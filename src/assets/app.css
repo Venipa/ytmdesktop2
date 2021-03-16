@@ -1,0 +1,3 @@
+.drag, [draggable] {
+  -webkit-app-region: drag
+}
