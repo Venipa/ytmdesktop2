@@ -1,0 +1,20 @@
+.ytd-nav-button {
+  background-color: transparent;
+  border: none;
+  color: white;
+  opacity: .8;
+  &:hover, &:active {
+    opacity: 1;
+  }
+  &-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px;
+    width: 48px;
+    padding: 12px;
+  }
+  svg {
+    color: inherit;
+  }
+}

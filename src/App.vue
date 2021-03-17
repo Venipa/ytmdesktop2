@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="h-full">
     <control-bar></control-bar>
     <router-view></router-view>
   </div>
@@ -16,7 +16,9 @@ export default {
 </script>
 
 <style>
+#app,
+html,
 body {
-  @apply text-gray-100 bg-gray-900;
+  @apply text-gray-100 bg-gray-900 h-full;
 }
 </style>

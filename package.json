@@ -2,57 +2,55 @@
   "name": "ytmdesktop2",
   "version": "0.1.0",
   "private": false,
+  "author": "Venipa <admin@venipa.net>",
   "scripts": {
-    "vcs": "vue-cli-service",
-    "lint": "vue-cli-service lint",
+    "serve": "vue-cli-service electron:serve",
     "build": "vue-cli-service electron:build",
-    ":serve": "vue-cli-service electron:serve",
+    "lint": "vue-cli-service lint",
     "postinstall": "electron-builder install-app-deps",
-    "postuninstall": "electron-builder install-app-deps"
+    "postuninstall": "electron-builder install-app-deps",
+    "vcs": "vue-cli-service"
   },
   "main": "background.js",
   "dependencies": {
+    "@headlessui/vue": "^0.3.0",
+    "@tailwindcss/forms": "^0.2.1",
     "@tailwindcss/postcss7-compat": "^2.0.2",
     "autoprefixer": "^9",
     "core-js": "^3.6.5",
+    "daisyui": "^0.14.5",
     "postcss": "^7",
     "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.0.2",
-    "vue": "^3.0.0"
+    "vue": "^3.0.0",
+    "vue-router": "^4.0.5",
+    "vue-tailwind": "^2.1.3"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^2.33.0",
+    "@typescript-eslint/parser": "^2.33.0",
     "@vue/cli-plugin-babel": "~4.5.0",
     "@vue/cli-plugin-eslint": "~4.5.0",
+    "@vue/cli-plugin-typescript": "~4.5.0",
     "@vue/cli-service": "~4.5.0",
     "@vue/compiler-sfc": "^3.0.0",
+    "@vue/eslint-config-typescript": "^5.0.2",
     "babel-eslint": "^10.1.0",
     "electron": "^12.0.1",
     "electron-devtools-installer": "^3.1.0",
     "eslint": "^6.7.2",
     "eslint-plugin-vue": "^7.0.0-0",
     "raw-loader": "^4.0.2",
+    "sass": "^1.32.8",
+    "sass-loader": "^10",
+    "typescript": "4.1",
     "vue-cli-plugin-electron-builder": "~2.0.0-rc.6",
     "vue-cli-plugin-tailwind": "~2.0.6"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "extends": [
-      "plugin:vue/vue3-essential",
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "parser": "babel-eslint"
-    },
-    "rules": {}
   },
   "browserslist": [
     "> 1%",
     "last 2 versions",
     "not dead"
   ],
-  "repository": "https://github.com/Venipa/ytmdesktop2",
-  "author": "Venipa <admin@venipa.net>",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": "https://github.com/Venipa/ytmdesktop2"
 }

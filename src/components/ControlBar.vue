@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex items-center justify-between border-b bg-black border-gray-600 select-none h-10 px-2"
+    class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2"
   >
     <div class="flex items-center flex-1 drag">
       <div class="h-4 w-4 text-gray-50 mr-2">
@@ -10,8 +10,8 @@
       </div>
       <p class="text-xs">Settings</p>
     </div>
-    <div class="flex">
-      <span @click="onClose" class="h-6 w-6 p-1 rounded flex items-center justify-center text-gray-50 hover:bg-red-500 transition-colors duration-100">
+    <div class="flex items-center">
+      <div @click="onClose" class="h-6 w-6 p-1 rounded flex items-center justify-center text-gray-50 hover:bg-red-500 transition-colors duration-100">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
@@ -23,7 +23,7 @@
             clip-rule="evenodd"
           />
         </svg>
-      </span>
+      </div>
     </div>
   </div>
 </template>
@@ -32,7 +32,7 @@
 export default {
   methods: {
     onClose() {
-      window.ipcRenderer.emit('settings.close');
+      window.app.settings.close();
     }
   }
 };
