@@ -15,16 +15,14 @@ contextBridge.exposeInMainWorld("app", {
   settingsProvider: {
     get: (key, defaultValue) =>
       new Promise((resolve) => {
-        return resolve(ipcRenderer.sendSync("settingsProvider.get", key, defaultValue));
+        return resolve(
+          ipcRenderer.sendSync("settingsProvider.get", key, defaultValue)
+        );
       }),
     set: (key, value) =>
       new Promise((resolve) => {
-        return resolve(
-          ipcRenderer.send("settingsProvider.set", {
-            key,
-            value,
-          })
-        );
+        return resolve(ipcRenderer.send("settingsProvider.set", key, value));
       }),
+    save: () => ipcRenderer.send("settingsProvider.save"),
   },
 });

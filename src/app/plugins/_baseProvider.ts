@@ -11,10 +11,20 @@ export interface OnDestroy {
 }
 
 export class BaseProvider {
-  __type = 'service_provider';
+  __type = "service_provider";
+  private __providers: { [key: string]: BaseProvider & any } = {};
   constructor(private name: string) {}
 
   getName() {
     return this.name;
+  }
+  _registerProviders(p: BaseProvider[]) {
+    this.__providers = p.reduce((l, r) => ({ ...l, [r.getName()]: r }), {});
+  }
+  getProvider(name: string) {
+    return this.__providers[name];
+  }
+  queryProvider(): BaseProvider[] {
+    return Object.values(this.__providers);
   }
 }

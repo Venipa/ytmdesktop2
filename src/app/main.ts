@@ -28,6 +28,7 @@ export default function() {
         return m.default;
       })
       .map((provider: any) => new provider(app));
+    providers.forEach((p: BaseProvider) => p._registerProviders(providers.filter((_p: BaseProvider) => _p.getName() !== p.getName())));
     return {
       providers,
       getProviderNames: () => providers.map((x: BaseProvider) => x.getName()),
@@ -186,15 +187,6 @@ export default function() {
     mainWindow.webContents.openDevTools();
     rootWindowInjectUtils(mainWindow);
 
-    const settingsProvider = serviceCollection.getProvider<SettingsProvider>(
-      "Settings Provider"
-    );
-    ipcMain.on("settingsProvider.get", (ev, ...[key, value]) => {
-      ev.returnValue = settingsProvider.get(key) || value;
-    });
-    ipcMain.on("settingsProvider.set", (ev, ...[key, value]) => {
-      settingsProvider.set(key, value);
-    });
 
     ipcMain.emit("settings.show");
   });
@@ -218,13 +210,12 @@ export default function() {
 
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {
+    const devLog = console.log;
     ipcMain
       .eventNames()
       .filter((x) => typeof x === "string")
       .forEach((event: any) =>
-        ipcMain.on(event as string, (ev, ...args) =>
-          console.log(event, ...args)
-        )
+        ipcMain.on(event as string, (ev, ...args) => devLog(event, ...args))
       );
     if (process.platform === "win32") {
       process.on("message", (data) => {

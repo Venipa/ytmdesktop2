@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-4">
     <div class="bg-opacity-5 bg-white shadow sm:rounded-lg">
-      <div class="px-4 py-5 sm:p-6 mt-4">
+      <div class="px-4 py-5 sm:p-6">
         <h3 class="text-lg leading-6 font-medium text-gray-100">
           Get Started
         </h3>
@@ -23,22 +23,25 @@
         </div>
       </div>
     </div>
-    <div>
-      <div class="p-6 text-gray-100 card">
-        <div class="form-control">
-          <label class="cursor-pointer label">
-            <span class="label-text text-gray-300">Autostart</span>
-            <div>
-              <input
-                type="checkbox"
-                checked="checked"
-                class="checkbox checkbox-primary"
-                v-model="autostartToggle"
-              />
-              <span class="checkbox-mark"></span>
-            </div>
-          </label>
-        </div>
+    <div class="px-3">
+      <div class="form-control">
+        <label class="cursor-pointer label">
+          <span class="label-text text-gray-300">Autostart</span>
+          <div>
+            <input
+              type="checkbox"
+              class="checkbox checkbox-primary"
+              v-bind:checked="appConfig.autostart"
+              @change="
+                (ev) => updateSetting('app.autostart', !!ev.target.checked)
+              "
+            />
+            <span class="checkbox-mark"></span>
+          </div>
+        </label>
+      </div>
+      <div class="flex flex-row justify-end mt-6">
+        <button class="btn btn-sm btn-primary">Save Changes</button>
       </div>
     </div>
   </div>
@@ -48,19 +51,21 @@
 import { defineComponent, onMounted, ref } from "vue";
 
 export default defineComponent({
-  watch: {},
-  setup() {
-    const autostartToggle = ref(false);
-    // onMounted(async () => {
-    //   autostartToggle.value = await (window as any).app.settingsProvider.get(
-    //     "app.autoustart",
-    //     true
-    //   );
-    // });
-    return {
-      autostartToggle,
-    };
+  methods: {
+    updateSetting(key: string, value: any) {
+      (window as any).app.settingsProvider.set(key, value);
+    },
   },
+  setup() {
+    const appConfig = ref<{ [key: string]: any }>({});
+    onMounted(async () => {
+      appConfig.value = await (window as any).app.settingsProvider
+        .get("app", true);
+    });
+    return {
+      appConfig,
+    };
+  }
 });
 </script>
 
