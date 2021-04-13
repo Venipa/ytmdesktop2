@@ -3,7 +3,7 @@
  * @param {{customCss: string}} options
  */
 const initializeYoutubeDesktop = function(options) {
-  console.log('ytd2-options', options);
+  console.log("ytd2-options", options);
   if (window.desktop) return;
   function createHtml(html) {
     var template = document.createElement("template");
@@ -50,4 +50,24 @@ const initializeYoutubeDesktop = function(options) {
   window.desktop = true;
   console.log("ytd2", "Initializing Elements");
   initializeElements();
+};
+
+/**
+ * initializeYoutubeCustomCSS
+ * @param {{customCss: string}} options
+ */
+const initializeYoutubeCustomCSS = function(options) {
+  console.log("ytd2-customcss", options);
+  /**
+   * @type {HTMLStyleElement} style
+   */
+  let style = document.head.querySelector(`style[data-ytd="customcss"]`);
+  if (!style) {
+    style = document.createElement("style");
+    style.innerText = options.customCss;
+    style.dataset.ytd = "customcss";
+    document.head.appendChild(style);
+  } else {
+    style.innerText = options.customCss;
+  }
 };

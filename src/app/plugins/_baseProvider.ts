@@ -13,10 +13,13 @@ export interface OnDestroy {
 export class BaseProvider {
   __type = "service_provider";
   private __providers: { [key: string]: BaseProvider & any } = {};
-  constructor(private name: string) {}
+  constructor(private name: string, private displayName: string = name) {}
 
   getName() {
     return this.name;
+  }
+  getDisplayName() {
+    return this.displayName;
   }
   _registerProviders(p: BaseProvider[]) {
     this.__providers = p.reduce((l, r) => ({ ...l, [r.getName()]: r }), {});

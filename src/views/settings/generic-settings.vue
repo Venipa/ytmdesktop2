@@ -1,6 +1,9 @@
 <template>
   <div class="flex flex-col gap-4">
-    <div class="bg-opacity-5 bg-white shadow sm:rounded-lg">
+    <div
+      class="bg-opacity-5 bg-white shadow sm:rounded-lg mt-4"
+      v-if="getStartedEnabled"
+    >
       <div class="px-4 py-5 sm:p-6">
         <h3 class="text-lg leading-6 font-medium text-gray-100">
           Get Started
@@ -21,51 +24,54 @@
             <span aria-hidden="true">&rarr;</span></a
           >
         </div>
+        <div class="mt-3 text-xs">
+          <a
+            href="#"
+            class="font-medium text-red-400 hover:text-red-300"
+            @click.prevent="disableGetStarted"
+            >Don't show again</a
+          >
+        </div>
       </div>
     </div>
-    <div class="px-3">
-      <div class="form-control">
-        <label class="cursor-pointer label">
-          <span class="label-text text-gray-300">Autostart</span>
-          <div>
-            <input
-              type="checkbox"
-              class="checkbox checkbox-primary"
-              v-bind:checked="appConfig.autostart"
-              @change="
-                (ev) => updateSetting('app.autostart', !!ev.target.checked)
-              "
-            />
-            <span class="checkbox-mark"></span>
-          </div>
-        </label>
-      </div>
-      <div class="flex flex-row justify-end mt-6">
-        <button class="btn btn-sm btn-primary">Save Changes</button>
-      </div>
+    <div class="px-3 flex flex-col gap-4 mt-4">
+      <settings-checkbox configKey="app.autostart">
+        Enable Autostart
+      </settings-checkbox>
+      <settings-checkbox configKey="app.autoupdate">
+        Enable Autoupdate
+      </settings-checkbox>
     </div>
   </div>
 </template>
 
 <script lang="ts">
+import SettingsCheckbox from "@/components/SettingsCheckbox.vue";
 import { defineComponent, onMounted, ref } from "vue";
 
 export default defineComponent({
+  components: { SettingsCheckbox },
   methods: {
-    updateSetting(key: string, value: any) {
-      (window as any).app.settingsProvider.set(key, value);
+    disableGetStarted() {
+      (window as any).app.settingsProvider
+        .set("app.getstarted", false)
+        .then(() => {
+          this.getStartedEnabled = false;
+        });
     },
   },
   setup() {
-    const appConfig = ref<{ [key: string]: any }>({});
+    const getStartedEnabled = ref<boolean>(true);
     onMounted(async () => {
-      appConfig.value = await (window as any).app.settingsProvider
-        .get("app", true);
+      getStartedEnabled.value = await (window as any).app.settingsProvider.get(
+        "app.getstarted",
+        true
+      );
     });
     return {
-      appConfig,
+      getStartedEnabled,
     };
-  }
+  },
 });
 </script>
 

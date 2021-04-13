@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("app", {
     open: () => ipcRenderer.send("settings.show"),
     close: () => ipcRenderer.send("settings.close"),
   },
+  reloadCustomCss: () => ipcRenderer.send("settings.customCssUpdate"),
   settingsProvider: {
     get: (key, defaultValue) =>
       new Promise((resolve) => {

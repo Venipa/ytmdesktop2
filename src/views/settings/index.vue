@@ -9,6 +9,9 @@
           <router-link to="/discord" class="nav-item" active-class="active"
             >Discord</router-link
           >
+          <router-link to="/custom-css" class="nav-item" active-class="active"
+            >Custom CSS</router-link
+          >
           <router-link to="/about" class="nav-item" active-class="active"
             >About</router-link
           >

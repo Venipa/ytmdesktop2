@@ -11,8 +11,11 @@ import {
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import path from "path";
+import fs from "fs";
 // @ts-ignore
 import youtubeInjectScript from "!raw-loader!../youtube-inject.js";
+import youtubeCustomCssInjectScript from "!raw-loader!../youtube-inject-customcss.js";
+import { render } from "sass";
 import { BaseProvider } from "./plugins/_baseProvider";
 import SettingsProvider from "./plugins/settingsProvider.plugin";
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -28,7 +31,11 @@ export default function() {
         return m.default;
       })
       .map((provider: any) => new provider(app));
-    providers.forEach((p: BaseProvider) => p._registerProviders(providers.filter((_p: BaseProvider) => _p.getName() !== p.getName())));
+    providers.forEach((p: BaseProvider) =>
+      p._registerProviders(
+        providers.filter((_p: BaseProvider) => _p.getName() !== p.getName())
+      )
+    );
     return {
       providers,
       getProviderNames: () => providers.map((x: BaseProvider) => x.getName()),
@@ -51,10 +58,6 @@ export default function() {
     { scheme: "ytm", privileges: { secure: true, standard: true } },
   ]);
 
-  /**
-   *
-   * @param {BrowserWindow} win
-   */
   async function rootWindowInjectUtils(win: BrowserWindow) {
     // Inject css
     const css = await import(
@@ -72,6 +75,20 @@ export default function() {
     `
       ),
       css.default
+    );
+  }
+  async function rootWindowInjectCustomCss(
+    win: BrowserWindow,
+    scssFile: string
+  ) {
+    const css = await new Promise<string>((resolve, reject) => {
+      render({ file: scssFile, outputStyle: 'compressed' }, (err, result) => {
+        if (err) reject(err);
+        resolve(result.css.toString());
+      });
+    });
+    await win.webContents.executeJavaScript(
+      `initializeYoutubeCustomCSS({ customCss: \`${css}\` })`
     );
   }
   /**
@@ -170,6 +187,7 @@ export default function() {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = await createRootWindow();
       rootWindowInjectUtils(mainWindow);
+      rootWindowInjectCustomCss(mainWindow);
     }
   });
   app.on("ready", async () => {
@@ -186,15 +204,13 @@ export default function() {
     await serviceCollection.exec("AfterInit");
     mainWindow.webContents.openDevTools();
     rootWindowInjectUtils(mainWindow);
-
-
-    ipcMain.emit("settings.show");
+    ipcMain.emit('settings.customCssUpdate');
   });
 
   let settingsWindow: BrowserWindow;
   ipcMain.on("settings.show", async () => {
     try {
-      if (!settingsWindow) {
+      if (!settingsWindow || settingsWindow.isDestroyed()) {
         settingsWindow = await createAppWindow();
       } else {
         settingsWindow.show();
@@ -203,10 +219,34 @@ export default function() {
       console.error(err);
     }
   });
-  ipcMain.on(
-    "settings.close",
-    async () => settingsWindow && settingsWindow.hide()
-  );
+  ipcMain.on("settings.close", async () => {
+    if (settingsWindow) {
+      if (isDevelopment) settingsWindow.webContents.closeDevTools();
+      settingsWindow.close();
+    }
+  });
+  ipcMain.on("settings.customCssUpdate", async () => {
+    let scssPath = serviceCollection
+      .getProvider<SettingsProvider>("settings")
+      .get(
+        "customcss.scssFile",
+        path.resolve(app.getPath("userData"), "custom.scss")
+      );
+    if (!fs.existsSync(scssPath)) {
+      fs.writeSync(scssPath, Buffer.from(""));
+      return;
+    }
+    console.log(`ytd loading custom css from ${scssPath}`);
+    await Promise.all(
+      BrowserWindow.getAllWindows()
+        .filter(
+          (x) => x.webContents.getURL().indexOf("https://music.youtube") === 0
+        )
+        .map((x) => {
+          return rootWindowInjectCustomCss(x, scssPath).catch(() => null);
+        })
+    );
+  });
 
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {

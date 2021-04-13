@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.4",
+    "@types/sass": "^1.16.0",
     "@typescript-eslint/eslint-plugin": "^2.33.0",
     "@typescript-eslint/parser": "^2.33.0",
     "@vue/cli-plugin-babel": "~4.5.0",

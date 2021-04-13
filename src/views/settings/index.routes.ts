@@ -16,6 +16,10 @@ const routes = {
       component: () => import("./discord-settings.vue"),
     },
     {
+      path: "/custom-css",
+      component: () => import("./customcss-settings.vue"),
+    },
+    {
       path: "/about",
       component: () => import("./about-settings.vue"),
     },
