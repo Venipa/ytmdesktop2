@@ -22,6 +22,7 @@
       <input
         v-bind:type="$attrs.type"
         v-bind:placeholder="$attrs.placeholder"
+        v-bind:accept="$attrs.accept
         @change="(ev) => updateSetting(ev.target)"
         class="hidden"
         ref="fileInputRef"

@@ -10,6 +10,7 @@
             configKey="customcss.scssFile"
             ref="customCssPathInput"
             type="file"
+            accept=".scss,.sass"
           >
             <template v-slot:label>
               SCSS File

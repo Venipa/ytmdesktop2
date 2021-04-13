@@ -221,6 +221,7 @@ export default function() {
   });
   ipcMain.on("settings.close", async () => {
     if (settingsWindow) {
+      settingsWindow.hide();
       if (isDevelopment) settingsWindow.webContents.closeDevTools();
       settingsWindow.close();
     }
