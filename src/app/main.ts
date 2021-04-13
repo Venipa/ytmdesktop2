@@ -156,7 +156,7 @@ export default function() {
       console.log("dev url:", process.env.WEBPACK_DEV_SERVER_URL);
       // Load the url of the dev server if in development mode
       await win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
-      if (!process.env.IS_TEST) win.webContents.openDevTools();
+      if (isDevelopment) win.webContents.openDevTools();
     } else {
       createProtocol("ytm");
       // Load the index.html when not in development
@@ -202,7 +202,7 @@ export default function() {
     await serviceCollection.exec("OnInit");
     mainWindow = await createRootWindow();
     await serviceCollection.exec("AfterInit");
-    mainWindow.webContents.openDevTools();
+    if (isDevelopment) mainWindow.webContents.openDevTools();
     rootWindowInjectUtils(mainWindow);
     ipcMain.emit('settings.customCssUpdate');
   });

@@ -1,9 +1,8 @@
-const pkg = require("../package.json");
 const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("ipcRenderer", {
   emit: (event, ...data) => ipcRenderer.send(event, ...data),
   on: (channel, func) => ipcRenderer.on(channel, func),
-  appVersion: pkg.version,
+  appVersion: '0.1.0',
 });
 
 contextBridge.exposeInMainWorld("app", {
