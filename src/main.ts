@@ -2,7 +2,6 @@ import { createApp } from "vue";
 import {
   createRouter,
   createWebHashHistory,
-  createWebHistory,
   RouteRecordRaw,
 } from "vue-router";
 import App from "./App.vue";
@@ -20,7 +19,7 @@ function loadRoutes() {
     .map((m: any) => m.default);
 }
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes: [...loadRoutes()],
 });
 createApp(App)

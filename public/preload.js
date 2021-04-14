@@ -1,12 +1,13 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const appVersion = '0.1.0';
 contextBridge.exposeInMainWorld("ipcRenderer", {
   emit: (event, ...data) => ipcRenderer.send(event, ...data),
   on: (channel, func) => ipcRenderer.on(channel, func),
-  appVersion: '0.1.0',
+  appVersion
 });
 
 contextBridge.exposeInMainWorld("app", {
-  version: pkg.version,
+  version: appVersion,
   settings: {
     open: () => ipcRenderer.send("settings.show"),
     close: () => ipcRenderer.send("settings.close"),

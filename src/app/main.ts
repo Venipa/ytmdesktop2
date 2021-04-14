@@ -53,10 +53,6 @@ export default function() {
   console.log(
     `Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`
   );
-  // Scheme must be registered before the app is ready
-  protocol.registerSchemesAsPrivileged([
-    { scheme: "ytm", privileges: { secure: true, standard: true } },
-  ]);
 
   async function rootWindowInjectUtils(win: BrowserWindow) {
     // Inject css
@@ -158,9 +154,8 @@ export default function() {
       await win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
       if (isDevelopment) win.webContents.openDevTools();
     } else {
-      createProtocol("ytm");
       // Load the index.html when not in development
-      await win.loadURL("ytm://./index.html");
+      await win.loadURL("app://./index.html");
     }
     win.webContents.on("new-window", function(e, url) {
       if (url.startsWith("http")) {
@@ -187,7 +182,7 @@ export default function() {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = await createRootWindow();
       rootWindowInjectUtils(mainWindow);
-      rootWindowInjectCustomCss(mainWindow);
+      ipcMain.emit('settings.customCssUpdate');
     }
   });
   app.on("ready", async () => {
@@ -198,6 +193,8 @@ export default function() {
       } catch (e) {
         console.error("Vue Devtools failed to install:", e.toString());
       }
+    } else {
+      createProtocol("app");
     }
     await serviceCollection.exec("OnInit");
     mainWindow = await createRootWindow();
