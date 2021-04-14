@@ -192,8 +192,6 @@ export default function() {
       settingsWindow.close();
     }
   });
-  (() => {
-  })();
 
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {
