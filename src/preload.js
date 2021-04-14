@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("app", {
     close: () => ipcRenderer.send("settings.close"),
   },
   reloadCustomCss: () => ipcRenderer.send("settings.customCssUpdate"),
+  watchCustomCss: (enabled) => ipcRenderer.send("settings.customCssWatch", enabled),
   settingsProvider: {
     get: (key, defaultValue) =>
       ipcRenderer.invoke("settingsProvider.get", key, defaultValue),

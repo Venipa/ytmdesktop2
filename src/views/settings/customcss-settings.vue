@@ -5,7 +5,10 @@
         Enable Custom CSS
       </settings-checkbox>
       <ease-transition>
-        <div class="flex flex-col gap-4" v-if="customCssToggle && customCssToggle.value">
+        <div
+          class="flex flex-col gap-4"
+          v-if="customCssToggle && customCssToggle.value"
+        >
           <settings-input
             configKey="customcss.scssFile"
             ref="customCssPathInput"
@@ -16,6 +19,12 @@
               SCSS File
             </template>
           </settings-input>
+          <settings-checkbox
+            configKey="customcss.scssFileWatch"
+            @change="scssWatch"
+          >
+            Update on Changes
+          </settings-checkbox>
           <button class="btn btn-primary" @click="reloadCSS">
             Reload
           </button>
@@ -37,6 +46,9 @@ export default defineComponent({
     reloadCSS() {
       (window as any).app.reloadCustomCss();
     },
+    scssWatch(enabled: boolean) {
+      (window as any).app.watchCustomCss(!!enabled);
+    }
   },
   setup() {
     const customCssToggle = ref(null),

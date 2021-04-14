@@ -20,7 +20,9 @@ import { BaseProvider } from "./plugins/_baseProvider";
 import SettingsProvider from "./plugins/settingsProvider.plugin";
 const isDevelopment = process.env.NODE_ENV !== "production";
 const defaultUrl = "https://music.youtube.com";
-
+function parseScriptPath(p: string) {
+  return path.resolve(__dirname, p);
+}
 export default function() {
   const serviceCollection = (() => {
     const pluginContext = require.context("./plugins", false, /plugin.ts$/i);
@@ -53,6 +55,7 @@ export default function() {
   console.log(
     `Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`
   );
+  console.log("preload.js: ", parseScriptPath("preload.js"));
 
   async function rootWindowInjectUtils(win: BrowserWindow) {
     // Inject css
@@ -60,7 +63,7 @@ export default function() {
       // @ts-ignore
       "!raw-loader!sass-loader!../assets/youtube-inject.scss"
     );
-    if (!css) console.error(css.default);
+    if (!css) console.error("ytd2-css", "failed to load css");
     console.log(
       "youtube-inject.js",
       await win.webContents.executeJavaScript(
@@ -78,13 +81,13 @@ export default function() {
     scssFile: string
   ) {
     const css = await new Promise<string>((resolve, reject) => {
-      render({ file: scssFile, outputStyle: 'compressed' }, (err, result) => {
+      render({ file: scssFile, outputStyle: "compressed" }, (err, result) => {
         if (err) reject(err);
-        resolve(result.css.toString());
+        resolve(result ? result.css.toString() : null);
       });
-    });
+    }).catch(() => null);
     await win.webContents.executeJavaScript(
-      `initializeYoutubeCustomCSS({ customCss: \`${css}\` })`
+      `initializeYoutubeCustomCSS({ customCss: \`${css || ""}\` })`
     );
   }
   /**
@@ -108,7 +111,7 @@ export default function() {
         webviewTag: true,
         contextIsolation: true,
         enableRemoteModule: false,
-        preload: path.resolve(__static, "preload.js"),
+        preload: parseScriptPath("preload.js"),
       },
       ...(options || {}),
     });
@@ -144,10 +147,9 @@ export default function() {
         webviewTag: true,
         contextIsolation: true,
         enableRemoteModule: true,
-        preload: path.resolve(__dirname, "preload.js"),
+        preload: parseScriptPath("preload.js"),
       },
     });
-
     if (process.env.WEBPACK_DEV_SERVER_URL) {
       console.log("dev url:", process.env.WEBPACK_DEV_SERVER_URL);
       // Load the url of the dev server if in development mode
@@ -181,8 +183,6 @@ export default function() {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = await createRootWindow();
-      rootWindowInjectUtils(mainWindow);
-      ipcMain.emit('settings.customCssUpdate');
     }
   });
   app.on("ready", async () => {
@@ -201,7 +201,10 @@ export default function() {
     await serviceCollection.exec("AfterInit");
     if (isDevelopment) mainWindow.webContents.openDevTools();
     rootWindowInjectUtils(mainWindow);
-    ipcMain.emit('settings.customCssUpdate');
+    setTimeout(() => {
+      ipcMain.emit("settings.customCssUpdate");
+      ipcMain.emit("settings.customCssWatch");
+    }, 50);
   });
 
   let settingsWindow: BrowserWindow;
@@ -223,28 +226,58 @@ export default function() {
       settingsWindow.close();
     }
   });
-  ipcMain.on("settings.customCssUpdate", async () => {
-    let scssPath = serviceCollection
-      .getProvider<SettingsProvider>("settings")
-      .get(
+  (() => {
+    let scssUpdateHandler;
+    const settings = serviceCollection.getProvider<SettingsProvider>(
+      "settings"
+    );
+    ipcMain.on("settings.customCssWatch", async () => {
+      const config: {
+        scssFileWatch: boolean;
+        scssFile: string;
+        enabled: boolean;
+      } = settings.get("customcss");
+      if (!fs.existsSync(config.scssFile) || !config) {
+        return;
+      }
+      if (
+        !config.scssFileWatch ||
+        (scssUpdateHandler && scssUpdateHandler !== config.scssFile)
+      ) {
+        if (scssUpdateHandler)
+          fs.unwatchFile(scssUpdateHandler), (scssUpdateHandler = null);
+        return;
+      }
+      if (!scssUpdateHandler) {
+        fs.watchFile(
+          config.scssFile,
+          { interval: 1000 },
+          (curr) => curr.size > 0 && ipcMain.emit("settings.customCssUpdate")
+        );
+        scssUpdateHandler = config.scssFile;
+      }
+    });
+    ipcMain.on("settings.customCssUpdate", async () => {
+      let scssPath = settings.get(
         "customcss.scssFile",
         path.resolve(app.getPath("userData"), "custom.scss")
       );
-    if (!fs.existsSync(scssPath)) {
-      fs.writeSync(scssPath, Buffer.from(""));
-      return;
-    }
-    console.log(`ytd loading custom css from ${scssPath}`);
-    await Promise.all(
-      BrowserWindow.getAllWindows()
-        .filter(
-          (x) => x.webContents.getURL().indexOf("https://music.youtube") === 0
-        )
-        .map((x) => {
-          return rootWindowInjectCustomCss(x, scssPath).catch(() => null);
-        })
-    );
-  });
+      if (!fs.existsSync(scssPath)) {
+        fs.writeSync(scssPath, Buffer.from(""));
+        return;
+      }
+      console.log(`ytd loading custom css from ${scssPath}`);
+      await Promise.all(
+        BrowserWindow.getAllWindows()
+          .filter(
+            (x) => x.webContents.getURL().indexOf("https://music.youtube") === 0
+          )
+          .map((x) => {
+            return rootWindowInjectCustomCss(x, scssPath).catch(() => null);
+          })
+      );
+    });
+  })();
 
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {
