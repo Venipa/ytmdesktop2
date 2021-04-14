@@ -1,13 +1,13 @@
-const { contextBridge, ipcRenderer } = require("electron");
-const appVersion = "0.1.0";
+import { contextBridge, ipcRenderer } from "electron";
+import pkg from "../package.json";
 contextBridge.exposeInMainWorld("ipcRenderer", {
   emit: (event, ...data) => ipcRenderer.send(event, ...data),
   on: (channel, func) => ipcRenderer.on(channel, func),
-  appVersion,
+  appVersion: pkg.version,
 });
 
 contextBridge.exposeInMainWorld("app", {
-  version: appVersion,
+  version: pkg.version,
   settings: {
     open: () => ipcRenderer.send("settings.show"),
     close: () => ipcRenderer.send("settings.close"),
@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld("app", {
         return resolve(ipcRenderer.send("settingsProvider.set", key, value));
       }),
     update: (key, value) =>
-      ipcRenderer.invoke("settingsProvider.set", key, value),
+      ipcRenderer.invoke("settingsProvider.update", key, value),
     save: () => ipcRenderer.send("settingsProvider.save"),
   },
 });

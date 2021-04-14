@@ -144,7 +144,7 @@ export default function() {
         webviewTag: true,
         contextIsolation: true,
         enableRemoteModule: true,
-        preload: path.resolve(__static, "preload.js"),
+        preload: path.resolve(__dirname, "preload.js"),
       },
     });
 

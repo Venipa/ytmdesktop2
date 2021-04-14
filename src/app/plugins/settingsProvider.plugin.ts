@@ -1,10 +1,10 @@
-import { App, IpcMainEvent } from "electron";
+import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { BaseProvider, OnInit, OnDestroy } from "./_baseProvider";
 import fs from "fs";
 import { existsSync } from "fs";
 import path from "path";
 import { get as _get, set as _set } from "lodash-es";
-import { IpcContext, IpcOn } from "../utils/onIpcEvent";
+import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
 let _settingsStore = {};
 const defaultSettings = {
   app: {
@@ -61,8 +61,8 @@ export default class SettingsProvider extends BaseProvider
   async OnDestroy() {
     await this.saveToDrive();
   }
-  @IpcOn("settingsProvider.get")
-  private _onEventGet(ev: IpcMainEvent, ...args: any[]) {
+  @IpcHandle("settingsProvider.get")
+  private _onEventGet(ev: IpcMainInvokeEvent, ...args: any[]) {
     const [key, value] = args;
     const returnValue = this.get(key);
     return returnValue === undefined || returnValue === null ? value : returnValue;
@@ -72,6 +72,12 @@ export default class SettingsProvider extends BaseProvider
     const [key, value] = args;
     this.set(key, value);
     this.saveToDrive();
+  }
+  @IpcHandle("settingsProvider.update")
+  private async _onEventUpdate(ev: IpcMainInvokeEvent, ...args: any[]) {
+    const [key, value] = args;
+    this.set(key, value);
+    await this.saveToDrive();
     return value;
   }
 }

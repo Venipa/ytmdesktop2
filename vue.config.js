@@ -1,8 +1,9 @@
 module.exports = {
   pluginOptions: {
     electronBuilder: {
-        nodeIntegration: false
-    }
+      preload: "src/preload.ts",
+      nodeIntegration: false,
+    },
   },
   chainWebpack: (config) => {
     config.module
@@ -13,6 +14,6 @@ module.exports = {
       .end();
   },
   configureWebpack: {
-    devtool: 'source-map'
-  }
+    devtool: "source-map",
+  },
 };
