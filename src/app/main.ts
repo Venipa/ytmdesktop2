@@ -11,13 +11,8 @@ import {
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import path from "path";
-import fs from "fs";
-// @ts-ignore
-import youtubeInjectScript from "!raw-loader!../youtube-inject.js";
-import youtubeCustomCssInjectScript from "!raw-loader!../youtube-inject-customcss.js";
-import { render } from "sass";
 import { BaseProvider } from "./plugins/_baseProvider";
-import SettingsProvider from "./plugins/settingsProvider.plugin";
+import { rootWindowInjectUtils } from "./utils/webContentUtils";
 const isDevelopment = process.env.NODE_ENV !== "production";
 const defaultUrl = "https://music.youtube.com";
 function parseScriptPath(p: string) {
@@ -56,40 +51,6 @@ export default function() {
     `Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`
   );
   console.log("preload.js: ", parseScriptPath("preload.js"));
-
-  async function rootWindowInjectUtils(win: BrowserWindow) {
-    // Inject css
-    const css = await import(
-      // @ts-ignore
-      "!raw-loader!sass-loader!../assets/youtube-inject.scss"
-    );
-    if (!css) console.error("ytd2-css", "failed to load css");
-    console.log(
-      "youtube-inject.js",
-      await win.webContents.executeJavaScript(
-        `${youtubeInjectScript}
-    initializeYoutubeDesktop({
-      customCss: \`${css.default}\`
-    })
-    `
-      ),
-      css.default
-    );
-  }
-  async function rootWindowInjectCustomCss(
-    win: BrowserWindow,
-    scssFile: string
-  ) {
-    const css = await new Promise<string>((resolve, reject) => {
-      render({ file: scssFile, outputStyle: "compressed" }, (err, result) => {
-        if (err) reject(err);
-        resolve(result ? result.css.toString() : null);
-      });
-    }).catch(() => null);
-    await win.webContents.executeJavaScript(
-      `initializeYoutubeCustomCSS({ customCss: \`${css || ""}\` })`
-    );
-  }
   /**
    *
    * @param {Electron.BrowserWindowConstructorOptions | undefined} options
@@ -183,6 +144,11 @@ export default function() {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = await createRootWindow();
+      rootWindowInjectUtils(mainWindow);
+      setTimeout(() => {
+        ipcMain.emit("settings.customCssUpdate");
+        ipcMain.emit("settings.customCssWatch");
+      }, 50);
     }
   });
   app.on("ready", async () => {
@@ -227,56 +193,6 @@ export default function() {
     }
   });
   (() => {
-    let scssUpdateHandler;
-    const settings = serviceCollection.getProvider<SettingsProvider>(
-      "settings"
-    );
-    ipcMain.on("settings.customCssWatch", async () => {
-      const config: {
-        scssFileWatch: boolean;
-        scssFile: string;
-        enabled: boolean;
-      } = settings.get("customcss");
-      if (!fs.existsSync(config.scssFile) || !config) {
-        return;
-      }
-      if (
-        !config.scssFileWatch ||
-        (scssUpdateHandler && scssUpdateHandler !== config.scssFile)
-      ) {
-        if (scssUpdateHandler)
-          fs.unwatchFile(scssUpdateHandler), (scssUpdateHandler = null);
-        return;
-      }
-      if (!scssUpdateHandler) {
-        fs.watchFile(
-          config.scssFile,
-          { interval: 1000 },
-          (curr) => curr.size > 0 && ipcMain.emit("settings.customCssUpdate")
-        );
-        scssUpdateHandler = config.scssFile;
-      }
-    });
-    ipcMain.on("settings.customCssUpdate", async () => {
-      let scssPath = settings.get(
-        "customcss.scssFile",
-        path.resolve(app.getPath("userData"), "custom.scss")
-      );
-      if (!fs.existsSync(scssPath)) {
-        fs.writeSync(scssPath, Buffer.from(""));
-        return;
-      }
-      console.log(`ytd loading custom css from ${scssPath}`);
-      await Promise.all(
-        BrowserWindow.getAllWindows()
-          .filter(
-            (x) => x.webContents.getURL().indexOf("https://music.youtube") === 0
-          )
-          .map((x) => {
-            return rootWindowInjectCustomCss(x, scssPath).catch(() => null);
-          })
-      );
-    });
   })();
 
   // Exit cleanly on request from parent process in development mode.
