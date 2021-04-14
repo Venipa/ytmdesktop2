@@ -65,13 +65,13 @@ export default class SettingsProvider extends BaseProvider
   private _onEventGet(ev: IpcMainEvent, ...args: any[]) {
     const [key, value] = args;
     const returnValue = this.get(key);
-    ev.returnValue =
-      returnValue === undefined || returnValue === null ? value : returnValue;
+    return returnValue === undefined || returnValue === null ? value : returnValue;
   }
   @IpcOn("settingsProvider.set")
   private _onEventSet(ev: IpcMainEvent, ...args: any[]) {
     const [key, value] = args;
     this.set(key, value);
     this.saveToDrive();
+    return value;
   }
 }

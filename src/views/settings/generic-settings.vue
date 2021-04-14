@@ -54,9 +54,9 @@ export default defineComponent({
   methods: {
     disableGetStarted() {
       (window as any).app.settingsProvider
-        .set("app.getstarted", false)
-        .then(() => {
-          this.getStartedEnabled = false;
+        .update("app.getstarted", false)
+        .then((v) => {
+          this.getStartedEnabled = v;
         });
     },
   },

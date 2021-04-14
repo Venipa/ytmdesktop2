@@ -44,8 +44,7 @@ export default defineComponent({
   created() {
     this.updateSetting = debounce((value: boolean) => {
       if (this.configKey) {
-        this.value = value;
-        (window as any).app.settingsProvider.set(this.configKey, !!value);
+        (window as any).app.settingsProvider.update(this.configKey, !!value).then(v => this.value = v);
       }
     }, 500);
   },

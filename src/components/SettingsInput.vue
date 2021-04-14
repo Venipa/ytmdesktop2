@@ -52,7 +52,7 @@ export default defineComponent({
     defaultValue: Object,
   },
   methods: {
-    updateSetting: () => null,
+    updateSetting: (ev: HTMLInputElement) => null,
   },
   setup(context) {
     const value = ref<any>(),
@@ -73,7 +73,7 @@ export default defineComponent({
       if (this.configKey) {
         if (ev.type === "file" && ev.files.length === 0) return;
         const value = ev.type === "file" ? ev.files[0].path : ev.value;
-        (window as any).app.settingsProvider.set(this.configKey, value);
+        (window as any).app.settingsProvider.update(this.configKey, value).then(v => this.value = v);
       }
     }, 1500);
   },
