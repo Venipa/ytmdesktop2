@@ -13,7 +13,7 @@ import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import path from "path";
 import { BaseProvider } from "./plugins/_baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
-const isDevelopment = process.env.NODE_ENV !== "production";
+import { isDevelopment } from "./utils/devUtils";
 const defaultUrl = "https://music.youtube.com";
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);

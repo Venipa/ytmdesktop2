@@ -5,7 +5,6 @@ import { existsSync } from "fs";
 import path from "path";
 import { get as _get, set as _set } from "lodash-es";
 import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
-let _settingsStore = {};
 const defaultSettings = {
   app: {
     autoupdate: true,
@@ -21,6 +20,8 @@ const defaultSettings = {
     scssFile: null
   }
 };
+let _settingsStore: SettingsStore = defaultSettings;
+type SettingsStore = typeof defaultSettings & {[key: string]: any};
 
 @IpcContext
 export default class SettingsProvider extends BaseProvider
