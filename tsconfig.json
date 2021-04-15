@@ -9,6 +9,7 @@
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "strictNullChecks": false,
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": false,
     "emitDecoratorMetadata": true,

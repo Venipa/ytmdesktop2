@@ -54,7 +54,9 @@ export default class SettingsProvider extends BaseProvider
   set(keys: string | string[], value: any) {
     return _set(_settingsStore, keys, value);
   }
-  @IpcOn("settingsProvider.save", 10000)
+  @IpcOn("settingsProvider.save", {
+    debounce: 10000
+  })
   async saveToDrive() {
     const configFile = await this.getConfigPath();
     fs.writeFileSync(configFile, JSON.stringify(_settingsStore));

@@ -1,10 +1,13 @@
-import { ipcMain } from "electron";
+import { ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { debounce } from "lodash-es";
 const classStoreSymbol = Symbol("__ipcEvents");
 interface IpcContextEvent {
   name: string;
-  type?: 'once' | 'handle';
-  debounce?: number
+  type?: "once" | "handle";
+  options?: {
+    debounce?: number;
+    filter?: (ev: IpcMainEvent | IpcMainInvokeEvent, ...args: any[]) => boolean;
+  };
 }
 export function IpcContext<T extends { new (...args: any[]): {} }>(
   IpcContextBase: T
@@ -14,12 +17,27 @@ export function IpcContext<T extends { new (...args: any[]): {} }>(
       super(...args);
       const symbols: any = IpcContextBase.prototype[classStoreSymbol];
       if (symbols) {
-        symbols.forEach(({ name, type, debounce: debounceMs }: IpcContextEvent, method: string) => {
-          const func = (...args: any[]) => {
-            if (typeof (this as any)[method] === 'function') return type === 'handle' ? Promise.resolve((this as any)[method](...args)) : (this as any)[method](...args);
-          };
-          ipcMain[type === 'once' ? "once" : type === 'handle' ? 'handle' : "on"](name, debounceMs ? debounce(func, debounceMs!) : func);
-        });
+        symbols.forEach(
+          ({ name, type, options }: IpcContextEvent, method: string) => {
+            const func = (...args: any[]) => {
+              if (
+                typeof (this as any)[method] === "function" &&
+                (typeof options?.filter === "function"
+                  ? options?.filter(args[0], ...args.slice(1))
+                  : true)
+              )
+                return type === "handle"
+                  ? Promise.resolve((this as any)[method](...args))
+                  : (this as any)[method](...args);
+            };
+            ipcMain[
+              type === "once" ? "once" : type === "handle" ? "handle" : "on"
+            ](
+              name,
+              options?.debounce ? debounce(func, options.debounce!) : func
+            );
+          }
+        );
       }
     }
   };
@@ -34,11 +52,17 @@ export function IpcOnce(event: string): MethodDecorator {
     target[classStoreSymbol] = target[classStoreSymbol] || new Map();
     target[classStoreSymbol].set(propertyKey, <IpcContextEvent>{
       name: event,
-      type: 'once'
+      type: "once",
     });
   };
 }
-export function IpcOn(event: string, debounce?: number): MethodDecorator {
+export function IpcOn(
+  event: string,
+  options?: {
+    debounce?: number;
+    filter?: (ev: IpcMainEvent, ...args: any[]) => boolean;
+  }
+): MethodDecorator {
   return function<T>(
     target: any,
     propertyKey: string | symbol,
@@ -47,11 +71,17 @@ export function IpcOn(event: string, debounce?: number): MethodDecorator {
     target[classStoreSymbol] = target[classStoreSymbol] || new Map();
     target[classStoreSymbol].set(propertyKey, <IpcContextEvent>{
       name: event,
-      debounce
+      options,
     });
   };
 }
-export function IpcHandle(event: string, debounce?: number): MethodDecorator {
+export function IpcHandle(
+  event: string,
+  options?: {
+    debounce?: number;
+    filter?: (ev: IpcMainEvent, ...args: any[]) => boolean;
+  }
+): MethodDecorator {
   return function<T>(
     target: any,
     propertyKey: string | symbol,
@@ -60,8 +90,8 @@ export function IpcHandle(event: string, debounce?: number): MethodDecorator {
     target[classStoreSymbol] = target[classStoreSymbol] || new Map();
     target[classStoreSymbol].set(propertyKey, <IpcContextEvent>{
       name: event,
-      type: 'handle',
-      debounce
+      type: "handle",
+      options,
     });
   };
 }

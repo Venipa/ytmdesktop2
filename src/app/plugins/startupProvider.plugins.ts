@@ -13,10 +13,6 @@ export default class EventProvider extends BaseProvider implements AfterInit, On
     super("startup");
   }
   async OnInit() {
-    const settings = this.settingsInstance;
-    const app = settings.get("app");
-    if (!isDevelopment && app.autoupdate) {
-    }
   }
   async AfterInit() {
     const settings = this.settingsInstance;
