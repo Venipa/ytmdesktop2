@@ -15,6 +15,7 @@ import { BaseProvider } from "./plugins/_baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
 import { isDevelopment } from "./utils/devUtils";
 import Logger from "@/utils/Logger";
+
 const defaultUrl = "https://music.youtube.com";
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);

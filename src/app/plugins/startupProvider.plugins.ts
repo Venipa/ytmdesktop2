@@ -1,9 +1,9 @@
-import { App, ipcMain } from "electron";
+import { App, BrowserWindow, ipcMain, Menu, Tray } from "electron";
 import { debounce } from "lodash-es";
 import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, AfterInit, OnInit } from "./_baseProvider";
-import { basename } from "path";
+import { basename, resolve } from "path";
 import { IpcOn } from "../utils/onIpcEvent";
 
 export default class EventProvider extends BaseProvider
@@ -11,10 +11,38 @@ export default class EventProvider extends BaseProvider
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
+  private _tray: Tray;
+  get Tray() {
+    return this._tray;
+  }
   constructor(private app: App) {
     super("startup");
   }
-  async OnInit() {}
+  async OnInit() {
+    this.app.whenReady().then(() => {
+      this._tray = new Tray(resolve(__dirname), "assets/logo.ico");
+      this._tray.setContextMenu(
+        Menu.buildFromTemplate([
+          {
+            label: "Show",
+            type: "normal",
+            click: () =>
+              BrowserWindow.getAllWindows()
+                .find((x) => x.webContents.getURL().match("music.youtube"))
+                ?.show(),
+          },
+          {
+            type: "separator",
+          },
+          {
+            label: "Quit",
+            type: "normal",
+          },
+        ])
+      );
+      this._tray.setToolTip(`Youtube Music Desktop v2`);
+    });
+  }
   async AfterInit() {
     const settings = this.settingsInstance;
     const app = settings.get("app");
