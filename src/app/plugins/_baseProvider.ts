@@ -1,3 +1,4 @@
+import Logger from "@/utils/Logger";
 import { App } from "electron";
 
 export interface OnInit {
@@ -13,7 +14,13 @@ export interface OnDestroy {
 export class BaseProvider {
   __type = "service_provider";
   private __providers: { [key: string]: BaseProvider & any } = {};
-  constructor(private name: string, private displayName: string = name) {}
+  private _loggerInstance: Logger;
+  get logger() {
+    return this._loggerInstance;
+  }
+  constructor(private name: string, private displayName: string = name) {
+    this._loggerInstance = new Logger(displayName || name);
+  }
 
   getName() {
     return this.name;

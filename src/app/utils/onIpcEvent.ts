@@ -22,19 +22,22 @@ export function IpcContext<T extends { new (...args: any[]): {} }>(
             const func = (...args: any[]) => {
               if (
                 typeof (this as any)[method] === "function" &&
-                (typeof options?.filter === "function"
-                  ? options?.filter(args[0], ...args.slice(1))
+                (options &&
+                options.filter &&
+                typeof options.filter === "function"
+                  ? options.filter(args[0], ...args.slice(1))
                   : true)
               )
                 return type === "handle"
                   ? Promise.resolve((this as any)[method](...args))
                   : (this as any)[method](...args);
+              return Promise.resolve(null);
             };
             ipcMain[
               type === "once" ? "once" : type === "handle" ? "handle" : "on"
             ](
               name,
-              options?.debounce ? debounce(func, options.debounce!) : func
+              options && options.debounce ? debounce(func, options.debounce) : func
             );
           }
         );

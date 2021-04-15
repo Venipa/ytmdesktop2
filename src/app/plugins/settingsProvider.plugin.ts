@@ -37,7 +37,7 @@ export default class SettingsProvider extends BaseProvider
   }
   async OnInit() {
     const configFile = await this.getConfigPath();
-    console.log(configFile);
+    this.logger.debug(configFile);
     if (existsSync(configFile)) {
       _settingsStore = {
         ...defaultSettings,

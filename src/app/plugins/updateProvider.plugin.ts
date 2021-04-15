@@ -24,28 +24,46 @@ export default class EventProvider extends BaseProvider
     super("startup");
   }
   OnInit() {
-    const settings = this.settingsInstance;
-    const app = settings.get("app");
-    if (!isDevelopment && app.autoupdate) {
+    if (!isDevelopment) {
+      const settings = this.settingsInstance;
+      const app = settings.get("app");
       const server = "https://update.electronjs.org";
       const feed = `${server}/Venipa/ytmdesktop2/${process.platform}-${
         process.arch
-      }/${app.getVersion()}`;
+      }/${this.app.getVersion()}`;
 
       autoUpdater.setFeedURL({
         url: feed,
       });
       autoUpdater.on("update-available", () => {
+        this.logger.debug("Update Available");
         this._updateAvailable = true;
+        ipcMain.emit("app.updateAvailable");
       });
       autoUpdater.on("update-downloaded", () => {
+        this.logger.debug("Update Downloaded");
         (this._updateAvailable = true), (this._updateDownloaded = true);
+        ipcMain.emit("app.updateDownloaded");
       });
-      autoUpdater.checkForUpdates();
+      if (app.autoupdate) autoUpdater.checkForUpdates();
     }
   }
   private _autoUpdateCheckHandle;
-  AfterInit() {}
+  AfterInit() {
+    this.logger.debug("Initialized");
+  }
+  @IpcOn("app.installUpdate", {
+    debounce: 1000,
+  })
+  onAutoUpdateRun() {
+    autoUpdater.quitAndInstall();
+  }
+  @IpcOn("app.checkUpdate", {
+    debounce: 1000,
+  })
+  onCheckUpdate() {
+    autoUpdater.checkForUpdates();
+  }
   @IpcOn("settingsProvider.update", {
     debounce: 1000,
     filter: (ev, [key]: [string]) => key === "app.autoupdate",

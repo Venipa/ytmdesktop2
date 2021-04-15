@@ -51,7 +51,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       fs.writeSync(scssPath, Buffer.from(""));
       return;
     }
-    console.log(`ytd loading custom css from ${scssPath}`);
+    this.logger.debug(`ytd loading custom css from ${scssPath}`);
     await Promise.all(
       BrowserWindow.getAllWindows()
         .filter(

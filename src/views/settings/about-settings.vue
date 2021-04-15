@@ -15,7 +15,27 @@
           <span class="font-semibold">Version</span>
           <span class="text-green-500 text-sm">{{ appVersion }}</span>
         </div>
-        <button class="btn btn-ghost">Update</button>
+        <button
+          class="btn btn-ghost"
+          v-if="downloaded && available"
+          @click="runUpdate"
+        >
+          Install Update
+        </button>
+        <button
+          class="btn btn-ghost"
+          v-else-if="available && !downloaded"
+          disabled
+        >
+          Downloading...
+        </button>
+        <button
+          class="btn btn-ghost"
+          v-else-if="!available && !downloaded"
+          @click="checkUpdate"
+        >
+          Check for Update
+        </button>
       </div>
     </div>
   </div>
@@ -25,10 +45,34 @@
 import { defineComponent } from "vue";
 
 export default defineComponent({
+  data() {
+    return {
+      downloaded: false,
+      available: false,
+    };
+  },
   computed: {
     appVersion(): string {
       return (window as any).app.version;
     },
+  },
+  methods: {
+    runUpdate() {
+      (window as any).app.installUpdate();
+    },
+    checkUpdate() {
+      (window as any).app.checkUpdate();
+    },
+  },
+  created() {
+    (window as any).ipcRenderer.on(
+      "app.updateAvailable",
+      () => (this.available = true)
+    );
+    (window as any).ipcRenderer.on(
+      "app.updateDownloaded",
+      () => (this.downloaded = true)
+    );
   },
 });
 </script>

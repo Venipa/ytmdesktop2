@@ -14,10 +14,12 @@ import path from "path";
 import { BaseProvider } from "./plugins/_baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
 import { isDevelopment } from "./utils/devUtils";
+import Logger from "@/utils/Logger";
 const defaultUrl = "https://music.youtube.com";
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
 }
+const log = new Logger("main");
 export default function() {
   const serviceCollection = (() => {
     const pluginContext = require.context("./plugins", false, /plugin.ts$/i);
@@ -47,10 +49,10 @@ export default function() {
         providers.find((x) => x.getName() === name),
     };
   })();
-  console.log(
+  log.debug(
     `Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`
   );
-  console.log("preload.js: ", parseScriptPath("preload.js"));
+  log.debug("preload.js: ", parseScriptPath("preload.js"));
   /**
    *
    * @param {Electron.BrowserWindowConstructorOptions | undefined} options
@@ -112,7 +114,7 @@ export default function() {
       },
     });
     if (process.env.WEBPACK_DEV_SERVER_URL) {
-      console.log("dev url:", process.env.WEBPACK_DEV_SERVER_URL);
+      log.debug("dev url:", process.env.WEBPACK_DEV_SERVER_URL);
       // Load the url of the dev server if in development mode
       await win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
       if (isDevelopment) win.webContents.openDevTools();
@@ -157,7 +159,7 @@ export default function() {
       try {
         await installExtension(VUEJS_DEVTOOLS);
       } catch (e) {
-        console.error("Vue Devtools failed to install:", e.toString());
+        log.error("Vue Devtools failed to install:", e.toString());
       }
     } else {
       createProtocol("app");
@@ -182,7 +184,7 @@ export default function() {
         settingsWindow.show();
       }
     } catch (err) {
-      console.error(err);
+      log.error(err);
     }
   });
   ipcMain.on("settings.close", async () => {
@@ -195,12 +197,11 @@ export default function() {
 
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {
-    const devLog = console.log;
     ipcMain
       .eventNames()
       .filter((x) => typeof x === "string")
       .forEach((event: any) =>
-        ipcMain.on(event as string, (ev, ...args) => devLog(event, ...args))
+        ipcMain.on(event as string, (ev, ...args) => new Logger(`event:${event}`).debug(event, ...args))
       );
     if (process.platform === "win32") {
       process.on("message", (data) => {

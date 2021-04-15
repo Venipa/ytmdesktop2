@@ -2,24 +2,22 @@ import { BrowserWindow } from "electron";
 import { render } from "sass";
 // @ts-ignore
 import youtubeInjectScript from "!raw-loader!../../youtube-inject.js";
+import Logger from "@/utils/Logger";
 
+const log = new Logger("InjectUtils");
 export async function rootWindowInjectUtils(win: BrowserWindow) {
   // Inject css
   const css = await import(
     // @ts-ignore
     "!raw-loader!sass-loader!../../assets/youtube-inject.scss"
   );
-  if (!css) console.error("ytd2-css", "failed to load css");
-  console.log(
-    "youtube-inject.js",
-    await win.webContents.executeJavaScript(
-      `${youtubeInjectScript}
+  if (!css) log.error("ytd2-css", "failed to load css");
+  await win.webContents.executeJavaScript(
+    `${youtubeInjectScript}
     initializeYoutubeDesktop({
       customCss: \`${css.default}\`
     })
     `
-    ),
-    css.default
   );
 }
 export async function rootWindowInjectCustomCss(
