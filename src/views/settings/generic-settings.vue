@@ -53,7 +53,7 @@ export default defineComponent({
   components: { SettingsCheckbox },
   methods: {
     disableGetStarted() {
-      (window as any).app.settingsProvider
+      (window as any).api.settingsProvider
         .update("app.getstarted", false)
         .then((v) => {
           this.getStartedEnabled = v;
@@ -63,7 +63,7 @@ export default defineComponent({
   setup() {
     const getStartedEnabled = ref<boolean>(true);
     onMounted(async () => {
-      getStartedEnabled.value = await (window as any).app.settingsProvider.get(
+      getStartedEnabled.value = await (window as any).api.settingsProvider.get(
         "app.getstarted",
         true
       );

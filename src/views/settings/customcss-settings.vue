@@ -44,10 +44,10 @@ export default defineComponent({
   components: { SettingsCheckbox, SettingsInput, EaseTransition },
   methods: {
     reloadCSS() {
-      (window as any).app.reloadCustomCss();
+      (window as any).api.reloadCustomCss();
     },
     scssWatch(enabled: boolean) {
-      (window as any).app.watchCustomCss(!!enabled);
+      (window as any).api.watchCustomCss(!!enabled);
     }
   },
   setup() {

@@ -1,5 +1,7 @@
 import Logger from "@/utils/Logger";
 import { App } from "electron";
+import { BrowserView } from "electron/main";
+import { BrowserWindowViews } from "../utils/mappedWindow";
 
 export interface OnInit {
   OnInit(app?: App): void | Promise<void>;
@@ -15,8 +17,12 @@ export class BaseProvider {
   __type = "service_provider";
   private __providers: { [key: string]: BaseProvider & any } = {};
   private _loggerInstance: Logger;
+  private _views: BrowserWindowViews<{ youtubeView: BrowserView }>;
   get logger() {
     return this._loggerInstance;
+  }
+  get views() {
+    return this._views.views;
   }
   constructor(private name: string, private displayName: string = name) {
     this._loggerInstance = new Logger(displayName || name);
@@ -30,6 +36,9 @@ export class BaseProvider {
   }
   _registerProviders(p: BaseProvider[]) {
     this.__providers = p.reduce((l, r) => ({ ...l, [r.getName()]: r }), {});
+  }
+  _registerWindows(views: BrowserWindowViews<{ youtubeView: BrowserView }>) {
+    this._views = views;
   }
   getProvider(name: string) {
     return this.__providers[name];

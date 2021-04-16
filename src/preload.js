@@ -1,12 +1,15 @@
 import { contextBridge, ipcRenderer } from "electron";
 import pkg from "../package.json";
 contextBridge.exposeInMainWorld("ipcRenderer", {
-  emit: (event, ...data) => ipcRenderer.send(event, ...data),
+  emit: (event, ...data) => {
+    console.log('ytd2-emit |', event, ...data);
+    ipcRenderer.send(event, ...data);
+  },
   on: (channel, func) => ipcRenderer.on(channel, func),
   appVersion: pkg.version,
 });
 
-contextBridge.exposeInMainWorld("app", {
+contextBridge.exposeInMainWorld("api", {
   version: pkg.version,
   settings: {
     open: () => ipcRenderer.send("settings.show"),
@@ -28,4 +31,5 @@ contextBridge.exposeInMainWorld("app", {
       ipcRenderer.invoke("settingsProvider.update", key, value),
     save: () => ipcRenderer.send("settingsProvider.save"),
   },
+  quit: () => ipcRenderer.send("app.quit")
 });

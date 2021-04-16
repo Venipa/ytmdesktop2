@@ -53,15 +53,15 @@ export default defineComponent({
   },
   computed: {
     appVersion(): string {
-      return (window as any).app.version;
+      return (window as any).api.version;
     },
   },
   methods: {
     runUpdate() {
-      (window as any).app.installUpdate();
+      (window as any).api.installUpdate();
     },
     checkUpdate() {
-      (window as any).app.checkUpdate();
+      (window as any).api.checkUpdate();
     },
   },
   created() {

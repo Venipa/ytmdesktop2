@@ -1,18 +1,23 @@
 <template>
   <div class="h-full">
-    <control-bar></control-bar>
+    <control-bar v-if="showControlBar" title="Settings"></control-bar>
     <router-view></router-view>
   </div>
 </template>
 
 <script>
-import ControlBar from './components/ControlBar'
+import ControlBar from "./components/ControlBar";
 export default {
-  name: 'App',
+  name: "App",
   components: {
-    ControlBar
-  }
-}
+    ControlBar,
+  },
+  computed: {
+    showControlBar() {
+      return !document.location.hash.match(/^\#\/youtube/);
+    },
+  },
+};
 </script>
 
 <style>

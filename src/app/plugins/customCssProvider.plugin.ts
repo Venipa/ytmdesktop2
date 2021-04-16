@@ -52,15 +52,10 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       return;
     }
     this.logger.debug(`ytd loading custom css from ${scssPath}`);
-    await Promise.all(
-      BrowserWindow.getAllWindows()
-        .filter(
-          (x) => x.webContents.getURL().indexOf("https://music.youtube") === 0
-        )
-        .map((x) => {
-          return rootWindowInjectCustomCss(x, scssPath).catch(() => null);
-        })
-    );
+    rootWindowInjectCustomCss(
+      this.views.youtubeView.webContents,
+      scssPath
+    ).catch(() => null);
   }
   async AfterInit() {}
 }

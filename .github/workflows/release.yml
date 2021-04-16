@@ -1,9 +1,10 @@
 name: Build/release
 on:
   push:
-    tags:
-      - "v*"
-
+    branches:
+      - master
+env:
+  NODE_ENV: production
 jobs:
   release:
     runs-on: ${{ matrix.os }}

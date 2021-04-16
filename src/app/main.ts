@@ -7,6 +7,7 @@ import {
   shell,
   BrowserWindowConstructorOptions,
   contextBridge,
+  BrowserView,
 } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
@@ -15,6 +16,7 @@ import { BaseProvider } from "./plugins/_baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
 import { isDevelopment } from "./utils/devUtils";
 import Logger from "@/utils/Logger";
+import { BrowserWindowViews } from "./utils/mappedWindow";
 
 const defaultUrl = "https://music.youtube.com";
 function parseScriptPath(p: string) {
@@ -64,18 +66,19 @@ export default function() {
       width: 1500,
       height: 800,
       autoHideMenuBar: true,
-      backgroundColor: "#232323",
+      backgroundColor: "#000000",
       center: true,
       closable: true,
       skipTaskbar: false,
       resizable: true,
+      frame: false,
+      titleBarStyle: "hidden",
       maximizable: true,
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
         webviewTag: true,
         contextIsolation: true,
         enableRemoteModule: false,
-        preload: parseScriptPath("preload.js"),
       },
       ...(options || {}),
     });
@@ -94,8 +97,67 @@ export default function() {
         callback({ requestHeaders: newRequestHeaders });
       }
     );
-    await win.loadURL(defaultUrl);
-    return win;
+    const youtubeView = new BrowserView({
+      webPreferences: {
+        nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
+        webviewTag: true,
+        contextIsolation: true,
+        enableRemoteModule: false,
+        preload: parseScriptPath("preload.js"),
+      },
+    });
+    const toolbarView = new BrowserView({
+      webPreferences: {
+        nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
+        webviewTag: false,
+        enableRemoteModule: false,
+        contextIsolation: true,
+        sandbox: true,
+        nativeWindowOpen: true,
+        preload: parseScriptPath("preload.js"),
+      },
+    });
+    const toolbarUrl = (process.env.WEBPACK_DEV_SERVER_URL
+      ? process.env.WEBPACK_DEV_SERVER_URL
+      : "app://./index.html/"
+    ).concat("#/youtube/toolbar");
+    win.addBrowserView(youtubeView);
+    win.addBrowserView(toolbarView);
+    const windowSize = win.getSize();
+    youtubeView.setBounds({
+      y: 40,
+      x: 0,
+      height: windowSize[1] - 40,
+      width: windowSize[0],
+    });
+    toolbarView.setBounds({
+      height: 40,
+      y: 0,
+      x: 0,
+      width: windowSize[0],
+    });
+    toolbarView.setAutoResize({ width: true });
+    youtubeView.setAutoResize({ width: true, height: true });
+    await toolbarView.webContents.loadURL(toolbarUrl);
+    await youtubeView.webContents.loadURL(defaultUrl);
+
+    if (isDevelopment)
+      youtubeView.webContents.openDevTools({ mode: "detach" }),
+        toolbarView.webContents.openDevTools({ mode: "detach" });
+
+    try {
+      if (serviceCollection)
+        serviceCollection.providers.forEach((p) =>
+          p._registerWindows(mainWindow)
+        );
+    } catch {}
+    return {
+      main: win,
+      views: {
+        youtubeView,
+        toolbarView,
+      },
+    };
   }
   async function createAppWindow() {
     // Create the browser window.
@@ -141,13 +203,21 @@ export default function() {
     }
   });
 
-  let mainWindow: BrowserWindow;
+  let mainWindow: BrowserWindowViews<{
+    youtubeView: BrowserView;
+    toolbarView: BrowserView;
+  }>;
   app.on("activate", async () => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = await createRootWindow();
-      rootWindowInjectUtils(mainWindow);
+      rootWindowInjectUtils(mainWindow.views.youtubeView.webContents);
+
+      if (serviceCollection)
+        serviceCollection.providers.forEach((p) =>
+          p._registerWindows(mainWindow)
+        );
       setTimeout(() => {
         ipcMain.emit("settings.customCssUpdate");
         ipcMain.emit("settings.customCssWatch");
@@ -160,7 +230,7 @@ export default function() {
       try {
         await installExtension(VUEJS_DEVTOOLS);
       } catch (e) {
-        log.error("Vue Devtools failed to install:", e.toString());
+        log.error("Vue Devtools failed to install:", e.message);
       }
     } else {
       createProtocol("app");
@@ -168,8 +238,11 @@ export default function() {
     await serviceCollection.exec("OnInit");
     mainWindow = await createRootWindow();
     await serviceCollection.exec("AfterInit");
-    if (isDevelopment) mainWindow.webContents.openDevTools();
-    rootWindowInjectUtils(mainWindow);
+    rootWindowInjectUtils(mainWindow.views.youtubeView.webContents);
+    if (serviceCollection)
+      serviceCollection.providers.forEach((p) =>
+        p._registerWindows(mainWindow)
+      );
     setTimeout(() => {
       ipcMain.emit("settings.customCssUpdate");
       ipcMain.emit("settings.customCssWatch");
@@ -195,6 +268,9 @@ export default function() {
       settingsWindow.close();
     }
   });
+  ipcMain.on("app.quit", () => {
+    app.quit();
+  });
 
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {
@@ -202,7 +278,9 @@ export default function() {
       .eventNames()
       .filter((x) => typeof x === "string")
       .forEach((event: any) =>
-        ipcMain.on(event as string, (ev, ...args) => new Logger(`event:${event}`).debug(event, ...args))
+        ipcMain.on(event as string, (ev, ...args) =>
+          new Logger(`event:${event}`).debug(event, ...args)
+        )
       );
     if (process.platform === "win32") {
       process.on("message", (data) => {

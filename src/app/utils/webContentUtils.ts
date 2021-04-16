@@ -1,27 +1,14 @@
-import { BrowserWindow } from "electron";
+import { BrowserWindow, WebContents } from "electron";
 import { render } from "sass";
 // @ts-ignore
 import youtubeInjectScript from "!raw-loader!../../youtube-inject.js";
-import Logger from "@/utils/Logger";
 
-const log = new Logger("InjectUtils");
-export async function rootWindowInjectUtils(win: BrowserWindow) {
-  // Inject css
-  const css = await import(
-    // @ts-ignore
-    "!raw-loader!sass-loader!../../assets/youtube-inject.scss"
-  );
-  if (!css) log.error("ytd2-css", "failed to load css");
-  await win.webContents.executeJavaScript(
-    `${youtubeInjectScript}
-    initializeYoutubeDesktop({
-      customCss: \`${css.default}\`
-    })
-    `
-  );
+export async function rootWindowInjectUtils(webContents: WebContents) {
+  await webContents.executeJavaScript(youtubeInjectScript);
+  await webContents.executeJavaScript(`initializeYoutubeDesktop()`);
 }
 export async function rootWindowInjectCustomCss(
-  win: BrowserWindow,
+  webContents: WebContents,
   scssFile: string
 ) {
   const css = await new Promise<string>((resolve, reject) => {
@@ -30,7 +17,7 @@ export async function rootWindowInjectCustomCss(
       resolve(result ? result.css.toString() : null);
     });
   }).catch(() => null);
-  await win.webContents.executeJavaScript(
+  await webContents.executeJavaScript(
     `initializeYoutubeCustomCSS({ customCss: \`${css || ""}\` })`
   );
 }

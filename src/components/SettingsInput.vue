@@ -58,7 +58,7 @@ export default defineComponent({
     const value = ref<any>(),
       fileInputRef = ref<any>();
     onMounted(async () => {
-      value.value = await (window as any).app.settingsProvider.get(
+      value.value = await (window as any).api.settingsProvider.get(
         context.configKey,
         context.defaultValue !== undefined ? context.defaultValue : null
       );
@@ -73,7 +73,7 @@ export default defineComponent({
       if (this.configKey) {
         if (ev.type === "file" && ev.files.length === 0) return;
         const value = ev.type === "file" ? ev.files[0].path : ev.value;
-        (window as any).app.settingsProvider.update(this.configKey, value).then(v => this.value = v);
+        (window as any).api.settingsProvider.update(this.configKey, value).then(v => this.value = v);
       }
     }, 1500);
   },
