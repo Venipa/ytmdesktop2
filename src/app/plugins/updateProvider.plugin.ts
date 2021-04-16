@@ -1,4 +1,5 @@
-import { App, autoUpdater, ipcMain } from "electron";
+import { App, ipcMain } from "electron";
+import { autoUpdater } from "electron-updater";
 import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
 import { AfterInit, BaseProvider, OnInit } from "./_baseProvider";
@@ -27,14 +28,15 @@ export default class EventProvider extends BaseProvider
     if (!isDevelopment) {
       const settings = this.settingsInstance;
       const app = settings.get("app");
-      const server = "https://update.electronjs.org";
-      const feed = `${server}/Venipa/ytmdesktop2/${process.platform}-${
-        process.arch
-      }/${this.app.getVersion()}`;
 
+      autoUpdater.logger = this.logger;
       autoUpdater.setFeedURL({
-        url: feed,
+        provider: "github",
+        owner: process.env.VUE_APP_USER,
+        repo: process.env.VUE_APP_REPO,
       });
+      autoUpdater.autoDownload = true;
+      autoUpdater.autoInstallOnAppQuit = true;
       autoUpdater.on("update-available", () => {
         this.logger.debug("Update Available");
         this._updateAvailable = true;
@@ -45,10 +47,9 @@ export default class EventProvider extends BaseProvider
         (this._updateAvailable = true), (this._updateDownloaded = true);
         ipcMain.emit("app.updateDownloaded");
       });
-      if (app.autoupdate) autoUpdater.checkForUpdates();
+      if (app.autoupdate) autoUpdater.checkForUpdatesAndNotify();
     }
   }
-  private _autoUpdateCheckHandle;
   AfterInit() {
     this.logger.debug("Initialized");
   }
@@ -62,8 +63,9 @@ export default class EventProvider extends BaseProvider
     debounce: 1000,
   })
   onCheckUpdate() {
-    autoUpdater.checkForUpdates();
+    autoUpdater.checkForUpdatesAndNotify();
   }
+  private _autoUpdateCheckHandle;
   @IpcOn("settingsProvider.update", {
     debounce: 1000,
     filter: (ev, [key]: [string]) => key === "app.autoupdate",
@@ -77,7 +79,9 @@ export default class EventProvider extends BaseProvider
       if (autoUpdateEnabled) {
         if (!this._autoUpdateCheckHandle)
           this._autoUpdateCheckHandle = setInterval(() => {
-            autoUpdater.checkForUpdates();
+            autoUpdater.checkForUpdates().then((x) => {
+              if (x && x.updateInfo) ipcMain.emit("app.updateAvailable");
+            });
           }, 1000 * 60 * 5);
       } else if (this._autoUpdateCheckHandle) {
         clearInterval(this._autoUpdateCheckHandle);
