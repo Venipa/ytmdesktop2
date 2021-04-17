@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
     console.log('ytd2-emit |', event, ...data);
     ipcRenderer.send(event, ...data);
   },
+  emitTo: (id, event, ...data) => ipcRenderer.sendTo(id, event, ...data),
   on: (channel, func) => ipcRenderer.on(channel, func),
   appVersion: pkg.version,
 });

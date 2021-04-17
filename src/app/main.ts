@@ -16,7 +16,8 @@ import { BaseProvider } from "./plugins/_baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
 import { isDevelopment } from "./utils/devUtils";
 import Logger from "@/utils/Logger";
-import { BrowserWindowViews } from "./utils/mappedWindow";
+import { BrowserWindowViews, getViewObject } from "./utils/mappedWindow";
+import { debounce } from "lodash-es";
 
 const defaultUrl = "https://music.youtube.com";
 function parseScriptPath(p: string) {
@@ -151,6 +152,25 @@ export default function() {
           p._registerWindows(mainWindow)
         );
     } catch {}
+    let fromMaximized = false;
+    win.on("maximize", () => {
+      fromMaximized = true;
+      if (process.platform === "win32")
+        toolbarView.setBounds({
+          ...toolbarView.getBounds(),
+          width: win.getSize()[0] - 20,
+        });
+    });
+    win.on(
+      "resize",
+      debounce(() => {
+        if (fromMaximized && !win.isMaximized())
+          toolbarView.setBounds({
+            ...toolbarView.getBounds(),
+            width: win.getSize()[0],
+          });
+      }, 50)
+    );
     return {
       main: win,
       views: {
@@ -212,7 +232,10 @@ export default function() {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = await createRootWindow();
-      rootWindowInjectUtils(mainWindow.views.youtubeView.webContents);
+      rootWindowInjectUtils(
+        mainWindow.views.youtubeView.webContents,
+        getViewObject(mainWindow)
+      );
 
       if (serviceCollection)
         serviceCollection.providers.forEach((p) =>
@@ -238,7 +261,10 @@ export default function() {
     await serviceCollection.exec("OnInit");
     mainWindow = await createRootWindow();
     await serviceCollection.exec("AfterInit");
-    rootWindowInjectUtils(mainWindow.views.youtubeView.webContents);
+    rootWindowInjectUtils(
+      mainWindow.views.youtubeView.webContents,
+      getViewObject(mainWindow)
+    );
     if (serviceCollection)
       serviceCollection.providers.forEach((p) =>
         p._registerWindows(mainWindow)

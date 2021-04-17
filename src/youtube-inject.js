@@ -23,14 +23,23 @@ const initializeYoutubeCustomCSS = function(options) {
   }
 };
 
-
-
-console.log('ytd2-track-watch', 'init', 'title =>', !!document.querySelector("title").childNodes[0]);
+console.log(
+  "ytd2-track-watch",
+  "init",
+  "title =>",
+  !!document.querySelector("title").childNodes[0]
+);
 const trackObservers = {
   "track:title": () => {
+    const title = document.querySelector(".title.ytmusic-player-bar") || document.querySelector(".song-title[title]");
     ipcRenderer.emit(
       "track:title",
-      document.querySelector(".title.ytmusic-player-bar").textContent
+      title.textContent
+    );
+    ipcRenderer.emitTo(
+      __ytd_window_data.toolbarView,
+      "track:title",
+      title.textContent
     );
   },
   "track:info": () => {
@@ -41,9 +50,12 @@ const trackObservers = {
   },
 };
 
-new MutationObserver(function() {
+const updateTrack = new MutationObserver(function(mutations) {
   Object.values(trackObservers).forEach((runner) => runner());
-}).observe(document.querySelector(".ytp-title").childNodes[0], {
-  childList: true,
-  subtree: true
 });
+document.querySelectorAll('.ytp-title').forEach(x => {
+  updateTrack.observe(x.childNodes[0].parentNode, {
+    childList: true,
+    subtree: true
+  });
+})
