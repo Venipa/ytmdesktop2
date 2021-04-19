@@ -7,9 +7,11 @@ const builderOptions = {
   productName: "Youtube Music for Desktop",
   mac: {
     category: "public.app-category.music",
+    icon: "src/assets/build_resources/mac/icon.icns",
   },
   dmg: {
-    icon: false,
+    icon: "src/assets/build_resources/mac/icon.icns",
+    title: "Install/Update ${productName} ${version}",
   },
   linux: {
     target: ["AppImage"],
@@ -18,7 +20,10 @@ const builderOptions = {
   squirrelWindows: null,
   nsis: {
     installerIcon: "src/assets/logo.ico",
-    menuCategory: "Youtube",
+    deleteAppDataOnUninstall: true,
+  },
+  win: {
+    icon: "src/assets/logo.ico",
   },
 };
 module.exports = {
