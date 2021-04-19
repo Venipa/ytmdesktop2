@@ -5,9 +5,9 @@ const builderOptions = {
   publish: ["github"],
   squirrelWindows: null,
   nsis: {
-    installerIcon: 'src/assets/logo.ico',
-    menuCategory: 'Venipa'
-  }
+    installerIcon: "src/assets/logo.ico",
+    menuCategory: "Venipa",
+  },
 };
 
 module.exports = {
@@ -15,7 +15,7 @@ module.exports = {
     electronBuilder: {
       preload: {
         preload: "src/preload.js",
-        toolbar: "src/toolbar.js"
+        toolbar: "src/toolbar.js",
       },
       nodeIntegration: false,
       builderOptions,
@@ -27,6 +27,12 @@ module.exports = {
       .test(() => false)
       .use("raw-loader")
       .loader("raw-loader")
+      .end();
+    config.module
+      .rule("svg")
+      .test(() => /\.svg$/)
+      .use("svg-inline-loader")
+      .loader("svg-inline-loader")
       .end();
   },
   configureWebpack: {

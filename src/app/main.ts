@@ -66,6 +66,8 @@ export default function() {
     const win = new BrowserWindow({
       width: 1500,
       height: 800,
+      minWidth: 600,
+      minHeight: 480,
       autoHideMenuBar: true,
       backgroundColor: "#000000",
       center: true,
@@ -184,7 +186,9 @@ export default function() {
     const win = new BrowserWindow({
       width: 800,
       height: 600,
-      backgroundColor: "#232323",
+      minWidth: 600,
+      minHeight: 480,
+      backgroundColor: "#000000",
       frame: false,
       webPreferences: {
         // Use pluginOptions.nodeIntegration, leave this alone
@@ -294,9 +298,18 @@ export default function() {
       settingsWindow.close();
     }
   });
+  ipcMain.on("app.minimize", (ev) => {
+    const window = BrowserWindow.fromWebContents(ev.sender);
+    if (window?.minimizable) mainWindow.main.minimize();
+  });
+  ipcMain.on("app.maximize", (ev) => {
+    const window = BrowserWindow.fromWebContents(ev.sender);
+    if (window?.maximizable && window?.isMaximized()) mainWindow.main.maximize();
+  });
   ipcMain.on("app.quit", () => {
     app.quit();
   });
+  
 
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {

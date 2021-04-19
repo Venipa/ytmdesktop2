@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer,  } from "electron";
 import pkg from "../package.json";
 contextBridge.exposeInMainWorld("ipcRenderer", {
   emit: (event, ...data) => {
@@ -32,5 +32,7 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("settingsProvider.update", key, value),
     save: () => ipcRenderer.send("settingsProvider.save"),
   },
+  minimize: () => ipcRenderer.send('app.minimize'),
+  maximize: () => ipcRenderer.send('app.maximize'),
   quit: () => ipcRenderer.send("app.quit")
 });

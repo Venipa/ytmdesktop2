@@ -10,10 +10,7 @@
         </template>
       </div>
       <div class="flex items-center space-x-2">
-        <div
-          @click="onSettings"
-          class="control-button"
-        >
+        <div @click="onSettings" class="control-button">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -28,58 +25,10 @@
         </div>
         <div class="w-px h-6 bg-gray-600"></div>
         <div class="flex items-center space-x-1">
-          <div
-            @click="onMin"
-            class="control-button"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="4 14 10 14 10 20"></polyline>
-              <polyline points="20 10 14 10 14 4"></polyline>
-              <line x1="14" y1="10" x2="21" y2="3"></line>
-              <line x1="3" y1="21" x2="10" y2="14"></line>
-            </svg>
-          </div>
-          <div
-            @click="onMax"
-            class="control-button"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
-              ></path>
-            </svg>
-          </div>
-          <div
-            @click="onClose"
-            class="control-button control-button-danger"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clip-rule="evenodd"
-              />
-            </svg>
+          <div @click="onMin" class="control-button"><MinIcon /></div>
+          <div @click="onMax" class="control-button"><MaxIcon /></div>
+          <div @click="onClose" class="control-button control-button-danger">
+            <CloseIcon />
           </div>
         </div>
       </div>
@@ -89,8 +38,16 @@
 
 <script>
 import { defineComponent } from "vue";
+import CloseIcon from "@/assets/icons/close.svg";
+import MaxIcon from "@/assets/icons/max-window.svg";
+import MinIcon from "@/assets/icons/min-window.svg";
 
 export default defineComponent({
+  components: {
+    CloseIcon,
+    MaxIcon,
+    MinIcon
+  },
   data() {
     return {
       title: null,
@@ -127,7 +84,9 @@ export default defineComponent({
     }
   }
   @apply h-8 w-8 rounded flex items-center justify-center text-gray-50 transition duration-100;
-  &:hover, &:active, &:focus {
+  &:hover,
+  &:active,
+  &:focus {
     @apply bg-gray-600;
   }
   &:active {
