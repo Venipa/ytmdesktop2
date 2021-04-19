@@ -1,8 +1,8 @@
 name: Build/release
 on:
   push:
-    branches:
-      - master
+    tags:
+      - "v*"
 env:
   NODE_ENV: production
 jobs:
