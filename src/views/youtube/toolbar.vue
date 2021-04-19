@@ -4,7 +4,7 @@
       class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2"
     >
       <div class="flex items-center flex-1 drag space-x-2">
-        <span class="text-xs label">Youtube Music for Desktop (v2)</span>
+        <span class="text-xs label">Youtube Music for Desktop</span>
         <template v-if="title">
           <span class="text-xs badge badge-sm badge-primary">{{ title }}</span>
         </template>
