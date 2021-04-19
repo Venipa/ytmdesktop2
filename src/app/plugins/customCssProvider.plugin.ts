@@ -43,7 +43,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   }
   @IpcOn("settings.customCssUpdate")
   private async _event_customCssUpdate(ev: IpcMainEvent, ...args: any[]) {
-    let scssPath = this.settingsInstance.get(
+    const scssPath = this.settingsInstance.get(
       "customcss.scssFile",
       path.resolve(this.app.getPath("userData"), "custom.scss")
     );

@@ -9,10 +9,11 @@ const builderOptions = {
     menuCategory: "Venipa",
   },
 };
-
 module.exports = {
   pluginOptions: {
     electronBuilder: {
+      chainWebpackMainProcess: (config) => {},
+      mainProcessTypeChecking: false,
       preload: {
         preload: "src/preload.js",
         toolbar: "src/toolbar.js",
@@ -28,12 +29,17 @@ module.exports = {
       .use("raw-loader")
       .loader("raw-loader")
       .end();
-    config.module
-      .rule("svg")
-      .test(() => /\.svg$/)
-      .use("svg-inline-loader")
-      .loader("svg-inline-loader")
-      .end();
+
+    const svgRule = config.module.rule("svg");
+
+    svgRule.uses.clear();
+
+    svgRule
+      .use("vue-loader")
+      .loader("vue-loader-v16") // or `vue-loader-v16` if you are using a preview support of Vue 3 in Vue CLI
+      .end()
+      .use("vue-svg-loader")
+      .loader("vue-svg-loader");
   },
   configureWebpack: {
     devtool: "source-map",

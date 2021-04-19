@@ -46,7 +46,7 @@ export default defineComponent({
   components: {
     CloseIcon,
     MaxIcon,
-    MinIcon
+    MinIcon,
   },
   data() {
     return {

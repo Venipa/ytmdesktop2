@@ -79,9 +79,7 @@ export default function() {
       maximizable: true,
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-        webviewTag: true,
         contextIsolation: true,
-        enableRemoteModule: false,
       },
       ...(options || {}),
     });
@@ -103,17 +101,13 @@ export default function() {
     const youtubeView = new BrowserView({
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-        webviewTag: true,
         contextIsolation: true,
-        enableRemoteModule: false,
         preload: parseScriptPath("preload.js"),
       },
     });
     const toolbarView = new BrowserView({
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-        webviewTag: false,
-        enableRemoteModule: false,
         contextIsolation: true,
         sandbox: true,
         nativeWindowOpen: true,
@@ -173,6 +167,9 @@ export default function() {
           });
       }, 50)
     );
+    youtubeView.webContents.on("page-title-updated", (ev, title) =>
+      youtubeView.webContents.emit("window-title-updated", title)
+    );
     return {
       main: win,
       views: {
@@ -188,15 +185,16 @@ export default function() {
       height: 600,
       minWidth: 600,
       minHeight: 480,
+      minimizable: true,
+      alwaysOnTop: true,
       backgroundColor: "#000000",
       frame: false,
+      parent: mainWindow.main,
       webPreferences: {
         // Use pluginOptions.nodeIntegration, leave this alone
         // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-        webviewTag: true,
         contextIsolation: true,
-        enableRemoteModule: true,
         preload: parseScriptPath("preload.js"),
       },
     });
@@ -300,16 +298,16 @@ export default function() {
   });
   ipcMain.on("app.minimize", (ev) => {
     const window = BrowserWindow.fromWebContents(ev.sender);
-    if (window?.minimizable) mainWindow.main.minimize();
+    if (window && window.minimizable) window.minimize();
   });
   ipcMain.on("app.maximize", (ev) => {
     const window = BrowserWindow.fromWebContents(ev.sender);
-    if (window?.maximizable && window?.isMaximized()) mainWindow.main.maximize();
+    if (window && window.maximizable)
+      window.isMaximized() ? window.unmaximize() : window.maximize();
   });
   ipcMain.on("app.quit", () => {
     app.quit();
   });
-  
 
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {

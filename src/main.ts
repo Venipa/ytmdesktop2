@@ -3,7 +3,7 @@ import { createRouter, createWebHashHistory, RouteRecordRaw } from "vue-router";
 import App from "./App.vue";
 import "./assets/tailwind.scss";
 import "./assets/app.scss";
-import { merge } from "lodash-es";
+
 /**
  * @returns {RouteRecordRaw[]} routes
  */
@@ -15,6 +15,7 @@ function loadRoutes() {
     .map(context)
     .map((m: any) => m.default);
 }
+
 const router = createRouter({
   history: createWebHashHistory(),
   routes: loadRoutes(),

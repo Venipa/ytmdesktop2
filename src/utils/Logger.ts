@@ -79,7 +79,7 @@ export default class Logger {
   constructor(public moduleName: string, config: Partial<ILoggerConfig> = {}) {
     this.config = Object.assign({}, defaultConfig, config);
 
-    let maxLength = types.reduce((p, c) => (c.length > p ? c.length : p), 0);
+    const maxLength = types.reduce((p, c) => (c.length > p ? c.length : p), 0);
 
     if (this.config.padSeverity) {
       types.forEach(

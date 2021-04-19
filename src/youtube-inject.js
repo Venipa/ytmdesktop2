@@ -49,7 +49,9 @@ const trackObservers = {
     );
   },
 };
-
+window.ipcRenderer.on('window-title-updated', () => {
+  Object.values(trackObservers).forEach((runner) => runner());
+});
 const updateTrack = new MutationObserver(function(mutations) {
   Object.values(trackObservers).forEach((runner) => runner());
 });
