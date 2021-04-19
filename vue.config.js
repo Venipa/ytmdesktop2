@@ -3,10 +3,22 @@
  */
 const builderOptions = {
   publish: ["github"],
+  appId: "net.venipa.ytmdesktop",
+  productName: "Youtube Music for Desktop",
+  mac: {
+    category: "public.app-category.music",
+  },
+  dmg: {
+    icon: false,
+  },
+  linux: {
+    target: ["AppImage"],
+    category: "Music",
+  },
   squirrelWindows: null,
   nsis: {
     installerIcon: "src/assets/logo.ico",
-    menuCategory: "Venipa",
+    menuCategory: "Youtube",
   },
 };
 module.exports = {

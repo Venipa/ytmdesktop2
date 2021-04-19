@@ -1,35 +1,31 @@
-name: Build/release
 on:
   push:
+    # Sequence of patterns matched against refs/tags
     tags:
-      - "v*"
-env:
-  NODE_ENV: production
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+
 jobs:
-  release:
+  build:
     runs-on: ${{ matrix.os }}
 
+    # Platforms to build on/for
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Install Node.js, NPM and Yarn
         uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 14
 
-      - name: Electron Builder Action
-        uses: samuelmeuli/action-electron-builder@v1.6.0
-        with:
-          use_vue_cli: true
-          # GitHub token, automatically provided to the action
-          # (No need to define this secret in the repo settings)
-          github_token: ${{ secrets.github_token }}
+      - name: Install dependencies
+        run: yarn
 
-          # If the commit is tagged with a version (e.g. "v1.0.0"),
-          # release the app after building
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      - name: Build Electron release
+        run: yarn run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
