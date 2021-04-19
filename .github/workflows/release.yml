@@ -22,16 +22,8 @@ jobs:
         with:
           node-version: 12
 
-      - name: Install Snapcraft
-        uses: samuelmeuli/action-snapcraft@v1
-        # Only install Snapcraft on Ubuntu
-        if: startsWith(matrix.os, 'ubuntu')
-        with:
-          # Log in to Snap Store
-          snapcraft_token: ${{ secrets.SNAPCRAFT_TOKEN }}
-
-      - name: Build/release Electron app
-        uses: samuelmeuli/action-electron-builder@v1
+      - name: Electron Builder Action
+        uses: samuelmeuli/action-electron-builder@v1.6.0
         with:
           use_vue_cli: true
           # GitHub token, automatically provided to the action
