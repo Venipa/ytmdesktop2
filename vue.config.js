@@ -23,7 +23,7 @@ const builderOptions = {
     deleteAppDataOnUninstall: true,
   },
   win: {
-    icon: "src/assets/logo.ico",
+    icon: "src/assets/build_resources/win/icon.ico",
   },
 };
 module.exports = {
