@@ -1,5 +1,7 @@
 # ytmdesktop2
 
+[![Build/release](https://github.com/Venipa/ytmdesktop2/actions/workflows/release.yml/badge.svg)](https://github.com/Venipa/ytmdesktop2/actions/workflows/release.yml)
+
 ## Project setup
 ```
 yarn install
