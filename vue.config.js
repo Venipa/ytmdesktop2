@@ -39,7 +39,8 @@ const electronBuilder = {
   
   nodeIntegration: false,
   builderOptions,
-  externals: ['fsevents', 'fsevents.node', 'chokidar']
+  externals: ['chokidar'],
+  nodeModulesPath: ['./node_modules']
 };
 module.exports = {
   pluginOptions: {
