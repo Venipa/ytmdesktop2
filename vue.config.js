@@ -46,7 +46,6 @@ module.exports = {
     electronBuilder,
   },
   chainWebpack: (config) => {
-    config.externals();
     config.module
       .rule("raw")
       .test(() => false)
