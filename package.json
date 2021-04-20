@@ -59,6 +59,9 @@
     "vue-cli-plugin-tailwind": "~2.0.6",
     "vue-svg-loader": "^0.17.0-beta.2"
   },
+  "resolutions": {
+    "chokidar": "2.1.8"
+  },
   "browserslist": [
     "> 1%",
     "last 2 versions",
