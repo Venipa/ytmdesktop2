@@ -40,6 +40,10 @@ module.exports = {
     },
   },
   chainWebpack: (config) => {
+    
+    config.externals({
+      fsevents: "require('fsevents')"
+    })
     config.module
       .rule("raw")
       .test(() => false)
@@ -59,6 +63,6 @@ module.exports = {
       .loader("vue-svg-loader");
   },
   configureWebpack: {
-    devtool: "source-map",
+    devtool: "inline-source-map",
   },
 };
