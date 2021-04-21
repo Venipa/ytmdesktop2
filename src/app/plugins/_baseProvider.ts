@@ -2,7 +2,9 @@ import Logger from "@/utils/Logger";
 import { App } from "electron";
 import { BrowserView } from "electron/main";
 import { BrowserWindowViews } from "../utils/mappedWindow";
-
+export interface BeforeStart {
+  BeforeStart(): void | Promise<void>;
+}
 export interface OnInit {
   OnInit(app?: App): void | Promise<void>;
 }

@@ -7,7 +7,7 @@ import { basename } from "path";
 import { IpcOn } from "../utils/onIpcEvent";
 
 export default class EventProvider extends BaseProvider
-  implements OnInit, AfterInit {
+  implements OnInit, AfterInit, BeforeStart {
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
@@ -24,10 +24,10 @@ export default class EventProvider extends BaseProvider
   constructor(private app: App) {
     super("startup");
   }
-  OnInit() {
+  BeforeStart() {
     if (!isDevelopment) {
-      const settings = this.settingsInstance;
-      const app = settings.get("app");
+      const settings = this.settingsInstance.instance();
+      const app = settings.app;
 
       autoUpdater.logger = this.logger;
       autoUpdater.setFeedURL({
@@ -42,13 +42,17 @@ export default class EventProvider extends BaseProvider
         this._updateAvailable = true;
         ipcMain.emit("app.updateAvailable");
       });
-      autoUpdater.on("update-downloaded", () => {
+      autoUpdater.signals.updateDownloaded(() => {
         this.logger.debug("Update Downloaded");
         (this._updateAvailable = true), (this._updateDownloaded = true);
         ipcMain.emit("app.updateDownloaded");
+
+        if (app.autoupdate) autoUpdater.quitAndInstall(true);
       });
       if (app.autoupdate) autoUpdater.checkForUpdatesAndNotify();
     }
+  }
+  OnInit() {
   }
   AfterInit() {
     this.logger.debug("Initialized");
@@ -70,7 +74,7 @@ export default class EventProvider extends BaseProvider
     debounce: 1000,
     filter: (ev, ...[key]: [string]) => key === "app.autoupdate",
   })
-  onAutoUpdateToggled(ev, [key, value]: [string, boolean]) {
+  onAutoUpdateToggled(ev, ...[key, value]: [string, boolean]) {
     const autoUpdateEnabled = this.settingsInstance.get(
       "app.autoupdate",
       false

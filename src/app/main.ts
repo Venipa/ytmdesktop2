@@ -24,7 +24,7 @@ function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
 }
 const log = new Logger("main");
-export default function() {
+export default async function() {
   const serviceCollection = (() => {
     const pluginContext = require.context("./plugins", false, /plugin.ts$/i);
     const providers = pluginContext
@@ -42,7 +42,9 @@ export default function() {
     return {
       providers,
       getProviderNames: () => providers.map((x: BaseProvider) => x.getName()),
-      exec: async (event: "OnInit" | "OnDestroy" | "AfterInit") => {
+      exec: async (
+        event: "OnInit" | "OnDestroy" | "AfterInit" | "BeforeStart"
+      ) => {
         return await Promise.all(
           providers
             .filter((x) => typeof x[event] === "function")
@@ -57,6 +59,12 @@ export default function() {
     `Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`
   );
   log.debug("preload.js: ", parseScriptPath("preload.js"));
+
+  try {
+    await serviceCollection.exec("BeforeStart");
+  } catch (ex) {
+    log.error(ex); // before start can be ignored, experimental
+  }
   /**
    *
    * @param {Electron.BrowserWindowConstructorOptions | undefined} options
@@ -266,9 +274,7 @@ export default function() {
       mainWindow.views.youtubeView.webContents,
       getViewObject(mainWindow)
     );
-    serviceCollection.providers.forEach((p) =>
-      p._registerWindows(mainWindow)
-    );
+    serviceCollection.providers.forEach((p) => p._registerWindows(mainWindow));
     setTimeout(() => {
       ipcMain.emit("settings.customCssUpdate");
       ipcMain.emit("settings.customCssWatch");
