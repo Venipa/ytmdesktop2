@@ -53,6 +53,9 @@ export default defineComponent({
       title: null,
     };
   },
+  beforeRouteLeave() {
+    return;
+  },
   methods: {
     onClose() {
       window.api.quit();
