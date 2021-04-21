@@ -39,7 +39,7 @@ const electronBuilder = {
   
   nodeIntegration: false,
   builderOptions,
-  externals: ['chokidar'],
+  externals: ['chokidar', 'discord-rpc'],
   nodeModulesPath: ['./node_modules']
 };
 module.exports = {
