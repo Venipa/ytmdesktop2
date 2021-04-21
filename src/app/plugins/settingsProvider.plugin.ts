@@ -1,4 +1,4 @@
-import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import { App, ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { BaseProvider, OnInit, OnDestroy } from "./_baseProvider";
 import fs from "fs";
 import { existsSync } from "fs";
@@ -17,11 +17,11 @@ const defaultSettings = {
   },
   customcss: {
     enabled: false,
-    scssFile: null
-  }
+    scssFile: null,
+  },
 };
 let _settingsStore: SettingsStore = defaultSettings;
-type SettingsStore = typeof defaultSettings & {[key: string]: any};
+type SettingsStore = typeof defaultSettings & { [key: string]: any };
 
 @IpcContext
 export default class SettingsProvider extends BaseProvider
@@ -58,7 +58,7 @@ export default class SettingsProvider extends BaseProvider
     return _set(_settingsStore, keys, value);
   }
   @IpcOn("settingsProvider.save", {
-    debounce: 10000
+    debounce: 10000,
   })
   async saveToDrive() {
     const configFile = await this.getConfigPath();
@@ -71,18 +71,24 @@ export default class SettingsProvider extends BaseProvider
   private _onEventGet(ev: IpcMainInvokeEvent, ...args: any[]) {
     const [key, value] = args;
     const returnValue = this.get(key);
-    return returnValue === undefined || returnValue === null ? value : returnValue;
+    return returnValue === undefined || returnValue === null
+      ? value
+      : returnValue;
   }
   @IpcOn("settingsProvider.set")
   private _onEventSet(ev: IpcMainEvent, ...args: any[]) {
     const [key, value] = args;
     this.set(key, value);
+    this.logger.debug(key, value);
+    ipcMain.emit("settingsProvider.change", ...args);
     this.saveToDrive();
   }
   @IpcHandle("settingsProvider.update")
   private async _onEventUpdate(ev: IpcMainInvokeEvent, ...args: any[]) {
     const [key, value] = args;
+    this.logger.debug(key, value);
     this.set(key, value);
+    ipcMain.emit("settingsProvider.change", ...args);
     await this.saveToDrive();
     return value;
   }

@@ -63,7 +63,7 @@ export function IpcOn(
   event: string,
   options?: {
     debounce?: number;
-    filter?: (ev: IpcMainEvent, ...args: any[]) => boolean;
+    filter?: (ev: IpcMainEvent | string, ...args: any[]) => boolean;
   }
 ): MethodDecorator {
   return function<T>(
@@ -82,7 +82,7 @@ export function IpcHandle(
   event: string,
   options?: {
     debounce?: number;
-    filter?: (ev: IpcMainEvent, ...args: any[]) => boolean;
+    filter?: (ev: IpcMainEvent | string, ...args: any[]) => boolean;
   }
 ): MethodDecorator {
   return function<T>(

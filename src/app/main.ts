@@ -262,18 +262,17 @@ export default function() {
     }
     await serviceCollection.exec("OnInit");
     mainWindow = await createRootWindow();
-    await serviceCollection.exec("AfterInit");
     rootWindowInjectUtils(
       mainWindow.views.youtubeView.webContents,
       getViewObject(mainWindow)
     );
-    if (serviceCollection)
-      serviceCollection.providers.forEach((p) =>
-        p._registerWindows(mainWindow)
-      );
+    serviceCollection.providers.forEach((p) =>
+      p._registerWindows(mainWindow)
+    );
     setTimeout(() => {
       ipcMain.emit("settings.customCssUpdate");
       ipcMain.emit("settings.customCssWatch");
+      serviceCollection.exec("AfterInit");
     }, 50);
   });
 

@@ -68,7 +68,7 @@ export default class EventProvider extends BaseProvider
   private _autoUpdateCheckHandle;
   @IpcOn("settingsProvider.update", {
     debounce: 1000,
-    filter: (ev, [key]: [string]) => key === "app.autoupdate",
+    filter: (ev, ...[key]: [string]) => key === "app.autoupdate",
   })
   onAutoUpdateToggled(ev, [key, value]: [string, boolean]) {
     const autoUpdateEnabled = this.settingsInstance.get(

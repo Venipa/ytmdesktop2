@@ -3,7 +3,7 @@ import { debounce } from "lodash-es";
 import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, AfterInit } from "./_baseProvider";
 
-export default class EventProvider extends BaseProvider implements AfterInit {
+export default class TrackProvider extends BaseProvider implements AfterInit {
   get currentWindow() {
     return BrowserWindow.getAllWindows().find((x) =>
       x.webContents.getURL().match("music.youtube")
@@ -14,29 +14,37 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   }
   async AfterInit() {}
 
-  async getCurrentTrack() {
-    await this.currentWindow.webContents
+  async getCurrentTrack(): Promise<{ url: string; title: string; id: string }> {
+    return await this.views.youtubeView.webContents
       .executeJavaScript(
         `(() => {
+         const title = document.querySelector(".title.ytmusic-player-bar") || document.querySelector(".song-title[title]");
+         const url = document.querySelector(".ytp-title-link.yt-uix-sessionlink");
       return {
-        url: document.querySelector('.ytp-title-link.yt-uix-sessionlink').href,
-        title: document.querySelector('.title.ytmusic-player-bar').textContent
+        url: url && url.href.match(/^http/) ? url.href : null,
+        title: title ? title.textContent : null
       };
     })()`
       )
-      .then((x) => {
+      .then(({ url, title }) => {
+        if (!url || !title) {
+          throw new Error("failed to parse track data");
+        }
         return {
-          url: new URLSearchParams(x.url),
-          title: x.title,
+          url: new URLSearchParams(url),
+          title: title,
         };
       })
-      .then((data) => {
+      .then(({ title, url }) => {
         return {
-          id: data.url.get("v"),
-          title: data.title,
-          url: data.url.toString(),
+          id: url.get("v"),
+          title: title,
+          url: decodeURIComponent(url.toString()),
         };
-      }).catch(this.logger.error);
+      })
+      .catch((err) => {
+        this.logger.error(err);
+        return null;
+      });
   }
-
 }

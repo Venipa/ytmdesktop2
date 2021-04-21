@@ -42,13 +42,17 @@ const trackObservers = {
     );
   },
   "track:info": () => {
+    /**
+     * @type {HTMLElement} title
+     */
     const title =
-        document.querySelector(".title.ytmusic-player-bar") ||
-        document.querySelector(".song-title[title]"),
-      url = document.querySelector(".ytp-title-link.yt-uix-sessionlink").href;
+      document.querySelector(".title.ytmusic-player-bar") ||
+      document.querySelector(".song-title[title]");
+    const url = document.querySelector(".ytp-title-link.yt-uix-sessionlink")
+      .href;
     ipcRenderer.emit("track:info", {
       url,
-      title,
+      title: title.textContent,
     });
   },
 };
