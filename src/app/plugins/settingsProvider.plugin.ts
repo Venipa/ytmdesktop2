@@ -1,5 +1,5 @@
 import { App, ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
-import { BaseProvider, OnInit, OnDestroy } from "./_baseProvider";
+import { BaseProvider, OnInit, OnDestroy, BeforeStart } from "./_baseProvider";
 import fs from "fs";
 import { existsSync } from "fs";
 import path from "path";
@@ -25,7 +25,7 @@ type SettingsStore = typeof defaultSettings & { [key: string]: any };
 
 @IpcContext
 export default class SettingsProvider extends BaseProvider
-  implements OnInit, OnDestroy {
+  implements OnDestroy, BeforeStart {
   constructor(private app: App) {
     super("settings");
   }
@@ -35,7 +35,7 @@ export default class SettingsProvider extends BaseProvider
       "app-settings.json"
     );
   }
-  async OnInit() {
+  async BeforeStart() {
     const configFile = await this.getConfigPath();
     this.logger.debug(configFile);
     if (existsSync(configFile)) {
