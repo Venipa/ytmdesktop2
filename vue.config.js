@@ -26,24 +26,27 @@ const builderOptions = {
     icon: "src/assets/build_resources/win/icon.ico",
   },
 };
+/**
+ * @type {import('electron-builder').AfterPackContext} electronBuilder
+ */
+const electronBuilder = {
+  chainWebpackMainProcess: (config) => {},
+  mainProcessTypeChecking: false,
+  preload: {
+    preload: "src/preload.js",
+    toolbar: "src/toolbar.js",
+  },
+  
+  nodeIntegration: false,
+  builderOptions,
+  externals: ['chokidar'],
+  nodeModulesPath: ['./node_modules']
+};
 module.exports = {
   pluginOptions: {
-    electronBuilder: {
-      chainWebpackMainProcess: (config) => {},
-      mainProcessTypeChecking: false,
-      preload: {
-        preload: "src/preload.js",
-        toolbar: "src/toolbar.js",
-      },
-      nodeIntegration: false,
-      builderOptions,
-    },
+    electronBuilder,
   },
   chainWebpack: (config) => {
-    
-    config.externals({
-      fsevents: "require('fsevents')"
-    })
     config.module
       .rule("raw")
       .test(() => false)
