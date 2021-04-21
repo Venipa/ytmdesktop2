@@ -11,6 +11,7 @@ const DEFAULT_PRESENCE: Presence = {
   largeImageKey: "logo",
   largeImageText: "Youtube Music for Desktop",
 };
+const CLIENT_ID = process.env.VUE_APP_DISCORD_CLIENT_ID;
 @IpcContext
 export default class EventProvider extends BaseProvider implements AfterInit {
   private _updateHandle: any;
@@ -43,9 +44,18 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     );
     this.presence = presence;
     this.client = client;
-    client.login({
-      clientId: process.env.VUE_APP_DISCORD_CLIENT_ID,
-    });
+    client
+      .login({
+        clientId: CLIENT_ID,
+      })
+      .catch(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => {
+              this.createClient().then(resolve);
+            }, 5000)
+          )
+      );
     return [client, presence];
   }
   private _refreshActivity() {
@@ -57,6 +67,9 @@ export default class EventProvider extends BaseProvider implements AfterInit {
             DISCORD_UPDATE_INTERVAL
           ))
       );
+    else if (this.settingsInstance.instance().discord.enabled) {
+      this.createClient().then(() => this._refreshActivity());
+    }
   }
   async AfterInit() {
     const settings = this.settingsInstance.instance();
@@ -85,10 +98,16 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     }
     this.logger.debug("setActivity", { ...this.presence });
     if (this.client)
-      return await this.client.setActivity(
-        this.presence || DEFAULT_PRESENCE,
-        process.pid
-      );
+      return await this.client
+        .setActivity(this.presence || DEFAULT_PRESENCE, process.pid)
+        .catch(
+          () =>
+            new Promise((resolve) =>
+              setTimeout(() => {
+                this.createClient().then(resolve);
+              }, 5000)
+            )
+        );
   }
   @IpcOn("settingsProvider.change", {
     filter: (key: string) => key === "discord.enabled",
@@ -109,7 +128,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     debounce: 1000,
   })
   private async __onToggleButtons(key: string, enabled: boolean) {
-    if (this.client) await this.onClientReady();
+    if (this.client) this.onClientReady();
   }
   async onClientReady() {
     const track = await this.trackService.getCurrentTrack();
