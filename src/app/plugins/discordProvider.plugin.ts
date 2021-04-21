@@ -14,7 +14,6 @@ const DEFAULT_PRESENCE: Presence = {
 @IpcContext
 export default class EventProvider extends BaseProvider implements AfterInit {
   private _updateHandle: any;
-  private clientId: string;
   private client: DiscordClient;
   private presence: Presence;
   private lastTrack: TrackInfoEvent;
@@ -26,7 +25,6 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   }
   constructor(private app: App) {
     super("discordRPC");
-    this.clientId = process.env.VUE_APP_DISCORD_CLIENT_ID;
   }
   private async createClient(): Promise<[DiscordClient, Presence]> {
     const client = new DiscordClient({
@@ -46,7 +44,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     this.presence = presence;
     this.client = client;
     client.login({
-      clientId: this.clientId,
+      clientId: process.env.VUE_APP_DISCORD_CLIENT_ID,
     });
     return [client, presence];
   }
@@ -79,9 +77,13 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       if (this.presence.buttons.length > 2) {
         this.presence.buttons = this.presence.buttons.slice(0, 2);
       }
-      if (this.presence.buttons.length === 0) delete this.presence.buttons;
+      if (
+        this.presence.buttons.length === 0 ||
+        !this.settingsInstance.instance().discord.buttons
+      )
+        delete this.presence.buttons;
     }
-    this.logger.debug({...this.presence});
+    this.logger.debug("setActivity", { ...this.presence });
     if (this.client)
       return await this.client.setActivity(
         this.presence || DEFAULT_PRESENCE,
@@ -93,7 +95,6 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     debounce: 1000,
   })
   private async __onToggleEnabled(key: string, enabled: boolean) {
-    this.logger.debug(key, enabled);
     if (this._updateHandle) clearTimeout(this._updateHandle);
     if (!this.client && enabled) {
       const [client, presence] = await this.createClient();
@@ -102,6 +103,13 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       this.client = null;
       this.presence = null;
     }
+  }
+  @IpcOn("settingsProvider.change", {
+    filter: (key: string) => key === "discord.buttons",
+    debounce: 1000,
+  })
+  private async __onToggleButtons(key: string, enabled: boolean) {
+    if (this.client) await this.onClientReady();
   }
   async onClientReady() {
     const track = await this.trackService.getCurrentTrack();

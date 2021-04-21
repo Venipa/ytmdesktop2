@@ -11,10 +11,8 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
 });
 contextBridge.exposeInMainWorld("process", {
   version: pkg.version,
-  environment: process.env.NODE_ENV,
-  discord: {
-    implemented: process.env.VUE_APP_DISCORD_CLIENT_ID ? process.env.VUE_APP_DISCORD_CLIENT_ID.slice(0, 5) + "*".repeat(process.env.VUE_APP_DISCORD_CLIENT_ID.length - 5) : false
-  }
+  environment: process.env.NODE_ENV
+  
 })
 contextBridge.exposeInMainWorld("api", {
   version: pkg.version,
