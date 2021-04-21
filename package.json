@@ -22,6 +22,7 @@
     "chalk": "^4.1.0",
     "core-js": "^3.6.5",
     "daisyui": "^0.14.5",
+    "discord-rpc": "^3.2.0",
     "electron-updater": "^4.3.8",
     "lodash-es": "^4.17.21",
     "postcss": "^7",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@babel/plugin-proposal-nullish-coalescing-operator": "^7.13.8",
     "@babel/plugin-proposal-optional-chaining": "^7.13.12",
+    "@types/discord-rpc": "^3.0.5",
     "@types/lodash-es": "^4.17.4",
     "@types/sass": "^1.16.0",
     "@typescript-eslint/eslint-plugin": "^2.33.0",

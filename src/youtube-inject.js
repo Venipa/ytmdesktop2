@@ -31,11 +31,10 @@ console.log(
 );
 const trackObservers = {
   "track:title": () => {
-    const title = document.querySelector(".title.ytmusic-player-bar") || document.querySelector(".song-title[title]");
-    ipcRenderer.emit(
-      "track:title",
-      title.textContent
-    );
+    const title =
+      document.querySelector(".title.ytmusic-player-bar") ||
+      document.querySelector(".song-title[title]");
+    ipcRenderer.emit("track:title", title.textContent);
     ipcRenderer.emitTo(
       __ytd_window_data.toolbarView,
       "track:title",
@@ -43,21 +42,25 @@ const trackObservers = {
     );
   },
   "track:info": () => {
-    ipcRenderer.emit(
-      "track:info",
-      document.querySelector(".ytp-title-link.yt-uix-sessionlink").href
-    );
+    const title =
+        document.querySelector(".title.ytmusic-player-bar") ||
+        document.querySelector(".song-title[title]"),
+      url = document.querySelector(".ytp-title-link.yt-uix-sessionlink").href;
+    ipcRenderer.emit("track:info", {
+      url,
+      title,
+    });
   },
 };
-window.ipcRenderer.on('window-title-updated', () => {
+window.ipcRenderer.on("window-title-updated", () => {
   Object.values(trackObservers).forEach((runner) => runner());
 });
 const updateTrack = new MutationObserver(function(mutations) {
   Object.values(trackObservers).forEach((runner) => runner());
 });
-document.querySelectorAll('.ytp-title').forEach(x => {
+document.querySelectorAll(".ytp-title").forEach((x) => {
   updateTrack.observe(x.childNodes[0].parentNode, {
     childList: true,
-    subtree: true
+    subtree: true,
   });
-})
+});

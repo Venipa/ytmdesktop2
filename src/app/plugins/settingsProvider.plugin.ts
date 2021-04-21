@@ -48,6 +48,9 @@ export default class SettingsProvider extends BaseProvider
     }
     await this.saveToDrive();
   }
+  instance() {
+    return _settingsStore;
+  }
   get(keys: string | string[], defaultValue?: any) {
     return _get(_settingsStore, keys, defaultValue);
   }
