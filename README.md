@@ -1,7 +1,19 @@
 # ytmdesktop2
 
-[![Build/release](https://github.com/Venipa/ytmdesktop2/actions/workflows/release.yml/badge.svg)](https://github.com/Venipa/ytmdesktop2/actions/workflows/release.yml)
+## Features
 
+### Discord Rich Presence
+
+![](https://i.mavis.moe/f/XMkSA6jQOv/discord-2021-04-22-01-07-41jpg.jpg)
+### Custom CSS
+
+![](https://i.mavis.moe/f/gM7xdf82eR/youtube-music-for-desktop-2021-04-22-01-12-20jpg.jpg)
+
+## And many more to come 😉
+&nbsp;&nbsp;
+
+---------------
+&nbsp;&nbsp;
 ## Project setup
 ```
 yarn install
