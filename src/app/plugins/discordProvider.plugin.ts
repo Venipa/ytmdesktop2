@@ -26,7 +26,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   }
   constructor(private app: App) {
     super("discordRPC");
-    this.clientId = process.env.VUE_DISCORD_CLIENT_ID;
+    this.clientId = process.env.VUE_APP_DISCORD_CLIENT_ID;
   }
   private async createClient(): Promise<[DiscordClient, Presence]> {
     const client = new DiscordClient({
