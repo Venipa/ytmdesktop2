@@ -75,7 +75,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   AfterInit() {
     const settings = this.settingsInstance.instance();
     if (!settings.discord.enabled) return;
-    this.createClient();
+    this.views.youtubeView.webContents.once('did-finish-load', () => settings.discord.enabled && this.createClient());
   }
   async setActivity(presence: Partial<Presence>) {
     if (!this.presence) return;
@@ -111,7 +111,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   private async __onToggleEnabled(key: string, enabled: boolean) {
     if (enabled) {
       this.createClient();
-    } else {
+    } else if (this.client) {
       this.client.destroy();
       this.client = null;
     }
