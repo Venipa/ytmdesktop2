@@ -10,7 +10,7 @@ import {
   BrowserView,
 } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
-import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
+import installExtension, { VUEJS3_DEVTOOLS } from "electron-devtools-installer";
 import path from "path";
 import { BaseProvider } from "./plugins/_baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
@@ -81,6 +81,7 @@ export default async function() {
       skipTaskbar: false,
       resizable: true,
       frame: false,
+      darkTheme: true,
       titleBarStyle: "hidden",
       maximizable: true,
       webPreferences: {
@@ -191,11 +192,11 @@ export default async function() {
       height: 600,
       minWidth: 600,
       minHeight: 480,
-      minimizable: true,
-      alwaysOnTop: true,
+      minimizable: false,
       backgroundColor: "#000000",
       frame: false,
       parent: mainWindow.main,
+      darkTheme: true,
       webPreferences: {
         // Use pluginOptions.nodeIntegration, leave this alone
         // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
@@ -258,11 +259,11 @@ export default async function() {
   app.on("ready", async () => {
     if (isDevelopment && !process.env.IS_TEST) {
       // Install Vue Devtools
-      try {
-        await installExtension(VUEJS_DEVTOOLS);
-      } catch (e) {
-        log.error("Vue Devtools failed to install:", e.message);
-      }
+      // try {
+      //   await installExtension(VUEJS3_DEVTOOLS);
+      // } catch (e) {
+      //   log.error("Vue Devtools failed to install:", e.message);
+      // }
     } else {
       createProtocol("app");
     }
@@ -288,6 +289,7 @@ export default async function() {
       } else {
         settingsWindow.show();
       }
+      mainWindow.views.settingsWindow = settingsWindow.getBrowserView();
     } catch (err) {
       log.error(err);
     }
@@ -297,6 +299,8 @@ export default async function() {
       settingsWindow.hide();
       if (isDevelopment) settingsWindow.webContents.closeDevTools();
       settingsWindow.close();
+      
+      if (mainWindow.views.settingsWindow) mainWindow.views.settingsWindow = null;
     }
   });
   ipcMain.on("app.minimize", (ev) => {

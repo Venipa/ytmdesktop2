@@ -23,6 +23,7 @@ export class BaseProvider {
   private _views: BrowserWindowViews<{
     youtubeView: BrowserView;
     toolbarView: BrowserView;
+    settingsWindow?: BrowserView;
   }>;
   get logger() {
     return this._loggerInstance;

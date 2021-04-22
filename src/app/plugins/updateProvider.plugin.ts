@@ -3,10 +3,11 @@ import { autoUpdater } from "electron-updater";
 import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, BeforeStart } from "./_baseProvider";
-import { IpcOn } from "../utils/onIpcEvent";
+import { IpcContext, IpcOn } from "../utils/onIpcEvent";
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = isDevelopment
   ? [null, null]
   : process.env.VUE_APP_GITHUB_REPOSITORY.split("/", 2);
+@IpcContext
 export default class EventProvider extends BaseProvider implements BeforeStart {
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
@@ -63,21 +64,18 @@ export default class EventProvider extends BaseProvider implements BeforeStart {
     autoUpdater.checkForUpdatesAndNotify();
   }
   private _autoUpdateCheckHandle;
-  @IpcOn("settingsProvider.update", {
+  @IpcOn("settingsProvider.change", {
     debounce: 1000,
     filter: (key: string) => key === "app.autoupdate",
   })
-  onAutoUpdateToggled(ev, ...[key, value]: [string, boolean]) {
-    const autoUpdateEnabled = this.settingsInstance.get(
-      "app.autoupdate",
-      false
-    );
+  onAutoUpdateToggled() {
+    const autoUpdateEnabled = this.settingsInstance.instance().app.autoupdate;
     if (!isDevelopment) {
       if (autoUpdateEnabled) {
         if (!this._autoUpdateCheckHandle)
           this._autoUpdateCheckHandle = setInterval(() => {
             autoUpdater.checkForUpdates().then((x) => {
-              if (x && x.updateInfo) ipcMain.emit("app.updateAvailable");
+              if (x && x.updateInfo && this.views.settingsWindow) this.views.settingsWindow.webContents.send("app.updateAvailable");
             });
           }, 1000 * 60 * 5);
       } else if (this._autoUpdateCheckHandle) {

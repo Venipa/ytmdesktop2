@@ -137,7 +137,7 @@ export default class SettingsProvider extends BaseProvider
     const [key, value] = args;
     this.logger.debug(key, value);
     this.set(key, value);
-    ipcMain.emit("settingsProvider.change", ...args);
+    ipcMain.emit("settingsProvider.change", key, value);
     await this.saveToDrive();
     return value;
   }

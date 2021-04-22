@@ -1,3 +1,4 @@
+import logger from "@/utils/Logger";
 import { ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { debounce } from "lodash-es";
 const classStoreSymbol = Symbol("__ipcEvents");
@@ -27,17 +28,20 @@ export function IpcContext<T extends { new (...args: any[]): {} }>(
                 typeof options.filter === "function"
                   ? options.filter(args[0], ...args.slice(1))
                   : true)
-              )
+              ) {
                 return type === "handle"
                   ? Promise.resolve((this as any)[method](...args))
                   : (this as any)[method](...args);
+              }
               return Promise.resolve(null);
             };
             ipcMain[
               type === "once" ? "once" : type === "handle" ? "handle" : "on"
             ](
               name,
-              options && options.debounce ? debounce(func, options.debounce) : func
+              options && options.debounce
+                ? debounce(func, options.debounce)
+                : func
             );
           }
         );

@@ -65,6 +65,6 @@ module.exports = {
       .loader("vue-svg-loader");
   },
   configureWebpack: {
-    devtool: "inline-source-map",
-  },
+    devtool: 'source-map'
+  }
 };
