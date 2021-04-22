@@ -29,5 +29,6 @@ jobs:
         run: yarn release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VUE_APP_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           VUE_APP_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
           VUE_APP_GITHUB_REPOSITORY: $GITHUB_REPOSITORY
