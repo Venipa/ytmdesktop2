@@ -58,7 +58,6 @@ export default async function() {
   log.debug(
     `Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`
   );
-  log.debug("preload.js: ", parseScriptPath("preload.js"));
 
   try {
     await serviceCollection.exec("BeforeStart");
@@ -278,8 +277,8 @@ export default async function() {
     setTimeout(() => {
       ipcMain.emit("settings.customCssUpdate");
       ipcMain.emit("settings.customCssWatch");
-      serviceCollection.exec("AfterInit");
     }, 50);
+    serviceCollection.exec("AfterInit");
   });
 
   let settingsWindow: BrowserWindow;

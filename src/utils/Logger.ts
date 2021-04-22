@@ -107,7 +107,8 @@ export default class Logger {
   }
 
   public debug(...args: any): void {
-    if (this.config.showDebug) this.print(this.config.debugStyle(this.alignedTypes[0]), ...args);
+    if (!this.config.showDebug) return;
+    this.print(this.config.debugStyle(this.alignedTypes[0]), ...args);
   }
 
   public info(...args: any): void {

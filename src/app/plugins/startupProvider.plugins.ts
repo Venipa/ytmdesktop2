@@ -66,7 +66,6 @@ export default class EventProvider extends BaseProvider
         enabled: !!app.autostart,
         args: startupArgs,
       });
-      this.logger.debug(`config`, process.execPath, app.autostart, startupArgs);
     }
   }
   @IpcOn("settingsProvider.update", {

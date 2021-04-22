@@ -2,12 +2,10 @@ import { App, ipcMain } from "electron";
 import { autoUpdater } from "electron-updater";
 import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
-import { AfterInit, BaseProvider, OnInit } from "./_baseProvider";
-import { basename } from "path";
+import { BaseProvider, BeforeStart } from "./_baseProvider";
 import { IpcOn } from "../utils/onIpcEvent";
 
-export default class EventProvider extends BaseProvider
-  implements OnInit, AfterInit, BeforeStart {
+export default class EventProvider extends BaseProvider implements BeforeStart {
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
@@ -38,12 +36,10 @@ export default class EventProvider extends BaseProvider
       autoUpdater.autoDownload = true;
       autoUpdater.autoInstallOnAppQuit = true;
       autoUpdater.on("update-available", () => {
-        this.logger.debug("Update Available");
         this._updateAvailable = true;
         ipcMain.emit("app.updateAvailable");
       });
       autoUpdater.signals.updateDownloaded(() => {
-        this.logger.debug("Update Downloaded");
         (this._updateAvailable = true), (this._updateDownloaded = true);
         ipcMain.emit("app.updateDownloaded");
 
@@ -51,11 +47,6 @@ export default class EventProvider extends BaseProvider
       });
       if (app.autoupdate) autoUpdater.checkForUpdatesAndNotify();
     }
-  }
-  OnInit() {
-  }
-  AfterInit() {
-    this.logger.debug("Initialized");
   }
   @IpcOn("app.installUpdate", {
     debounce: 1000,

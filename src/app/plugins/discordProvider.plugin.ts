@@ -40,7 +40,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
 
     client.on(
       "ready",
-      debounce(() => this.onClientReady(), 1000)
+      debounce(() => this.onClientReady.bind(this), 1000)
     );
     this.presence = presence;
     this.client = client;
@@ -52,29 +52,30 @@ export default class EventProvider extends BaseProvider implements AfterInit {
         () =>
           new Promise((resolve) =>
             setTimeout(() => {
-              this.createClient().then(resolve);
+              this.createClient.bind(this).then(resolve);
             }, 5000)
           )
       );
     return [client, presence];
   }
   private _refreshActivity() {
+    if (this._updateHandle) clearTimeout(this._updateHandle);
     if (this.client)
       this.setActivity(this.presence).then(
         () =>
           (this._updateHandle = setTimeout(
-            this._refreshActivity,
+            () => this._refreshActivity.bind(this),
             DISCORD_UPDATE_INTERVAL
           ))
       );
-    else if (this.settingsInstance.instance().discord.enabled) {
-      this.createClient().then(() => this._refreshActivity());
+    else if (this.settingsInstance.get("discord.enabled")) {
+      this.createClient();
     }
   }
-  async AfterInit() {
+  AfterInit() {
     const settings = this.settingsInstance.instance();
     if (!settings.discord.enabled) return;
-    const [client, presence] = await this.createClient();
+    this.createClient();
   }
   async setActivity(presence: Partial<Presence>) {
     if (!this.presence) return;
@@ -98,29 +99,21 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     }
     this.logger.debug("setActivity", { ...this.presence });
     if (this.client)
-      return await this.client
-        .setActivity(this.presence || DEFAULT_PRESENCE, process.pid)
-        .catch(
-          () =>
-            new Promise((resolve) =>
-              setTimeout(() => {
-                this.createClient().then(resolve);
-              }, 5000)
-            )
-        );
+      return await this.client.setActivity(
+        this.presence || DEFAULT_PRESENCE,
+        process.pid
+      );
   }
   @IpcOn("settingsProvider.change", {
     filter: (key: string) => key === "discord.enabled",
     debounce: 1000,
   })
   private async __onToggleEnabled(key: string, enabled: boolean) {
-    if (this._updateHandle) clearTimeout(this._updateHandle);
-    if (!this.client && enabled) {
-      const [client, presence] = await this.createClient();
-    } else if (!enabled && this.client) {
-      await this.client.destroy();
+    if (enabled) {
+      this.createClient.bind(this);
+    } else {
+      this.client.destroy();
       this.client = null;
-      this.presence = null;
     }
   }
   @IpcOn("settingsProvider.change", {
@@ -147,9 +140,9 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       this.setActivity({
         state: "Browsing...",
       });
-
+    if (this._updateHandle) clearTimeout(this._updateHandle);
     this._updateHandle = setTimeout(
-      this._refreshActivity,
+      () => this._refreshActivity.bind(this),
       DISCORD_UPDATE_INTERVAL
     );
   }
