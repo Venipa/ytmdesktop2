@@ -62,9 +62,19 @@ window.ipcRenderer.on("window-title-updated", () => {
 const updateTrack = new MutationObserver(function(mutations) {
   Object.values(trackObservers).forEach((runner) => runner());
 });
-document.querySelectorAll(".ytp-title").forEach((x) => {
-  updateTrack.observe(x.childNodes[0].parentNode, {
-    childList: true,
-    subtree: true,
-  });
-});
+const initializeTrackObserver = () => {
+  const elements = document.querySelectorAll(".ytp-title");
+  if (elements.length > 0)
+    elements.forEach((x) => {
+      updateTrack.observe(x.childNodes[0].parentNode, {
+        childList: true,
+        subtree: true,
+      });
+    });
+  else {
+    setTimeout(() => {
+      initializeTrackObserver();
+    }, 2500);
+  }
+};
+initializeTrackObserver();
