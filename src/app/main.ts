@@ -15,15 +15,15 @@ import path from "path";
 import { BaseProvider } from "./plugins/_baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
 import { isDevelopment } from "./utils/devUtils";
-import Logger from "@/utils/Logger";
 import { BrowserWindowViews, getViewObject } from "./utils/mappedWindow";
 import { debounce } from "lodash-es";
+import logger from "@/utils/Logger";
 
 const defaultUrl = "https://music.youtube.com";
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
 }
-const log = new Logger("main");
+const log = logger.child({ label: 'main' });
 export default async function() {
   const serviceCollection = (() => {
     const pluginContext = require.context("./plugins", false, /plugin.ts$/i);
@@ -320,7 +320,7 @@ export default async function() {
       .filter((x) => typeof x === "string")
       .forEach((event: any) =>
         ipcMain.on(event as string, (ev, ...args) =>
-          new Logger(`event:${event}`).debug(event, ...args)
+          logger.child({ label: `event:${event}` }).debug(event, ...args)
         )
       );
     if (process.platform === "win32") {

@@ -1,6 +1,7 @@
-import Logger from "@/utils/Logger";
+import logger from "@/utils/Logger";
 import { App } from "electron";
 import { BrowserView } from "electron/main";
+import { Logger } from "winston";
 import { BrowserWindowViews } from "../utils/mappedWindow";
 export interface BeforeStart {
   BeforeStart(): void | Promise<void>;
@@ -27,7 +28,7 @@ export class BaseProvider {
     return this._views.views;
   }
   constructor(private name: string, private displayName: string = name) {
-    this._loggerInstance = new Logger(displayName || name);
+    this._loggerInstance = logger.child({ label: displayName || name })
   }
 
   getName() {
