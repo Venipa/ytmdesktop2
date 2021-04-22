@@ -4,7 +4,7 @@ import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, BeforeStart } from "./_baseProvider";
 import { IpcOn } from "../utils/onIpcEvent";
-
+const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = process.env.VUE_APP_GITHUB_REPOSITORY.split('/', 2);
 export default class EventProvider extends BaseProvider implements BeforeStart {
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
@@ -30,8 +30,8 @@ export default class EventProvider extends BaseProvider implements BeforeStart {
       autoUpdater.logger = this.logger;
       autoUpdater.setFeedURL({
         provider: "github",
-        owner: process.env.VUE_APP_USER,
-        repo: process.env.VUE_APP_REPO,
+        owner: GITHUB_AUTHOR,
+        repo: GITHUB_REPOSITORY,
       });
       autoUpdater.autoDownload = true;
       autoUpdater.autoInstallOnAppQuit = true;
