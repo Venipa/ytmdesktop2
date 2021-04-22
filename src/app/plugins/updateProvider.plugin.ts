@@ -2,13 +2,14 @@ import { App, ipcMain } from "electron";
 import { autoUpdater } from "electron-updater";
 import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, BeforeStart } from "./_baseProvider";
+import { AfterInit, BaseProvider, BeforeStart } from "./_baseProvider";
 import { IpcContext, IpcOn } from "../utils/onIpcEvent";
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = isDevelopment
   ? [null, null]
   : process.env.VUE_APP_GITHUB_REPOSITORY.split("/", 2);
 @IpcContext
-export default class EventProvider extends BaseProvider implements BeforeStart {
+export default class EventProvider extends BaseProvider
+  implements BeforeStart, AfterInit {
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
@@ -40,16 +41,24 @@ export default class EventProvider extends BaseProvider implements BeforeStart {
       autoUpdater.autoInstallOnAppQuit = true;
       autoUpdater.on("update-available", () => {
         this._updateAvailable = true;
-        ipcMain.emit("app.updateAvailable");
       });
       autoUpdater.signals.updateDownloaded(() => {
         (this._updateAvailable = true), (this._updateDownloaded = true);
-        ipcMain.emit("app.updateDownloaded");
 
         if (app.autoupdate) autoUpdater.quitAndInstall(true);
       });
       if (app.autoupdate) autoUpdater.checkForUpdatesAndNotify();
     }
+  }
+  AfterInit() {
+    autoUpdater.on("update-available", () => {
+      if (this.views.settingsWindow)
+        this.views.settingsWindow.webContents.send("app.updateAvailable");
+    });
+    autoUpdater.signals.updateDownloaded(() => {
+      if (this.views.settingsWindow)
+        this.views.settingsWindow.webContents.send("app.updateDownloaded");
+    });
   }
   @IpcOn("app.installUpdate", {
     debounce: 1000,
@@ -75,7 +84,10 @@ export default class EventProvider extends BaseProvider implements BeforeStart {
         if (!this._autoUpdateCheckHandle)
           this._autoUpdateCheckHandle = setInterval(() => {
             autoUpdater.checkForUpdates().then((x) => {
-              if (x && x.updateInfo && this.views.settingsWindow) this.views.settingsWindow.webContents.send("app.updateAvailable");
+              if (x && x.updateInfo && this.views.settingsWindow)
+                this.views.settingsWindow.webContents.send(
+                  "app.updateAvailable"
+                );
             });
           }, 1000 * 60 * 5);
       } else if (this._autoUpdateCheckHandle) {
