@@ -32,7 +32,7 @@ export default class EventProvider extends BaseProvider
     this._tray.setContextMenu(this.buildMenu());
   }
   private buildMenu() {
-    const settings = this.settingsInstance.instance();
+    const settings = this.settingsInstance.instance;
     return Menu.buildFromTemplate([
       {
         label: "Youtube Music for Desktop",
@@ -50,7 +50,7 @@ export default class EventProvider extends BaseProvider
         type: "checkbox",
         checked: settings.app.autostart,
         click: (item) => {
-          ipcMain.emit("settingsProvider.set", "app.autostart", item.checked);
+          this.settingsInstance.set("app.autostart", item.checked);
         },
       },
       {
@@ -58,7 +58,7 @@ export default class EventProvider extends BaseProvider
         type: "checkbox",
         checked: settings.app.autoupdate,
         click: (item) => {
-          ipcMain.emit("settingsProvider.set", "app.autoupdate", item.checked);
+          this.settingsInstance.set("app.autoupdate", item.checked);
         },
       },
       {
@@ -82,11 +82,7 @@ export default class EventProvider extends BaseProvider
             type: "checkbox",
             checked: settings.discord.enabled,
             click: (item) => {
-              ipcMain.emit(
-                "settingsProvider.set",
-                "discord.enabled",
-                item.checked
-              );
+              this.settingsInstance.set("discord.enabled", item.checked);
             },
           },
           {
@@ -94,11 +90,7 @@ export default class EventProvider extends BaseProvider
             type: "checkbox",
             checked: settings.discord.enabled,
             click: (item) => {
-              ipcMain.emit(
-                "settingsProvider.set",
-                "discord.buttons",
-                item.checked
-              );
+              this.settingsInstance.set("discord.buttons", item.checked);
             },
           },
         ],
@@ -115,11 +107,7 @@ export default class EventProvider extends BaseProvider
             type: "checkbox",
             checked: settings.customcss.enabled,
             click: (item) => {
-              ipcMain.emit(
-                "settingsProvider.set",
-                "customcss.enabled",
-                item.checked
-              );
+              this.settingsInstance.set("customcss.enabled", item.checked);
             },
           },
           {
@@ -151,7 +139,7 @@ export default class EventProvider extends BaseProvider
     return ["--processStart", `"${basename(process.execPath)}"`];
   }
   async AfterInit() {
-    const app = this.settingsInstance.instance().app;
+    const app = this.settingsInstance.instance.app;
     if (app.autostart) {
       this.app.setLoginItemSettings({
         openAtLogin: true,
@@ -167,7 +155,7 @@ export default class EventProvider extends BaseProvider
     this.initializeTray();
   }
   @IpcOn("settingsProvider.change", {
-    debounce: 1000,
+    debounce: 50,
   })
   private onSettingsChange() {
     this._tray.setContextMenu(this.buildMenu());

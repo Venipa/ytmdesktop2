@@ -73,7 +73,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     }
   }
   AfterInit() {
-    const settings = this.settingsInstance.instance();
+    const settings = this.settingsInstance.instance;
     if (!settings.discord.enabled) return;
     this.createClient();
   }
@@ -93,7 +93,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       }
       if (
         this.presence.buttons.length === 0 ||
-        !this.settingsInstance.instance().discord.buttons
+        !this.settingsInstance.instance.discord.buttons
       )
         delete this.presence.buttons;
     }

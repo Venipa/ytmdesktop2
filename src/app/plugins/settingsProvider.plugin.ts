@@ -63,7 +63,7 @@ export default class SettingsProvider extends BaseProvider
     }
     await this.saveToDrive();
   }
-  instance() {
+  get instance() {
     return _settingsStore;
   }
   get(keys: string | string[], defaultValue?: any) {
@@ -129,7 +129,7 @@ export default class SettingsProvider extends BaseProvider
     const [key, value] = args;
     this.set(key, value);
     this.logger.debug(key, value);
-    ipcMain.emit("settingsProvider.change", ...args);
+    ipcMain.emit("settingsProvider.change", key, value);
     this.saveToDrive();
   }
   @IpcHandle("settingsProvider.update")

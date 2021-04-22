@@ -28,7 +28,7 @@ export default class EventProvider extends BaseProvider
   }
   BeforeStart() {
     if (!isDevelopment) {
-      const settings = this.settingsInstance.instance();
+      const settings = this.settingsInstance.instance;
       const app = settings.app;
 
       autoUpdater.logger = this.logger;
@@ -78,7 +78,7 @@ export default class EventProvider extends BaseProvider
     filter: (key: string) => key === "app.autoupdate",
   })
   onAutoUpdateToggled() {
-    const autoUpdateEnabled = this.settingsInstance.instance().app.autoupdate;
+    const autoUpdateEnabled = this.settingsInstance.instance.app.autoupdate;
     if (!isDevelopment) {
       if (autoUpdateEnabled) {
         if (!this._autoUpdateCheckHandle)
