@@ -71,10 +71,9 @@ export default defineComponent({
     },
   },
   created() {
-    window.ipcRenderer.on(
-      "track:title",
-      (ev, ...[title]) => (this.title = title)
-    );
+    window.ipcRenderer.on("track:title", (ev, title) => {
+      (this.title = title), console.log(title);
+    });
   },
 });
 </script>

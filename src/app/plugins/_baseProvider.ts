@@ -20,7 +20,10 @@ export class BaseProvider {
   __type = "service_provider";
   private __providers: { [key: string]: BaseProvider & any } = {};
   private _loggerInstance: Logger;
-  private _views: BrowserWindowViews<{ youtubeView: BrowserView }>;
+  private _views: BrowserWindowViews<{
+    youtubeView: BrowserView;
+    toolbarView: BrowserView;
+  }>;
   get logger() {
     return this._loggerInstance;
   }
@@ -28,7 +31,7 @@ export class BaseProvider {
     return this._views.views;
   }
   constructor(private name: string, private displayName: string = name) {
-    this._loggerInstance = logger.child({ label: displayName || name })
+    this._loggerInstance = logger.child({ label: displayName || name });
   }
 
   getName() {

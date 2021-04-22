@@ -1,15 +1,29 @@
+import { TransformableInfo } from "logform";
 import { createLogger, format, transports } from "winston";
+import { inspect } from "util";
 import DailyRotateFile from "winston-daily-rotate-file";
-const myFormat = format.printf(({ level, message, label, timestamp }) => {
-  return `${timestamp} [${label}] ${level}: ${
-    typeof (message as any) === "object" ? JSON.stringify(message) : message
-  }`;
+const myFormat = format.printf((info) => {
+  const { level, message, label, timestamp } = info;
+  // @ts-ignore
+  let msg = [message, ...(info[Symbol.for('splat')] || [])]
+    .map((arg) => {
+      if (typeof arg === 'object') {
+        return inspect(arg, true, 5);
+      } else if (arg instanceof Error) return arg.stack;
+      else return arg;
+    })
+    .join(" ");
+  return `${timestamp} [${label}] ${level}: ${msg}`;
 });
 const logger = createLogger({
   defaultMeta: {
     label: "app",
   },
-  format: format.combine(format.splat(), format.timestamp(), myFormat),
+  format: format.combine(
+    format.splat(),
+    format.timestamp(),
+    myFormat
+  ),
   transports: [],
 });
 
@@ -18,9 +32,11 @@ if (process.env.NODE_ENV !== "production") {
     new transports.Console({
       level,
       format: format.combine(
-        format.splat(),
         format.colorize(),
-        format.timestamp(),
+        format.splat(),
+        format.timestamp({
+          format: "DD-MM-YYYY HH:mm:ss",
+        }),
         myFormat
       ),
     });

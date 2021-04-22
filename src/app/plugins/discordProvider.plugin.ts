@@ -75,7 +75,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   AfterInit() {
     const settings = this.settingsInstance.instance();
     if (!settings.discord.enabled) return;
-    this.views.youtubeView.webContents.once('did-finish-load', () => settings.discord.enabled && this.createClient());
+    this.createClient();
   }
   async setActivity(presence: Partial<Presence>) {
     if (!this.presence) return;

@@ -2,12 +2,13 @@ import { App, BrowserWindow, ipcMain, Menu, Tray } from "electron";
 import { debounce } from "lodash-es";
 import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit, OnInit } from "./_baseProvider";
+import { BaseProvider, AfterInit, OnInit, BeforeStart } from "./_baseProvider";
 import { basename, resolve } from "path";
 import { IpcOn } from "../utils/onIpcEvent";
+import AutoLaunch from "auto-launch";
 
 export default class EventProvider extends BaseProvider
-  implements AfterInit, OnInit {
+  implements AfterInit, BeforeStart {
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
@@ -18,61 +19,51 @@ export default class EventProvider extends BaseProvider
   constructor(private app: App) {
     super("startup");
   }
-  async OnInit() {
-    this.app.whenReady().then(() => {
-      this._tray = new Tray(resolve(__dirname), "assets/logo.ico");
-      this._tray.setContextMenu(
-        Menu.buildFromTemplate([
-          {
-            label: "Show",
-            type: "normal",
-            click: () =>
-              BrowserWindow.getAllWindows()
-                .find((x) => x.webContents.getURL().match("music.youtube"))
-                ?.show(),
-          },
-          {
-            type: "separator",
-          },
-          {
-            label: "Quit",
-            type: "normal",
-          },
-        ])
-      );
-      this._tray.setToolTip(`Youtube Music Desktop v2`);
-    });
+  async BeforeStart() {
+    this.app.whenReady().then(() => {});
   }
+  private async initializeTray() {
+    this._tray = new Tray(resolve(__dirname), "assets/logo.ico");
+    this._tray.setToolTip(`Youtube Music Desktop v2`);
+    this._tray.setContextMenu(
+      Menu.buildFromTemplate([
+        {
+          label: "Show Window",
+          click: () => {
+            const wnd = BrowserWindow.fromBrowserView(this.views.youtubeView);
+            if (wnd) wnd.show();
+          },
+        },
+        {
+          type: "separator",
+        },
+        {
+          label: "Quit",
+          click: () => this.app.quit(),
+        },
+      ])
+    );
+  }
+  private autoLaunch: AutoLaunch;
   async AfterInit() {
-    const settings = this.settingsInstance;
-    const app = settings.get("app");
-    const exeName = basename(process.execPath);
-    const startupArgs = [
-      "--processStart",
-      `${exeName}`,
-      "--process-start-args",
-      "--hidden",
-    ];
-    if (
-      app.autostart !==
-      this.app.getLoginItemSettings({
-        args: startupArgs,
-        path: process.execPath,
-      }).openAtLogin
-    ) {
-      this.app.setLoginItemSettings({
-        openAtLogin: true,
-        path: process.execPath,
-        enabled: !!app.autostart,
-        args: startupArgs,
-      });
-    }
+    const settings = this.settingsInstance.instance().app;
+    this.autoLaunch = new AutoLaunch({
+      name: "Youtube Music for Desktop",
+      path: this.app.getPath("exe"),
+    });
+    if (this.autoLaunch.isEnabled() && !settings.autostart)
+      await this.autoLaunch.disable();
+    else if (!this.autoLaunch.isEnabled() && settings.autostart)
+      await this.autoLaunch.enable();
+    this.initializeTray();
   }
   @IpcOn("settingsProvider.update", {
     debounce: 1000,
-    filter: (ev, [key]: [string]) => key === "app.autostart",
+    filter: (key: string, enabled: boolean) => key === "app.autostart",
   })
-  async onAutoStartToggle() {
-    await this.AfterInit();
+  async onAutoStartToggle(key: string, enabled: boolean) {
+    if (await this.autoLaunch.isEnabled() !== enabled) {
+      await this.autoLaunch[enabled ? "enable" : "disable"]();
+    }
   }
 }

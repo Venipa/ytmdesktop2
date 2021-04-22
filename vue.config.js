@@ -36,7 +36,6 @@ const electronBuilder = {
     preload: "src/preload.js",
     toolbar: "src/toolbar.js",
   },
-  
   nodeIntegration: false,
   builderOptions,
   externals: ['chokidar'],

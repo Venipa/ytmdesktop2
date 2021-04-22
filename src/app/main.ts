@@ -14,16 +14,15 @@ import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import path from "path";
 import { BaseProvider } from "./plugins/_baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
-import { isDevelopment } from "./utils/devUtils";
+import { defaultUrl, isDevelopment } from "./utils/devUtils";
 import { BrowserWindowViews, getViewObject } from "./utils/mappedWindow";
 import { debounce } from "lodash-es";
 import logger from "@/utils/Logger";
 
-const defaultUrl = "https://music.youtube.com";
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
 }
-const log = logger.child({ label: 'main' });
+const log = logger.child({ label: "main" });
 export default async function() {
   const serviceCollection = (() => {
     const pluginContext = require.context("./plugins", false, /plugin.ts$/i);
@@ -243,7 +242,7 @@ export default async function() {
       mainWindow = await createRootWindow();
       rootWindowInjectUtils(
         mainWindow.views.youtubeView.webContents,
-        getViewObject(mainWindow)
+        getViewObject(mainWindow.views)
       );
 
       if (serviceCollection)
@@ -271,7 +270,7 @@ export default async function() {
     mainWindow = await createRootWindow();
     rootWindowInjectUtils(
       mainWindow.views.youtubeView.webContents,
-      getViewObject(mainWindow)
+      getViewObject(mainWindow.views)
     );
     serviceCollection.providers.forEach((p) => p._registerWindows(mainWindow));
     setTimeout(() => {

@@ -4,7 +4,9 @@ import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, BeforeStart } from "./_baseProvider";
 import { IpcOn } from "../utils/onIpcEvent";
-const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = process.env.VUE_APP_GITHUB_REPOSITORY.split('/', 2);
+const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = isDevelopment
+  ? [null, null]
+  : process.env.VUE_APP_GITHUB_REPOSITORY.split("/", 2);
 export default class EventProvider extends BaseProvider implements BeforeStart {
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
@@ -63,7 +65,7 @@ export default class EventProvider extends BaseProvider implements BeforeStart {
   private _autoUpdateCheckHandle;
   @IpcOn("settingsProvider.update", {
     debounce: 1000,
-    filter: (ev, ...[key]: [string]) => key === "app.autoupdate",
+    filter: (key: string) => key === "app.autoupdate",
   })
   onAutoUpdateToggled(ev, ...[key, value]: [string, boolean]) {
     const autoUpdateEnabled = this.settingsInstance.get(

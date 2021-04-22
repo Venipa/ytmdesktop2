@@ -1,10 +1,22 @@
 import { App, ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
-import { BaseProvider, OnInit, OnDestroy, BeforeStart } from "./_baseProvider";
+import {
+  BaseProvider,
+  OnInit,
+  OnDestroy,
+  BeforeStart,
+  AfterInit,
+} from "./_baseProvider";
 import fs from "fs";
 import { existsSync } from "fs";
 import path from "path";
-import { get as _get, set as _set } from "lodash-es";
+import { debounce, get as _get, set as _set } from "lodash-es";
 import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
+import {
+  rootWindowInjectCustomCss,
+  rootWindowInjectUtils,
+} from "../utils/webContentUtils";
+import { getViewObject } from "../utils/mappedWindow";
+import { defaultUri, defaultUrl } from "../utils/devUtils";
 const defaultSettings = {
   app: {
     autoupdate: true,
@@ -19,13 +31,16 @@ const defaultSettings = {
     enabled: false,
     scssFile: null,
   },
+  state: {
+    currentUrl: null,
+  },
 };
 let _settingsStore: SettingsStore = defaultSettings;
 type SettingsStore = typeof defaultSettings & { [key: string]: any };
 
 @IpcContext
 export default class SettingsProvider extends BaseProvider
-  implements OnDestroy, BeforeStart {
+  implements OnDestroy, BeforeStart, AfterInit {
   constructor(private app: App) {
     super("settings");
   }
@@ -55,7 +70,8 @@ export default class SettingsProvider extends BaseProvider
     return _get(_settingsStore, keys, defaultValue);
   }
   set(keys: string | string[], value: any) {
-    return _set(_settingsStore, keys, value);
+    _set(_settingsStore, keys, value);
+    return this;
   }
   @IpcOn("settingsProvider.save", {
     debounce: 10000,
@@ -66,6 +82,39 @@ export default class SettingsProvider extends BaseProvider
   }
   async OnDestroy() {
     await this.saveToDrive();
+  }
+  AfterInit() {
+    this.views.youtubeView.webContents.on(
+      "did-navigate-in-page",
+      (ev, location) => {
+        this.logger.debug(`navigate-in-page :: ${location}`);
+      }
+    );
+    let previousHostname: string = defaultUrl;
+    this.views.youtubeView.webContents.on(
+      "did-navigate",
+      debounce((ev: Electron.Event, location: string) => {
+        this.logger.debug("navigate", location);
+        const url = new URL(location);
+        if (url) {
+          if (
+            url.hostname === defaultUri.hostname &&
+            previousHostname !== url.hostname
+          ) {
+            rootWindowInjectUtils(
+              this.views.youtubeView.webContents,
+              getViewObject(this.views)
+            ),
+              ipcMain.emit("settings.customCssUpdate");
+            ipcMain.emit("settings.customCssWatch");
+          }
+          previousHostname = url.hostname;
+          if (url.hostname !== defaultUri.hostname) {
+            this.views.toolbarView.webContents.send("track:title", null); // disable title bar track title
+          }
+        }
+      }, 500)
+    );
   }
   @IpcHandle("settingsProvider.get")
   private _onEventGet(ev: IpcMainInvokeEvent, ...args: any[]) {
