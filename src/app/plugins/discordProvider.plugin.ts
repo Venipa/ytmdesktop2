@@ -40,7 +40,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
 
     client.on(
       "ready",
-      debounce(() => this.onClientReady.bind(this), 1000)
+      debounce(() => this.onClientReady(), 1000)
     );
     this.presence = presence;
     this.client = client;
@@ -52,7 +52,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
         () =>
           new Promise((resolve) =>
             setTimeout(() => {
-              this.createClient.bind(this).then(resolve);
+              this.createClient().then(resolve);
             }, 5000)
           )
       );
@@ -64,7 +64,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       this.setActivity(this.presence).then(
         () =>
           (this._updateHandle = setTimeout(
-            () => this._refreshActivity.bind(this),
+            () => this._refreshActivity(),
             DISCORD_UPDATE_INTERVAL
           ))
       );
@@ -110,7 +110,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   })
   private async __onToggleEnabled(key: string, enabled: boolean) {
     if (enabled) {
-      this.createClient.bind(this);
+      this.createClient();
     } else {
       this.client.destroy();
       this.client = null;
@@ -142,7 +142,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       });
     if (this._updateHandle) clearTimeout(this._updateHandle);
     this._updateHandle = setTimeout(
-      () => this._refreshActivity.bind(this),
+      () => this._refreshActivity(),
       DISCORD_UPDATE_INTERVAL
     );
   }
