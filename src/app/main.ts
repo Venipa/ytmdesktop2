@@ -12,54 +12,31 @@ import {
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS3_DEVTOOLS } from "electron-devtools-installer";
 import path from "path";
-import { BaseProvider } from "./plugins/_baseProvider";
+import { BaseProvider } from "./utils/baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
 import { defaultUrl, isDevelopment } from "./utils/devUtils";
 import { BrowserWindowViews, getViewObject } from "./utils/mappedWindow";
 import { debounce } from "lodash-es";
 import logger from "@/utils/Logger";
+import { createEventCollection, createPluginCollection } from "./utils/serviceCollection";
 
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
 }
 const log = logger.child({ label: "main" });
 export default async function() {
-  const serviceCollection = (() => {
-    const pluginContext = require.context("./plugins", false, /plugin.ts$/i);
-    const providers = pluginContext
-      .keys()
-      .map(pluginContext)
-      .map((m: any) => {
-        return m.default;
-      })
-      .map((provider: any) => new provider(app));
-    providers.forEach((p: BaseProvider) =>
-      p._registerProviders(
-        providers.filter((_p: BaseProvider) => _p.getName() !== p.getName())
-      )
-    );
-    return {
-      providers,
-      getProviderNames: () => providers.map((x: BaseProvider) => x.getName()),
-      exec: async (
-        event: "OnInit" | "OnDestroy" | "AfterInit" | "BeforeStart"
-      ) => {
-        return await Promise.all(
-          providers
-            .filter((x) => typeof x[event] === "function")
-            .map((x) => Promise.resolve(x[event](app)))
-        );
-      },
-      getProvider: <T>(name: string): T =>
-        providers.find((x) => x.getName() === name),
-    };
-  })();
+  const serviceCollection = await createPluginCollection(app),
+  eventCollection = await createEventCollection(app, serviceCollection.providers);
   log.debug(
     `Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`
+  );
+  log.debug(
+    `Loaded Events: ${eventCollection.getProviderNames().join(", ")}`
   );
 
   try {
     await serviceCollection.exec("BeforeStart");
+    await eventCollection.prepare();
   } catch (ex) {
     log.error(ex); // before start can be ignored, experimental
   }
@@ -153,7 +130,7 @@ export default async function() {
     try {
       if (serviceCollection)
         serviceCollection.providers.forEach((p) =>
-          p._registerWindows(mainWindow)
+          p.__registerWindows(mainWindow)
         );
     } catch {}
     let fromMaximized = false;
@@ -249,7 +226,7 @@ export default async function() {
 
       if (serviceCollection)
         serviceCollection.providers.forEach((p) =>
-          p._registerWindows(mainWindow)
+          p.__registerWindows(mainWindow)
         );
       setTimeout(() => {
         ipcMain.emit("settings.customCssUpdate");
@@ -274,7 +251,7 @@ export default async function() {
       mainWindow.views.youtubeView.webContents,
       getViewObject(mainWindow.views)
     );
-    serviceCollection.providers.forEach((p) => p._registerWindows(mainWindow));
+    serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
     setTimeout(() => {
       ipcMain.emit("settings.customCssUpdate");
       ipcMain.emit("settings.customCssWatch");

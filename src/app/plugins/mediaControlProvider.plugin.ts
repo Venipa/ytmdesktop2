@@ -7,7 +7,5 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   constructor(private app: App) {
     super("events");
   }
-  async AfterInit() {
-    
-  }
+  async AfterInit() {}
 }

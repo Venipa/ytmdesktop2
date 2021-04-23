@@ -2,7 +2,7 @@ import { App } from "electron";
 import { IpcContext, IpcOn } from "../utils/onIpcEvent";
 import { Client as DiscordClient, Presence } from "discord-rpc";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit } from "./_baseProvider";
+import { BaseProvider, AfterInit } from "../utils/baseProvider";
 import { TrackInfoEvent } from "../interfaces/trackEvent";
 import TrackProvider from "./trackProvider.plugin";
 import { debounce } from "lodash-es";

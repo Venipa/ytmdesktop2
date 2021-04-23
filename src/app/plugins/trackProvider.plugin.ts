@@ -1,7 +1,7 @@
 import { App, BrowserWindow, ipcMain } from "electron";
 import { debounce } from "lodash-es";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit } from "./_baseProvider";
+import { BaseProvider, AfterInit } from "../utils/baseProvider";
 
 export default class TrackProvider extends BaseProvider implements AfterInit {
   get currentWindow() {

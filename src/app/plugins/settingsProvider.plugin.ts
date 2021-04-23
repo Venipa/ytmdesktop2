@@ -5,7 +5,7 @@ import {
   OnDestroy,
   BeforeStart,
   AfterInit,
-} from "./_baseProvider";
+} from "../utils/baseProvider";
 import fs from "fs";
 import { existsSync } from "fs";
 import path from "path";

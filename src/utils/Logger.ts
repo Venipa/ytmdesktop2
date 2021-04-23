@@ -3,7 +3,7 @@ import { createLogger, format, transports } from "winston";
 import { inspect } from "util";
 import DailyRotateFile from "winston-daily-rotate-file";
 const myFormat = format.printf((info) => {
-  const { level, message, label, timestamp } = info;
+  const { level, message, timestamp, ...meta } = info;
   // @ts-ignore
   let msg = [message, ...(info[Symbol.for('splat')] || [])]
     .map((arg) => {
@@ -13,7 +13,7 @@ const myFormat = format.printf((info) => {
       else return arg;
     })
     .join(" ");
-  return `${timestamp} [${label}] ${level}: ${msg}`;
+  return `${timestamp} [${meta.label}]${meta.moduleName ? `[${meta.moduleName}]` : ''} ${level}: ${msg}`;
 });
 const logger = createLogger({
   defaultMeta: {
@@ -21,7 +21,9 @@ const logger = createLogger({
   },
   format: format.combine(
     format.splat(),
-    format.timestamp(),
+    format.timestamp({
+      format: "DD-MM-YYYY HH:mm:ss.ms",
+    }),
     myFormat
   ),
   transports: [],
@@ -32,10 +34,10 @@ if (process.env.NODE_ENV !== "production") {
     new transports.Console({
       level,
       format: format.combine(
-        format.colorize(),
         format.splat(),
+        format.colorize(),
         format.timestamp({
-          format: "DD-MM-YYYY HH:mm:ss",
+          format: "HH:mm:ss",
         }),
         myFormat
       ),

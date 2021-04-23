@@ -3,7 +3,7 @@ import { IpcContext, IpcOn } from "../utils/onIpcEvent";
 import fs from "fs";
 import path from "path";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit } from "./_baseProvider";
+import { BaseProvider, AfterInit } from "../utils/baseProvider";
 import { rootWindowInjectCustomCss } from "../utils/webContentUtils";
 @IpcContext
 export default class EventProvider extends BaseProvider implements AfterInit {
