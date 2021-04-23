@@ -66,11 +66,16 @@ export default class SettingsProvider extends BaseProvider
   get instance() {
     return _settingsStore;
   }
-  get(keys: string | string[], defaultValue?: any) {
-    return _get(_settingsStore, keys, defaultValue);
+  get(key: string, defaultValue?: any) {
+    return _get(_settingsStore, key, defaultValue);
   }
-  set(keys: string | string[], value: any) {
-    _set(_settingsStore, keys, value);
+  set(key: string, value: any) {
+    _set(_settingsStore, key, value);
+    try {
+      ipcMain.emit("settingsProvider.change", key, value);
+    } catch (ex) {
+      this.logger.error(ex);
+    }
     return this;
   }
   @IpcOn("settingsProvider.save", {
@@ -129,7 +134,6 @@ export default class SettingsProvider extends BaseProvider
     const [key, value] = args;
     this.set(key, value);
     this.logger.debug(key, value);
-    ipcMain.emit("settingsProvider.change", key, value);
     this.saveToDrive();
   }
   @IpcHandle("settingsProvider.update")
@@ -137,7 +141,6 @@ export default class SettingsProvider extends BaseProvider
     const [key, value] = args;
     this.logger.debug(key, value);
     this.set(key, value);
-    ipcMain.emit("settingsProvider.change", key, value);
     await this.saveToDrive();
     return value;
   }

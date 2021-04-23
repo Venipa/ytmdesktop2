@@ -88,7 +88,7 @@ export default class EventProvider extends BaseProvider
           {
             label: "Show Buttons",
             type: "checkbox",
-            checked: settings.discord.enabled,
+            checked: settings.discord.buttons,
             click: (item) => {
               this.settingsInstance.set("discord.buttons", item.checked);
             },

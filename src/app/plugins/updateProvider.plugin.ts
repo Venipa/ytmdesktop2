@@ -45,7 +45,7 @@ export default class EventProvider extends BaseProvider
       autoUpdater.signals.updateDownloaded(() => {
         (this._updateAvailable = true), (this._updateDownloaded = true);
 
-        if (app.autoupdate) autoUpdater.quitAndInstall(true);
+        if (app.autoupdate) autoUpdater.quitAndInstall(false, true);
       });
       if (app.autoupdate) autoUpdater.checkForUpdatesAndNotify();
     }

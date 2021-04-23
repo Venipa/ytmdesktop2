@@ -82,7 +82,7 @@ export default async function() {
       resizable: true,
       frame: false,
       darkTheme: true,
-      titleBarStyle: "hidden",
+      titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
       maximizable: true,
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
@@ -107,6 +107,7 @@ export default async function() {
     );
     const youtubeView = new BrowserView({
       webPreferences: {
+        disableHtmlFullscreenWindowResize: true,
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
         contextIsolation: true,
         preload: parseScriptPath("preload.js"),
@@ -299,8 +300,9 @@ export default async function() {
       settingsWindow.hide();
       if (isDevelopment) settingsWindow.webContents.closeDevTools();
       settingsWindow.close();
-      
-      if (mainWindow.views.settingsWindow) mainWindow.views.settingsWindow = null;
+
+      if (mainWindow.views.settingsWindow)
+        mainWindow.views.settingsWindow = null;
     }
   });
   ipcMain.on("app.minimize", (ev) => {
