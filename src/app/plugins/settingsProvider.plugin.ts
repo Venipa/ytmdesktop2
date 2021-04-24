@@ -19,6 +19,7 @@ import { getViewObject } from "../utils/mappedWindow";
 import { defaultUri, defaultUrl } from "../utils/devUtils";
 const defaultSettings = {
   app: {
+    beta: false,
     autoupdate: true,
     autostart: true,
     getstarted: true,

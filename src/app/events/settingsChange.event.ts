@@ -5,6 +5,6 @@ export default class extends BaseEvent implements OnEventExecute {
     super("settingsProvider.change");
   }
   execute(key, value) {
-    this.logger.debug(`${key} as changed its value to`, value);
+    this.logger.debug(`${key} has changed its value to`, value);
   }
 }
