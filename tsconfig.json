@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "ES2019",
     "module": "esnext",
     "strict": false,
     "jsx": "preserve",
@@ -36,9 +36,11 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
+    "src/**/*.js",
     "tests/**/*.ts",
     "tests/**/*.tsx",
-    "src/preload.js"
+    "src/preload.js",
+    "src/preload*.js"
   ],
   "exclude": [
     "node_modules"

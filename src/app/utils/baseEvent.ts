@@ -3,7 +3,7 @@ import { App, ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { Logger } from "winston";
 import { BaseProvider } from "./baseProvider";
 export interface OnEventExecute {
-  execute: (ev: IpcMainEvent, ...args: any[]) => Promise<any> | any | void;
+  execute: (ev: IpcMainEvent | any, ...args: any[]) => Promise<any> | any | void;
 }
 export interface OnEventHandle {
   handle: (ev: IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any;

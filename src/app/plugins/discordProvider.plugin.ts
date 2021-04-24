@@ -6,6 +6,12 @@ import { BaseProvider, AfterInit } from "../utils/baseProvider";
 import { TrackInfoEvent } from "../interfaces/trackEvent";
 import TrackProvider from "./trackProvider.plugin";
 import { debounce } from "lodash-es";
+import {
+  discordEmbedFromTrack,
+  parseMusicChannelById,
+  parseMusicUrlById,
+  TrackData,
+} from "../utils/trackData";
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
 const DEFAULT_PRESENCE: Presence = {
   largeImageKey: "logo",
@@ -17,7 +23,6 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   private _updateHandle: any;
   private client: DiscordClient;
   private presence: Presence;
-  private lastTrack: TrackInfoEvent;
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
@@ -97,7 +102,6 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       )
         delete this.presence.buttons;
     }
-    this.logger.debug("setActivity", { ...this.presence });
     if (this.client)
       return await this.client.setActivity(
         this.presence || DEFAULT_PRESENCE,
@@ -124,21 +128,13 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     if (this.client) this.onClientReady();
   }
   async onClientReady() {
-    const track = await this.trackService.getCurrentTrack();
-    if (track)
-      this.setActivity({
-        details: track.title,
-        state: "Playing",
-        buttons: [
-          {
-            label: "Listen to Audio",
-            url: track.url,
-          },
-        ],
-      });
+    const track = this.trackService.trackData;
+    if (track) this.setActivity(discordEmbedFromTrack(track));
     else
       this.setActivity({
+        ...DEFAULT_PRESENCE,
         state: "Browsing...",
+        buttons: [],
       });
     if (this._updateHandle) clearTimeout(this._updateHandle);
     this._updateHandle = setTimeout(
@@ -146,22 +142,11 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       DISCORD_UPDATE_INTERVAL
     );
   }
-  @IpcOn("track:info", {
-    debounce: 1000,
+  @IpcOn("track:change", {
+    debounce: 100,
   })
-  private async __onTrackInfo(ev, ...[track]: [TrackInfoEvent]) {
-    this.logger.debug(track);
-    if (!this.client || !track.title) return;
-    this.lastTrack = track;
-    this.setActivity({
-      details: track.title,
-      state: "Playing",
-      buttons: [
-        {
-          label: "Listen to Audio",
-          url: track.url,
-        },
-      ],
-    });
+  private async __onTrackInfo(track: TrackData) {
+    if (!this.client || !track?.video) return;
+    this.setActivity(discordEmbedFromTrack(track));
   }
 }

@@ -86,8 +86,9 @@ export default async function() {
       webPreferences: {
         disableHtmlFullscreenWindowResize: true,
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-        contextIsolation: true,
-        preload: parseScriptPath("preload.js"),
+        contextIsolation: false, // window object is required to be rewritten for tracking current track
+        preload: parseScriptPath("preload-yt.js"),
+        nativeWindowOpen: true
       },
     });
     const toolbarView = new BrowserView({
@@ -96,7 +97,7 @@ export default async function() {
         contextIsolation: true,
         sandbox: true,
         nativeWindowOpen: true,
-        preload: parseScriptPath("preload.js"),
+        preload: parseScriptPath("preload-api.js"),
       },
     });
     const toolbarUrl = (process.env.WEBPACK_DEV_SERVER_URL
@@ -180,7 +181,7 @@ export default async function() {
         // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
         contextIsolation: true,
-        preload: parseScriptPath("preload.js"),
+        preload: parseScriptPath("preload-api.js"),
       },
     });
     if (process.env.WEBPACK_DEV_SERVER_URL) {
@@ -297,14 +298,6 @@ export default async function() {
 
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {
-    ipcMain
-      .eventNames()
-      .filter((x) => typeof x === "string")
-      .forEach((event: any) =>
-        ipcMain.on(event as string, (ev, ...args) =>
-          logger.child({ label: `event:${event}` }).debug(event, ...args)
-        )
-      );
     if (process.platform === "win32") {
       process.on("message", (data) => {
         if (data === "graceful-exit") {
