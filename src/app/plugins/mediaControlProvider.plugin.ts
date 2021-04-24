@@ -5,7 +5,7 @@ import { BaseProvider, AfterInit } from "../utils/baseProvider";
 
 export default class EventProvider extends BaseProvider implements AfterInit {
   constructor(private app: App) {
-    super("events");
+    super("mediaController");
   }
   async AfterInit() {}
 }
