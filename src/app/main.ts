@@ -40,6 +40,10 @@ export default async function() {
   } catch (ex) {
     log.error(ex); // before start can be ignored, experimental
   }
+
+  protocol.registerSchemesAsPrivileged([
+    { scheme: 'app', privileges: { secure: true, standard: true } }
+  ])
   /**
    *
    * @param {Electron.BrowserWindowConstructorOptions | undefined} options

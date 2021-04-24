@@ -37,14 +37,22 @@
           Check for Update
         </button>
       </div>
+      <div class="h-px my-4 bg-gray-500 rounded"></div>
+      <div class="px-5 flex flex-col gap-4">
+        <settings-checkbox configKey="app.beta">
+          Include Pre Releases / Beta
+        </settings-checkbox>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import SettingsCheckbox from "@/components/SettingsCheckbox.vue";
+import { defineComponent, ref } from "vue";
 
 export default defineComponent({
+  components: { SettingsCheckbox },
   data() {
     return {
       downloaded: false,

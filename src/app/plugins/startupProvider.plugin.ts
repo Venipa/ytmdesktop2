@@ -1,22 +1,17 @@
 import {
   App,
   BrowserWindow,
-  ipcMain,
-  LoginItemSettings,
-  Menu,
-  nativeImage,
-  shell,
   Tray,
 } from "electron";
 import SettingsProvider from "./settingsProvider.plugin";
 import {
   BaseProvider,
   AfterInit,
-  OnInit,
   BeforeStart,
 } from "../utils/baseProvider";
 import { basename, resolve } from "path";
 import { IpcContext, IpcOn } from "../utils/onIpcEvent";
+import { createTrayMenu } from "../utils/trayMenu";
 @IpcContext
 export default class EventProvider extends BaseProvider
   implements AfterInit, BeforeStart {
@@ -33,112 +28,12 @@ export default class EventProvider extends BaseProvider
   async BeforeStart() {}
   private async initializeTray() {
     this._tray = new Tray(resolve(__static, "favicon.ico"));
-    this._tray.setToolTip(`Youtube Music Desktop v2`);
+    this._tray.setToolTip(`Youtube Music for Desktop`);
+    this._tray.addListener('click', () => BrowserWindow.fromBrowserView(this.views.youtubeView)?.show());
     this._tray.setContextMenu(this.buildMenu());
   }
   private buildMenu() {
-    const settings = this.settingsInstance.instance;
-    return Menu.buildFromTemplate([
-      {
-        label: "Youtube Music for Desktop",
-        sublabel: `Version: ${this.app.getVersion()}`,
-      },
-      {
-        label: "Check for Updates",
-        click: () => ipcMain.emit("app.checkUpdate"),
-      },
-      {
-        type: "separator",
-      },
-      {
-        label: "Auto Startup",
-        type: "checkbox",
-        checked: settings.app.autostart,
-        click: (item) => {
-          this.settingsInstance.set("app.autostart", item.checked);
-        },
-      },
-      {
-        label: "Auto Update",
-        type: "checkbox",
-        checked: settings.app.autoupdate,
-        click: (item) => {
-          this.settingsInstance.set("app.autoupdate", item.checked);
-        },
-      },
-      {
-        type: "separator",
-      },
-      {
-        label: "Settings",
-        click: () => {
-          ipcMain.emit("settings.show");
-        },
-      },
-      {
-        type: "separator",
-      },
-      {
-        type: "submenu",
-        label: "Discord",
-        submenu: [
-          {
-            label: "Show Presence",
-            type: "checkbox",
-            checked: settings.discord.enabled,
-            click: (item) => {
-              this.settingsInstance.set("discord.enabled", item.checked);
-            },
-          },
-          {
-            label: "Show Buttons",
-            type: "checkbox",
-            checked: settings.discord.buttons,
-            click: (item) => {
-              this.settingsInstance.set("discord.buttons", item.checked);
-            },
-          },
-        ],
-      },
-      {
-        type: "separator",
-      },
-      {
-        type: "submenu",
-        label: "Custom CSS",
-        submenu: [
-          {
-            label: "Enable CSS",
-            type: "checkbox",
-            checked: settings.customcss.enabled,
-            click: (item) => {
-              this.settingsInstance.set("customcss.enabled", item.checked);
-            },
-          },
-          {
-            label: "Open selected CSS File",
-            enabled: settings.customcss.enabled,
-            click: (item) => {
-              if (item.enabled) shell.openExternal(settings.customcss.scssFile);
-            },
-          },
-          {
-            label: "Change CSS File",
-            enabled: settings.customcss.enabled,
-            click: (item) => {
-              if (item.enabled) ipcMain.emit("settings.show");
-            },
-          },
-        ],
-      },
-      {
-        type: "separator",
-      },
-      {
-        label: "Quit",
-        click: () => this.app.quit(),
-      },
-    ]);
+    return createTrayMenu(this);
   }
   private get startArgs() {
     return ["--processStart", `"${basename(process.execPath)}"`];
