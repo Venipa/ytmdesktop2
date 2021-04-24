@@ -75,7 +75,7 @@ export default class UpdateProvider extends BaseProvider
   })
   onCheckUpdate() {
     autoUpdater.checkForUpdates().then(x => {
-      if (!x?.updateInfo) throw new Error("No Update available");
+      if (!x?.updateInfo || x.updateInfo.version === this.app.getVersion()) throw new Error("No Update available");
       return x;
     }).then((x) => {
       return dialog

@@ -5,6 +5,9 @@ const builderOptions = {
   publish: ["github"],
   appId: "net.venipa.ytmdesktop",
   productName: "Youtube Music for Desktop",
+  extraMetadata: {
+    name: "Youtube Music for Desktop"
+  },
   mac: {
     category: "public.app-category.music",
     icon: "src/assets/build_resources/mac/icon.icns",
