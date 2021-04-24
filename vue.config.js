@@ -33,13 +33,14 @@ const electronBuilder = {
   chainWebpackMainProcess: (config) => {},
   mainProcessTypeChecking: false,
   preload: {
-    preload: "src/preload.js",
+    "preload-yt": "src/preload-yt.js",
+    "preload-api": "src/preload-api.js",
     toolbar: "src/toolbar.js",
   },
   nodeIntegration: false,
   builderOptions,
-  externals: ['chokidar'],
-  nodeModulesPath: ['./node_modules']
+  externals: ["chokidar"],
+  nodeModulesPath: ["./node_modules"],
 };
 module.exports = {
   pluginOptions: {
@@ -65,6 +66,6 @@ module.exports = {
       .loader("vue-svg-loader");
   },
   configureWebpack: {
-    devtool: 'source-map'
-  }
+    devtool: "source-map",
+  },
 };

@@ -9,7 +9,12 @@ import {
   Tray,
 } from "electron";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit, OnInit, BeforeStart } from "./_baseProvider";
+import {
+  BaseProvider,
+  AfterInit,
+  OnInit,
+  BeforeStart,
+} from "../utils/baseProvider";
 import { basename, resolve } from "path";
 import { IpcContext, IpcOn } from "../utils/onIpcEvent";
 @IpcContext
@@ -158,7 +163,7 @@ export default class EventProvider extends BaseProvider
     debounce: 50,
   })
   private onSettingsChange() {
-    this._tray.setContextMenu(this.buildMenu());
+    if (this._tray) this._tray.setContextMenu(this.buildMenu());
   }
   @IpcOn("settingsProvider.change", {
     debounce: 1000,

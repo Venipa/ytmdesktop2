@@ -3,11 +3,13 @@
     <div
       class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2"
     >
-      <div class="flex items-center flex-1 drag space-x-2">
+      <div class="flex items-center flex-1 drag space-x-2 appear">
         <span class="text-xs label">Youtube Music for Desktop</span>
-        <template v-if="title">
-          <span class="text-xs badge badge-sm badge-primary">{{ title }}</span>
-        </template>
+        <span
+          class="text-xs badge badge-sm badge-primary appear"
+          v-if="title"
+          >{{ title }}</span
+        >
       </div>
       <div class="flex items-center space-x-2">
         <div @click="onSettings" class="control-button">
@@ -46,7 +48,7 @@ export default defineComponent({
   components: {
     CloseIcon,
     MaxIcon,
-    MinIcon,
+    MinIcon
   },
   data() {
     return {
@@ -72,7 +74,8 @@ export default defineComponent({
   },
   created() {
     window.ipcRenderer.on("track:title", (ev, title) => {
-      (this.title = title), console.log(title);
+      this.title = null;
+      if (title) this.title = title;
     });
   },
 });

@@ -5,7 +5,7 @@ import {
   OnDestroy,
   BeforeStart,
   AfterInit,
-} from "./_baseProvider";
+} from "../utils/baseProvider";
 import fs from "fs";
 import { existsSync } from "fs";
 import path from "path";
@@ -93,6 +93,8 @@ export default class SettingsProvider extends BaseProvider
       "did-navigate-in-page",
       (ev, location) => {
         this.logger.debug(`navigate-in-page :: ${location}`);
+        const url = new URLSearchParams(location.split("?")[1]);
+        if (url?.has("v")) ipcMain.emit("track:set-active", url.get("v"));
       }
     );
     let previousHostname: string = defaultUrl;

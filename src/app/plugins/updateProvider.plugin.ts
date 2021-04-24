@@ -2,7 +2,7 @@ import { App, ipcMain } from "electron";
 import { autoUpdater } from "electron-updater";
 import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
-import { AfterInit, BaseProvider, BeforeStart } from "./_baseProvider";
+import { AfterInit, BaseProvider, BeforeStart } from "../utils/baseProvider";
 import { IpcContext, IpcOn } from "../utils/onIpcEvent";
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = isDevelopment
   ? [null, null]

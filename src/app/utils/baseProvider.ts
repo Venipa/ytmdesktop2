@@ -2,7 +2,7 @@ import logger from "@/utils/Logger";
 import { App } from "electron";
 import { BrowserView } from "electron/main";
 import { Logger } from "winston";
-import { BrowserWindowViews } from "../utils/mappedWindow";
+import { BrowserWindowViews } from "./mappedWindow";
 export interface BeforeStart {
   BeforeStart(): void | Promise<void>;
 }
@@ -18,7 +18,7 @@ export interface OnDestroy {
 
 export class BaseProvider {
   __type = "service_provider";
-  private __providers: { [key: string]: BaseProvider & any } = {};
+  private _providers: { [key: string]: BaseProvider & any } = {};
   private _loggerInstance: Logger;
   private _views: BrowserWindowViews<{
     youtubeView: BrowserView;
@@ -32,7 +32,7 @@ export class BaseProvider {
     return this._views.views;
   }
   constructor(private name: string, private displayName: string = name) {
-    this._loggerInstance = logger.child({ label: displayName || name });
+    this._loggerInstance = logger.child({ moduleName: this.name });
   }
 
   getName() {
@@ -41,16 +41,22 @@ export class BaseProvider {
   getDisplayName() {
     return this.displayName;
   }
-  _registerProviders(p: BaseProvider[]) {
-    this.__providers = p.reduce((l, r) => ({ ...l, [r.getName()]: r }), {});
+  __registerProviders(p: BaseProvider[]) {
+    this._providers = p.reduce((l, r) => ({ ...l, [r.getName()]: r }), {});
   }
-  _registerWindows(views: BrowserWindowViews<{ youtubeView: BrowserView }>) {
+  __registerWindows(
+    views: BrowserWindowViews<{
+      youtubeView: BrowserView;
+      toolbarView: BrowserView;
+      settingsWindow?: BrowserView;
+    }>
+  ) {
     this._views = views;
   }
   getProvider(name: string) {
-    return this.__providers[name];
+    return this._providers[name];
   }
   queryProvider(): BaseProvider[] {
-    return Object.values(this.__providers);
+    return Object.values(this._providers);
   }
 }
