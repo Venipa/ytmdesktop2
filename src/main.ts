@@ -18,7 +18,38 @@ function loadRoutes() {
 
 const router = createRouter({
   history: createWebHashHistory(),
-  routes: loadRoutes(),
+  routes: [
+    {
+      path: "/",
+      component: () => import("./views/settings/index.vue"),
+      children: [
+        {
+          path: "/",
+          component: () => import("./views/settings/generic-settings.vue"),
+        },
+        {
+          path: "/discord",
+          component: () => import("./views/settings/discord-settings.vue"),
+        },
+        {
+          path: "/custom-css",
+          component: () => import("./views/settings/customcss-settings.vue"),
+        },
+        {
+          path: "/about",
+          component: () => import("./views/settings/about-settings.vue"),
+        },
+      ],
+    },
+    {
+      path: "/youtube/toolbar",
+      component: () => import("./views/youtube/toolbar.vue"),
+    },
+    {
+      path: "/youtube/loading",
+      component: () => import("./views/youtube/loading.vue"),
+    },
+  ],
 });
 createApp(App)
   .use(router)

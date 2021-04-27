@@ -43,5 +43,6 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
       console.log('Client Plugin ::', m.name, m.exec);
       m.exec();
     });
+    window.api.emit('app.loadEnd')
   });
 })();
