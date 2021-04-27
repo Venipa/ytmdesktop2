@@ -34,5 +34,8 @@ export default {
     minimize: () => ipcRenderer.send("app.minimize"),
     maximize: () => ipcRenderer.send("app.maximize"),
     quit: () => ipcRenderer.send("app.quit"),
+    emit: (event, ...data) => ipcRenderer.send(event, ...data),
+    emitTo: (id, event, ...data) => ipcRenderer.sendTo(id, event, ...data),
+    on: (channel, func) => ipcRenderer.on(channel, func),
   },
 };

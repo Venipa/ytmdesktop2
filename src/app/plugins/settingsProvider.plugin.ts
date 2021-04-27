@@ -112,7 +112,7 @@ export default class SettingsProvider extends BaseProvider
             rootWindowInjectUtils(
               this.views.youtubeView.webContents,
               getViewObject(this.views)
-            ),
+            );
               ipcMain.emit("settings.customCssUpdate");
             ipcMain.emit("settings.customCssWatch");
           }

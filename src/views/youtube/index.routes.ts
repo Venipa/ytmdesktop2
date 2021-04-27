@@ -1,11 +1,13 @@
 import { RouteRecordRaw } from "vue-router";
 
-/**
- * @type {RouteRecordRaw} routes
- */
-const routes = {
-  path: "/youtube/toolbar",
-  component: () => import("./toolbar.vue")
-};
-
+const routes: Partial<RouteRecordRaw>[] = [
+  {
+    path: "/youtube/toolbar",
+    component: () => import("./toolbar.vue"),
+  },
+  {
+    path: "/youtube/loading",
+    component: () => import("./loading.vue"),
+  },
+];
 export default routes;

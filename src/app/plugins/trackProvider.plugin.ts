@@ -36,9 +36,15 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       ipcMain.emit("track:change", this.trackData);
     }
   }
+  @IpcOn("track:title-change", {
+    debounce: 100,
+  })
+  private __onTitleChange(ev, trackId: string) {
+    if (trackId) this.__onActiveTrack(trackId);
+  }
   @IpcOn("track:set-active")
   private __onActiveTrack(trackId: string) {
-    this.logger.debug(`active track: ${trackId}`);
+    this.logger.debug(`active track:`, trackId);
     this._activeTrackId = trackId;
     if (this.trackData) ipcMain.emit("track:change", this.trackData);
   }

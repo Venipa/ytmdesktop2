@@ -18,7 +18,11 @@ import { defaultUrl, isDevelopment } from "./utils/devUtils";
 import { BrowserWindowViews, getViewObject } from "./utils/mappedWindow";
 import { debounce } from "lodash-es";
 import logger from "@/utils/Logger";
-import { createEventCollection, createPluginCollection } from "./utils/serviceCollection";
+import {
+  createEventCollection,
+  createPluginCollection,
+} from "./utils/serviceCollection";
+import { createApiView, createView } from "./utils/view";
 
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
@@ -26,13 +30,14 @@ function parseScriptPath(p: string) {
 const log = logger.child({ label: "main" });
 export default async function() {
   const serviceCollection = await createPluginCollection(app),
-  eventCollection = await createEventCollection(app, serviceCollection.providers);
+    eventCollection = await createEventCollection(
+      app,
+      serviceCollection.providers
+    );
   log.debug(
     `Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`
   );
-  log.debug(
-    `Loaded Events: ${eventCollection.getProviderNames().join(", ")}`
-  );
+  log.debug(`Loaded Events: ${eventCollection.getProviderNames().join(", ")}`);
 
   try {
     await serviceCollection.exec("BeforeStart");
@@ -42,8 +47,8 @@ export default async function() {
   }
 
   protocol.registerSchemesAsPrivileged([
-    { scheme: 'app', privileges: { secure: true, standard: true } }
-  ])
+    { scheme: "app", privileges: { secure: true, standard: true } },
+  ]);
   /**
    *
    * @param {Electron.BrowserWindowConstructorOptions | undefined} options
@@ -53,15 +58,17 @@ export default async function() {
     const win = new BrowserWindow({
       width: 1500,
       height: 800,
-      minWidth: 600,
+      minWidth: 800,
       minHeight: 480,
       autoHideMenuBar: true,
+      icon: path.resolve(__static, "favicon.ico"),
       backgroundColor: "#000000",
       center: true,
       closable: true,
       skipTaskbar: false,
       resizable: true,
       frame: false,
+      title: "Youtube Music for Desktop",
       darkTheme: true,
       titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
       maximizable: true,
@@ -86,51 +93,80 @@ export default async function() {
         callback({ requestHeaders: newRequestHeaders });
       }
     );
-    const youtubeView = new BrowserView({
-      webPreferences: {
-        disableHtmlFullscreenWindowResize: true,
-        nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-        contextIsolation: false, // window object is required to be rewritten for tracking current track
-        preload: parseScriptPath("preload-yt.js"),
-        nativeWindowOpen: true
-      },
-    });
-    const toolbarView = new BrowserView({
-      webPreferences: {
-        nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-        contextIsolation: true,
-        sandbox: true,
-        nativeWindowOpen: true,
-        preload: parseScriptPath("preload-api.js"),
-      },
-    });
-    const toolbarUrl = (process.env.WEBPACK_DEV_SERVER_URL
-      ? process.env.WEBPACK_DEV_SERVER_URL
-      : "app://./index.html/"
-    ).concat("#/youtube/toolbar");
-    win.addBrowserView(youtubeView);
-    win.addBrowserView(toolbarView);
-    const windowSize = win.getSize();
-    youtubeView.setBounds({
-      y: 40,
-      x: 0,
-      height: windowSize[1] - 40,
-      width: windowSize[0],
-    });
-    toolbarView.setBounds({
-      height: 40,
-      y: 0,
-      x: 0,
-      width: windowSize[0],
-    });
-    toolbarView.setAutoResize({ width: true });
-    youtubeView.setAutoResize({ width: true, height: true });
-    await toolbarView.webContents.loadURL(toolbarUrl);
-    await youtubeView.webContents.loadURL(defaultUrl);
+    const loadingView = await createApiView("/youtube/loading", (view) => {
+      win.addBrowserView(view);
+      if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
 
-    if (isDevelopment)
-      youtubeView.webContents.openDevTools({ mode: "detach" }),
-        toolbarView.webContents.openDevTools({ mode: "detach" });
+      const [width, height] = win.getSize();
+      view.setBounds({
+        x: 0,
+        y: 0,
+        width,
+        height,
+      });
+      view.setAutoResize({ width: true, height: true });
+      win.setTopBrowserView(view);
+    });
+    const youtubeView = await createView(
+      parseScriptPath("preload-yt.js"),
+      (view) => {
+        const [width, height] = win.getSize();
+        view.setBounds({
+          y: 40,
+          x: 0,
+          height: height - 40,
+          width,
+        });
+        view.setAutoResize({ width: true, height: true });
+        let lastLocation: string;
+        view.webContents.on("did-navigate", (ev, location) => {
+          lastLocation = location;
+        });
+        view.webContents.on("will-navigate", (ev, location) => {
+          if (
+            !lastLocation?.match(defaultUrl) &&
+            !!location?.match(defaultUrl)
+          ) {
+            ipcMain.emit("app.loadStart");
+          }
+        });
+      }
+    );
+    const toolbarView = await createApiView("/youtube/toolbar", (view) => {
+      win.addBrowserView(view);
+      const [width, height] = win.getSize();
+      view.setBounds({
+        height: 40,
+        y: 0,
+        x: 0,
+        width,
+      });
+      view.setAutoResize({ width: true });
+      if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
+    });
+    win.addBrowserView(youtubeView);
+    ipcMain.on("app.loadEnd", () => win.removeBrowserView(loadingView));
+    ipcMain.on(
+      "app.loadStart",
+      debounce(() => {
+        if (
+          !win
+            .getBrowserViews()
+            ?.find(
+              (x) =>
+                loadingView.webContents &&
+                x.webContents.id === loadingView.webContents.id
+            )
+        )
+          win.addBrowserView(loadingView);
+        win.setTopBrowserView(loadingView);
+      }, 100)
+    );
+    ipcMain.emit("app.loadStart");
+    await youtubeView.webContents.loadURL(defaultUrl).then(() => {
+      if (isDevelopment)
+        youtubeView.webContents.openDevTools({ mode: "detach" });
+    });
 
     try {
       if (serviceCollection)
@@ -141,21 +177,37 @@ export default async function() {
     let fromMaximized = false;
     win.on("maximize", () => {
       fromMaximized = true;
-      if (process.platform === "win32")
-        toolbarView.setBounds({
-          ...toolbarView.getBounds(),
-          width: win.getSize()[0] - 20,
-        });
+      const [winWidth, winHeight] = win.getSize(),
+        youtubeBounds = youtubeView.getBounds(),
+        toolbarBounds = toolbarView.getBounds();
+
+      toolbarView.setBounds({
+        ...toolbarView.getBounds(),
+        width: winWidth - 16,
+      });
+      youtubeView.setBounds({
+        ...youtubeBounds,
+        height: winHeight - toolbarBounds.height - 16,
+      });
     });
     win.on(
       "resize",
       debounce(() => {
-        if (fromMaximized && !win.isMaximized())
+        if (fromMaximized && !win.isMaximized()) {
+          const [winWidth, winHeight] = win.getSize(),
+            youtubeBounds = youtubeView.getBounds(),
+            toolbarBounds = toolbarView.getBounds();
           toolbarView.setBounds({
-            ...toolbarView.getBounds(),
-            width: win.getSize()[0],
+            ...toolbarBounds,
+            width: winWidth,
           });
-      }, 50)
+          youtubeView.setBounds({
+            ...youtubeBounds,
+            height: winHeight - toolbarBounds.height,
+          });
+          fromMaximized = false;
+        }
+      }, 100)
     );
     youtubeView.webContents.on("page-title-updated", (ev, title) =>
       youtubeView.webContents.emit("window-title-updated", title)
@@ -173,12 +225,13 @@ export default async function() {
     const win = new BrowserWindow({
       width: 800,
       height: 600,
-      minWidth: 600,
+      minWidth: 800,
       minHeight: 480,
       minimizable: false,
       backgroundColor: "#000000",
       frame: false,
       parent: mainWindow.main,
+      modal: true,
       darkTheme: true,
       webPreferences: {
         // Use pluginOptions.nodeIntegration, leave this alone
@@ -241,12 +294,6 @@ export default async function() {
   });
   app.on("ready", async () => {
     if (isDevelopment && !process.env.IS_TEST) {
-      // Install Vue Devtools
-      // try {
-      //   await installExtension(VUEJS3_DEVTOOLS);
-      // } catch (e) {
-      //   log.error("Vue Devtools failed to install:", e.message);
-      // }
     } else {
       createProtocol("app");
     }
