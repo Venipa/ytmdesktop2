@@ -110,6 +110,7 @@ export default async function() {
     const youtubeView = await createView(
       parseScriptPath("preload-yt.js"),
       (view) => {
+        win.addBrowserView(view);
         const [width, height] = win.getSize();
         view.setBounds({
           y: 40,
@@ -144,7 +145,6 @@ export default async function() {
       view.setAutoResize({ width: true });
       if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
     });
-    win.addBrowserView(youtubeView);
     ipcMain.on("app.loadEnd", () => win.removeBrowserView(loadingView));
     ipcMain.on(
       "app.loadStart",
