@@ -133,7 +133,7 @@ export default async function() {
         });
       }
     );
-    const toolbarView = await createApiView("/youtube/toolbar", (view) => {
+    const toolbarView = await createApiView(process.platform === 'darwin' ? "/youtube/toolbar-mac" : "/youtube/toolbar", (view) => {
       win.addBrowserView(view);
       const [width, height] = win.getSize();
       view.setBounds({
