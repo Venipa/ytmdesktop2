@@ -70,7 +70,7 @@ export default async function() {
       frame: false,
       title: "Youtube Music for Desktop",
       darkTheme: true,
-      titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
+      titleBarStyle: "hidden",
       maximizable: true,
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
@@ -133,18 +133,23 @@ export default async function() {
         });
       }
     );
-    const toolbarView = await createApiView(process.platform === 'darwin' ? "/youtube/toolbar-mac" : "/youtube/toolbar", (view) => {
-      win.addBrowserView(view);
-      const [width, height] = win.getSize();
-      view.setBounds({
-        height: 40,
-        y: 0,
-        x: 0,
-        width,
-      });
-      view.setAutoResize({ width: true });
-      if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
-    });
+    const toolbarView = await createApiView(
+      process.platform === "darwin"
+        ? "/youtube/toolbar-mac"
+        : "/youtube/toolbar",
+      (view) => {
+        win.addBrowserView(view);
+        const [width, height] = win.getSize();
+        view.setBounds({
+          height: 40,
+          y: 0,
+          x: 0,
+          width,
+        });
+        view.setAutoResize({ width: true });
+        if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
+      }
+    );
     ipcMain.on("app.loadEnd", () => win.removeBrowserView(loadingView));
     ipcMain.on(
       "app.loadStart",
@@ -166,6 +171,15 @@ export default async function() {
     await youtubeView.webContents.loadURL(defaultUrl).then(() => {
       if (isDevelopment)
         youtubeView.webContents.openDevTools({ mode: "detach" });
+      if (process.platform === "darwin") {
+        const bounds = win.getBounds();
+        win.setBounds({
+          width: bounds.width + 1,
+        });
+        win.setBounds({
+          width: bounds.width - 1,
+        });
+      }
     });
 
     try {
