@@ -1,6 +1,6 @@
 <template>
   <div class="h-full">
-    <control-bar v-if="showControlBar" title="Settings"></control-bar>
+    <control-bar title="Settings"></control-bar>
     <router-view></router-view>
   </div>
 </template>
@@ -12,11 +12,7 @@ export default {
   components: {
     ControlBar,
   },
-  computed: {
-    showControlBar() {
-      return !document.location.hash.match(/^\#\/youtube/);
-    },
-  },
+  computed: {},
 };
 </script>
 

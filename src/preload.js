@@ -10,6 +10,7 @@ export default {
   process: {
     version: pkg.version,
     environment: process.env.NODE_ENV,
+    platform: process.platform
   },
   api: {
     version: pkg.version,
