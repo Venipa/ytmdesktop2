@@ -2,7 +2,7 @@
   <div class="h-full overflow-hidden">
     <div class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2 space-x-2">
       <div class="flex items-center flex-1 drag space-x-2 appear">
-        <div class="flex-none w-24"></div>
+        <div class="flex-none w-16"></div>
         <div class="text-xs bg-primary h-7 rounded items-center px-3 bg-opacity-50 appear flex truncate" v-if="title">
           <span class="truncate overflow-ellipsis">{{ title }}</span>
         </div>
@@ -61,24 +61,5 @@ export default defineComponent({
 html,
 body {
   @apply overflow-hidden;
-}
-.control-button {
-  &.control-button-danger {
-    &:hover {
-      @apply bg-red-600;
-    }
-  }
-  @apply h-8 w-8 rounded flex items-center justify-center text-gray-50 transition duration-100;
-  &:hover,
-  &:active,
-  &:focus {
-    @apply bg-gray-600;
-  }
-  &:active {
-    @apply transform-gpu scale-95;
-  }
-  svg {
-    @apply w-4 h-4;
-  }
 }
 </style>

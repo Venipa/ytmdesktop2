@@ -78,23 +78,4 @@ html,
 body {
   @apply overflow-hidden;
 }
-.control-button {
-  &.control-button-danger {
-    &:hover {
-      @apply bg-red-600;
-    }
-  }
-  @apply h-8 w-8 rounded flex items-center justify-center text-gray-50 transition duration-100;
-  &:hover,
-  &:active,
-  &:focus {
-    @apply bg-gray-600;
-  }
-  &:active {
-    @apply transform-gpu scale-95;
-  }
-  svg {
-    @apply w-4 h-4;
-  }
-}
 </style>

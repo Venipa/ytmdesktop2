@@ -70,7 +70,7 @@ export default async function() {
       frame: false,
       title: "Youtube Music for Desktop",
       darkTheme: true,
-      titleBarStyle: "hidden",
+      titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
       maximizable: true,
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",

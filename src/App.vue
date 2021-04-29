@@ -1,17 +1,10 @@
 <template>
-  <div class="h-full">
-    <control-bar title="Settings"></control-bar>
-    <router-view></router-view>
-  </div>
+  <router-view></router-view>
 </template>
 
 <script>
-import ControlBar from "./components/ControlBar";
 export default {
   name: "App",
-  components: {
-    ControlBar,
-  },
   computed: {},
 };
 </script>
