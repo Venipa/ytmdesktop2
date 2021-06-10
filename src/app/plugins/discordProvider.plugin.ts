@@ -3,15 +3,9 @@ import { IpcContext, IpcOn } from "../utils/onIpcEvent";
 import { Client as DiscordClient, Presence } from "discord-rpc";
 import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, AfterInit } from "../utils/baseProvider";
-import { TrackInfoEvent } from "../interfaces/trackEvent";
 import TrackProvider from "./trackProvider.plugin";
 import { debounce } from "lodash-es";
-import {
-  discordEmbedFromTrack,
-  parseMusicChannelById,
-  parseMusicUrlById,
-  TrackData,
-} from "../utils/trackData";
+import { discordEmbedFromTrack, TrackData } from "../utils/trackData";
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
 const DEFAULT_PRESENCE: Presence = {
   largeImageKey: "logo",
@@ -55,9 +49,11 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       })
       .catch(
         () =>
-          new Promise((resolve) =>
+          new Promise((resolve, reject) =>
             setTimeout(() => {
-              this.createClient().then(resolve);
+              this.createClient()
+                .then(resolve)
+                .catch(reject);
             }, 5000)
           )
       );
@@ -103,10 +99,9 @@ export default class EventProvider extends BaseProvider implements AfterInit {
         delete this.presence.buttons;
     }
     if (this.client)
-      return await this.client.setActivity(
-        this.presence || DEFAULT_PRESENCE,
-        process.pid
-      );
+      return await this.client
+        .setActivity(this.presence || DEFAULT_PRESENCE, process.pid)
+        .catch(() => null);
   }
   @IpcOn("settingsProvider.change", {
     filter: (key: string) => key === "discord.enabled",

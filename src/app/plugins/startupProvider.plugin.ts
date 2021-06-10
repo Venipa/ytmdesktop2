@@ -17,6 +17,7 @@ export default class EventProvider extends BaseProvider
   constructor(private app: App) {
     super("startup");
     app.commandLine.appendSwitch("disable-http-cache");
+    app.setAsDefaultProtocolClient("ytm", process.execPath);
   }
   async BeforeStart() {}
   private async initializeTray() {
