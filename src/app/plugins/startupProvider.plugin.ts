@@ -1,14 +1,6 @@
-import {
-  App,
-  BrowserWindow,
-  Tray,
-} from "electron";
+import { App, BrowserWindow, Tray } from "electron";
 import SettingsProvider from "./settingsProvider.plugin";
-import {
-  BaseProvider,
-  AfterInit,
-  BeforeStart,
-} from "../utils/baseProvider";
+import { BaseProvider, AfterInit, BeforeStart } from "../utils/baseProvider";
 import { basename, resolve } from "path";
 import { IpcContext, IpcOn } from "../utils/onIpcEvent";
 import { createTrayMenu } from "../utils/trayMenu";
@@ -24,12 +16,15 @@ export default class EventProvider extends BaseProvider
   }
   constructor(private app: App) {
     super("startup");
+    app.commandLine.appendSwitch("disable-http-cache");
   }
   async BeforeStart() {}
   private async initializeTray() {
     this._tray = new Tray(resolve(__static, "favicon.ico"));
     this._tray.setToolTip(`Youtube Music for Desktop`);
-    this._tray.addListener('click', () => BrowserWindow.fromBrowserView(this.views.youtubeView)?.show());
+    this._tray.addListener("click", () =>
+      BrowserWindow.fromBrowserView(this.views.youtubeView)?.show()
+    );
     this._tray.setContextMenu(this.buildMenu());
   }
   private buildMenu() {

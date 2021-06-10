@@ -10,10 +10,10 @@ const builderOptions = {
   },
   mac: {
     category: "public.app-category.music",
-    icon: "src/assets/build_resources/mac/icon.icns",
+    icon: "src/assets/icons/mac/icon.icns",
   },
   dmg: {
-    icon: "src/assets/build_resources/mac/icon.icns",
+    icon: "src/assets/icons/mac/icon.icns",
     title: "Install/Update ${productName} ${version}",
   },
   linux: {
@@ -22,11 +22,11 @@ const builderOptions = {
   },
   squirrelWindows: null,
   nsis: {
-    installerIcon: "src/assets/logo.ico",
+    installerIcon: "src/assets/icons/win/icon.ico",
     deleteAppDataOnUninstall: true,
   },
   win: {
-    icon: "src/assets/build_resources/win/icon.ico",
+    icon: "src/assets/icons/win/icon.ico",
   },
 };
 /**
