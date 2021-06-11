@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 declare const __static: any;
 declare global {
   interface Window {
