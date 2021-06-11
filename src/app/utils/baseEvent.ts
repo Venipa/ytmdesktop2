@@ -49,7 +49,7 @@ export class BaseEvent implements IBaseEvent {
     this.__type = type;
   }
 
-  __prepare(app: App) {
+  __prepare() {
     const type = this.__type;
     const func = (...args: any[]) => {
       return type === "handle"

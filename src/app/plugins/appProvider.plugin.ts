@@ -1,4 +1,4 @@
-import { App, ipcMain } from "electron";
+import { App } from "electron";
 import { BaseProvider, AfterInit } from "../utils/baseProvider";
 
 export default class AppProvider extends BaseProvider implements AfterInit {

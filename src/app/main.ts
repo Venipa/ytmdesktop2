@@ -2,17 +2,13 @@ import {
   app,
   protocol,
   BrowserWindow,
-  ipcRenderer,
   ipcMain,
   shell,
   BrowserWindowConstructorOptions,
-  contextBridge,
   BrowserView,
 } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
-import installExtension, { VUEJS3_DEVTOOLS } from "electron-devtools-installer";
 import path from "path";
-import { BaseProvider } from "./utils/baseProvider";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
 import { defaultUrl, isDevelopment } from "./utils/devUtils";
 import { BrowserWindowViews, getViewObject } from "./utils/mappedWindow";
@@ -139,7 +135,7 @@ export default async function() {
         : "/youtube/toolbar",
       (view) => {
         win.addBrowserView(view);
-        const [width, height] = win.getSize();
+        const [width] = win.getSize();
         view.setBounds({
           height: 40,
           y: 0,

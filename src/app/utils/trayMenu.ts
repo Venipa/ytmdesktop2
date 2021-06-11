@@ -1,4 +1,4 @@
-import { App, ipcMain, Menu, shell } from "electron";
+import { ipcMain, Menu, shell } from "electron";
 import AppProvider from "../plugins/appProvider.plugin";
 import SettingsProvider from "../plugins/settingsProvider.plugin";
 import UpdateProvider from "../plugins/updateProvider.plugin";
@@ -9,7 +9,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
     "settings"
   ) as SettingsProvider;
   const { app } = provider.getProvider("app") as AppProvider;
-  const { updateAvailable, updateDownloaded, onCheckUpdate: checkUpdate, onAutoUpdateRun: applyUpdate } = provider.getProvider("update") as UpdateProvider;
+  const { updateAvailable, onCheckUpdate: checkUpdate, onAutoUpdateRun: applyUpdate } = provider.getProvider("update") as UpdateProvider;
   return Menu.buildFromTemplate([
     {
       label: "Youtube Music for Desktop",

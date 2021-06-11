@@ -1,4 +1,3 @@
-import { ipcMain } from "electron";
 import { BaseEvent, OnEventExecute } from "../utils/baseEvent";
 import { TrackData } from "../utils/trackData";
 

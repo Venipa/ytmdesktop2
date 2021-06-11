@@ -19,9 +19,6 @@
       "warn",
       {
         "argsIgnorePattern": "^_"
-      },
-      {
-        "argsIgnorePattern": "^__"
       }
     ],
     "no-unused-expressions": "off",

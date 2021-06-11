@@ -1,6 +1,4 @@
-import { App, ipcMain } from "electron";
-import { debounce } from "lodash-es";
-import SettingsProvider from "./settingsProvider.plugin";
+import { App } from "electron";
 import { BaseProvider, AfterInit } from "../utils/baseProvider";
 
 export default class EventProvider extends BaseProvider implements AfterInit {

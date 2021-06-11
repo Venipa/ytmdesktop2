@@ -1,4 +1,4 @@
-import { App, BrowserWindow, dialog, ipcMain } from "electron";
+import { App, BrowserWindow, dialog } from "electron";
 import { autoUpdater } from "electron-updater";
 import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";

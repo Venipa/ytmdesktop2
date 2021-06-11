@@ -1,5 +1,4 @@
-import { App, BrowserWindow, ipcMain } from "electron";
-import SettingsProvider from "./settingsProvider.plugin";
+import { App, ipcMain } from "electron";
 import { BaseProvider, AfterInit } from "../utils/baseProvider";
 import { TrackData } from "../utils/trackData";
 import { IpcContext, IpcOn } from "../utils/onIpcEvent";

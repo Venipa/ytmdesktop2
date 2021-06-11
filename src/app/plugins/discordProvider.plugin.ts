@@ -119,7 +119,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     filter: (key: string) => key === "discord.buttons",
     debounce: 1000,
   })
-  private async __onToggleButtons(key: string, enabled: boolean) {
+  private async __onToggleButtons() {
     if (this.client) this.onClientReady();
   }
   async onClientReady() {

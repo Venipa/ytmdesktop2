@@ -1,4 +1,4 @@
-import { App, BrowserWindow, ipcMain, IpcMainEvent } from "electron";
+import { App, ipcMain } from "electron";
 import { IpcContext, IpcOn } from "../utils/onIpcEvent";
 import fs from "fs";
 import path from "path";
@@ -15,7 +15,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     super("customcss");
   }
   @IpcOn("settings.customCssWatch")
-  private async _event_customCssWatch(ev: IpcMainEvent, ...args: any[]) {
+  private async _event_customCssWatch() {
     const config: {
       scssFileWatch: boolean;
       scssFile: string;
@@ -42,7 +42,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     }
   }
   @IpcOn("settings.customCssUpdate")
-  private async _event_customCssUpdate(ev: IpcMainEvent, ...args: any[]) {
+  private async _event_customCssUpdate() {
     const scssPath = this.settingsInstance.get(
       "customcss.scssFile",
       path.resolve(this.app.getPath("userData"), "custom.scss")

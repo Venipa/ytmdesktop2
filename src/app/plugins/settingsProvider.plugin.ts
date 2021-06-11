@@ -1,7 +1,6 @@
 import { App, ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import {
   BaseProvider,
-  OnInit,
   OnDestroy,
   BeforeStart,
   AfterInit,
@@ -11,10 +10,7 @@ import { existsSync } from "fs";
 import path from "path";
 import { debounce, get as _get, set as _set } from "lodash-es";
 import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
-import {
-  rootWindowInjectCustomCss,
-  rootWindowInjectUtils,
-} from "../utils/webContentUtils";
+import { rootWindowInjectUtils } from "../utils/webContentUtils";
 import { getViewObject } from "../utils/mappedWindow";
 import { defaultUri, defaultUrl } from "../utils/devUtils";
 const defaultSettings = {
@@ -113,7 +109,7 @@ export default class SettingsProvider extends BaseProvider
               this.views.youtubeView.webContents,
               getViewObject(this.views)
             );
-              ipcMain.emit("settings.customCssUpdate");
+            ipcMain.emit("settings.customCssUpdate");
             ipcMain.emit("settings.customCssWatch");
           }
           previousHostname = url.hostname;

@@ -1,4 +1,4 @@
-import { BrowserWindow, WebContents } from "electron";
+import { WebContents } from "electron";
 import { render } from "sass";
 // @ts-ignore
 import youtubeInjectScript from "!raw-loader!../../youtube-inject.js";

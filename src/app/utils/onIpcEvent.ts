@@ -1,4 +1,3 @@
-import logger from "@/utils/Logger";
 import { ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { debounce } from "lodash-es";
 const classStoreSymbol = Symbol("__ipcEvents");
@@ -54,7 +53,7 @@ export function IpcOnce(event: string): MethodDecorator {
   return function<T>(
     target: any,
     propertyKey: string | symbol,
-    descriptor?: TypedPropertyDescriptor<T>
+    _descriptor?: TypedPropertyDescriptor<T>
   ) {
     target[classStoreSymbol] = target[classStoreSymbol] || new Map();
     target[classStoreSymbol].set(propertyKey, <IpcContextEvent>{
@@ -73,7 +72,7 @@ export function IpcOn(
   return function<T>(
     target: any,
     propertyKey: string | symbol,
-    descriptor?: TypedPropertyDescriptor<T>
+    _descriptor?: TypedPropertyDescriptor<T>
   ) {
     target[classStoreSymbol] = target[classStoreSymbol] || new Map();
     target[classStoreSymbol].set(propertyKey, <IpcContextEvent>{
@@ -92,7 +91,7 @@ export function IpcHandle(
   return function<T>(
     target: any,
     propertyKey: string | symbol,
-    descriptor?: TypedPropertyDescriptor<T>
+    _descriptor?: TypedPropertyDescriptor<T>
   ) {
     target[classStoreSymbol] = target[classStoreSymbol] || new Map();
     target[classStoreSymbol].set(propertyKey, <IpcContextEvent>{
