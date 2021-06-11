@@ -1,11 +1,10 @@
-import { TransformableInfo } from "logform";
 import { createLogger, format, transports } from "winston";
 import { inspect } from "util";
 import DailyRotateFile from "winston-daily-rotate-file";
 const myFormat = format.printf((info) => {
   const { level, message, timestamp, ...meta } = info;
   // @ts-ignore
-  let msg = [message, ...(info[Symbol.for('splat')] || [])]
+  const msg = [message, ...(info[Symbol.for('splat')] || [])]
     .map((arg) => {
       if (typeof arg === 'object') {
         return inspect(arg, true, 5);

@@ -58,7 +58,7 @@ export default class EventProvider extends BaseProvider
   }
   @IpcOn("settingsProvider.change", {
     debounce: 1000,
-    filter: (key: string, enabled: boolean) => key === "app.autostart",
+    filter: (key: string) => key === "app.autostart",
   })
   private async onAutoStartToggle(key: string, enabled: boolean) {
     if (enabled) {

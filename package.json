@@ -48,8 +48,8 @@
     "@types/discord-rpc": "^3.0.5",
     "@types/lodash-es": "^4.17.4",
     "@types/sass": "^1.16.0",
-    "@typescript-eslint/eslint-plugin": "^2.33.0",
-    "@typescript-eslint/parser": "^2.33.0",
+    "@typescript-eslint/eslint-plugin": "^4.26.1",
+    "@typescript-eslint/parser": "^4.26.1",
     "@vue/cli-plugin-babel": "~4.5.12",
     "@vue/cli-plugin-eslint": "~4.5.12",
     "@vue/cli-plugin-typescript": "~4.5.12",
@@ -74,7 +74,9 @@
     "vue-svg-loader": "^0.17.0-beta.2"
   },
   "resolutions": {
-    "chokidar": "2.1.8"
+    "chokidar": "2.1.8",
+    "@typescript-eslint/eslint-plugin": "^4.26.1",
+    "@typescript-eslint/parser": "^4.26.1"
   },
   "optionalDependencies": {
     "@nodert-win10/windows.foundation": "^0.2.96",
