@@ -31,6 +31,9 @@ export class BaseProvider {
   get views() {
     return this._views.views;
   }
+  get windowContext() {
+    return this._views;
+  }
   constructor(private name: string, private displayName: string = name) {
     this._loggerInstance = logger.child({ moduleName: this.name });
   }

@@ -1,10 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
 import pkg from "../package.json";
+
 export default {
   ipcRenderer: {
     emit: (event, ...data) => ipcRenderer.send(event, ...data),
     emitTo: (id, event, ...data) => ipcRenderer.sendTo(id, event, ...data),
     on: (channel, func) => ipcRenderer.on(channel, func),
+    invoke: (channel, ...data) => ipcRenderer.invoke(channel, ...data),
     appVersion: pkg.version,
   },
   process: {
@@ -22,6 +24,8 @@ export default {
     installUpdate: () => ipcRenderer.send("app.installUpdate"),
     checkUpdate: () => ipcRenderer.send("app.checkUpdate"),
     settingsProvider: {
+      getAll: (defaultValue) =>
+        ipcRenderer.invoke("settingsProvider.getAll", defaultValue),
       get: (key, defaultValue) =>
         ipcRenderer.invoke("settingsProvider.get", key, defaultValue),
       set: (key, value) =>

@@ -1,4 +1,4 @@
-import { IpcContext, IpcOn } from "../utils/onIpcEvent";
+import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
 import { Client as DiscordClient, Presence } from "discord-rpc";
 import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, AfterInit } from "../utils/baseProvider";
@@ -15,6 +15,7 @@ const CLIENT_ID = process.env.VUE_APP_DISCORD_CLIENT_ID;
 @IpcContext
 export default class EventProvider extends BaseProvider implements AfterInit {
   private _updateHandle: any;
+  private isConnected: boolean = false;
   private client: DiscordClient;
   private presence: Presence;
   get settingsInstance(): SettingsProvider {
@@ -35,8 +36,10 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       largeImageText: "Youtube Music for Desktop",
     };
     client.on("ready", () => this.logger.debug("ready"));
-    client.on("connected", () => this.logger.debug("connected"));
-
+    client.on(
+      "connected",
+      () => (this.logger.debug("connected"), (this.isConnected = true))
+    );
     client.on(
       "ready",
       debounce(() => this.onClientReady(), 1000)
@@ -108,11 +111,13 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     debounce: 1000,
   })
   private async __onToggleEnabled(key: string, enabled: boolean) {
-    if (enabled) {
+    if (enabled && (!this.client || !this.isConnected)) {
       this.createClient();
     } else if (this.client) {
       this.client.destroy();
       this.client = null;
+      this.isConnected = false;
+      this.windowContext.sendToAllViews("discord.disconnected");
     }
   }
   @IpcOn("settingsProvider.change", {
@@ -136,6 +141,12 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       () => this._refreshActivity(),
       DISCORD_UPDATE_INTERVAL
     );
+
+    this.windowContext.sendToAllViews("discord.connected");
+  }
+  @IpcHandle("req:discord.connected")
+  private async __onDiscordStatus() {
+    return this.client && this.isConnected;
   }
   @IpcOn("track:change", {
     debounce: 100,

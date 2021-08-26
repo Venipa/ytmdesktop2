@@ -8,6 +8,9 @@
             <router-link to="/" class="nav-item" exact-active-class="active"
               >Generic</router-link
             >
+            <router-link to="/player" class="nav-item" active-class="active"
+              >Player</router-link
+            >
             <router-link to="/discord" class="nav-item" active-class="active"
               >Discord</router-link
             >

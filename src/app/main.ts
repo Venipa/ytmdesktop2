@@ -11,7 +11,11 @@ import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import path from "path";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
 import { defaultUrl, isDevelopment } from "./utils/devUtils";
-import { BrowserWindowViews, getViewObject } from "./utils/mappedWindow";
+import {
+  BrowserWindowViews,
+  createWindowContext,
+  getViewObject,
+} from "./utils/mappedWindow";
 import { debounce } from "lodash-es";
 import logger from "@/utils/Logger";
 import {
@@ -222,13 +226,14 @@ export default async function() {
     youtubeView.webContents.on("page-title-updated", (ev, title) =>
       youtubeView.webContents.emit("window-title-updated", title)
     );
-    return {
+    const __data = {
       main: win,
       views: {
         youtubeView,
         toolbarView,
       },
     };
+    return createWindowContext<typeof __data.views>(__data);
   }
   async function createAppWindow() {
     // Create the browser window.

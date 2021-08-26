@@ -13,12 +13,16 @@ import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
 import { rootWindowInjectUtils } from "../utils/webContentUtils";
 import { getViewObject } from "../utils/mappedWindow";
 import { defaultUri, defaultUrl } from "../utils/devUtils";
+import eventNames from "../utils/eventNames";
 const defaultSettings = {
   app: {
     beta: false,
     autoupdate: true,
     autostart: true,
     getstarted: true,
+  },
+  player: {
+    skipDisliked: false
   },
   discord: {
     enabled: true,
@@ -69,7 +73,8 @@ export default class SettingsProvider extends BaseProvider
   set(key: string, value: any) {
     _set(_settingsStore, key, value);
     try {
-      ipcMain.emit("settingsProvider.change", key, value);
+      ipcMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value),
+      this.windowContext.sendToAllViews(eventNames.SERVER_SETTINGS_CHANGE, key, value);
     } catch (ex) {
       this.logger.error(ex);
     }
@@ -124,6 +129,14 @@ export default class SettingsProvider extends BaseProvider
   private _onEventGet(ev: IpcMainInvokeEvent, ...args: any[]) {
     const [key, value] = args;
     const returnValue = this.get(key);
+    return returnValue === undefined || returnValue === null
+      ? value
+      : returnValue;
+  }
+  @IpcHandle("settingsProvider.getAll")
+  private _onEventGetAll(ev: IpcMainInvokeEvent, ...args: any[]) {
+    const [value] = args;
+    const returnValue = _settingsStore;
     return returnValue === undefined || returnValue === null
       ? value
       : returnValue;

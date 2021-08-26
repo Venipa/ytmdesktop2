@@ -17,6 +17,10 @@ const router = createRouter({
           component: () => import("./views/settings/generic-settings.vue"),
         },
         {
+          path: "/player",
+          component: () => import("./views/settings/player-settings.vue"),
+        },
+        {
           path: "/discord",
           component: () => import("./views/settings/discord-settings.vue"),
         },
