@@ -19,9 +19,16 @@
 <script>
 import { defineComponent, ref } from "@vue/runtime-core";
 import RPCIcon from "@/assets/icons/discord-rpc.svg";
-const discordConnected = ref(false);
-const onConnectFn = window.ipcRenderer.on("discord.connected", () => (discordConnected.value = true)),
-  onDisconnectFn = window.ipcRenderer.on("discord.disconnected", () => (discordConnected.value = false));
+const discordConnected = ref(false),
+  discordEnabled = ref(!!window.settings.get("discord.enabled"));
+const subscribers = [];
+subscribers.push(
+  window.ipcRenderer.on("discord.connected", () => (discordConnected.value = true)),
+  window.ipcRenderer.on("discord.disconnected", () => (discordConnected.value = false)),
+  window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
+    if (key === "discord.enabled" && value !== discordEnabled.value) discordEnabled.value = !!value;
+  })
+);
 export default defineComponent({
   components: { RPCIcon },
   methods: {
@@ -30,7 +37,7 @@ export default defineComponent({
     },
   },
   setup() {
-    const discordEnabled = ref(!!window.settings.get("discord.enabled"));
+    discordEnabled.value = !!window.settings.get("discord.enabled");
     window.ipcRenderer.invoke("req:discord.connected").then((x) => (discordConnected.value = !!x));
     return {
       discordEnabled,
@@ -41,8 +48,8 @@ export default defineComponent({
       },
     };
   },
-  deactivated() {
-    window.ipcRenderer.off(onConnectFn), window.ipcRenderer.off(onDisconnectFn);
+  unmounted() {
+    subscribers.forEach(window.ipcRenderer.off);
   },
 });
 </script>

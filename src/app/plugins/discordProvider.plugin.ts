@@ -51,14 +51,17 @@ export default class EventProvider extends BaseProvider implements AfterInit {
         clientId: CLIENT_ID,
       })
       .catch(
-        () =>
+        (err) => {
+          
           new Promise((resolve, reject) =>
             setTimeout(() => {
               this.createClient()
                 .then(resolve)
                 .catch(reject);
             }, 5000)
-          )
+          );
+          this.logger.debug(err);
+        }
       );
     return [client, presence];
   }
