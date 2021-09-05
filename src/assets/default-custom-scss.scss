@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito&display=swap');
+* {
+  font-family: "Nunito"!important;
+}
+#progress-bar.ytmusic-player-bar {
+  --paper-slider-active-color: #fff;
+  --paper-slider-knob-color: #afff4f;
+}
+// .ytmusic-item-thumbnail-overlay-renderer {
+//   background-image: url(https://i.mavis.moe/f/xp2CE4ENIY/dogejpg.jpg);
+//   background-size: cover;
+//   background-position: center;
+//   background-repeat: no-repeat;
+// }
+ytmusic-app {
+  --ytmusic-player-bar-background: #0f0f11;
+}
+.content.ytmusic-player-page {
+  padding: 0;
+}
+.image.ytmusic-player-bar {
+  border-radius: 8px;
+}
+ytmusic-player-queue {
+  padding: 10px 0;
+}
+tp-yt-paper-icon-button.ytmusic-settings-button {
+  width: 40px;
+  height: 40px;
+}
+ytmusic-player-queue-item {
+  --ytmusic-player-queue-item-thumbnail-size: 42px!important;
+  --ytmusic-list-item-height: 58px;
+  &:not(:last-child) {
+    margin-bottom: 8px;
+  }
+  border-radius: 8px;
+  border: 0;
+  opacity: .825;
+  &:hover:not([selected]) {
+    background-color: rgba(#f9f9ff, .05);
+    opacity: 1;
+  }
+}
+.logo.ytmusic-nav-bar {
+  filter: hue-rotate(210deg);
+}
+.ytmusic-play-button-renderer,
+.thumbnail.ytmusic-player-queue-item,
+.thumbnail-overlay {
+  border-radius: 8px;
+  overflow: hidden;
+}

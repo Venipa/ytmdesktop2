@@ -5,6 +5,8 @@ import path from "path";
 import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, AfterInit } from "../utils/baseProvider";
 import { rootWindowInjectCustomCss } from "../utils/webContentUtils";
+// @ts-ignore
+import customDefaultCss from "!raw-loader!@/assets/discord-custom-scss.scss";
 @IpcContext
 export default class EventProvider extends BaseProvider implements AfterInit {
   private scssUpdateHandler: string;
@@ -48,7 +50,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       path.resolve(this.app.getPath("userData"), "custom.scss")
     );
     if (!fs.existsSync(scssPath)) {
-      fs.writeSync(scssPath, Buffer.from(""));
+      fs.writeSync(scssPath, Buffer.from(customDefaultCss));
       return;
     }
     this.logger.debug(`ytd loading custom css from ${scssPath}`);
