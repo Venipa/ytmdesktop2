@@ -16,6 +16,12 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   constructor(private app: App) {
     super("customcss");
   }
+  private getScssPath() {
+    return this.settingsInstance.get(
+      "customcss.scssFile",
+      path.resolve(this.app.getPath("documents"), "ytmdesktop", "custom.scss")
+    );
+  }
   @IpcOn("settings.customCssWatch")
   private async _event_customCssWatch() {
     const config: {
@@ -45,12 +51,9 @@ export default class EventProvider extends BaseProvider implements AfterInit {
   }
   @IpcOn("settings.customCssUpdate")
   private async _event_customCssUpdate() {
-    const scssPath = this.settingsInstance.get(
-      "customcss.scssFile",
-      path.resolve(this.app.getPath("userData"), "custom.scss")
-    );
+    const scssPath = this.getScssPath();
     if (!fs.existsSync(scssPath)) {
-      fs.writeSync(scssPath, Buffer.from(customDefaultCss));
+      fs.writeFileSync(scssPath, customDefaultCss);
       return;
     }
     this.logger.debug(`ytd loading custom css from ${scssPath}`);
@@ -60,12 +63,15 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     ).catch(() => null);
   }
   async AfterInit() {
-    const scssPath = this.settingsInstance.get(
-      "customcss.scssFile",
-      path.resolve(this.app.getPath("userData"), "custom.scss")
-    );
+    const scssPath = this.getScssPath(),
+      scssParent = path.resolve(scssPath, "..");
     if (!fs.existsSync(scssPath)) {
-      fs.writeSync(scssPath, Buffer.from(customDefaultCss));
+      if (!fs.existsSync(scssParent)) {
+        fs.mkdirSync(scssParent, { recursive: true });
+      }
+      fs.writeFileSync(scssPath, customDefaultCss);
+      this.settingsInstance.set("customcss.enabled", true);
+      this.settingsInstance.set("customcss.scssFile", scssPath);
     }
   }
 }
