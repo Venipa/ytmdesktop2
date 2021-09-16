@@ -6,7 +6,7 @@ import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, AfterInit } from "../utils/baseProvider";
 import { rootWindowInjectCustomCss } from "../utils/webContentUtils";
 // @ts-ignore
-import customDefaultCss from "!raw-loader!@/assets/discord-custom-scss.scss";
+import customDefaultCss from "!raw-loader!@/assets/discord-custom.scss";
 @IpcContext
 export default class EventProvider extends BaseProvider implements AfterInit {
   private scssUpdateHandler: string;
