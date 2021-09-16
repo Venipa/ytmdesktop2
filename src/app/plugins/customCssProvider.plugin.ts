@@ -6,7 +6,7 @@ import SettingsProvider from "./settingsProvider.plugin";
 import { BaseProvider, AfterInit } from "../utils/baseProvider";
 import { rootWindowInjectCustomCss } from "../utils/webContentUtils";
 // @ts-ignore
-import customDefaultCss from "!raw-loader!@/assets/discord-custom.scss";
+import customDefaultCss from "!raw-loader!../../assets/default-custom.scss";
 @IpcContext
 export default class EventProvider extends BaseProvider implements AfterInit {
   private scssUpdateHandler: string;
@@ -59,5 +59,13 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       scssPath
     ).catch(() => null);
   }
-  async AfterInit() {}
+  async AfterInit() {
+    const scssPath = this.settingsInstance.get(
+      "customcss.scssFile",
+      path.resolve(this.app.getPath("userData"), "custom.scss")
+    );
+    if (!fs.existsSync(scssPath)) {
+      fs.writeSync(scssPath, Buffer.from(customDefaultCss));
+    }
+  }
 }
