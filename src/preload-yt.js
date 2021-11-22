@@ -38,6 +38,11 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
     });
   })();
   window.__ytd_settings = {};
+  let _loadedYTM = false;
+  window.isYTMLoaded = () => {
+    return _loadedYTM;
+  };
+
   window.api.settingsProvider
     .getAll({})
     .then((x) => (window.__ytd_settings = merge({}, window.__ytd_settings, x)));
@@ -53,5 +58,6 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
       m.exec(pluginContext);
     });
     window.api.emit("app.loadEnd");
+    _loadedYTM = true; // todo
   });
 })();
