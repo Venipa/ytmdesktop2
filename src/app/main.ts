@@ -150,6 +150,7 @@ export default async function() {
         if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
       }
     );
+    ipcMain.on("app.loadEnd", () => win.removeBrowserView(loadingView));
     ipcMain.on(
       "app.loadStart",
       debounce(() => {
