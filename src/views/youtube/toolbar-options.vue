@@ -1,5 +1,8 @@
 <template>
   <div class="flex flex-row items-center space-x-2">
+    <div @click="() => action('nav.same-origin')" class="control-button relative w-4 h-4" v-if="!isHome">
+      <HomeIcon></HomeIcon>
+    </div>
     <div @click="() => toggleSetting('discord.enabled')" class="control-button relative" :class="{ 'opacity-100': discordEnabled, 'opacity-70': !discordEnabled }">
       <RPCIcon></RPCIcon>
       <div v-if="discordConnected" class="p-0.5 rounded-full bg-green-500 absolute top-0 right-0 w-3 h-3 flex items-center justify-center">
@@ -19,18 +22,23 @@
 <script>
 import { defineComponent, ref } from "@vue/runtime-core";
 import RPCIcon from "@/assets/icons/discord-rpc.svg";
+import HomeIcon from "@/assets/icons/home.svg";
 const discordConnected = ref(false),
   discordEnabled = ref(!!window.settings.get("discord.enabled"));
+const isHome = ref(true);
 const subscribers = [];
 subscribers.push(
   window.ipcRenderer.on("discord.connected", () => (discordConnected.value = true)),
   window.ipcRenderer.on("discord.disconnected", () => (discordConnected.value = false)),
+  window.api.on("nav.same-origin", (ev, sameOrigin) => {
+    if (sameOrigin !== isHome.value) isHome.value = !!sameOrigin;
+  }),
   window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
     if (key === "discord.enabled" && value !== discordEnabled.value) discordEnabled.value = !!value;
   })
 );
 export default defineComponent({
-  components: { RPCIcon },
+  components: { RPCIcon, HomeIcon },
   methods: {
     onSettings() {
       window.api.settings.open();
@@ -42,14 +50,18 @@ export default defineComponent({
     return {
       discordEnabled,
       discordConnected,
+      isHome,
       async toggleSetting(key) {
         const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
         if (key === "discord.enabled") discordEnabled.value = setting;
       },
+      action(actionParam) {
+        window.api.emit(`action:${actionParam}`);
+      },
     };
   },
   unmounted() {
-    subscribers.forEach(window.ipcRenderer.off);
+    subscribers.filter(x => !!x).forEach(window.ipcRenderer.off);
   },
 });
 </script>

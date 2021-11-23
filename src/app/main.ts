@@ -49,6 +49,8 @@ export default async function() {
   protocol.registerSchemesAsPrivileged([
     { scheme: "app", privileges: { secure: true, standard: true } },
   ]);
+  app.userAgentFallback = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
+
   /**
    *
    * @param {Electron.BrowserWindowConstructorOptions | undefined} options
@@ -78,7 +80,7 @@ export default async function() {
       },
       ...(options || {}),
     });
-    const stringifiedUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
+    win.webContents.session.setUserAgent(app.userAgentFallback);
     win.webContents.session.webRequest.onBeforeSendHeaders(
       {
         urls: ["https://accounts.google.com/*"],
@@ -87,8 +89,7 @@ export default async function() {
         const newRequestHeaders = {
           ...(details.requestHeaders || {}),
           ...{
-            "User-Agent":
-              stringifiedUA,
+            "User-Agent": app.userAgentFallback,
           },
         };
         callback({ requestHeaders: newRequestHeaders });
