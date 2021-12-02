@@ -3132,11 +3132,6 @@ caniuse-lite@^1.0.0, caniuse-lite@^1.0.30001109, caniuse-lite@^1.0.30001219:
   resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001236.tgz#0a80de4cdf62e1770bb46a30d884fc8d633e3958"
   integrity sha512-o0PRQSrSCGJKCPZcgMzl5fUaj5xHe8qA2m4QRvnyY4e1lITqoNkr7q/Oh1NcpGSy0Th97UZ35yoKcINPoq7YOQ==
 
-cargo-cp-artifact@^0.1.5:
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/cargo-cp-artifact/-/cargo-cp-artifact-0.1.5.tgz#2c35f7d658f22acfe9b1fa2774344d9a389efd14"
-  integrity sha512-mWwNdfrEyvMPxDHoAhbCYwQBNP3RyW9bV+yi5VaaHtVZqoDXbGU5JQF5qG7s65SJhqP7HIVAQD7wZM6Fk2COuw==
-
 case-sensitive-paths-webpack-plugin@^2.3.0:
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/case-sensitive-paths-webpack-plugin/-/case-sensitive-paths-webpack-plugin-2.4.0.tgz#db64066c6422eed2e08cc14b986ca43796dbc6d4"
@@ -11370,13 +11365,6 @@ xmldom@^0.5.0:
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/xmldom/-/xmldom-0.5.0.tgz#193cb96b84aa3486127ea6272c4596354cb4962e"
   integrity sha512-Foaj5FXVzgn7xFzsKeNIde9g6aFBxTPi37iwsno8QvApmtg7KYrr+OPyRHcJF7dud2a5nGRBXK3n0dL62Gf7PA==
-
-xosms@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/xosms/-/xosms-0.2.0.tgz#837d60c30645e1d47e2f99257e20f4d36b9f1381"
-  integrity sha512-AURWZrkVgyjAXZb+uORhRNPucH5qeTvNcmLOIX0G3ugibU2FYRmMGZcP7+tI8P9xUD3kemZ69d69VPg2hcTVqA==
-  dependencies:
-    cargo-cp-artifact "^0.1.5"
 
 xtend@^4.0.0, xtend@^4.0.2, xtend@~4.0.0, xtend@~4.0.1:
   version "4.0.2"
