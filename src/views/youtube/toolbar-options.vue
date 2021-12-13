@@ -3,6 +3,9 @@
     <div @click="() => action('nav.same-origin')" class="control-button relative w-4 h-4" v-if="!isHome">
       <HomeIcon></HomeIcon>
     </div>
+    <div @click="() => action('app.devTools')" class="control-button relative w-4 h-4" v-if="isDev">
+      <DevIcon></DevIcon>
+    </div>
     <div @click="() => toggleSetting('discord.enabled')" class="control-button relative" :class="{ 'opacity-100': discordEnabled, 'opacity-70': !discordEnabled }">
       <RPCIcon></RPCIcon>
       <div v-if="discordConnected" class="p-0.5 rounded-full bg-green-500 absolute top-0 right-0 w-3 h-3 flex items-center justify-center">
@@ -23,9 +26,11 @@
 import { defineComponent, ref } from "@vue/runtime-core";
 import RPCIcon from "@/assets/icons/discord-rpc.svg";
 import HomeIcon from "@/assets/icons/home.svg";
+import DevIcon from "@/assets/icons/chip.svg";
 const discordConnected = ref(false),
   discordEnabled = ref(!!window.settings.get("discord.enabled"));
 const isHome = ref(true);
+const isDev = ref(false);
 const subscribers = [];
 subscribers.push(
   window.ipcRenderer.on("discord.connected", () => (discordConnected.value = true)),
@@ -35,10 +40,11 @@ subscribers.push(
   }),
   window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
     if (key === "discord.enabled" && value !== discordEnabled.value) discordEnabled.value = !!value;
+    if (key === "app.enableDev" && value !== isDev.value) isDev.value = !!value;
   })
 );
 export default defineComponent({
-  components: { RPCIcon, HomeIcon },
+  components: { RPCIcon, HomeIcon, DevIcon },
   methods: {
     onSettings() {
       window.api.settings.open();
@@ -46,22 +52,24 @@ export default defineComponent({
   },
   setup() {
     discordEnabled.value = !!window.settings.get("discord.enabled");
+    isDev.value = !!window.settings.get("app.enableDev");
     window.ipcRenderer.invoke("req:discord.connected").then((x) => (discordConnected.value = !!x));
     return {
       discordEnabled,
       discordConnected,
       isHome,
+      isDev,
       async toggleSetting(key) {
         const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
         if (key === "discord.enabled") discordEnabled.value = setting;
       },
       action(actionParam) {
-        window.api.emit(`action:${actionParam}`);
+        return window.api.action(actionParam);
       },
     };
   },
   unmounted() {
-    subscribers.filter(x => !!x).forEach(window.ipcRenderer.off);
+    subscribers.filter((x) => !!x).forEach(window.ipcRenderer.off);
   },
 });
 </script>

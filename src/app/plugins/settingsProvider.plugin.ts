@@ -20,6 +20,7 @@ const defaultSettings = {
     autoupdate: true,
     autostart: true,
     getstarted: true,
+    enableDev: false
   },
   player: {
     skipDisliked: false

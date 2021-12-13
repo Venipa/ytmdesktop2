@@ -1,28 +1,14 @@
-import {
-  app,
-  protocol,
-  BrowserWindow,
-  ipcMain,
-  shell,
-  BrowserWindowConstructorOptions,
-  BrowserView,
-} from "electron";
-import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
-import path from "path";
-import { rootWindowInjectUtils } from "./utils/webContentUtils";
-import { defaultUrl, isDevelopment } from "./utils/devUtils";
-import {
-  BrowserWindowViews,
-  createWindowContext,
-  getViewObject,
-} from "./utils/mappedWindow";
-import { debounce } from "lodash-es";
-import logger from "@/utils/Logger";
-import {
-  createEventCollection,
-  createPluginCollection,
-} from "./utils/serviceCollection";
-import { createApiView, createView } from "./utils/view";
+import logger from '@/utils/Logger';
+import { app, BrowserView, BrowserWindow, BrowserWindowConstructorOptions, ipcMain, protocol, shell } from 'electron';
+import { debounce } from 'lodash-es';
+import path from 'path';
+import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
+
+import { defaultUrl, isDevelopment } from './utils/devUtils';
+import { BrowserWindowViews, createWindowContext, getViewObject } from './utils/mappedWindow';
+import { createEventCollection, createPluginCollection } from './utils/serviceCollection';
+import { createApiView, createView } from './utils/view';
+import { rootWindowInjectUtils } from './utils/webContentUtils';
 
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
@@ -49,7 +35,8 @@ export default async function() {
   protocol.registerSchemesAsPrivileged([
     { scheme: "app", privileges: { secure: true, standard: true } },
   ]);
-  app.userAgentFallback = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
+  app.userAgentFallback =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
 
   /**
    *
@@ -141,18 +128,23 @@ export default async function() {
         : "/youtube/toolbar",
       (view) => {
         win.addBrowserView(view);
+        win.setTopBrowserView(view);
         const [width] = win.getSize();
         view.setBounds({
           height: 40,
-          y: 0,
-          x: 0,
           width,
+          x: 0,
+          y: 0,
         });
+        view.setBackgroundColor("transparent");
         view.setAutoResize({ width: true });
         if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
       }
     );
-    ipcMain.on("app.loadEnd", () => win.removeBrowserView(loadingView));
+    ipcMain.on("app.loadEnd", () => {
+      win.removeBrowserView(loadingView);
+      win.setTopBrowserView(toolbarView);
+    });
     ipcMain.on(
       "app.loadStart",
       debounce(() => {
