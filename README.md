@@ -3,6 +3,10 @@
 [![Discord](https://img.shields.io/discord/834826233195003944?color=%237289DA&label=discord&logo=discord&logoColor=%23ffffff&style=for-the-badge)](https://discord.gg/dq4bZMhMjT)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Venipa/ytmdesktop2?style=for-the-badge)](https://github.com/Venipa/ytmdesktop2/releases/latest)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Venipa/ytmdesktop2?style=for-the-badge)
+
+![image](https://user-images.githubusercontent.com/17952364/145900705-470fc896-2ca3-4803-a14d-aca6355cbba9.png)
+
+
 ## Features
 
 ### Discord Rich Presence
