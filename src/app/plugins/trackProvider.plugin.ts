@@ -43,6 +43,8 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   }
   @IpcOn("track:set-active")
   private __onActiveTrack(trackId: string) {
+    if (this._activeTrackId === trackId) return;
+
     this.logger.debug(`active track:`, trackId);
     this._activeTrackId = trackId;
     if (this.trackData) ipcMain.emit("track:change", this.trackData);

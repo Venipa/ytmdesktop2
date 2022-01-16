@@ -12,9 +12,13 @@ import { debounce, get as _get, set as _set } from "lodash-es";
 import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
 import { rootWindowInjectUtils } from "../utils/webContentUtils";
 import { getViewObject } from "../utils/mappedWindow";
-import { defaultUri, defaultUrl } from "../utils/devUtils";
+import { defaultUri, defaultUrl, isDevelopment } from "../utils/devUtils";
 import eventNames from "../utils/eventNames";
 const defaultSettings = {
+  api: {
+    enabled: isDevelopment ? true : false,
+    port: 13091,
+  },
   app: {
     beta: false,
     autoupdate: true,
@@ -38,7 +42,7 @@ const defaultSettings = {
   },
 };
 let _settingsStore: SettingsStore = defaultSettings;
-type SettingsStore = typeof defaultSettings & { [key: string]: any };
+export type SettingsStore = typeof defaultSettings & { [key: string]: any };
 
 @IpcContext
 export default class SettingsProvider extends BaseProvider

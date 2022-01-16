@@ -1,4 +1,5 @@
 import { Presence } from "discord-rpc";
+import { YoutubeMatcher } from "./youtubeMatcher";
 
 export interface Thumbnails {
   url: string;
@@ -89,9 +90,18 @@ export const parseMusicUrlById = (id: string) =>
 export const parseMusicChannelById = (id: string) =>
   `https://music.youtube.com/channel/${id}?feature=share`;
 export const discordEmbedFromTrack = (track: TrackData): Presence => {
+  const startDate = new Date();
   return {
     details: track.video.title,
     state: `by ${track.video.author}`,
+    startTimestamp: startDate,
+    endTimestamp: new Date(
+      startDate.getTime() + ~~Number(track.video.lengthSeconds) * 1000
+    ),
+    largeImageKey:
+      track.video.thumbnail.thumbnails.find((x) =>
+        YoutubeMatcher.Thumbnail.test(x.url)
+      )?.url ?? "logo",
     smallImageKey: "playx1024",
     smallImageText: `${Number.parseInt(track.video.viewCount)?.toLocaleString(
       "de"
@@ -100,7 +110,7 @@ export const discordEmbedFromTrack = (track: TrackData): Presence => {
       ...(track.video.videoId
         ? [
             {
-              label: "Listen to Audio",
+              label: "Open in Browser",
               url: parseMusicUrlById(track.video.videoId),
             },
           ]

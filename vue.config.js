@@ -1,3 +1,5 @@
+const WorkerPlugin = require("worker-plugin");
+
 /**
  * @type {import("electron-builder").Configuration} builderOptions
  */
@@ -6,7 +8,7 @@ const builderOptions = {
   appId: "net.venipa.ytmdesktop",
   productName: "Youtube Music for Desktop",
   extraMetadata: {
-    name: "Youtube Music for Desktop"
+    name: "Youtube Music for Desktop",
   },
   mac: {
     category: "public.app-category.music",
@@ -33,12 +35,12 @@ const builderOptions = {
  * @type {import('electron-builder').AfterPackContext} electronBuilder
  */
 const electronBuilder = {
-  chainWebpackMainProcess: (config) => {},
   mainProcessTypeChecking: false,
   preload: {
     "preload-yt": "src/preload-yt.js",
     "preload-api": "src/preload-api.js",
     toolbar: "src/toolbar.js",
+    api: "src/api/main.ts",
   },
   nodeIntegration: false,
   builderOptions,
@@ -70,5 +72,6 @@ module.exports = {
   },
   configureWebpack: {
     devtool: "source-map",
+    plugins: [new WorkerPlugin()],
   },
 };

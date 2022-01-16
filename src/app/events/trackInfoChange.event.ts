@@ -1,3 +1,4 @@
+import ApiProvider from "../plugins/apiProvider.plugin";
 import { BaseEvent, OnEventExecute } from "../utils/baseEvent";
 import { TrackData } from "../utils/trackData";
 
@@ -11,6 +12,11 @@ export default class extends BaseEvent implements OnEventExecute {
       "track:title",
       track?.video?.title
     );
-    trackProvider.views.youtubeView.webContents.send("track.change", track.video.videoId);
+    trackProvider.views.youtubeView.webContents.send(
+      "track.change",
+      track.video.videoId
+    );
+    const api = this.getProvider("api") as ApiProvider;
+    api.sendMessage(this.eventName, { ...track });
   }
 }

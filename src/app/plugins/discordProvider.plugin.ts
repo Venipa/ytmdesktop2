@@ -6,6 +6,7 @@ import TrackProvider from "./trackProvider.plugin";
 import { debounce } from "lodash-es";
 import { discordEmbedFromTrack, TrackData } from "../utils/trackData";
 import { App } from "electron";
+import { YoutubeMatcher } from "../utils/youtubeMatcher";
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
 const DEFAULT_PRESENCE: Presence = {
   largeImageKey: "logo",
@@ -50,19 +51,16 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       .login({
         clientId: CLIENT_ID,
       })
-      .catch(
-        (err) => {
-          
-          new Promise((resolve, reject) =>
-            setTimeout(() => {
-              this.createClient()
-                .then(resolve)
-                .catch(reject);
-            }, 5000)
-          );
-          this.logger.debug(err);
-        }
-      );
+      .catch((err) => {
+        new Promise((resolve, reject) =>
+          setTimeout(() => {
+            this.createClient()
+              .then(resolve)
+              .catch(reject);
+          }, 5000)
+        );
+        this.logger.debug(err);
+      });
     return [client, presence];
   }
   private _refreshActivity() {
@@ -103,6 +101,9 @@ export default class EventProvider extends BaseProvider implements AfterInit {
         !this.settingsInstance.instance.discord.buttons
       )
         delete this.presence.buttons;
+    }
+    if (YoutubeMatcher.Thumbnail.test(presence.largeImageKey)) {
+      this.presence.largeImageKey = presence.largeImageKey;
     }
     if (this.client)
       return await this.client
