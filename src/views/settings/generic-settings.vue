@@ -40,31 +40,63 @@
           </div>
         </div>
       </settings-checkbox>
+      <div :class="['flex flex-col gap-y-1', apiEnabledSetting ? 'bg-black bg-opacity-20 -mx-4 px-4 pt-1.5 pb-2.5 rounded-lg' : 'mt-1.5']">
+        <settings-checkbox configKey="api.enabled" class="group">
+          <div class="flex flex-col">
+            <div>Enable API</div>
+            <div class="select-none opacity-80 group-hover:opacity-100 text-xs font-medium">... allows to utilize the clients api to extend functionality.</div>
+            <div class="select-none text-red-500 opacity-80 group-hover:opacity-100 uppercase text-xs font-medium">Experimental</div>
+          </div>
+        </settings-checkbox>
+
+        <template v-if="apiEnabledSetting">
+          <settings-input configKey="api.port" type="number" :min="13000" :max="13100" placeholder="13000-13100" class="bg-transparent border-0 -mx-2.5">
+            <template v-slot:label>
+              API Port
+            </template>
+          </settings-input>
+        </template>
+      </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import SettingsCheckbox from "@/components/SettingsCheckbox.vue";
-import { defineComponent, onMounted, ref } from "vue";
+import SettingsInput from "@/components/SettingsInput.vue";
+import { defineComponent, ref } from "vue";
 
+const getStartedEnabled = ref(!!window.settings.get("app.getstarted"));
+const apiEnabledSetting = ref(!!window.settings.get("api.enabled"));
+const apiPortSetting = ref(window.settings.get("api.port") ?? 13091);
+const subscribers = [];
+subscribers.push(
+  ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
+    if (key === "api.enabled" && value !== apiEnabledSetting.value) apiEnabledSetting.value = !!value;
+    if (key === "api.port" && value !== apiPortSetting.value) apiPortSetting.value = value;
+  })
+);
 export default defineComponent({
-  components: { SettingsCheckbox },
+  components: { SettingsCheckbox, SettingsInput },
   methods: {
     disableGetStarted() {
-      (window as any).api.settingsProvider.update("app.getstarted", false).then((v) => {
+      window.api.settingsProvider.update("app.getstarted", false).then((v) => {
         this.getStartedEnabled = v;
       });
     },
   },
   setup() {
-    const getStartedEnabled = ref<boolean>(true);
-    onMounted(async () => {
-      getStartedEnabled.value = await (window as any).api.settingsProvider.get("app.getstarted", true);
-    });
     return {
       getStartedEnabled,
+      apiPortSetting,
+      apiEnabledSetting,
     };
+  },
+  unmounted() {
+    if (subscribers) {
+      subscribers.filter((x) => typeof x === "function").forEach(window.ipcRenderer.off);
+      subscribers = [];
+    }
   },
 });
 </script>

@@ -1,6 +1,6 @@
 import { ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { debounce } from "lodash-es";
-const classStoreSymbol = Symbol("__ipcEvents");
+const classIpcStoreSymbol = Symbol("__ipcEvents");
 interface IpcContextEvent {
   name: string;
   type?: "once" | "handle";
@@ -9,13 +9,24 @@ interface IpcContextEvent {
     filter?: (ev: IpcMainEvent | IpcMainInvokeEvent, ...args: any[]) => boolean;
   };
 }
+export function IpcContextWithOptions() {
+  return IpcContext; // todo: add options to ipc base to allow setting prefixes to events
+}
+export function getRegisteredEventNames(classRef: any) {
+  return Array.from(classRef)
+    ?.filter(([, value]) => Boolean(value))
+    .map(([, value]: [string, IpcContextEvent]) => value.name);
+}
 export function IpcContext<T extends { new (...args: any[]): {} }>(
   IpcContextBase: T
 ) {
   return class extends IpcContextBase {
+    public get __registeredIpcEvents() {
+      return this[Object.getOwnPropertySymbols(this)[0]]?.values?.();
+    }
     constructor(...args: any[]) {
       super(...args);
-      const symbols: any = IpcContextBase.prototype[classStoreSymbol];
+      const symbols: any = IpcContextBase.prototype[classIpcStoreSymbol];
       if (symbols) {
         symbols.forEach(
           ({ name, type, options }: IpcContextEvent, method: string) => {
@@ -55,8 +66,8 @@ export function IpcOnce(event: string): MethodDecorator {
     propertyKey: string | symbol,
     _descriptor?: TypedPropertyDescriptor<T>
   ) {
-    target[classStoreSymbol] = target[classStoreSymbol] || new Map();
-    target[classStoreSymbol].set(propertyKey, <IpcContextEvent>{
+    target[classIpcStoreSymbol] = target[classIpcStoreSymbol] || new Map();
+    target[classIpcStoreSymbol].set(propertyKey, <IpcContextEvent>{
       name: event,
       type: "once",
     });
@@ -74,8 +85,8 @@ export function IpcOn(
     propertyKey: string | symbol,
     _descriptor?: TypedPropertyDescriptor<T>
   ) {
-    target[classStoreSymbol] = target[classStoreSymbol] || new Map();
-    target[classStoreSymbol].set(propertyKey, <IpcContextEvent>{
+    target[classIpcStoreSymbol] = target[classIpcStoreSymbol] || new Map();
+    target[classIpcStoreSymbol].set(propertyKey, <IpcContextEvent>{
       name: event,
       options,
     });
@@ -93,8 +104,8 @@ export function IpcHandle(
     propertyKey: string | symbol,
     _descriptor?: TypedPropertyDescriptor<T>
   ) {
-    target[classStoreSymbol] = target[classStoreSymbol] || new Map();
-    target[classStoreSymbol].set(propertyKey, <IpcContextEvent>{
+    target[classIpcStoreSymbol] = target[classIpcStoreSymbol] || new Map();
+    target[classIpcStoreSymbol].set(propertyKey, <IpcContextEvent>{
       name: event,
       type: "handle",
       options,

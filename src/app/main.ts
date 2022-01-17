@@ -1,14 +1,29 @@
-import logger from '@/utils/Logger';
-import { app, BrowserView, BrowserWindow, BrowserWindowConstructorOptions, ipcMain, protocol, shell } from 'electron';
-import { debounce } from 'lodash-es';
-import path from 'path';
-import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
+import logger from "@/utils/Logger";
+import {
+  app,
+  BrowserView,
+  BrowserWindow,
+  BrowserWindowConstructorOptions,
+  ipcMain,
+  protocol,
+  shell,
+} from "electron";
+import { debounce } from "lodash-es";
+import path from "path";
+import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 
-import { defaultUrl, isDevelopment } from './utils/devUtils';
-import { BrowserWindowViews, createWindowContext, getViewObject } from './utils/mappedWindow';
-import { createEventCollection, createPluginCollection } from './utils/serviceCollection';
-import { createApiView, createView } from './utils/view';
-import { rootWindowInjectUtils } from './utils/webContentUtils';
+import { defaultUrl, isDevelopment } from "./utils/devUtils";
+import {
+  BrowserWindowViews,
+  createWindowContext,
+  getViewObject,
+} from "./utils/mappedWindow";
+import {
+  createEventCollection,
+  createPluginCollection,
+} from "./utils/serviceCollection";
+import { createApiView, createView } from "./utils/view";
+import { rootWindowInjectUtils } from "./utils/webContentUtils";
 
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
@@ -325,10 +340,10 @@ export default async function() {
     try {
       if (!settingsWindow || settingsWindow.isDestroyed()) {
         settingsWindow = await createAppWindow();
+        mainWindow.views.settingsWindow = settingsWindow as any;
       } else {
         settingsWindow.show();
       }
-      mainWindow.views.settingsWindow = settingsWindow.getBrowserView();
     } catch (err) {
       log.error(err);
     }

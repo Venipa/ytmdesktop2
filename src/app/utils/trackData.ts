@@ -89,20 +89,27 @@ export const parseMusicUrlById = (id: string) =>
   `https://music.youtube.com/watch?v=${id}&feature=share`;
 export const parseMusicChannelById = (id: string) =>
   `https://music.youtube.com/channel/${id}?feature=share`;
-export const discordEmbedFromTrack = (track: TrackData): Presence => {
-  const startDate = new Date();
+export const discordEmbedFromTrack = (
+  track: TrackData,
+  playing: boolean = true,
+  progress: number = 0
+): Presence => {
+  const startDate = progress
+      ? new Date(Date.now() - progress * 1000)
+      : new Date(),
+    endDate = new Date(
+      startDate.getTime() + ~~Number(track.video.lengthSeconds) * 1000
+    );
   return {
     details: track.video.title,
     state: `by ${track.video.author}`,
-    startTimestamp: startDate,
-    endTimestamp: new Date(
-      startDate.getTime() + ~~Number(track.video.lengthSeconds) * 1000
-    ),
+    startTimestamp: playing ? startDate : null,
+    endTimestamp: playing ? endDate : null,
     largeImageKey:
       track.video.thumbnail.thumbnails.find((x) =>
         YoutubeMatcher.Thumbnail.test(x.url)
       )?.url ?? "logo",
-    smallImageKey: "playx1024",
+    smallImageKey: playing ? "playx1024" : "pausex1024",
     smallImageText: `${Number.parseInt(track.video.viewCount)?.toLocaleString(
       "de"
     ) || track.video.viewCount} views`,

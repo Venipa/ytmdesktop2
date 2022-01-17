@@ -2,7 +2,7 @@ import { EMPTY_URL, isDevelopment } from "@/app/utils/devUtils";
 import logger from "@/utils/Logger";
 import { BrowserWindow, ipcMain } from "electron";
 import path from "path";
-import { apiChannelName, ApiPayload } from "./apiWorkerHelper";
+import { apiChannelName } from "./apiWorkerHelper";
 export interface ApiWorker {
   send(name: string, ...args: any[]): void;
   invoke<T = any>(name: string, ...args: any[]): Promise<T>;
@@ -48,7 +48,7 @@ export const createApiWorker = async (): Promise<ApiWorker> => {
       });
     }
     destroy() {
-      worker.destroy();
+      if (!worker.isDestroyed()) worker.destroy();
     }
   })();
 };

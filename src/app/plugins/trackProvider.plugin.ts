@@ -1,7 +1,10 @@
-import { App, ipcMain } from "electron";
-import { BaseProvider, AfterInit } from "../utils/baseProvider";
-import { TrackData } from "../utils/trackData";
-import { IpcContext, IpcOn } from "../utils/onIpcEvent";
+import { App, ipcMain } from 'electron';
+
+import { AfterInit, BaseProvider } from '../utils/baseProvider';
+import { IpcContext, IpcOn } from '../utils/onIpcEvent';
+import { TrackData } from '../utils/trackData';
+import DiscordProvider from './discordProvider.plugin';
+
 const tracks: { [id: string]: TrackData } = {};
 @IpcContext
 export default class TrackProvider extends BaseProvider implements AfterInit {
@@ -48,5 +51,18 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     this.logger.debug(`active track:`, trackId);
     this._activeTrackId = trackId;
     if (this.trackData) ipcMain.emit("track:change", this.trackData);
+  }
+  @IpcOn("track:play-state")
+  private __onPlayStateChange(_ev, val: boolean, progressSeconds: number = 0) {
+    this.logger.debug(
+      [
+        "play state change",
+        val ? "playing" : "paused",
+        ", progress: ",
+        progressSeconds,
+      ].join(" ")
+    );
+    const discordProvider = this.getProvider("discordRPC") as DiscordProvider;
+    discordProvider.updatePlayState(val, progressSeconds);
   }
 }

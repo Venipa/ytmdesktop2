@@ -55,7 +55,7 @@ export async function createEventCollection(
       providers: events,
       getProviderNames: () => events.map((x: BaseEvent) => x.eventName),
       prepare: async () => {
-        return await Promise.all(events.map((x: BaseEvent) => Promise.resolve(x.__prepare(app))))
+        return await Promise.all(events.map((x: BaseEvent) => Promise.resolve(x.__prepare())))
       },
       getProvider: <T>(name: string): T =>
         events.find((x) => x.getName() === name),

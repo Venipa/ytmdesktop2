@@ -1,12 +1,14 @@
-import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
-import { Client as DiscordClient, Presence } from "discord-rpc";
-import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit } from "../utils/baseProvider";
-import TrackProvider from "./trackProvider.plugin";
-import { debounce } from "lodash-es";
-import { discordEmbedFromTrack, TrackData } from "../utils/trackData";
-import { App } from "electron";
-import { YoutubeMatcher } from "../utils/youtubeMatcher";
+import { Client as DiscordClient, Presence } from 'discord-rpc';
+import { App } from 'electron';
+import { debounce } from 'lodash-es';
+
+import { AfterInit, BaseProvider } from '../utils/baseProvider';
+import { IpcContext, IpcHandle, IpcOn } from '../utils/onIpcEvent';
+import { discordEmbedFromTrack, TrackData } from '../utils/trackData';
+import { YoutubeMatcher } from '../utils/youtubeMatcher';
+import SettingsProvider from './settingsProvider.plugin';
+import TrackProvider from './trackProvider.plugin';
+
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
 const DEFAULT_PRESENCE: Presence = {
   largeImageKey: "logo",
@@ -14,11 +16,17 @@ const DEFAULT_PRESENCE: Presence = {
 };
 const CLIENT_ID = process.env.VUE_APP_DISCORD_CLIENT_ID;
 @IpcContext
-export default class EventProvider extends BaseProvider implements AfterInit {
+export default class DiscordProvider extends BaseProvider implements AfterInit {
   private _updateHandle: any;
   private isConnected: boolean = false;
   private client: DiscordClient;
-  private presence: Presence;
+  private _presence: Presence;
+  get presence() {
+    return this._presence;
+  }
+  set presence(val: Presence) {
+    this._presence = val;
+  }
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
@@ -82,6 +90,12 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     if (!settings.discord.enabled) return;
     this.createClient();
   }
+  async updatePlayState(val: boolean, progress: number = 0) {
+    if (this.trackService.trackData)
+      await this.setActivity(
+        discordEmbedFromTrack(this.trackService.trackData, val, progress)
+      );
+  }
   async setActivity(presence: Partial<Presence>) {
     if (!this.presence) return;
     this.presence = { ...presence, ...DEFAULT_PRESENCE };
@@ -105,6 +119,9 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     if (YoutubeMatcher.Thumbnail.test(presence.largeImageKey)) {
       this.presence.largeImageKey = presence.largeImageKey;
     }
+    if (this.presence.startTimestamp === null)
+      delete this.presence.startTimestamp;
+    if (this.presence.endTimestamp === null) delete this.presence.endTimestamp;
     if (this.client)
       return await this.client
         .setActivity(this.presence || DEFAULT_PRESENCE, process.pid)
