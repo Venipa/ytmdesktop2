@@ -9,7 +9,9 @@ export interface ApiWorker {
   destroy(): void;
   rendererId: number;
 }
-export const createApiWorker = async (): Promise<ApiWorker> => {
+export const createApiWorker = async (
+  parent?: BrowserWindow
+): Promise<ApiWorker> => {
   const workerSource = path.join(__dirname, "api.js");
   logger.debug("Worker Added", workerSource);
   const worker = new BrowserWindow({
@@ -29,7 +31,9 @@ export const createApiWorker = async (): Promise<ApiWorker> => {
       disableHtmlFullscreenWindowResize: true,
       preload: workerSource,
     },
+    parent,
   });
+  if (parent) parent.on("close", () => worker.destroy());
   await worker.loadURL(EMPTY_URL);
 
   if (isDevelopment) worker.webContents.openDevTools();

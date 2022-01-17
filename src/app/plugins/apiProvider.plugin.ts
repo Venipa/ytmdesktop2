@@ -29,10 +29,14 @@ export default class ApiProvider extends BaseProvider
   sendMessage(...args: any[]) {
     return this._thread?.send("socket", ...args);
   }
+  private get settingsProvider() {
+    return this.getProvider("settings") as SettingsProvider;
+  }
   async AfterInit() {
     if (this._thread) this._thread.destroy();
-    this._thread = await createApiWorker();
-    const config = this.getProvider("settings") as SettingsProvider;
+    const config = this.settingsProvider;
+    if (!config.instance?.api?.enabled) return;
+    this._thread = await createApiWorker(this.windowContext.main);
     const rendererId = await this._thread.invoke<number>("initialize", {
       config: { ...config!.instance },
     });
