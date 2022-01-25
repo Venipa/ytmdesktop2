@@ -5,6 +5,7 @@ import TrackProvider from "./trackProvider.plugin";
 import { MediaServiceProvider } from "xosms";
 import { XOSMS } from "@/app/utils/xosms-types";
 import { TrackData } from "@/app/utils/trackData";
+import ApiProvider from "./apiProvider.plugin";
 
 @IpcContext
 export default class MediaControlProvider extends BaseProvider
@@ -17,14 +18,19 @@ export default class MediaControlProvider extends BaseProvider
     app.commandLine.appendSwitch("disable-features", "MediaSessionService");
   }
   async AfterInit() {
-    this._mediaProvider = new MediaServiceProvider(
-      this.app.name,
-      this.app.name
-    );
+    this._mediaProvider = ((msp) => {
+      msp.isEnabled = true;
+      return msp;
+    })(new MediaServiceProvider(this.app.name, this.app.name));
     const xosmsLog = this.logger.child("xosms");
     if (this._mediaProvider) {
-      this._mediaProvider.buttonPressed = (...args) => {
+      this._mediaProvider.buttonPressed = (keyName, ...args) => {
         xosmsLog.debug(["button press", ...args]);
+        const trackProvider = this.getProvider<ApiProvider>("api");
+        if (keyName === "pause") trackProvider.pauseTrack();
+        else if (keyName === "play") trackProvider.playTrack();
+        else if (keyName === "next") trackProvider.nextTrack();
+        else if (keyName === "previous") trackProvider.prevTrack();
       };
     }
     if (!this.mediaProviderEnabled())
@@ -32,7 +38,7 @@ export default class MediaControlProvider extends BaseProvider
         [
           "XOSMS is disabled",
           ":: Status:",
-          `Provider - ${!!this
+          `Provider: ${!!this
             ._mediaProvider}, Enabled: ${this.mediaProviderEnabled()}`,
         ].join(", ")
       );
@@ -78,7 +84,8 @@ export default class MediaControlProvider extends BaseProvider
     this._mediaProvider.setThumbnail(XOSMS.ThumbnailType.Uri, albumThumbnail);
     this._mediaProvider.title = trackData.video.title;
     this._mediaProvider.trackId = trackData.video.videoId;
-    this._mediaProvider.isEnabled = true;
+    this._mediaProvider.previousButtonEnabled = true;
+    this._mediaProvider.nextButtonEnabled = true;
     this.logger.debug([
       this._mediaProvider.title,
       XOSMS.MediaType[this._mediaProvider.mediaType].toString(),
