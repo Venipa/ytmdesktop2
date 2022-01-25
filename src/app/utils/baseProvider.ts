@@ -4,7 +4,7 @@ import { BrowserView } from "electron/main";
 import { Logger } from "winston";
 import { BrowserWindowViews } from "./mappedWindow";
 export interface BeforeStart {
-  BeforeStart(): void | Promise<void>;
+  BeforeStart(app?: App): void | Promise<void>;
 }
 export interface OnInit {
   OnInit(app?: App): void | Promise<void>;

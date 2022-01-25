@@ -1,5 +1,5 @@
 import { App } from "electron";
-import { BaseProvider, AfterInit } from "@/app/utils/baseProvider";
+import { BaseProvider, AfterInit, BeforeStart } from "@/app/utils/baseProvider";
 import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
 import TrackProvider from "./trackProvider.plugin";
 import { MediaServiceProvider } from "xosms";
@@ -7,20 +7,35 @@ import { XOSMS } from "@/app/utils/xosms-types";
 import { TrackData } from "@/app/utils/trackData";
 
 @IpcContext
-export default class EventProvider extends BaseProvider implements AfterInit {
+export default class MediaControlProvider extends BaseProvider
+  implements AfterInit, BeforeStart {
   private _mediaProvider: MediaServiceProvider;
   constructor(private app: App) {
     super("mediaController");
+  }
+  async BeforeStart(app?: App) {
+    app.commandLine.appendSwitch("disable-features", "MediaSessionService");
   }
   async AfterInit() {
     this._mediaProvider = new MediaServiceProvider(
       this.app.name,
       this.app.name
     );
-    if (this._mediaProvider)
+    const xosmsLog = this.logger.child("xosms");
+    if (this._mediaProvider) {
       this._mediaProvider.buttonPressed = (...args) => {
-        this.logger.child("xosms").debug(["button press", ...args]);
+        xosmsLog.debug(["button press", ...args]);
       };
+    }
+    if (!this.mediaProviderEnabled())
+      xosmsLog.warn(
+        [
+          "XOSMS is disabled",
+          ":: Status:",
+          `Provider - ${!!this
+            ._mediaProvider}, Enabled: ${this.mediaProviderEnabled()}`,
+        ].join(", ")
+      );
   }
 
   @IpcOn("track:play-state")
