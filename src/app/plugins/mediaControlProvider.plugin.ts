@@ -11,6 +11,7 @@ import ApiProvider from "./apiProvider.plugin";
 export default class MediaControlProvider extends BaseProvider
   implements AfterInit, BeforeStart {
   private _mediaProvider: MediaServiceProvider;
+  private xosmsLog = this.logger.child("xosms");
   constructor(private app: App) {
     super("mediaController");
   }
@@ -22,10 +23,9 @@ export default class MediaControlProvider extends BaseProvider
       msp.isEnabled = true;
       return msp;
     })(new MediaServiceProvider(this.app.name, this.app.name));
-    const xosmsLog = this.logger.child("xosms");
     if (this._mediaProvider) {
       this._mediaProvider.buttonPressed = (keyName, ...args) => {
-        xosmsLog.debug(["button press", ...args]);
+        this.xosmsLog.debug(["button press", keyName, ...args]);
         const trackProvider = this.getProvider<ApiProvider>("api");
         if (keyName === "pause") trackProvider.pauseTrack();
         else if (keyName === "play") trackProvider.playTrack();
@@ -34,7 +34,7 @@ export default class MediaControlProvider extends BaseProvider
       };
     }
     if (!this.mediaProviderEnabled())
-      xosmsLog.warn(
+      this.xosmsLog.warn(
         [
           "XOSMS is disabled",
           ":: Status:",
@@ -60,6 +60,14 @@ export default class MediaControlProvider extends BaseProvider
 
       this._mediaProvider.playButtonEnabled = !isPlaying;
       this._mediaProvider.pauseButtonEnabled = isPlaying;
+      this.xosmsLog.debug(
+        [
+          `IsPlaying State: ${isPlaying}`,
+          `XOSMS: ${XOSMS.PlaybackStatus[
+            this._mediaProvider.playbackStatus
+          ]?.toString?.()}`,
+        ].join(", ")
+      );
     }
   }
   private mediaProviderEnabled() {

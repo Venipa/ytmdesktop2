@@ -1,14 +1,18 @@
-import { App, ipcMain } from 'electron';
+import { App, ipcMain } from "electron";
 
-import { AfterInit, BaseProvider } from '../utils/baseProvider';
-import { IpcContext, IpcOn } from '../utils/onIpcEvent';
-import { TrackData } from '../utils/trackData';
-import DiscordProvider from './discordProvider.plugin';
+import { AfterInit, BaseProvider } from "../utils/baseProvider";
+import { IpcContext, IpcOn } from "../utils/onIpcEvent";
+import { TrackData } from "../utils/trackData";
+import DiscordProvider from "./discordProvider.plugin";
 
 const tracks: { [id: string]: TrackData } = {};
 @IpcContext
 export default class TrackProvider extends BaseProvider implements AfterInit {
   private _activeTrackId: string;
+  private _playState: "playing" | "paused" | undefined;
+  get playState() {
+    return this._playState;
+  }
   constructor(private app: App) {
     super("track");
   }
@@ -53,16 +57,21 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     if (this.trackData) ipcMain.emit("track:change", this.trackData);
   }
   @IpcOn("track:play-state")
-  private __onPlayStateChange(_ev, val: boolean, progressSeconds: number = 0) {
+  private __onPlayStateChange(
+    _ev,
+    isPlaying: boolean,
+    progressSeconds: number = 0
+  ) {
     this.logger.debug(
       [
         "play state change",
-        val ? "playing" : "paused",
+        isPlaying ? "playing" : "paused",
         ", progress: ",
         progressSeconds,
       ].join(" ")
     );
+    this._playState = isPlaying ? "playing" : "paused";
     const discordProvider = this.getProvider("discordRPC") as DiscordProvider;
-    discordProvider.updatePlayState(val, progressSeconds);
+    discordProvider.updatePlayState(isPlaying, progressSeconds);
   }
 }

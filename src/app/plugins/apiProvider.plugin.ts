@@ -32,6 +32,9 @@ export default class ApiProvider extends BaseProvider
   private get settingsProvider() {
     return this.getProvider("settings") as SettingsProvider;
   }
+  private get trackProvider() {
+    return this.getProvider<TrackProvider>("track");
+  }
   async AfterInit() {
     if (this._thread) this._thread.destroy();
     const config = this.settingsProvider;
@@ -78,28 +81,22 @@ export default class ApiProvider extends BaseProvider
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_PLAY)
   async playTrack() {
-    await this.views.youtubeView.webContents.executeJavaScript(
-      `(el => el && el.title !== "Play" && el.click())(document.querySelector(".ytmusic-player-bar#play-pause-button"))`
-    );
+    if (this.trackProvider.playState === "paused")
+      await this.views.youtubeView.webContents.executeJavaScript(
+        `(el => el && el.click())(document.querySelector(".ytmusic-player-bar#play-pause-button"))`
+      );
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_PAUSE)
   async pauseTrack() {
-    await this.views.youtubeView.webContents.executeJavaScript(
-      `(el => el && el.title === "Play" && el.click())(document.querySelector(".ytmusic-player-bar#play-pause-button"))`
-    );
+    if (this.trackProvider.playState === "playing")
+      await this.views.youtubeView.webContents.executeJavaScript(
+        `(el => el && el.click())(document.querySelector(".ytmusic-player-bar#play-pause-button"))`
+      );
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_TOGGLE_PLAY)
   async toggleTrackPlayback() {
-    await this.views.youtubeView.webContents
-      .executeJavaScript(
-        `(el => el ? el.title === "Play" : null)(document.querySelector(".ytmusic-player-bar#play-pause-button"))`
-      )
-      .then((x) => {
-        return typeof x === "boolean"
-          ? x
-            ? this.pauseTrack()
-            : this.playTrack()
-          : null;
-      });
+    if (this.trackProvider.playState === "playing") return this.pauseTrack();
+    else if (this.trackProvider.playState === "paused") return this.playTrack();
+    return Promise.resolve(null);
   }
 }
