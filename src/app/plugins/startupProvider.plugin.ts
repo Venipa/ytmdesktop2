@@ -1,9 +1,9 @@
 import { App, BrowserWindow, Tray } from "electron";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit, BeforeStart } from "../utils/baseProvider";
+import { BaseProvider, AfterInit, BeforeStart } from "@/app/utils/baseProvider";
 import { basename, resolve } from "path";
-import { IpcContext, IpcOn } from "../utils/onIpcEvent";
-import { createTrayMenu } from "../utils/trayMenu";
+import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
+import { createTrayMenu } from "@/app/utils/trayMenu";
 @IpcContext
 export default class EventProvider extends BaseProvider
   implements AfterInit, BeforeStart {

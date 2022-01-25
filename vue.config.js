@@ -1,3 +1,4 @@
+const webpackNodeExternals = require("webpack-node-externals");
 const WorkerPlugin = require("worker-plugin");
 
 /**
@@ -44,7 +45,7 @@ const electronBuilder = {
   },
   nodeIntegration: false,
   builderOptions,
-  externals: ["chokidar"],
+  externals: ["chokidar", "xosms", ...Array.from(webpackNodeExternals())],
   nodeModulesPath: ["./node_modules"],
 };
 module.exports = {

@@ -1,6 +1,6 @@
 import ApiProvider from "../plugins/apiProvider.plugin";
-import { BaseEvent, OnEventExecute } from "../utils/baseEvent";
-import { TrackData } from "../utils/trackData";
+import { BaseEvent, OnEventExecute } from "@/app/utils/baseEvent";
+import { TrackData } from "@/app/utils/trackData";
 
 export default class extends BaseEvent implements OnEventExecute {
   constructor() {

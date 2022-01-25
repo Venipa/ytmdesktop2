@@ -1,7 +1,7 @@
 import { App } from "electron";
-import { BaseProvider, AfterInit } from "../utils/baseProvider";
-import { defaultUrl } from "../utils/devUtils";
-import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
+import { BaseProvider, AfterInit } from "@/app/utils/baseProvider";
+import { defaultUrl } from "@/app/utils/devUtils";
+import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 
 @IpcContext
 export default class EventProvider extends BaseProvider implements AfterInit {

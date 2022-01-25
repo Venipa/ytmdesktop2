@@ -1,9 +1,9 @@
 import { App, BrowserWindow, dialog } from "electron";
 import { autoUpdater } from "electron-updater";
-import { isDevelopment } from "../utils/devUtils";
+import { isDevelopment } from "@/app/utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
-import { AfterInit, BaseProvider, BeforeStart } from "../utils/baseProvider";
-import { IpcContext, IpcOn } from "../utils/onIpcEvent";
+import { AfterInit, BaseProvider, BeforeStart } from "@/app/utils/baseProvider";
+import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = isDevelopment
   ? [null, null]
   : process.env.VUE_APP_GITHUB_REPOSITORY.split("/", 2);

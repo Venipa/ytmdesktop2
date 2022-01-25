@@ -4,16 +4,16 @@ import {
   OnDestroy,
   BeforeStart,
   AfterInit,
-} from "../utils/baseProvider";
+} from "@/app/utils/baseProvider";
 import fs from "fs";
 import { existsSync } from "fs";
 import path from "path";
 import { debounce, get as _get, set as _set } from "lodash-es";
-import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
-import { rootWindowInjectUtils } from "../utils/webContentUtils";
-import { getViewObject } from "../utils/mappedWindow";
-import { defaultUri, defaultUrl, isDevelopment } from "../utils/devUtils";
-import eventNames from "../utils/eventNames";
+import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
+import { rootWindowInjectUtils } from "@/app/utils/webContentUtils";
+import { getViewObject } from "@/app/utils/mappedWindow";
+import { defaultUri, defaultUrl, isDevelopment } from "@/app/utils/devUtils";
+import eventNames from "@/app/utils/eventNames";
 const defaultSettings = {
   api: {
     enabled: isDevelopment ? true : false,

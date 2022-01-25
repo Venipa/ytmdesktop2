@@ -1,10 +1,10 @@
 import { App, ipcMain } from "electron";
-import { IpcContext, IpcOn } from "../utils/onIpcEvent";
+import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
 import fs from "fs";
 import path from "path";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit } from "../utils/baseProvider";
-import { rootWindowInjectCustomCss } from "../utils/webContentUtils";
+import { BaseProvider, AfterInit } from "@/app/utils/baseProvider";
+import { rootWindowInjectCustomCss } from "@/app/utils/webContentUtils";
 // @ts-ignore
 import customDefaultCss from "!raw-loader!../../assets/default-custom.scss";
 @IpcContext

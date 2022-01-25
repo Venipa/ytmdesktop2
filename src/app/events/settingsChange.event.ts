@@ -1,4 +1,4 @@
-import { BaseEvent, OnEventExecute } from "../utils/baseEvent";
+import { BaseEvent, OnEventExecute } from "@/app/utils/baseEvent";
 
 export default class extends BaseEvent implements OnEventExecute {
   constructor() {

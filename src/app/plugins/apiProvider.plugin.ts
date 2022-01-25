@@ -1,8 +1,8 @@
 import { App, BrowserWindow } from "electron";
-import { BaseProvider, AfterInit, OnDestroy } from "../utils/baseProvider";
+import { BaseProvider, AfterInit, OnDestroy } from "@/app/utils/baseProvider";
 import { ApiWorker, createApiWorker } from "@/api/createApiWorker";
 import SettingsProvider from "./settingsProvider.plugin";
-import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
+import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import TrackProvider from "./trackProvider.plugin";
 const API_ROUTES = {
   TRACK_CURRENT: "api/track",

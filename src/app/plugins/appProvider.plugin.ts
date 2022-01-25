@@ -1,5 +1,5 @@
 import { App } from "electron";
-import { BaseProvider, AfterInit } from "../utils/baseProvider";
+import { BaseProvider, AfterInit } from "@/app/utils/baseProvider";
 
 export default class AppProvider extends BaseProvider implements AfterInit {
   constructor(private _app: App) {

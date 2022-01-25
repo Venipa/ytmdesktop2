@@ -56,8 +56,8 @@ export class BaseProvider {
   ) {
     this._views = views;
   }
-  getProvider(name: string) {
-    return this._providers[name];
+  getProvider<T = any>(name: string) {
+    return this._providers[name] as T;
   }
   queryProvider(): BaseProvider[] {
     return Object.values(this._providers);
