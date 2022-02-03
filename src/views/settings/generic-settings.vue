@@ -7,8 +7,9 @@
         </h3>
         <div class="mt-2 max-w-xl text-sm text-gray-200">
           <p>
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Commodi,
-            totam at reprehenderit maxime aut beatae ad.
+            You can change things like Discord rich presence,
+            add custome style sheets, change player functionality, 
+            enable/disable Developer Mode and auto updates, etc.
           </p>
         </div>
         <div class="mt-3 text-sm">
