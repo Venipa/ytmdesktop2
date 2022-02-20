@@ -3,6 +3,7 @@ import { App } from 'electron';
 import { debounce } from 'lodash-es';
 
 import { AfterInit, BaseProvider } from '../utils/baseProvider';
+import { isDevelopment } from '../utils/devUtils';
 import { IpcContext, IpcHandle, IpcOn } from '../utils/onIpcEvent';
 import { discordEmbedFromTrack, TrackData } from '../utils/trackData';
 import { YoutubeMatcher } from '../utils/youtubeMatcher';
@@ -15,6 +16,8 @@ const DEFAULT_PRESENCE: Presence = {
   largeImageText: "Youtube Music for Desktop",
 };
 const CLIENT_ID = process.env.VUE_APP_DISCORD_CLIENT_ID;
+const DISCORD_SERVICE_ENABLED = !!CLIENT_ID;
+
 @IpcContext
 export default class DiscordProvider extends BaseProvider implements AfterInit {
   private _updateHandle: any;
@@ -37,6 +40,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     super("discordRPC");
   }
   private async createClient(): Promise<[DiscordClient, Presence]> {
+    if (!DISCORD_SERVICE_ENABLED) return null;
     const client = new DiscordClient({
       transport: "ipc",
     });
@@ -87,7 +91,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
   }
   AfterInit() {
     const settings = this.settingsInstance.instance;
-    if (!settings.discord.enabled) return;
+    if (!settings.discord.enabled || !DISCORD_SERVICE_ENABLED) return;
     this.createClient();
   }
   async updatePlayState(val: boolean, progress: number = 0) {
@@ -128,7 +132,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
         .catch(() => null);
   }
   @IpcOn("settingsProvider.change", {
-    filter: (key: string) => key === "discord.enabled",
+    filter: (key: string) => key === "discord.enabled" && DISCORD_SERVICE_ENABLED,
     debounce: 1000,
   })
   private async __onToggleEnabled(key: string, enabled: boolean) {
@@ -167,7 +171,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
   }
   @IpcHandle("req:discord.connected")
   private async __onDiscordStatus() {
-    return this.client && this.isConnected;
+    return DISCORD_SERVICE_ENABLED && this.client && this.isConnected;
   }
   @IpcOn("track:change", {
     debounce: 100,
