@@ -310,10 +310,6 @@ export default async function() {
         serviceCollection.providers.forEach((p) =>
           p.__registerWindows(mainWindow)
         );
-      setTimeout(() => {
-        ipcMain.emit("settings.customCssUpdate");
-        ipcMain.emit("settings.customCssWatch");
-      }, 50);
     }
   });
   app.on("ready", async () => {
@@ -328,11 +324,12 @@ export default async function() {
       getViewObject(mainWindow.views)
     );
     serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
-    setTimeout(() => {
-      ipcMain.emit("settings.customCssUpdate");
-      ipcMain.emit("settings.customCssWatch");
-    }, 50);
-    serviceCollection.exec("AfterInit");
+    serviceCollection.exec("AfterInit").then(() => {
+      setTimeout(() => {
+        ipcMain.emit("settings.customCssUpdate");
+        ipcMain.emit("settings.customCssWatch");
+      }, 50);
+    });
   });
 
   let settingsWindow: BrowserWindow;
