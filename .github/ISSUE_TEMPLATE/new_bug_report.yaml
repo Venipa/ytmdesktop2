@@ -1,0 +1,48 @@
+name: Bug
+description: File a bug report
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a bug report, please search for the behaviour in the existing issues. 
+        
+        ---
+        
+        Thank you for taking the time to file a bug report. To address this bug as fast as possible, we need some information.
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: | 
+        Which operating system do you use? Please provide the version as well.
+        Windows: win+r and type `cmd /C "ver | clip"` and paste it here
+      placeholder: "Microsoft Windows [Version 10.0.19043.1586]"
+    validations:
+      required: true
+  - type: input
+    id: appVersion
+    attributes:
+      label: Youtube Music Desktop App Version
+      description: | 
+        What App Version are you running on, you can find your version in the top left or in the tray menu from ytmdesktop2.
+      placeholder: "Microsoft Windows [Version 10.0.19043.1586]"
+    validations:
+      required: true
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug description
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Which steps do we need to take to reproduce this error?
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: If applicable, provide relevant log output. No need for backticks here.
+      render: shell
