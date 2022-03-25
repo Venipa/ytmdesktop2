@@ -7,8 +7,7 @@
         </h3>
         <div class="mt-2 max-w-xl text-sm text-gray-200">
           <p>
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Commodi,
-            totam at reprehenderit maxime aut beatae ad.
+            Welcome to Youtube Music for Desktop, here you can adjust settings to your liking aswell as personalize your experience.
           </p>
         </div>
         <div class="mt-3 text-sm">
@@ -27,6 +26,9 @@
       </settings-checkbox>
       <settings-checkbox configKey="app.autoupdate">
         Enable Autoupdate
+      </settings-checkbox>
+      <settings-checkbox configKey="app.minimizeTrayOverride">
+        Close window to tray instead of quitting
       </settings-checkbox>
       <settings-checkbox configKey="app.enableDev" class="group">
         <div class="flex flex-col">
@@ -69,7 +71,7 @@ import { defineComponent, ref } from "vue";
 const getStartedEnabled = ref(!!window.settings.get("app.getstarted"));
 const apiEnabledSetting = ref(!!window.settings.get("api.enabled"));
 const apiPortSetting = ref(window.settings.get("api.port") ?? 13091);
-const subscribers = [];
+let subscribers = [];
 subscribers.push(
   ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
     if (key === "api.enabled" && value !== apiEnabledSetting.value) apiEnabledSetting.value = !!value;

@@ -9,46 +9,53 @@ export const createTrayMenu = (provider: BaseProvider) => {
     "settings"
   ) as SettingsProvider;
   const { app } = provider.getProvider("app") as AppProvider;
-  const { updateAvailable, onCheckUpdate: checkUpdate, onAutoUpdateRun: applyUpdate } = provider.getProvider("update") as UpdateProvider;
+  const {
+    updateAvailable,
+    onCheckUpdate: checkUpdate,
+    onAutoUpdateRun: applyUpdate
+  } = provider.getProvider("update") as UpdateProvider;
   return Menu.buildFromTemplate([
     {
       label: "Youtube Music for Desktop",
       sublabel: `Version: ${app.getVersion()}`,
+      click: () => ipcMain.emit("app.trayState", null, "visible")
     },
     {
-      label: updateAvailable ? 'Update Available - Apply/Download' : "Check for Updates",
-      click: () => updateAvailable ? applyUpdate() : checkUpdate(),
+      label: updateAvailable
+        ? "Update Available - Apply/Download"
+        : "Check for Updates",
+      click: () => (updateAvailable ? applyUpdate() : checkUpdate())
     },
     {
-      type: "separator",
+      type: "separator"
     },
     {
       label: "Auto Startup",
       type: "checkbox",
       checked: settings.app.autostart,
-      click: (item) => {
+      click: item => {
         set("app.autostart", item.checked);
-      },
+      }
     },
     {
       label: "Auto Update",
       type: "checkbox",
       checked: settings.app.autoupdate,
-      click: (item) => {
+      click: item => {
         set("app.autoupdate", item.checked);
-      },
+      }
     },
     {
-      type: "separator",
+      type: "separator"
     },
     {
       label: "Settings",
       click: () => {
         ipcMain.emit("settings.show");
-      },
+      }
     },
     {
-      type: "separator",
+      type: "separator"
     },
     {
       type: "submenu",
@@ -58,22 +65,22 @@ export const createTrayMenu = (provider: BaseProvider) => {
           label: "Show Presence",
           type: "checkbox",
           checked: settings.discord.enabled,
-          click: (item) => {
+          click: item => {
             set("discord.enabled", item.checked);
-          },
+          }
         },
         {
           label: "Show Buttons",
           type: "checkbox",
           checked: settings.discord.buttons,
-          click: (item) => {
+          click: item => {
             set("discord.buttons", item.checked);
-          },
-        },
-      ],
+          }
+        }
+      ]
     },
     {
-      type: "separator",
+      type: "separator"
     },
     {
       type: "submenu",
@@ -83,32 +90,32 @@ export const createTrayMenu = (provider: BaseProvider) => {
           label: "Enable CSS",
           type: "checkbox",
           checked: settings.customcss.enabled,
-          click: (item) => {
+          click: item => {
             set("customcss.enabled", item.checked);
-          },
+          }
         },
         {
           label: "Open selected CSS File",
           enabled: settings.customcss.enabled,
-          click: (item) => {
+          click: item => {
             if (item.enabled) shell.openExternal(settings.customcss.scssFile);
-          },
+          }
         },
         {
           label: "Change CSS File",
           enabled: settings.customcss.enabled,
-          click: (item) => {
+          click: item => {
             if (item.enabled) ipcMain.emit("settings.show");
-          },
-        },
-      ],
+          }
+        }
+      ]
     },
     {
-      type: "separator",
+      type: "separator"
     },
     {
       label: "Quit",
-      click: () => app.quit(),
-    },
+      click: () => ipcMain.emit("app.quit", null, true)
+    }
   ]);
 };

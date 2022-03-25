@@ -28,3 +28,8 @@ export async function rootWindowInjectCustomCss(
     `initializeYoutubeCustomCSS({ customCss: \`${css || ""}\` })`
   );
 }
+export async function rootWindowClearCustomCss(webContents: WebContents) {
+  await webContents.executeJavaScript(
+    `initializeYoutubeCustomCSS({ customCss: "" })`
+  );
+}

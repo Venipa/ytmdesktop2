@@ -5,12 +5,14 @@ import {
   BrowserWindow,
   BrowserWindowConstructorOptions,
   ipcMain,
+  IpcMainEvent,
   protocol,
   shell,
 } from "electron";
 import { debounce } from "lodash-es";
 import path from "path";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
+import SettingsProvider from "./plugins/settingsProvider.plugin";
 
 import { defaultUrl, isDevelopment } from "./utils/devUtils";
 import {
@@ -79,6 +81,7 @@ export default async function() {
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
         contextIsolation: true,
+        backgroundThrottling: false,
       },
       ...(options || {}),
     });
@@ -288,7 +291,7 @@ export default async function() {
     // On macOS it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
     if (process.platform !== "darwin") {
-      app.quit();
+      ipcMain.emit("app.quit", null, true);
     }
   });
 
@@ -324,12 +327,11 @@ export default async function() {
       getViewObject(mainWindow.views)
     );
     serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
-    serviceCollection.exec("AfterInit").then(() => {
-      setTimeout(() => {
-        ipcMain.emit("settings.customCssUpdate");
-        ipcMain.emit("settings.customCssWatch");
-      }, 50);
-    });
+    serviceCollection.exec("AfterInit");
+    mainWindow.main.blur();
+    setTimeout(() => {
+      mainWindow.main.focus(); // fix hibernation/standby expired window cache
+    }, 50);
   });
 
   let settingsWindow: BrowserWindow;
@@ -364,8 +366,34 @@ export default async function() {
     if (window && window.maximizable)
       window.isMaximized() ? window.unmaximize() : window.maximize();
   });
-  ipcMain.on("app.quit", () => {
+  let forcedQuit = false;
+  ipcMain.on("app.quit", (ev: IpcMainEvent, forceQuit: boolean) => {
+    forcedQuit = !!forceQuit;
     app.quit();
+  });
+  app.on("before-quit", (ev) => {
+    if (forcedQuit) return;
+    const settings = serviceCollection.getProvider<SettingsProvider>(
+      "settings"
+    );
+    if (settings.get("app.minimizeTrayOverride")) {
+      ipcMain.emit("app.trayState", null, "hidden");
+      ev.preventDefault(); // prevent quit - minimize to tray
+    }
+  });
+  ipcMain.on("app.restore", () => {
+    if (!mainWindow.main.isVisible()) {
+      ipcMain.emit("app.trayState", null, "visible");
+    }
+  });
+  ipcMain.on("app.trayState", (ev: IpcMainEvent, state: string) => {
+    if (state === "visible" && !mainWindow.main.isVisible()) {
+      mainWindow.main.show();
+      mainWindow.main.setSkipTaskbar(false);
+    } else if (state === "hidden" && mainWindow.main.isVisible()) {
+      mainWindow.main.hide();
+      mainWindow.main.setSkipTaskbar(true);
+    }
   });
 
   // Exit cleanly on request from parent process in development mode.
@@ -373,12 +401,16 @@ export default async function() {
     if (process.platform === "win32") {
       process.on("message", (data) => {
         if (data === "graceful-exit") {
-          serviceCollection.exec("OnDestroy").then(app.quit);
+          serviceCollection
+            .exec("OnDestroy")
+            .then(() => ipcMain.emit("app.quit", true));
         }
       });
     } else {
       process.on("SIGTERM", () => {
-        serviceCollection.exec("OnDestroy").then(app.quit);
+        serviceCollection
+          .exec("OnDestroy")
+          .then(() => ipcMain.emit("app.quit", true));
       });
     }
   }

@@ -1,4 +1,4 @@
-import { App, BrowserWindow, dialog } from "electron";
+import { App, BrowserWindow, dialog, ipcMain } from "electron";
 import { autoUpdater } from "electron-updater";
 import { isDevelopment } from "../utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
@@ -47,7 +47,7 @@ export default class UpdateProvider extends BaseProvider
 
         if (app.autoupdate) {
           autoUpdater.quitAndInstall(false);
-          this.app.quit();
+          ipcMain.emit("app.quit", null, true);
         }
       });
     }
@@ -68,7 +68,7 @@ export default class UpdateProvider extends BaseProvider
   })
   onAutoUpdateRun() {
     autoUpdater.quitAndInstall(false);
-    this.app.quit();
+    ipcMain.emit("app.quit", null, true);
   }
   @IpcOn("app.checkUpdate", {
     debounce: 1000,

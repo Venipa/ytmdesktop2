@@ -24,7 +24,8 @@ const defaultSettings = {
     autoupdate: true,
     autostart: true,
     getstarted: true,
-    enableDev: false
+    enableDev: false,
+    minimizeTrayOverride: false
   },
   player: {
     skipDisliked: false
@@ -34,7 +35,7 @@ const defaultSettings = {
     buttons: false,
   },
   customcss: {
-    enabled: false,
+    enabled: true,
     scssFile: null,
   },
   state: {

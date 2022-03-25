@@ -25,16 +25,19 @@
 </template>
 
 <script>
-import { defineComponent } from "vue";
+import { defineComponent, ref } from "vue";
 import CloseIcon from "@/assets/icons/close.svg";
 
+const title = ref(),
+  appVersion = ref(window.api.version);
 export default defineComponent({
   components: {
-    CloseIcon
+    CloseIcon,
   },
-  data() {
+  setup() {
     return {
-      title: null,
+      title,
+      appVersion,
     };
   },
   beforeRouteLeave() {
