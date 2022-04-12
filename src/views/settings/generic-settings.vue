@@ -27,6 +27,12 @@
       <settings-checkbox configKey="app.autoupdate">
         Enable Autoupdate
       </settings-checkbox>
+      <settings-checkbox configKey="app.enableStatisticsAndErrorTracing">
+        <div class="flex flex-col">
+          <span>Allow reporting of anonymized errors to sentry.io.</span>
+          <span class="opacity-80">(allows for faster bug fixing.)</span>
+        </div>
+      </settings-checkbox>
       <settings-checkbox configKey="app.minimizeTrayOverride">
         Close window to tray instead of quitting
       </settings-checkbox>
@@ -71,11 +77,13 @@ import { defineComponent, ref } from "vue";
 const getStartedEnabled = ref(!!window.settings.get("app.getstarted"));
 const apiEnabledSetting = ref(!!window.settings.get("api.enabled"));
 const apiPortSetting = ref(window.settings.get("api.port") ?? 13091);
+const errorReportingEnabled = ref(window.settings.get("app.enableStatisticsAndErrorTracing"));
 let subscribers = [];
 subscribers.push(
   ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
     if (key === "api.enabled" && value !== apiEnabledSetting.value) apiEnabledSetting.value = !!value;
     if (key === "api.port" && value !== apiPortSetting.value) apiPortSetting.value = value;
+    if (key === "app.enableStatisticsAndErrorTracing") errorReportingEnabled.value = !!value;
   })
 );
 export default defineComponent({
@@ -92,6 +100,7 @@ export default defineComponent({
       getStartedEnabled,
       apiPortSetting,
       apiEnabledSetting,
+      errorReportingEnabled
     };
   },
   unmounted() {

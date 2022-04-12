@@ -25,7 +25,8 @@ const defaultSettings = {
     autostart: true,
     getstarted: true,
     enableDev: false,
-    minimizeTrayOverride: false
+    minimizeTrayOverride: false,
+    enableStatisticsAndErrorTracing: true
   },
   player: {
     skipDisliked: false
