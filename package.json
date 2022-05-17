@@ -1,13 +1,13 @@
 {
   "name": "ytmdesktop2",
-  "version": "0.5.2",
+  "version": "0.5.5",
   "private": false,
   "author": "Venipa <admin@venipa.net>",
   "license": "MIT",
   "repository": "https://github.com/Venipa/ytmdesktop2",
   "scripts": {
     "serve": "vue-cli-service electron:serve",
-    "dev": "npm run serve",
+    "dev": "vue-cli-service electron:build --mode development",
     "build": "vue-cli-service electron:build",
     "release": "vue-cli-service electron:build",
     "lint": "vue-cli-service lint",

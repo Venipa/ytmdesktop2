@@ -1,6 +1,7 @@
 import { createLogger, format, transports } from "winston";
 import { inspect } from "util";
 import DailyRotateFile from "winston-daily-rotate-file";
+import { app } from "electron";
 const myFormat = format.printf((info) => {
   const { level, message, timestamp, ...meta } = info;
   // @ts-ignore
@@ -50,6 +51,7 @@ if (process.env.NODE_ENV !== "production") {
       maxSize: "10m",
       zippedArchive: true,
       level: "error",
+      dirname: app.getPath("appData")
     })
   );
 }

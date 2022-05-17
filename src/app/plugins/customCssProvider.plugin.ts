@@ -3,8 +3,11 @@ import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
 import fs from "fs";
 import path from "path";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit } from "@/app/utils/baseProvider";
-import { rootWindowInjectCustomCss } from "@/app/utils/webContentUtils";
+import { BaseProvider, AfterInit } from "../utils/baseProvider";
+import {
+  rootWindowClearCustomCss,
+  rootWindowInjectCustomCss,
+} from "../utils/webContentUtils";
 // @ts-ignore
 import customDefaultCss from "!raw-loader!../../assets/default-custom.scss";
 @IpcContext
@@ -17,8 +20,8 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     super("customcss");
   }
   private getScssPath() {
-    return this.settingsInstance.get(
-      "customcss.scssFile",
+    return (
+      this.settingsInstance.get("customcss.scssFile") ??
       path.resolve(this.app.getPath("documents"), "ytmdesktop", "custom.scss")
     );
   }
@@ -62,7 +65,25 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       scssPath
     ).catch(() => null);
   }
+  @IpcOn("settingsProvider.change", {
+    filter: (key: string) => key === "customcss.enabled",
+    debounce: 1000,
+  })
+  private async _event_toggleCss(_key: string, value: boolean) {
+    if (!value) rootWindowClearCustomCss(this.views.youtubeView.webContents);
+    else {
+      const scssFile = this.getScssPath();
+      if (scssFile) await this._initializeSCSS();
+      rootWindowInjectCustomCss(this.views.youtubeView.webContents, scssFile);
+    }
+  }
   async AfterInit() {
+    this._initializeSCSS().then(() => {
+      if (this.settingsInstance.instance?.customcss?.enabled)
+        this._event_toggleCss(null, true);
+    });
+  }
+  private async _initializeSCSS() {
     const scssPath = this.getScssPath(),
       scssParent = path.resolve(scssPath, "..");
     if (!fs.existsSync(scssPath)) {
@@ -70,8 +91,14 @@ export default class EventProvider extends BaseProvider implements AfterInit {
         fs.mkdirSync(scssParent, { recursive: true });
       }
       fs.writeFileSync(scssPath, customDefaultCss);
-      this.settingsInstance.set("customcss.enabled", true);
-      this.settingsInstance.set("customcss.scssFile", scssPath);
+      this.settingsInstance
+        .set("customcss.enabled", true)
+        .set("customcss.scssFile", scssPath);
+      this.logger.debug("has scss data " + !!customDefaultCss);
+      if (this.settingsInstance.get("customcss.scssFileWatch"))
+        ipcMain.emit("settings.customCssWatch");
+      return true;
     }
+    return false;
   }
 }

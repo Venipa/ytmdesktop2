@@ -16,10 +16,32 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       if (isHome !== lastNavigatioIsSameOrigin) {
         lastNavigatioIsSameOrigin = isHome;
         this.windowContext.sendToAllViews("nav.same-origin", isHome);
+        if (isHome) this.handlePreloadOnWindowNav();
       }
     });
   }
-
+  private isYTMLoaded() {
+    if (this.windowContext.main.webContents.isLoading()) return null;
+    return this.views.youtubeView.webContents
+      .executeJavaScript(
+        `typeof window.isYTMLoaded === "function" && !!window.isYTMLoaded()`
+      )
+      .then((x) => !!x)
+      .catch(() => false);
+  }
+  private _isPreloading = false;
+  private async handlePreloadOnWindowNav() {
+    const isLoaded = await this.isYTMLoaded();
+    if (isLoaded === null) return;
+    if (this._isPreloading) {
+      if (isLoaded) this._isPreloading = false;
+      return;
+    }
+    if (!isLoaded) {
+      this._isPreloading = true;
+      this.windowContext.main.reload();
+    }
+  }
   @IpcHandle("action:nav.same-origin", {
     debounce: 1000,
   })
