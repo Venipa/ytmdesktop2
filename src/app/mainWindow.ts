@@ -1,3 +1,4 @@
+import translations from "@/translations";
 import logger from "@/utils/Logger";
 import {
   app,
@@ -73,7 +74,7 @@ export default async function() {
       skipTaskbar: false,
       resizable: true,
       frame: false,
-      title: "Youtube Music for Desktop",
+      title: translations.appName,
       darkTheme: true,
       titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
       maximizable: true,

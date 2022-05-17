@@ -22,7 +22,7 @@ body:
   - type: input
     id: appVersion
     attributes:
-      label: Youtube Music Desktop App Version
+      label: YouTube Music Desktop App Version
       description: | 
         What App Version are you running on, you can find your version in the top left or in the tray menu from ytmdesktop2.
       placeholder: "v0.5.4"

@@ -7,7 +7,7 @@
         </h3>
         <div class="mt-2 max-w-xl text-sm text-gray-200">
           <p>
-            Welcome to Youtube Music for Desktop, here you can adjust settings to your liking aswell as personalize your experience.
+            Welcome to YouTube Music for Desktop, here you can adjust settings to your liking aswell as personalize your experience.
           </p>
         </div>
         <div class="mt-3 text-sm">
@@ -44,7 +44,7 @@
             <div class="flex space-x-1">
               <div class="uppercase font-bold text-red-500">Hold Up!</div> If someone told you to copy/paste something here you have an 11/10 chance you're being scammed.
             </div>
-            <div>Pasting anything in the console could give attackers access to your Google/Youtube account.</div>
+            <div>Pasting anything in the console could give attackers access to your Google/YouTube account.</div>
           </div>
         </div>
       </settings-checkbox>

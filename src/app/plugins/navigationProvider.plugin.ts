@@ -1,4 +1,4 @@
-import { App } from "electron";
+import { App, ipcMain } from "electron";
 import { BaseProvider, AfterInit } from "@/app/utils/baseProvider";
 import { defaultUrl } from "@/app/utils/devUtils";
 import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";

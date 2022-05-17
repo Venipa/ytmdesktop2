@@ -7,9 +7,9 @@ const WorkerPlugin = require("worker-plugin");
 const builderOptions = {
   publish: ["github"],
   appId: "net.venipa.ytmdesktop",
-  productName: "Youtube Music for Desktop",
+  productName: "YouTube Music for Desktop",
   extraMetadata: {
-    name: "Youtube Music for Desktop",
+    name: "YouTube Music for Desktop",
   },
   mac: {
     category: "public.app-category.music",

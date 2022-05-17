@@ -1,3 +1,4 @@
+import translations from "@/translations";
 import logger from "@/utils/Logger";
 import {
   app,
@@ -53,7 +54,7 @@ export default async function() {
     { scheme: "app", privileges: { secure: true, standard: true } },
   ]);
   app.userAgentFallback =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36";
 
   /**
    *
@@ -74,7 +75,7 @@ export default async function() {
       skipTaskbar: false,
       resizable: true,
       frame: false,
-      title: "Youtube Music for Desktop",
+      title: translations.appName,
       darkTheme: true,
       titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
       maximizable: true,
@@ -98,6 +99,19 @@ export default async function() {
           },
         };
         callback({ requestHeaders: newRequestHeaders });
+      }
+    );
+    let unblockedConsentView = false;
+    win.webContents.session.webRequest.onBeforeSendHeaders(
+      {
+        urls: ["https://consent.youtube.com/", "https://consent.youtube.com/*"], // i dont like google
+      },
+      (details, callback) => {
+        if (!unblockedConsentView) {
+          ipcMain.emit("app.loadEnd");
+          unblockedConsentView = true;
+        }
+        callback(details);
       }
     );
     const loadingView = await createApiView("/youtube/loading", (view) => {

@@ -1,3 +1,4 @@
+import translations from "@/translations";
 import { ipcMain, Menu, shell } from "electron";
 import AppProvider from "../plugins/appProvider.plugin";
 import SettingsProvider from "../plugins/settingsProvider.plugin";
@@ -16,7 +17,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
   } = provider.getProvider("update") as UpdateProvider;
   return Menu.buildFromTemplate([
     {
-      label: "Youtube Music for Desktop",
+      label: translations.appName,
       sublabel: `Version: ${app.getVersion()}`,
       click: () => ipcMain.emit("app.trayState", null, "visible")
     },

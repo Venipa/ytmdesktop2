@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full">
+  <div class="h-full absolute inset-0 overflow-hidden">
     <control-bar title="Settings"></control-bar>
     <div class="flex flex-col">
       <div class="navbar">
@@ -23,7 +23,7 @@
           </div>
         </div>
       </div>
-      <div class="container mx-auto">
+      <div class="container mx-auto overflow-auto">
         <router-view></router-view>
       </div>
     </div>

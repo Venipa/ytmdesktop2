@@ -3,7 +3,7 @@
     <div class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2 space-x-2">
       <div class="flex items-center flex-1 drag space-x-2 appear">
         <div class="flex items-center space-x-1">
-          <div class="text-xs label -mt-px flex-none">Youtube Music for Desktop</div>
+          <div class="text-xs label -mt-px flex-none">YouTube Music for Desktop</div>
           <div class="text-xs opacity-30 text-white" v-if="appVersion !== undefined">v{{ appVersion }}</div>
         </div>
         <div class="text-xs bg-primary h-7 rounded items-center px-3 bg-opacity-50 appear flex truncate" v-if="title">

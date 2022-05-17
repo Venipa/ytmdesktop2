@@ -6,7 +6,7 @@
           About
         </h3>
         <p class="text-sm text-gray-200">
-          Shows information about your Youtube Desktop Instance
+          Shows information about your YouTube Desktop Instance
         </p>
       </div>
       <div class="h-px my-4 bg-gray-500 rounded"></div>

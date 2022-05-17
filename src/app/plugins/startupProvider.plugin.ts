@@ -22,7 +22,7 @@ export default class EventProvider extends BaseProvider
   async BeforeStart() {}
   private async initializeTray() {
     this._tray = new Tray(resolve(__static, "favicon.ico"));
-    this._tray.setToolTip(`Youtube Music for Desktop`);
+    this._tray.setToolTip(`YouTube Music for Desktop`);
     this._tray.addListener("click", () =>
       BrowserWindow.fromBrowserView(this.views.youtubeView)?.show()
     );

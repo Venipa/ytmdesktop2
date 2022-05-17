@@ -1,3 +1,4 @@
+import translations from '@/translations';
 import { Client as DiscordClient, Presence } from 'discord-rpc';
 import { App } from 'electron';
 import { debounce } from 'lodash-es';
@@ -13,7 +14,7 @@ import TrackProvider from './trackProvider.plugin';
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
 const DEFAULT_PRESENCE: Presence = {
   largeImageKey: "logo",
-  largeImageText: "Youtube Music for Desktop",
+  largeImageText: translations.appName,
 };
 const CLIENT_ID = process.env.VUE_APP_DISCORD_CLIENT_ID;
 const DISCORD_SERVICE_ENABLED = !!CLIENT_ID;
@@ -46,7 +47,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     });
     const presence: Presence = {
       largeImageKey: "logo",
-      largeImageText: "Youtube Music for Desktop",
+      largeImageText: translations.appName,
     };
     client.on("ready", () => this.logger.debug("ready"));
     client.on(
