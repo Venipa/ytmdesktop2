@@ -35,7 +35,7 @@ export default defineComponent({
     max: Number
   },
   methods: {
-    updateSetting: (ev: HTMLInputElement) => null,
+    updateSetting: (_ev: HTMLInputElement) => null,
   },
   setup(context) {
     const value = ref<any>(),

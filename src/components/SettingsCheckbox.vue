@@ -27,7 +27,7 @@ export default defineComponent({
     defaultValue: Object,
   },
   methods: {
-    updateSetting: (value: boolean) => null,
+    updateSetting: (_value: boolean) => null,
   },
   setup(context) {
     const value = ref<boolean>();

@@ -53,8 +53,9 @@ export default async function() {
   protocol.registerSchemesAsPrivileged([
     { scheme: "app", privileges: { secure: true, standard: true } },
   ]);
+  const brickGoogleUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
   app.userAgentFallback =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36";
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
 
   /**
    *
@@ -86,19 +87,15 @@ export default async function() {
       },
       ...(options || {}),
     });
+    win.webContents.setUserAgent(app.userAgentFallback);
     win.webContents.session.setUserAgent(app.userAgentFallback);
     win.webContents.session.webRequest.onBeforeSendHeaders(
       {
         urls: ["https://accounts.google.com/*"],
       },
       (details, callback) => {
-        const newRequestHeaders = {
-          ...(details.requestHeaders || {}),
-          ...{
-            "User-Agent": app.userAgentFallback,
-          },
-        };
-        callback({ requestHeaders: newRequestHeaders });
+        details.requestHeaders['User-Agent'] = brickGoogleUA;
+        callback(details);
       }
     );
     let unblockedConsentView = false;
