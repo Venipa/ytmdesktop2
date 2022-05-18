@@ -19,7 +19,9 @@ jobs:
         # install dbus-1 dep for xosms
       - if: matrix.os == 'ubuntu-latest'
         name: install ubuntu deps
-        run: sudo apt install libdbus-1-dev
+        run: |
+          sudo apt update
+          sudo apt install libdbus-1-dev
 
       - name: Install Node.js, NPM and Yarn
         uses: actions/setup-node@v1
