@@ -16,7 +16,14 @@
 
 ![image](https://user-images.githubusercontent.com/17952364/149849609-fe5d3819-7303-4467-9f8e-56fa1e306c87.png)
 
-... And many more to come 😉
+### OBS Implementation
+
+[OBS Browser Source Files](https://obsproject.com/forum/threads/zyphens-now-playing-overlay.125383/post-557409),
+don't forget to enable the api inside the ytmdesktop2 app
+
+---------------
+
+... features to be added ...
 &nbsp;&nbsp;
 
 ---------------
