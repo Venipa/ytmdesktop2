@@ -60,7 +60,8 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   private __onPlayStateChange(
     _ev,
     isPlaying: boolean,
-    progressSeconds: number = 0
+    progressSeconds: number = 0,
+    uiTimeInfo: [number, number] = null
   ) {
     this.logger.debug(
       [
@@ -68,10 +69,16 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
         isPlaying ? "playing" : "paused",
         ", progress: ",
         progressSeconds,
+        ", ui progress: ",
+        ...(uiTimeInfo?.length > 0 ? uiTimeInfo : ["-"])
       ].join(" ")
     );
     this._playState = isPlaying ? "playing" : "paused";
     const discordProvider = this.getProvider("discordRPC") as DiscordProvider;
-    discordProvider.updatePlayState(isPlaying, progressSeconds);
+    if (uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1]) {
+      const [currentUIProgress] = uiTimeInfo;
+      return discordProvider.updatePlayState(isPlaying, currentUIProgress);
+    }
+    return discordProvider.updatePlayState(isPlaying, progressSeconds);
   }
 }

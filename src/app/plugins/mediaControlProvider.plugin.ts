@@ -86,7 +86,7 @@ export default class MediaControlProvider extends BaseProvider
         ["Video"]: XOSMS.MediaType.Video,
         ["Music"]: XOSMS.MediaType.Music,
         ["Image"]: XOSMS.MediaType.Image,
-      }[trackData.context.category] ?? XOSMS.MediaType.Unknown;
+      }[trackData.context.category] ?? XOSMS.MediaType.Video;
     this._mediaProvider.playbackStatus = XOSMS.PlaybackStatus.Changing;
     this._mediaProvider.albumArtist = trackData.video.author;
     this._mediaProvider.albumTitle = trackData.context.pageOwnerDetails.name;
