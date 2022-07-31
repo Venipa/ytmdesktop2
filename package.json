@@ -1,6 +1,6 @@
 {
   "name": "ytmdesktop2",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": false,
   "author": "Venipa <admin@venipa.net>",
   "scripts": {
@@ -43,8 +43,6 @@
     "xosms": "^0.3.0"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.13.8",
-    "@babel/plugin-proposal-optional-chaining": "^7.13.12",
     "@types/discord-rpc": "^4.0.0",
     "@types/electron-devtools-installer": "^2.2.0",
     "@types/events": "^3.0.0",

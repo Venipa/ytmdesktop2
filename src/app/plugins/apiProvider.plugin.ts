@@ -61,7 +61,7 @@ export default class ApiProvider extends BaseProvider
   }
   @IpcHandle("api/routes")
   private async __getRoutes() {
-    return Object.values(API_ROUTES).map((x) => x.replace(/^\/api\//, ""));
+    return Object.values(API_ROUTES).map((x) => x.replace(/^\/?api\//, ""));
   }
   @IpcHandle(API_ROUTES.TRACK_CURRENT)
   async getTrackInformation() {

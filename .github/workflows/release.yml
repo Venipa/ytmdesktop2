@@ -21,15 +21,18 @@ jobs:
         name: install ubuntu deps
         run: |
           sudo apt update
-          sudo apt install libdbus-1-dev
+          sudo apt install libdbus-1-dev snapd
+          sudo snap install snapcraft --classic
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 14
 
       - name: Install dependencies
-        run: yarn
+        run: |
+          yarn config set ignore-engines true
+          yarn
 
       - name: Build Electron release
         run: yarn release

@@ -23,6 +23,7 @@ const builderOptions = {
   linux: {
     target: ["AppImage"],
     category: "Music",
+    icon: "src/assets/icons/mac/icon.icns"
   },
   squirrelWindows: null,
   nsis: {
