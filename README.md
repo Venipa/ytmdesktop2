@@ -1,3 +1,5 @@
+![](https://img.shields.io/badge/UPDATE-ytmdesktop2%20is%20undergoing%20transition%20to%20react...-critical?style=for-the-badge)
+
 # ytmdesktop2
 
 [![Discord](https://img.shields.io/discord/834826233195003944?color=%237289DA&label=discord&logo=discord&logoColor=%23ffffff&style=for-the-badge)](https://discord.gg/dq4bZMhMjT)
