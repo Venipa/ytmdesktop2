@@ -1,5 +1,6 @@
-import { ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import { IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { debounce } from "lodash-es";
+import { serverMain } from "./serverEvents";
 const classIpcStoreSymbol = Symbol("__ipcEvents");
 interface IpcContextEvent {
   name: string;
@@ -45,7 +46,7 @@ export function IpcContext<T extends { new (...args: any[]): {} }>(
               }
               return Promise.resolve(null);
             };
-            ipcMain[
+            serverMain[
               type === "once" ? "once" : type === "handle" ? "handle" : "on"
             ](
               name,

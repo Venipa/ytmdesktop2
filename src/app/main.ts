@@ -5,7 +5,6 @@ import {
   BrowserView,
   BrowserWindow,
   BrowserWindowConstructorOptions,
-  ipcMain,
   IpcMainEvent,
   protocol,
   shell,
@@ -21,6 +20,7 @@ import {
   createWindowContext,
   getViewObject,
 } from "./utils/mappedWindow";
+import { serverMain } from "./utils/serverEvents";
 import {
   createEventCollection,
   createPluginCollection,
@@ -105,7 +105,7 @@ export default async function() {
       },
       (details, callback) => {
         if (!unblockedConsentView) {
-          ipcMain.emit("app.loadEnd");
+          serverMain.emit("app.loadEnd");
           unblockedConsentView = true;
         }
         callback(details);
@@ -146,7 +146,7 @@ export default async function() {
             !lastLocation?.match(defaultUrl) &&
             !!location?.match(defaultUrl)
           ) {
-            ipcMain.emit("app.loadStart");
+            serverMain.emit("app.loadStart");
           }
         });
       }
@@ -170,11 +170,11 @@ export default async function() {
         if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
       }
     );
-    ipcMain.on("app.loadEnd", () => {
+    serverMain.on("app.loadEnd", () => {
       win.removeBrowserView(loadingView);
       win.setTopBrowserView(toolbarView);
     });
-    ipcMain.on(
+    serverMain.on(
       "app.loadStart",
       debounce(() => {
         if (
@@ -190,7 +190,7 @@ export default async function() {
         win.setTopBrowserView(loadingView);
       }, 100)
     );
-    ipcMain.emit("app.loadStart");
+    serverMain.emit("app.loadStart");
     await youtubeView.webContents.loadURL(defaultUrl).then(() => {
       if (isDevelopment)
         youtubeView.webContents.openDevTools({ mode: "detach" });
@@ -302,7 +302,7 @@ export default async function() {
     // On macOS it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
     if (process.platform !== "darwin") {
-      ipcMain.emit("app.quit", null, true);
+      serverMain.emit("app.quit", null, true);
     }
   });
 
@@ -346,7 +346,7 @@ export default async function() {
   });
 
   let settingsWindow: BrowserWindow;
-  ipcMain.on("settings.show", async () => {
+  serverMain.on("settings.show", async () => {
     try {
       if (!settingsWindow || settingsWindow.isDestroyed()) {
         settingsWindow = await createAppWindow();
@@ -358,7 +358,7 @@ export default async function() {
       log.error(err);
     }
   });
-  ipcMain.on("settings.close", async () => {
+  serverMain.on("settings.close", async () => {
     if (settingsWindow) {
       settingsWindow.hide();
       if (isDevelopment) settingsWindow.webContents.closeDevTools();
@@ -368,17 +368,17 @@ export default async function() {
         mainWindow.views.settingsWindow = null;
     }
   });
-  ipcMain.on("app.minimize", (ev) => {
+  serverMain.on("app.minimize", (ev) => {
     const window = BrowserWindow.fromWebContents(ev.sender);
     if (window && window.minimizable) window.minimize();
   });
-  ipcMain.on("app.maximize", (ev) => {
+  serverMain.on("app.maximize", (ev) => {
     const window = BrowserWindow.fromWebContents(ev.sender);
     if (window && window.maximizable)
       window.isMaximized() ? window.unmaximize() : window.maximize();
   });
   let forcedQuit = false;
-  ipcMain.on("app.quit", (ev: IpcMainEvent, forceQuit: boolean) => {
+  serverMain.on("app.quit", (ev: IpcMainEvent, forceQuit: boolean) => {
     forcedQuit = !!forceQuit;
     app.quit();
   });
@@ -388,16 +388,16 @@ export default async function() {
       "settings"
     );
     if (settings.get("app.minimizeTrayOverride")) {
-      ipcMain.emit("app.trayState", null, "hidden");
+      serverMain.emit("app.trayState", null, "hidden");
       ev.preventDefault(); // prevent quit - minimize to tray
     }
   });
-  ipcMain.on("app.restore", () => {
+  serverMain.on("app.restore", () => {
     if (!mainWindow.main.isVisible()) {
-      ipcMain.emit("app.trayState", null, "visible");
+      serverMain.emit("app.trayState", null, "visible");
     }
   });
-  ipcMain.on("app.trayState", (ev: IpcMainEvent, state: string) => {
+  serverMain.on("app.trayState", (ev: IpcMainEvent, state: string) => {
     if (state === "visible" && !mainWindow.main.isVisible()) {
       mainWindow.main.show();
       mainWindow.main.setSkipTaskbar(false);
@@ -414,14 +414,14 @@ export default async function() {
         if (data === "graceful-exit") {
           serviceCollection
             .exec("OnDestroy")
-            .then(() => ipcMain.emit("app.quit", true));
+            .then(() => serverMain.emit("app.quit", true));
         }
       });
     } else {
       process.on("SIGTERM", () => {
         serviceCollection
           .exec("OnDestroy")
-          .then(() => ipcMain.emit("app.quit", true));
+          .then(() => serverMain.emit("app.quit", true));
       });
     }
   }

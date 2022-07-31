@@ -23,26 +23,11 @@
 </template>
 
 <script>
-import { defineComponent, ref } from "@vue/runtime-core";
+import { defineComponent } from "vue";
+import { refIpc } from "../../utils/Ipc";
 import RPCIcon from "@/assets/icons/discord-rpc.svg";
 import HomeIcon from "@/assets/icons/home.svg";
 import DevIcon from "@/assets/icons/chip.svg";
-const discordConnected = ref(false),
-  discordEnabled = ref(!!window.settings.get("discord.enabled"));
-const isHome = ref(true);
-const isDev = ref(false);
-const subscribers = [];
-subscribers.push(
-  window.ipcRenderer.on("discord.connected", () => (discordConnected.value = true)),
-  window.ipcRenderer.on("discord.disconnected", () => (discordConnected.value = false)),
-  window.api.on("nav.same-origin", (ev, sameOrigin) => {
-    if (sameOrigin !== isHome.value) isHome.value = !!sameOrigin;
-  }),
-  window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
-    if (key === "discord.enabled" && value !== discordEnabled.value) discordEnabled.value = !!value;
-    if (key === "app.enableDev" && value !== isDev.value) isDev.value = !!value;
-  })
-);
 export default defineComponent({
   components: { RPCIcon, HomeIcon, DevIcon },
   methods: {
@@ -51,9 +36,35 @@ export default defineComponent({
     },
   },
   setup() {
-    discordEnabled.value = !!window.settings.get("discord.enabled");
-    isDev.value = !!window.settings.get("app.enableDev");
-    window.ipcRenderer.invoke("req:discord.connected").then((x) => (discordConnected.value = !!x));
+    const [discordConnected, setDiscordConnected] = refIpc(["discord.connected", "discord.disconnected"], {
+      defaultValue: false,
+      mapper: (data, name) => {
+        return {["discord.connected"]: true, ["discord.disconnected"]: false}[name];
+      },
+      ignoreUndefined: true
+    });
+    const [isHome] = refIpc("nav.same-origin", {
+      defaultValue: true,
+      mapper: ([sameOrigin]) => !!sameOrigin,
+      rawArgs: true
+    });
+    const [discordEnabled, setDiscordEnabled] = refIpc("settingsProvider.change", {
+      defaultValue: window.settings.get("discord.enabled"),
+      mapper: ([key, value]) => {
+        if (key === "discord.enabled") return value;
+      },
+      ignoreUndefined: true,
+      rawArgs: true
+    });
+    const [isDev] = refIpc("settingsProvider.change", {
+      defaultValue: window.settings.get("app.enableDev"),
+      mapper: ([key, value]) => {
+        if (key === "app.enableDev") return value;
+      },
+      ignoreUndefined: true,
+      rawArgs: true
+    });
+    window.ipcRenderer.invoke("req:discord.connected").then((x) => (setDiscordConnected(!!x)));
     return {
       discordEnabled,
       discordConnected,
@@ -61,16 +72,14 @@ export default defineComponent({
       isDev,
       async toggleSetting(key) {
         const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
-        if (key === "discord.enabled") discordEnabled.value = setting;
+        if (key === "discord.enabled") setDiscordEnabled(setting);
       },
       action(actionParam) {
         return window.api.action(actionParam);
       },
     };
   },
-  unmounted() {
-    subscribers.filter((x) => !!x).forEach(window.ipcRenderer.off);
-  },
+  unmounted() {},
 });
 </script>
 

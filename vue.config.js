@@ -1,5 +1,7 @@
+const path = require("path");
 const webpackNodeExternals = require("webpack-node-externals");
 const WorkerPlugin = require("worker-plugin");
+const tsconfig = require("./tsconfig.json");
 
 /**
  * @type {import("electron-builder").Configuration} builderOptions
@@ -48,11 +50,18 @@ const electronBuilder = {
   externals: ["chokidar", "xosms", ...Array.from(webpackNodeExternals())],
   nodeModulesPath: ["./node_modules"],
 };
+// const TsConfigPaths = require("tsconfig-paths-webpack-plugin").default;
+// const tsConfigAliasMapping = Object.entries(tsconfig.compilerOptions.paths).map(([alias, paths]) => {
+//   return [alias.split("/*", 2)[0], path.resolve(__dirname, paths[0].split("/*", 2)[0])];
+// });
 module.exports = {
   pluginOptions: {
     electronBuilder,
   },
   chainWebpack: (config) => {
+    // tsConfigAliasMapping.forEach(([alias, path]) => config.resolve.alias.set(alias, path));
+    // config.resolve.plugin("tsconfig-paths").use(new TsConfigPaths());
+    console.log(config.resolve.alias.store);
     config.module
       .rule("raw")
       .test(() => false)
@@ -60,16 +69,17 @@ module.exports = {
       .loader("raw-loader")
       .end();
 
-    const svgRule = config.module.rule("svg");
+      config.module.rules.delete('svg')
 
-    svgRule.uses.clear();
+      config.module
+        .rule('svg')
+        .test(/\.(svg)(\?.*)?$/)
+        .use('vue-loader')
+        .loader('vue-loader')
+        .end()
+        .use('vue-svg-loader')
+        .loader('vue-svg-loader')
 
-    svgRule
-      .use("vue-loader")
-      .loader("vue-loader-v16") // or `vue-loader-v16` if you are using a preview support of Vue 3 in Vue CLI
-      .end()
-      .use("vue-svg-loader")
-      .loader("vue-svg-loader");
   },
   configureWebpack: {
     devtool: "source-map",

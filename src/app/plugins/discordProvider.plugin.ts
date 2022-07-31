@@ -1,15 +1,14 @@
-import translations from '@/translations';
-import { Client as DiscordClient, Presence } from 'discord-rpc';
-import { App } from 'electron';
-import { debounce } from 'lodash-es';
+import translations from "@/translations";
+import { Client as DiscordClient, Presence } from "discord-rpc";
+import { App } from "electron";
+import { debounce } from "lodash-es";
 
-import { AfterInit, BaseProvider } from '../utils/baseProvider';
-import { isDevelopment } from '../utils/devUtils';
-import { IpcContext, IpcHandle, IpcOn } from '../utils/onIpcEvent';
-import { discordEmbedFromTrack, TrackData } from '../utils/trackData';
-import { YoutubeMatcher } from '../utils/youtubeMatcher';
-import SettingsProvider from './settingsProvider.plugin';
-import TrackProvider from './trackProvider.plugin';
+import { AfterInit, BaseProvider } from "@/app/utils/baseProvider";
+import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
+import { discordEmbedFromTrack, TrackData } from "@/app/utils/trackData";
+import { YoutubeMatcher } from "@/app/utils/youtubeMatcher";
+import SettingsProvider from "./settingsProvider.plugin";
+import TrackProvider from "./trackProvider.plugin";
 
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
 const DEFAULT_PRESENCE: Presence = {
@@ -22,7 +21,14 @@ const DISCORD_SERVICE_ENABLED = !!CLIENT_ID;
 @IpcContext
 export default class DiscordProvider extends BaseProvider implements AfterInit {
   private _updateHandle: any;
-  private isConnected: boolean = false;
+  private _isConnected: boolean = false;
+  get isConnected() {
+    return this._isConnected;
+  }
+  private _enabled = !!DISCORD_SERVICE_ENABLED;
+  get enabled() {
+    return this._enabled;
+  }
   private client: DiscordClient;
   private _presence: Presence;
   get presence() {
@@ -38,10 +44,22 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     return this.getProvider("track");
   }
   constructor(private app: App) {
-    super("discordRPC");
+    super("discord");
+  }
+  async disable() {
+    if (!this._enabled) return;
+    this._enabled = false;
+    if (this.isConnected && this.client)
+      await this.client.destroy().catch((err) => this.logger.error(err));
+  }
+  async enable() {
+    if (this._enabled) return;
+    this._enabled = true;
+    if (!this.isConnected || !this.client)
+      await this.createClient().catch((err) => this.logger.error(err));
   }
   private async createClient(): Promise<[DiscordClient, Presence]> {
-    if (!DISCORD_SERVICE_ENABLED) return null;
+    if (!this._enabled) return null;
     const client = new DiscordClient({
       transport: "ipc",
     });
@@ -52,7 +70,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     client.on("ready", () => this.logger.debug("ready"));
     client.on(
       "connected",
-      () => (this.logger.debug("connected"), (this.isConnected = true))
+      () => (this.logger.debug("connected"), (this._isConnected = true))
     );
     client.on(
       "ready",
@@ -86,13 +104,13 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
             DISCORD_UPDATE_INTERVAL
           ))
       );
-    else if (this.settingsInstance.get("discord.enabled")) {
+    else if (this.settingsInstance.get("discord.enabled") && this._enabled) {
       this.createClient();
     }
   }
   AfterInit() {
     const settings = this.settingsInstance.instance;
-    if (!settings.discord.enabled || !DISCORD_SERVICE_ENABLED) return;
+    if (!settings.discord.enabled || !this._enabled) return;
     this.createClient();
   }
   async updatePlayState(val: boolean, progress: number = 0) {
@@ -133,16 +151,16 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
         .catch(() => null);
   }
   @IpcOn("settingsProvider.change", {
-    filter: (key: string) => key === "discord.enabled" && DISCORD_SERVICE_ENABLED,
+    filter: (key: string) => key === "discord.enabled",
     debounce: 1000,
   })
   private async __onToggleEnabled(key: string, enabled: boolean) {
-    if (enabled && (!this.client || !this.isConnected)) {
+    if (enabled && (!this.client || !this._isConnected)) {
       this.createClient();
     } else if (this.client) {
       this.client.destroy();
       this.client = null;
-      this.isConnected = false;
+      this._isConnected = false;
       this.windowContext.sendToAllViews("discord.disconnected");
     }
   }
@@ -172,7 +190,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
   }
   @IpcHandle("req:discord.connected")
   private async __onDiscordStatus() {
-    return DISCORD_SERVICE_ENABLED && this.client && this.isConnected;
+    return DISCORD_SERVICE_ENABLED && this.client && this._isConnected;
   }
   @IpcOn("track:change", {
     debounce: 100,

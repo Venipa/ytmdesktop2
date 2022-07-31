@@ -1,8 +1,9 @@
-import { App, ipcMain } from "electron";
+import { App } from "electron";
 
-import { AfterInit, BaseProvider } from "../utils/baseProvider";
-import { IpcContext, IpcOn } from "../utils/onIpcEvent";
-import { TrackData } from "../utils/trackData";
+import { AfterInit, BaseProvider } from "@/app/utils/baseProvider";
+import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
+import { serverMain } from "@/app/utils/serverEvents";
+import { TrackData } from "@/app/utils/trackData";
 import DiscordProvider from "./discordProvider.plugin";
 
 const tracks: { [id: string]: TrackData } = {};
@@ -12,6 +13,9 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   private _playState: "playing" | "paused" | undefined;
   get playState() {
     return this._playState;
+  }
+  get playing() {
+    return this.playState === "playing";
   }
   constructor(private app: App) {
     super("track");
@@ -39,7 +43,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       (await this.getActiveTrackByDOM()) === track.video.videoId
     ) {
       this._activeTrackId = track.video.videoId;
-      ipcMain.emit("track:change", this.trackData);
+      serverMain.emit("track:change", this.trackData);
     }
   }
   @IpcOn("track:title-change", {
@@ -54,7 +58,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 
     this.logger.debug(`active track:`, trackId);
     this._activeTrackId = trackId;
-    if (this.trackData) ipcMain.emit("track:change", this.trackData);
+    if (this.trackData) serverMain.emit("track:change", this.trackData);
   }
   @IpcOn("track:play-state")
   private __onPlayStateChange(
@@ -74,7 +78,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       ].join(" ")
     );
     this._playState = isPlaying ? "playing" : "paused";
-    const discordProvider = this.getProvider("discordRPC") as DiscordProvider;
+    const discordProvider = this.getProvider("discord") as DiscordProvider;
     if (uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1]) {
       const [currentUIProgress] = uiTimeInfo;
       return discordProvider.updatePlayState(isPlaying, currentUIProgress);

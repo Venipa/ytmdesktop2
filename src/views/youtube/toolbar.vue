@@ -35,8 +35,8 @@ import CloseIcon from "@/assets/icons/close.svg";
 import MaxIcon from "@/assets/icons/max-window.svg";
 import MinIcon from "@/assets/icons/min-window.svg";
 import ToolbarOptions from "./toolbar-options.vue";
-const title = ref(),
-  appVersion = ref(window.api.version);
+import { refIpc } from "@/utils/Ipc";
+const appVersion = ref(window.api.version);
 export default defineComponent({
   components: {
     CloseIcon,
@@ -45,6 +45,10 @@ export default defineComponent({
     ToolbarOptions,
   },
   setup() {
+    const [title] = refIpc("TRACK_TITLE_CHANGE", {
+      ignoreUndefined: true,
+      defaultValue: null
+    });
     return {
       title,
       appVersion,
@@ -65,10 +69,6 @@ export default defineComponent({
     },
   },
   created() {
-    window.ipcRenderer.on("track:title", (ev, title) => {
-      this.title = null;
-      if (title) this.title = title;
-    });
   },
 });
 </script>

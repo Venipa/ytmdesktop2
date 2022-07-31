@@ -1,15 +1,16 @@
-import { App, ipcMain } from "electron";
+import { App } from "electron";
 import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
 import fs from "fs";
 import path from "path";
 import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit } from "../utils/baseProvider";
+import { BaseProvider, AfterInit } from "@/app/utils/baseProvider";
 import {
   rootWindowClearCustomCss,
   rootWindowInjectCustomCss,
-} from "../utils/webContentUtils";
+} from "@/app/utils/webContentUtils";
 // @ts-ignore
 import customDefaultCss from "!raw-loader!../../assets/default-custom.scss";
+import { serverMain } from "@/app/utils/serverEvents";
 @IpcContext
 export default class EventProvider extends BaseProvider implements AfterInit {
   private scssUpdateHandler: string;
@@ -47,7 +48,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
       fs.watchFile(
         config.scssFile,
         { interval: 1000 },
-        (curr) => curr.size > 0 && ipcMain.emit("settings.customCssUpdate")
+        (curr) => curr.size > 0 && serverMain.emit("settings.customCssUpdate")
       );
       this.scssUpdateHandler = config.scssFile;
     }
@@ -96,7 +97,7 @@ export default class EventProvider extends BaseProvider implements AfterInit {
         .set("customcss.scssFile", scssPath);
       this.logger.debug("has scss data " + !!customDefaultCss);
       if (this.settingsInstance.get("customcss.scssFileWatch"))
-        ipcMain.emit("settings.customCssWatch");
+        serverMain.emit("settings.customCssWatch");
       return true;
     }
     return false;

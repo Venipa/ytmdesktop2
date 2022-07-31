@@ -5,8 +5,7 @@ export const createApiView = async (path: string, postFunc?: (ctx: BrowserView) 
     webPreferences: {
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
       contextIsolation: true,
-      preload: resolve(__dirname, "preload-api.js"),
-      nativeWindowOpen: true,
+      preload: resolve(__dirname, "preload-api.js")
     },
   });
   await view.webContents.loadURL(
@@ -25,7 +24,6 @@ export const createView = async (preload: string, postFunc?: (ctx: BrowserView) 
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
       contextIsolation: false, // window object is required to be rewritten for tracking current track
       preload,
-      nativeWindowOpen: true,
     },
   });
   if (postFunc) await Promise.resolve(postFunc(view));

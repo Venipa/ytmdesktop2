@@ -5,7 +5,6 @@ import {
   BrowserView,
   BrowserWindow,
   BrowserWindowConstructorOptions,
-  ipcMain,
   protocol,
   shell,
 } from "electron";
@@ -19,6 +18,7 @@ import {
   createWindowContext,
   getViewObject,
 } from "./utils/mappedWindow";
+import { serverMain } from "./utils/serverEvents";
 import {
   createEventCollection,
   createPluginCollection,
@@ -134,7 +134,7 @@ export default async function() {
             !lastLocation?.match(defaultUrl) &&
             !!location?.match(defaultUrl)
           ) {
-            ipcMain.emit("app.loadStart");
+            serverMain.emit("app.loadStart");
           }
         });
       }
@@ -158,11 +158,11 @@ export default async function() {
         if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
       }
     );
-    ipcMain.on("app.loadEnd", () => {
+    serverMain.on("app.loadEnd", () => {
       win.removeBrowserView(loadingView);
       win.setTopBrowserView(toolbarView);
     });
-    ipcMain.on(
+    serverMain.on(
       "app.loadStart",
       debounce(() => {
         if (
@@ -178,7 +178,7 @@ export default async function() {
         win.setTopBrowserView(loadingView);
       }, 100)
     );
-    ipcMain.emit("app.loadStart");
+    serverMain.emit("app.loadStart");
     await youtubeView.webContents.loadURL(defaultUrl).then(() => {
       if (isDevelopment)
         youtubeView.webContents.openDevTools({ mode: "detach" });
@@ -313,8 +313,8 @@ export default async function() {
           p.__registerWindows(mainWindow)
         );
       setTimeout(() => {
-        ipcMain.emit("settings.customCssUpdate");
-        ipcMain.emit("settings.customCssWatch");
+        serverMain.emit("settings.customCssUpdate");
+        serverMain.emit("settings.customCssWatch");
       }, 50);
     }
   });
@@ -333,14 +333,14 @@ export default async function() {
       p.__registerWindows(mainWindow)
     );
     setTimeout(() => {
-      ipcMain.emit("settings.customCssUpdate");
-      ipcMain.emit("settings.customCssWatch");
+      serverMain.emit("settings.customCssUpdate");
+      serverMain.emit("settings.customCssWatch");
     }, 50);
     serviceCollection.exec("AfterInit");
   });
 
   let settingsWindow: BrowserWindow;
-  ipcMain.on("settings.show", async () => {
+  serverMain.on("settings.show", async () => {
     try {
       if (!settingsWindow || settingsWindow.isDestroyed()) {
         settingsWindow = await createAppWindow();
@@ -352,7 +352,7 @@ export default async function() {
       log.error(err);
     }
   });
-  ipcMain.on("settings.close", async () => {
+  serverMain.on("settings.close", async () => {
     if (settingsWindow) {
       settingsWindow.hide();
       if (isDevelopment) settingsWindow.webContents.closeDevTools();
@@ -362,16 +362,16 @@ export default async function() {
         mainWindow.views.settingsWindow = null;
     }
   });
-  ipcMain.on("app.minimize", (ev) => {
+  serverMain.on("app.minimize", (ev) => {
     const window = BrowserWindow.fromWebContents(ev.sender);
     if (window && window.minimizable) window.minimize();
   });
-  ipcMain.on("app.maximize", (ev) => {
+  serverMain.on("app.maximize", (ev) => {
     const window = BrowserWindow.fromWebContents(ev.sender);
     if (window && window.maximizable)
       window.isMaximized() ? window.unmaximize() : window.maximize();
   });
-  ipcMain.on("app.quit", () => {
+  serverMain.on("app.quit", () => {
     app.quit();
   });
 

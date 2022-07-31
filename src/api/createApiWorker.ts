@@ -1,6 +1,7 @@
 import { EMPTY_URL, isDevelopment } from "@/app/utils/devUtils";
+import { serverMain } from "@/app/utils/serverEvents";
 import logger from "@/utils/Logger";
-import { BrowserWindow, ipcMain } from "electron";
+import { BrowserWindow } from "electron";
 import path from "path";
 import { apiChannelName } from "./apiWorkerHelper";
 export interface ApiWorker {
@@ -17,6 +18,7 @@ export const createApiWorker = async (
   const worker = new BrowserWindow({
     show: false,
     closable: false,
+    focusable: false,
     frame: false,
     height: 0,
     width: 0,
@@ -25,11 +27,16 @@ export const createApiWorker = async (
     webPreferences: {
       nodeIntegration: true,
       devTools: isDevelopment,
+      contextIsolation: false,
+      nodeIntegrationInWorker: true,
       backgroundThrottling: false,
       disableBlinkFeatures: "*",
       disableDialogs: true,
       disableHtmlFullscreenWindowResize: true,
+      enablePreferredSizeMode: false,
+      webgl: false,
       preload: workerSource,
+      allowRunningInsecureContent: true
     },
     parent,
   });
@@ -47,7 +54,7 @@ export const createApiWorker = async (
     }
     invoke<T = any>(name: string, ...args: any[]) {
       return new Promise<T>((resolve) => {
-        ipcMain.once(`${apiChannelName}/${name}`, (ev, data) => resolve(data));
+        serverMain.once(`${apiChannelName}/${name}`, (ev, data) => resolve(data));
         worker.webContents.send(apiChannelName, name, ...args);
       });
     }

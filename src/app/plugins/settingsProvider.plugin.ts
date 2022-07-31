@@ -1,4 +1,4 @@
-import { App, ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import {
   BaseProvider,
   OnDestroy,
@@ -14,6 +14,7 @@ import { rootWindowInjectUtils } from "@/app/utils/webContentUtils";
 import { getViewObject } from "@/app/utils/mappedWindow";
 import { defaultUri, defaultUrl, isDevelopment } from "@/app/utils/devUtils";
 import eventNames from "@/app/utils/eventNames";
+import { serverMain } from "@/app/utils/serverEvents";
 const defaultSettings = {
   api: {
     enabled: isDevelopment ? true : false,
@@ -80,7 +81,7 @@ export default class SettingsProvider extends BaseProvider
   set(key: string, value: any) {
     _set(_settingsStore, key, value);
     try {
-      ipcMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value),
+      serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value),
       this.windowContext.sendToAllViews(eventNames.SERVER_SETTINGS_CHANGE, key, value);
     } catch (ex) {
       this.logger.error(ex);
@@ -103,7 +104,7 @@ export default class SettingsProvider extends BaseProvider
       (ev, location) => {
         this.logger.debug(`navigate-in-page :: ${location}`);
         const url = new URLSearchParams(location.split("?")[1]);
-        if (url?.has("v")) ipcMain.emit("track:set-active", url.get("v"));
+        if (url?.has("v")) serverMain.emit("track:set-active", url.get("v"));
       }
     );
     let previousHostname: string = defaultUrl;
@@ -121,8 +122,8 @@ export default class SettingsProvider extends BaseProvider
               this.views.youtubeView.webContents,
               getViewObject(this.views)
             );
-            ipcMain.emit("settings.customCssUpdate");
-            ipcMain.emit("settings.customCssWatch");
+            serverMain.emit("settings.customCssUpdate");
+            serverMain.emit("settings.customCssWatch");
           }
           previousHostname = url.hostname;
           if (url.hostname !== defaultUri.hostname) {

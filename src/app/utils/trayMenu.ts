@@ -1,9 +1,10 @@
 import translations from "@/translations";
-import { ipcMain, Menu, shell } from "electron";
+import { Menu, shell } from "electron";
 import AppProvider from "../plugins/appProvider.plugin";
 import SettingsProvider from "../plugins/settingsProvider.plugin";
 import UpdateProvider from "../plugins/updateProvider.plugin";
 import { BaseProvider } from "./baseProvider";
+import { serverMain } from "./serverEvents";
 
 export const createTrayMenu = (provider: BaseProvider) => {
   const { set, instance: settings } = provider.getProvider(
@@ -19,7 +20,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
     {
       label: translations.appName,
       sublabel: `Version: ${app.getVersion()}`,
-      click: () => ipcMain.emit("app.trayState", null, "visible")
+      click: () => serverMain.emit("app.trayState", null, "visible")
     },
     {
       label: updateAvailable
@@ -52,7 +53,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
     {
       label: "Settings",
       click: () => {
-        ipcMain.emit("settings.show");
+        serverMain.emit("settings.show");
       }
     },
     {
@@ -106,7 +107,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
           label: "Change CSS File",
           enabled: settings.customcss.enabled,
           click: item => {
-            if (item.enabled) ipcMain.emit("settings.show");
+            if (item.enabled) serverMain.emit("settings.show");
           }
         }
       ]
@@ -116,7 +117,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
     },
     {
       label: "Quit",
-      click: () => ipcMain.emit("app.quit", null, true)
+      click: () => serverMain.emit("app.quit", null, true)
     }
   ]);
 };

@@ -2,14 +2,14 @@
   <div class="h-full absolute inset-0 overflow-hidden flex flex-col">
     <control-bar title="Settings"></control-bar>
     <div class="flex flex-col flex-auto">
-      <div class="navbar">
+      <div class="navbar pb-0 min-h-0">
         <div class="container mx-auto">
-          <div class="nav-items">
-            <router-link to="/" class="nav-item" exact-active-class="active">Generic</router-link>
-            <router-link to="/player" class="nav-item" active-class="active">Player</router-link>
-            <router-link to="/discord" class="nav-item" active-class="active">Discord</router-link>
-            <router-link to="/custom-css" class="nav-item" active-class="active">Custom CSS</router-link>
-            <router-link to="/about" class="nav-item" active-class="active">About</router-link>
+          <div class="tabs">
+            <router-link to="/" class="tab tab-bordered" exact-active-class="tab-active active">Generic</router-link>
+            <router-link to="/player" class="tab tab-bordered" active-class="tab-active active">Player</router-link>
+            <router-link to="/discord" class="tab tab-bordered" active-class="tab-active active">Discord</router-link>
+            <router-link to="/custom-css" class="tab tab-bordered" active-class="tab-active active">Custom CSS</router-link>
+            <router-link to="/about" class="tab tab-bordered" active-class="tab-active active">About</router-link>
           </div>
         </div>
       </div>

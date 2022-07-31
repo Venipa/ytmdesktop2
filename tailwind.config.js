@@ -1,12 +1,14 @@
-const colors = require("tailwindcss/colors");
 
+/**
+ * @type {import("tailwindcss").Config}
+ */
 module.exports = {
-  purge: { content: ["./public/**/*.html", "./src/**/*.vue"] },
+  content: ["./public/**/*.html", "./src/**/*.vue"],
   darkMode: false, // or 'media' or 'class'
   theme: {
     extend: {
       colors: {
-        ...require("daisyui/colors"),
+        // ...require("daisyui").config.theme.colors,
         gray: {
           "50": "#f4f4f4",
           "100": "#e9e9ea",
@@ -22,5 +24,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require("@tailwindcss/forms"), require("daisyui")],
+  plugins: [require("daisyui")],
 };

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2019",
-    "module": "esnext",
+    "target": "ES2022",
+    "module": "ESNext",
     "strict": false,
     "jsx": "preserve",
     "importHelpers": true,
@@ -23,6 +23,12 @@
     "paths": {
       "@/*": [
         "src/*"
+      ],
+      "@src/*": [
+        "./src/*"
+      ],
+      "@assets/*": [
+        "./src/assets/*"
       ]
     },
     "lib": [
@@ -33,9 +39,11 @@
     ]
   },
   "include": [
+    "./src/typings.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
+    "src/**/*.svg",
     "src/**/*.js",
     "tests/**/*.ts",
     "tests/**/*.tsx",

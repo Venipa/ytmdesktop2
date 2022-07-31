@@ -1,9 +1,10 @@
-import { App, BrowserWindow, dialog, ipcMain } from "electron";
+import { App, BrowserWindow, dialog } from "electron";
 import { autoUpdater } from "electron-updater";
 import { isDevelopment } from "@/app/utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
 import { AfterInit, BaseProvider, BeforeStart } from "@/app/utils/baseProvider";
 import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
+import { serverMain } from "@/app/utils/serverEvents";
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = isDevelopment
   ? [null, null]
   : process.env.VUE_APP_GITHUB_REPOSITORY.split("/", 2);
@@ -47,7 +48,7 @@ export default class UpdateProvider extends BaseProvider
 
         if (app.autoupdate) {
           autoUpdater.quitAndInstall(false);
-          ipcMain.emit("app.quit", null, true);
+          serverMain.emit("app.quit", null, true);
         }
       });
     }
@@ -68,7 +69,7 @@ export default class UpdateProvider extends BaseProvider
   })
   onAutoUpdateRun() {
     autoUpdater.quitAndInstall(false);
-    ipcMain.emit("app.quit", null, true);
+    serverMain.emit("app.quit", null, true);
   }
   @IpcOn("app.checkUpdate", {
     debounce: 1000,
