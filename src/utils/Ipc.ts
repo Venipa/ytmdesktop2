@@ -1,6 +1,7 @@
-import eventNames from "@/app/utils/eventNames";
-import { IpcRendererEvent } from "electron";
-import { ref, effect, Ref, onMounted, onUnmounted } from "vue";
+import eventNames from '@/app/utils/eventNames';
+import { IpcRendererEvent } from 'electron';
+import { onMounted, onUnmounted, Ref, ref } from 'vue';
+
 type Map<T, R> =
   | ((item: T, name: string) => T)
   | ((item: T, name: string) => R);

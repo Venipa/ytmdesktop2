@@ -46,7 +46,7 @@ const electronBuilder = {
   },
   nodeIntegration: false,
   builderOptions,
-  externals: ["chokidar", "xosms", ...Array.from(webpackNodeExternals())],
+  externals: ["chokidar", "xosms", "express", "express-ws", ...Array.from(webpackNodeExternals())],
   nodeModulesPath: ["./node_modules"],
 };
 // const TsConfigPaths = require("tsconfig-paths-webpack-plugin").default;

@@ -49,7 +49,7 @@
 
 <script lang="ts">
 import SettingsCheckbox from "@/components/SettingsCheckbox.vue";
-import { defineComponent, ref } from "vue";
+import { defineComponent } from "vue";
 
 export default defineComponent({
   components: { SettingsCheckbox },

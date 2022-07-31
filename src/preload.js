@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { ipcRenderer } from "electron";
 import pkg from "../package.json";
 
 export default {

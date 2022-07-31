@@ -58,7 +58,7 @@
         </settings-checkbox>
 
         <template v-if="apiEnabledSetting">
-          <settings-input configKey="api.port" type="number" :min="13000" :max="13100" placeholder="13000-13100" class="bg-transparent border-0 -mx-2.5">
+          <settings-input configKey="api.port" type="number" :min="13000" :max="30000" placeholder="13000-30000" class="bg-transparent border-0 -mx-2.5">
             <template v-slot:label>
               API Port
             </template>
