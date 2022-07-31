@@ -3,20 +3,19 @@
   "version": "0.7.0",
   "private": false,
   "author": "Venipa <admin@venipa.net>",
-  "license": "MIT",
-  "repository": "https://github.com/Venipa/ytmdesktop2",
   "scripts": {
     "serve": "vue-cli-service electron:serve",
-    "dev": "npm run serve",
     "build": "vue-cli-service electron:build --mode development",
-    "release": "vue-cli-service electron:build",
     "lint": "vue-cli-service lint",
+    "dev": "npm run serve",
+    "electron:build": "vue-cli-service electron:build",
+    "electron:serve": "vue-cli-service electron:serve",
     "postinstall": "electron-builder install-app-deps",
     "postuninstall": "electron-builder install-app-deps",
     "rebuild-deps": "electron-builder install-app-deps",
+    "release": "vue-cli-service electron:build",
     "vcs": "vue-cli-service"
   },
-  "main": "background.js",
   "dependencies": {
     "@headlessui/vue": "^1.6.7",
     "@sentry/electron": "^3.0.7",
@@ -47,6 +46,7 @@
     "@babel/plugin-proposal-nullish-coalescing-operator": "^7.13.8",
     "@babel/plugin-proposal-optional-chaining": "^7.13.12",
     "@types/discord-rpc": "^4.0.0",
+    "@types/electron-devtools-installer": "^2.2.0",
     "@types/events": "^3.0.0",
     "@types/express": "^4.17.13",
     "@types/express-ws": "^3.0.1",
@@ -68,13 +68,14 @@
     "eslint": "^8.20.0",
     "eslint-plugin-vue": "^9.3.0",
     "node-gyp": "^9.1.0",
+    "postcss-import": "^14.1.0",
     "raw-loader": "^4.0.2",
     "sass": "^1.32.8",
     "sass-loader": "^13.0.2",
     "svg-inline-loader": "^0.8.2",
     "tsconfig-paths-webpack-plugin": "^4.0.0",
     "typescript": "^4.7.4",
-    "vue-cli-plugin-electron-builder": "~2.1.1",
+    "vue-cli-plugin-electron-builder": "^3.0.0-alpha.4",
     "vue-cli-plugin-tailwind": "~3.0.0",
     "vue-loader": "^17.0.0",
     "vue-loader-v16": "^16.0.0-beta.5.4",
@@ -82,11 +83,13 @@
     "webpack-node-externals": "^3.0.0",
     "worker-plugin": "^5.0.1"
   },
-  "resolutions": {
-    "webpack": "^5.74"
-  },
+  "license": "MIT",
   "optionalDependencies": {
     "bufferutil": "^4.0.6",
     "utf-8-validate": "^5.0.8"
+  },
+  "repository": "https://github.com/Venipa/ytmdesktop2",
+  "resolutions": {
+    "webpack": "^5.54"
   }
 }

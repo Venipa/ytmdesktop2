@@ -1,7 +1,6 @@
 const path = require("path");
 const webpackNodeExternals = require("webpack-node-externals");
-const WorkerPlugin = require("worker-plugin");
-const tsconfig = require("./tsconfig.json");
+
 
 /**
  * @type {import("electron-builder").Configuration} builderOptions
@@ -42,7 +41,6 @@ const electronBuilder = {
   preload: {
     "preload-yt": "src/preload-yt.js",
     "preload-api": "src/preload-api.js",
-    toolbar: "src/toolbar.js",
     api: "src/api/main.ts",
   },
   nodeIntegration: false,
@@ -61,7 +59,6 @@ module.exports = {
   chainWebpack: (config) => {
     // tsConfigAliasMapping.forEach(([alias, path]) => config.resolve.alias.set(alias, path));
     // config.resolve.plugin("tsconfig-paths").use(new TsConfigPaths());
-    console.log(config.resolve.alias.store);
     config.module
       .rule("raw")
       .test(() => false)
@@ -82,7 +79,6 @@ module.exports = {
 
   },
   configureWebpack: {
-    devtool: "source-map",
-    plugins: [new WorkerPlugin()],
+    devtool: "source-map"
   },
 };
