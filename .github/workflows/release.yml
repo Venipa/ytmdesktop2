@@ -24,12 +24,14 @@ jobs:
           sudo apt install libdbus-1-dev
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: 16
 
       - name: Install dependencies
-        run: yarn
+        run: |
+          yarn config set ignore-engines true
+          yarn
 
       - name: Build Electron release
         run: yarn release
