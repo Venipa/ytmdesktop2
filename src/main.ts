@@ -50,13 +50,4 @@ const router = createRouter({
 });
 createApp(App)
   .use(router)
-  .use({
-    install(app) {
-      const context = require.context("./plugins", true, /.ts$/i);
-      return context
-        .keys()
-        .map(context)
-        .map((m: any) => m.default(app));
-    },
-  })
   .mount("#app");
