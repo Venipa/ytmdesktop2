@@ -12,7 +12,7 @@
       </div>
       <div class="flex items-center space-x-2">
         <template v-if="updateInfo">
-          <button class="text-xs bg-green-500 h-7 rounded items-center px-3 transition duration-100 ease-out appear flex truncate cursor-pointer" :class="{ 'bg-green-500': updateInfo && !updateInfoProgress && !updateDownloaded, 'text-green-500' : updateDownloaded }" @click="() => runUpdate()">
+          <button class="text-xs h-7 rounded items-center px-3 transition duration-100 ease-out appear flex truncate cursor-pointer" :class="{ 'bg-green-500 text-white': updateInfo && !updateInfoProgress && !updateDownloaded, 'text-green-500' : updateDownloaded }" @click="() => runUpdate()">
             <template v-if="updateInfoProgress?.percent">Downloading Update v{{updateInfo.version}}... {{updateInfoProgress.percent.toFixed(0).padStart(5)}}%</template>
             <template v-else>
               <span class="truncate overflow-ellipsis">New Update v{{updateInfo.version}}</span>
