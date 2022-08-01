@@ -1,12 +1,12 @@
-import { AfterInit, BaseProvider, BeforeStart } from '@/app/utils/baseProvider';
-import { isDevelopment } from '@/app/utils/devUtils';
-import { IpcContext, IpcHandle, IpcOn } from '@/app/utils/onIpcEvent';
-import { App, BrowserWindow, dialog } from 'electron';
-import { autoUpdater, CancellationToken, UpdateInfo } from 'electron-updater';
-import semver from 'semver';
+import { AfterInit, BaseProvider, BeforeStart } from "@/app/utils/baseProvider";
+import { isDevelopment } from "@/app/utils/devUtils";
+import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
+import { App, BrowserWindow, dialog } from "electron";
+import { autoUpdater, CancellationToken, UpdateInfo } from "electron-updater";
+import semver from "semver";
 
-import IPC_EVENT_NAMES from '../utils/eventNames';
-import SettingsProvider from './settingsProvider.plugin';
+import IPC_EVENT_NAMES from "../utils/eventNames";
+import SettingsProvider from "./settingsProvider.plugin";
 
 if (isDevelopment) process.env.__SKIP_BUILD == null;
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] =
@@ -54,7 +54,6 @@ export default class UpdateProvider
       if (this._updateAvailable)
         this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, ev);
 
-        
       this.windowContext.sendToAllViews(
         IPC_EVENT_NAMES.APP_UPDATE_CHECKING,
         false
@@ -174,6 +173,13 @@ export default class UpdateProvider
   onCheckUpdate() {
     return this._checkUpdate()
       .then((x) => {
+        const releaseNotes = (
+          typeof x.updateInfo.releaseNotes === "string"
+            ? x.updateInfo.releaseNotes
+            : x.updateInfo.releaseNotes?.map((x) => x.note).join("\n")
+        )
+          ?.replace(/<[^>]+>/g, "")
+          .trimStart();
         return dialog
           .showMessageBox(
             BrowserWindow.fromBrowserView(this.views.youtubeView),
@@ -181,7 +187,7 @@ export default class UpdateProvider
               title: `Update available (${x.updateInfo.version})`,
               message: `Hey there, there is a new version which you can update to.\n\n${
                 process.platform === "win32"
-                  ? x.updateInfo.releaseNotes
+                  ? releaseNotes
                   : x.updateInfo.releaseName
               }`,
               type: "question",
