@@ -23,7 +23,7 @@ export default {
       close: () => ipcRenderer.send("settings.close"),
     },
     installUpdate: () => ipcRenderer.send("app.installUpdate"),
-    checkUpdate: () => ipcRenderer.send("app.checkUpdate"),
+    checkUpdate: () => ipcRenderer.invoke("app.checkUpdate"),
     settingsProvider: {
       getAll: (defaultValue) =>
         ipcRenderer.invoke("settingsProvider.getAll", defaultValue),
@@ -45,5 +45,6 @@ export default {
     emit: (event, ...data) => ipcRenderer.send(event, ...data),
     emitTo: (id, event, ...data) => ipcRenderer.sendTo(id, event, ...data),
     on: (channel, func) => ipcRenderer.on(channel, func),
+    off: (channel, func) => ipcRenderer.off(channel, func),
   },
 };

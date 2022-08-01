@@ -13,6 +13,7 @@ import { debounce } from "lodash-es";
 import path from "path";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import SettingsProvider from "./plugins/settingsProvider.plugin";
+import UpdateProvider from "./plugins/updateProvider.plugin";
 
 import { defaultUrl, isDevelopment } from "./utils/devUtils";
 import {
@@ -32,7 +33,7 @@ function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
 }
 const log = logger.child({ label: "main" });
-export default async function() {
+export default async function () {
   const serviceCollection = await createPluginCollection(app),
     eventCollection = await createEventCollection(
       app,
@@ -53,7 +54,8 @@ export default async function() {
   protocol.registerSchemesAsPrivileged([
     { scheme: "app", privileges: { secure: true, standard: true } },
   ]);
-  const brickGoogleUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
+  const brickGoogleUA =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
   app.userAgentFallback =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
 
@@ -94,7 +96,7 @@ export default async function() {
         urls: ["https://accounts.google.com/*"],
       },
       (details, callback) => {
-        details.requestHeaders['User-Agent'] = brickGoogleUA;
+        details.requestHeaders["User-Agent"] = brickGoogleUA;
         callback(details);
       }
     );
@@ -288,7 +290,7 @@ export default async function() {
       // Load the index.html when not in development
       await win.loadURL("app://./index.html");
     }
-    win.webContents.on("new-window", function(e, url) {
+    win.webContents.on("new-window", function (e, url) {
       if (url.startsWith("http")) {
         e.preventDefault();
         shell.openExternal(url);
@@ -383,10 +385,15 @@ export default async function() {
     app.quit();
   });
   app.on("before-quit", (ev) => {
-    if (forcedQuit) return;
-    const settings = serviceCollection.getProvider<SettingsProvider>(
-      "settings"
-    );
+    // dont allow prevent of quit if update queued
+    if (
+      forcedQuit ||
+      serviceCollection.getProvider<UpdateProvider>("update")
+        .updateQueuedForInstall
+    )
+      return;
+    const settings =
+      serviceCollection.getProvider<SettingsProvider>("settings");
     if (settings.get("app.minimizeTrayOverride")) {
       serverMain.emit("app.trayState", null, "hidden");
       ev.preventDefault(); // prevent quit - minimize to tray

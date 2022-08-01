@@ -22,6 +22,9 @@
   &:active {
     @apply transform-gpu scale-95;
   }
+  &:disabled, &.disabled {
+    @apply scale-100 opacity-60;
+  }
   svg {
     @apply w-4 h-4;
   }

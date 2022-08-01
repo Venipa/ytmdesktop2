@@ -3,6 +3,9 @@
     <div @click="() => action('nav.same-origin')" class="control-button relative w-4 h-4" v-if="!isHome">
       <HomeIcon></HomeIcon>
     </div>
+    <div @click="() => checkUpdate()" class="control-button relative w-4 h-4" :class="{ 'disabled': updateChecking }" :disabled="updateChecking">
+      <RefreshIcon :class="{ 'animate-spin duration-500 ease-out': updateChecking }"></RefreshIcon>
+    </div>
     <div @click="() => action('app.devTools')" class="control-button relative w-4 h-4" v-if="isDev">
       <DevIcon></DevIcon>
     </div>
@@ -23,13 +26,14 @@
 </template>
 
 <script>
-import { defineComponent } from "vue";
+import { defineComponent, ref } from "vue";
 import { refIpc } from "../../utils/Ipc";
 import RPCIcon from "@/assets/icons/discord-rpc.svg";
 import HomeIcon from "@/assets/icons/home.svg";
 import DevIcon from "@/assets/icons/chip.svg";
+import RefreshIcon from "@/assets/icons/refresh.svg";
 export default defineComponent({
-  components: { RPCIcon, HomeIcon, DevIcon },
+  components: { RPCIcon, HomeIcon, DevIcon, RefreshIcon },
   methods: {
     onSettings() {
       window.api.settings.open();
@@ -39,14 +43,14 @@ export default defineComponent({
     const [discordConnected, setDiscordConnected] = refIpc(["discord.connected", "discord.disconnected"], {
       defaultValue: false,
       mapper: (data, name) => {
-        return {["discord.connected"]: true, ["discord.disconnected"]: false}[name];
+        return { ["discord.connected"]: true, ["discord.disconnected"]: false }[name];
       },
-      ignoreUndefined: true
+      ignoreUndefined: true,
     });
     const [isHome] = refIpc("nav.same-origin", {
       defaultValue: true,
       mapper: ([sameOrigin]) => !!sameOrigin,
-      rawArgs: true
+      rawArgs: true,
     });
     const [discordEnabled, setDiscordEnabled] = refIpc("settingsProvider.change", {
       defaultValue: window.settings.get("discord.enabled"),
@@ -54,7 +58,7 @@ export default defineComponent({
         if (key === "discord.enabled") return value;
       },
       ignoreUndefined: true,
-      rawArgs: true
+      rawArgs: true,
     });
     const [isDev] = refIpc("settingsProvider.change", {
       defaultValue: window.settings.get("app.enableDev"),
@@ -62,20 +66,32 @@ export default defineComponent({
         if (key === "app.enableDev") return value;
       },
       ignoreUndefined: true,
-      rawArgs: true
+      rawArgs: true,
     });
-    window.ipcRenderer.invoke("req:discord.connected").then((x) => (setDiscordConnected(!!x)));
+    window.ipcRenderer.invoke("req:discord.connected").then((x) => setDiscordConnected(!!x));
+    const [updateChecking, setUpdateChecking] = refIpc("APP_UPDATE_CHECKING");
     return {
       discordEnabled,
       discordConnected,
+      updateChecking,
       isHome,
       isDev,
       async toggleSetting(key) {
         const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
         if (key === "discord.enabled") setDiscordEnabled(setting);
       },
+      checkUpdate() {
+        if (updateChecking.value) return;
+        setUpdateChecking(true);
+        this.action("app.checkUpdate").finally(() => {
+          setUpdateChecking(false);
+        });
+      },
       action(actionParam) {
         return window.api.action(actionParam);
+      },
+      invoke(invokeParam) {
+        return window.api.invoke(invokeParam);
       },
     };
   },

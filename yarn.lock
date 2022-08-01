@@ -1764,7 +1764,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/semver@^7.3.6":
+"@types/semver@^7.3.10", "@types/semver@^7.3.6":
   version "7.3.10"
   resolved "https://registry.yarnpkg.com/@types/semver/-/semver-7.3.10.tgz#5f19ee40cbeff87d916eedc8c2bfe2305d957f73"
   integrity sha512-zsv3fsC7S84NN6nPK06u79oWgrPVd0NvOyqgghV1haPaFcVxIrP4DLomRwGAXk0ui4HZA7mOcSFL98sMVW9viw==
@@ -4399,7 +4399,7 @@ electron-builder@^22.2.0:
     update-notifier "^5.1.0"
     yargs "^16.2.0"
 
-electron-builder@^23.3.2:
+electron-builder@^23.3.3:
   version "23.3.3"
   resolved "https://registry.yarnpkg.com/electron-builder/-/electron-builder-23.3.3.tgz#88d4e584a99b9e36ca4e8432b1163a1ef877355f"
   integrity sha512-mFYYdhoFPKevP6y5uaaF3dusmB2OtQ/HnwwpyOePeU7QDS0SEIAUokQsHUanAiJAZcBqtY7iyLBgX18QybdFFw==
@@ -4496,7 +4496,7 @@ electron-updater@^5.2.1:
     semver "^7.3.5"
     typed-emitter "^2.1.0"
 
-electron@^19.0.8:
+electron@^19.0.10:
   version "19.0.10"
   resolved "https://registry.yarnpkg.com/electron/-/electron-19.0.10.tgz#4d2f03f307fbb70a295ff419112130b75661eda9"
   integrity sha512-EiWtPWdD7CzkRkp1cw7t0N9W2qhI5XZOudHX7daOh5wI076nsdV2dtlAf/XyTHhPNoKR5qhTWrSnYL9PY6D1vg==

@@ -8,6 +8,7 @@ import expressWs from 'express-ws';
 import { apiChannelName } from './apiWorkerHelper';
 
 import type { SettingsStore } from "@/app/plugins/settingsProvider.plugin";
+import { Server } from 'http';
 const {app, getWss} = expressWs(createApp());
 let appConfig: SettingsStore;
 const log = logger.child("api-server");
@@ -65,9 +66,13 @@ app.on("error", log.error);
 const initialize = async ({config}: {config: SettingsStore}) => {
   appConfig = config;
   const serverPort = config.api.port;
-  app.listen(serverPort);
-  log.debug(`${app.settings} - listening on ${serverPort}`)
+  let server: Server;
+  await new Promise<void>((resolve) => server = app.listen(serverPort, () => {
+    return resolve();
+  }));
+  log.debug(`${app.settings} - listening on ${serverPort}, state: ${server.listening ? 'active' : 'listening failed'}`);
   log.debug("routes: ", [app.routes]);
+  return process.pid;
 }
 const close = async () => {}
 const sendMessage = async (name: string, ...args: any[]) => {

@@ -11,6 +11,7 @@ const API_ROUTES = {
   TRACK_CONTROL_PLAY: "api/track/play",
   TRACK_CONTROL_PAUSE: "api/track/pause",
   TRACK_CONTROL_TOGGLE_PLAY: "api/track/toggle-play-state",
+  TRACK_SOCKET: "api/socket"
 };
 @IpcContext
 export default class ApiProvider extends BaseProvider
@@ -40,12 +41,13 @@ export default class ApiProvider extends BaseProvider
     const config = this.settingsProvider;
     if (!config.instance?.api?.enabled) return;
     this._thread = await createApiWorker(this.windowContext.main);
-    const rendererId = await this._thread.invoke<number>("initialize", {
+    const tpid = await this._thread.invoke<number>("initialize", {
       config: { ...config!.instance },
     });
     this._renderer = BrowserWindow.getAllWindows().find(
-      (x) => x.id === rendererId
+      (x) => x.id === this._thread.rendererId
     );
+    this.logger.debug("running thread pid: " + tpid);
   }
 
   @IpcOn("settingsProvider.change", {

@@ -15,26 +15,17 @@
           <span class="font-semibold">Version</span>
           <span class="text-green-500 text-sm">{{ appVersion }}</span>
         </div>
-        <button
-          class="btn btn-ghost"
-          v-if="downloaded && available"
-          @click="runUpdate"
-        >
-          Install Update
+        <button class="btn btn-ghost" v-if="updateInfo && updateDownloaded" @click="runUpdate">
+          <div class="flex leading-none flex-col space-y-1 justify-center items-center">
+            <div>Install Update</div>
+            <div class="text-green-500">{{updateInfo.version}}</div>
+          </div>
         </button>
-        <button
-          class="btn btn-ghost"
-          v-else-if="available && !downloaded"
-          disabled
-        >
-          Downloading...
+        <button class="btn btn-ghost" v-else-if="updateInfo && updateInfoProgress?.percent" disabled>
+          Downloading...{{updateInfoProgress.percent.toFixed(0).padStart(5)}}%
         </button>
-        <button
-          class="btn btn-ghost"
-          v-else-if="!available && !downloaded"
-          @click="checkUpdate"
-        >
-          Check for Update
+        <button class="btn btn-ghost" v-else @click="checkUpdate">
+          {{updateChecking ? "Checking for Updates..." : "Check for Update"}}
         </button>
       </div>
       <div class="h-px my-4 bg-gray-500 rounded"></div>
@@ -49,14 +40,57 @@
 
 <script lang="ts">
 import SettingsCheckbox from "@/components/SettingsCheckbox.vue";
-import { defineComponent } from "vue";
+import { refIpc } from "@/utils/Ipc";
+import { defineComponent, onMounted, ref } from "vue";
 
 export default defineComponent({
   components: { SettingsCheckbox },
-  data() {
+  setup() {
+    const [updateInfo, setUpdateInfo] = refIpc("APP_UPDATE", {
+      ignoreUndefined: true,
+      defaultValue: null,
+    });
+    const [updateInfoProgress] = refIpc("APP_UPDATE_PROGRESS", {
+      ignoreUndefined: true,
+      defaultValue: null,
+    });
+    const [updateDownloaded] = refIpc("APP_UPDATE_DOWNLOADED", {
+      ignoreUndefined: true,
+      defaultValue: null,
+      mapper: (x) => !!x,
+    });
+    const isInstalling = ref(false);
+    const [updateChecking, setUpdateChecking] = refIpc("APP_UPDATE_CHECKING");
+    onMounted(() => {
+      (window as any).api.action("app.getUpdate").then((ev) => setUpdateInfo(ev));
+    });
     return {
-      downloaded: false,
-      available: false,
+      updateChecking,
+      updateInfo,
+      updateInfoProgress,
+      updateDownloaded,
+      checkUpdate() {
+        if (updateChecking.value) return;
+        setUpdateChecking(true);
+        this.action("app.checkUpdate").finally(() => {
+          setUpdateChecking(false);
+        });
+      },
+      action(actionParam) {
+        return (window as any).api.action(actionParam);
+      },
+      runUpdate() {
+        if (isInstalling.value) return;
+        isInstalling.value = true;
+        return (window as any).api
+          .action("app.installUpdate")
+          .then(() => {
+            setUpdateInfo(null);
+          })
+          .finally(() => {
+            isInstalling.value = false;
+          });
+      },
     };
   },
   computed: {
@@ -64,24 +98,8 @@ export default defineComponent({
       return (window as any).api.version;
     },
   },
-  methods: {
-    runUpdate() {
-      (window as any).api.installUpdate();
-    },
-    checkUpdate() {
-      (window as any).api.checkUpdate();
-    },
-  },
-  created() {
-    (window as any).ipcRenderer.on(
-      "app.updateAvailable",
-      () => (this.available = true)
-    );
-    (window as any).ipcRenderer.on(
-      "app.updateDownloaded",
-      () => (this.downloaded = true)
-    );
-  },
+  methods: {},
+  created() {},
 });
 </script>
 

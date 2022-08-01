@@ -11,6 +11,14 @@
         </div>
       </div>
       <div class="flex items-center space-x-2">
+        <template v-if="updateInfo">
+          <button class="text-xs bg-green-500 h-7 rounded items-center px-3 transition duration-100 ease-out appear flex truncate cursor-pointer" :class="{ 'bg-green-500': updateInfo && !updateInfoProgress && !updateDownloaded, 'text-green-500' : updateDownloaded }" @click="() => runUpdate()">
+            <template v-if="updateInfoProgress?.percent">Downloading Update v{{updateInfo.version}}... {{updateInfoProgress.percent.toFixed(0).padStart(5)}}%</template>
+            <template v-else>
+              <span class="truncate overflow-ellipsis">New Update v{{updateInfo.version}}</span>
+            </template>
+          </button>
+        </template>
         <toolbar-options></toolbar-options>
         <div class="w-px h-6 bg-gray-600"></div>
         <div class="flex items-center space-x-1">
@@ -47,11 +55,40 @@ export default defineComponent({
   setup() {
     const [title] = refIpc("TRACK_TITLE_CHANGE", {
       ignoreUndefined: true,
-      defaultValue: null
+      defaultValue: null,
     });
+    const [updateInfo, setUpdateInfo] = refIpc("APP_UPDATE", {
+      ignoreUndefined: true,
+      defaultValue: null,
+    });
+    const [updateInfoProgress] = refIpc("APP_UPDATE_PROGRESS", {
+      ignoreUndefined: true,
+      defaultValue: null,
+    });
+    const [updateDownloaded] = refIpc("APP_UPDATE_DOWNLOADED", {
+      ignoreUndefined: true,
+      defaultValue: null,
+      mapper: (x) => !!x,
+    });
+    const isInstalling = ref(false);
     return {
       title,
       appVersion,
+      updateInfo,
+      updateInfoProgress,
+      updateDownloaded,
+      runUpdate() {
+        if (isInstalling.value) return;
+        isInstalling.value = true;
+        return window.api
+          .action("app.installUpdate")
+          .then(() => {
+            setUpdateInfo(null);
+          })
+          .finally(() => {
+            isInstalling.value = false;
+          });
+      },
     };
   },
   beforeRouteLeave() {
@@ -68,8 +105,7 @@ export default defineComponent({
       window.api.minimize();
     },
   },
-  created() {
-  },
+  created() {},
 });
 </script>
 
