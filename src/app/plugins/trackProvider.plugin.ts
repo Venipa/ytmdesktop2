@@ -74,15 +74,24 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
         ", progress: ",
         progressSeconds,
         ", ui progress: ",
-        ...(uiTimeInfo?.length > 0 ? uiTimeInfo : ["-"])
+        ...(uiTimeInfo?.length > 0 ? uiTimeInfo : ["-"]),
       ].join(" ")
     );
     this._playState = isPlaying ? "playing" : "paused";
     const discordProvider = this.getProvider("discord") as DiscordProvider;
-    if (uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1]) {
-      const [currentUIProgress] = uiTimeInfo;
-      return discordProvider.updatePlayState(isPlaying, currentUIProgress);
-    }
-    return discordProvider.updatePlayState(isPlaying, progressSeconds);
+    const initPromise = new Promise<void>((resolve) => {
+      if (!discordProvider.enabled && isPlaying) {
+        return resolve(discordProvider.enable());
+      }
+      return resolve(Promise.resolve());
+    });
+
+    return initPromise.then(() => {
+      if (uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1]) {
+        const [currentUIProgress] = uiTimeInfo;
+        return discordProvider.updatePlayState(isPlaying, currentUIProgress);
+      }
+      return discordProvider.updatePlayState(isPlaying, progressSeconds);
+    });
   }
 }
