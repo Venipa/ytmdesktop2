@@ -58,10 +58,12 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 
     this.logger.debug(`active track:`, trackId);
     this._activeTrackId = trackId;
-    if (this.trackData) serverMain.emit("track:change", this.trackData);
+    if (this.trackData) {
+      serverMain.emit("track:change", this.trackData);
+    }
   }
   @IpcOn("track:play-state")
-  private __onPlayStateChange(
+  private async __onPlayStateChange(
     _ev,
     isPlaying: boolean,
     progressSeconds: number = 0,
@@ -79,19 +81,11 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     );
     this._playState = isPlaying ? "playing" : "paused";
     const discordProvider = this.getProvider("discord") as DiscordProvider;
-    const initPromise = new Promise<void>((resolve) => {
-      if (!discordProvider.enabled && isPlaying) {
-        return resolve(discordProvider.enable());
-      }
-      return resolve(Promise.resolve());
-    });
-
-    return initPromise.then(() => {
-      if (uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1]) {
-        const [currentUIProgress] = uiTimeInfo;
-        return discordProvider.updatePlayState(isPlaying, currentUIProgress);
-      }
-      return discordProvider.updatePlayState(isPlaying, progressSeconds);
-    });
+    if (isPlaying && !discordProvider.isConnected && discordProvider.enabled) await discordProvider.enable();
+    if (uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1]) {
+      const [currentUIProgress] = uiTimeInfo;
+      return await discordProvider.updatePlayState(isPlaying, currentUIProgress);
+    }
+    return await discordProvider.updatePlayState(isPlaying, progressSeconds);
   }
 }

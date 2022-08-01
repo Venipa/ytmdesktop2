@@ -47,19 +47,24 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     super("discord");
   }
   async disable() {
-    if (!this._enabled) return;
-    this._enabled = false;
-    if (this.isConnected && this.client)
-      await this.client.destroy().catch((err) => this.logger.error(err));
+    if (!this.client) return;
+    this._isConnected = false;
+    await this.client.destroy();
+    clearTimeout(this._updateHandle);
+    this.client = null;
+    this.windowContext.sendToAllViews("discord.disconnected");
   }
   async enable() {
-    if (this._enabled) return;
-    this._enabled = true;
-    if (!this.isConnected || !this.client)
-      await this.createClient().catch((err) => this.logger.error(err));
+    if (this.client) return;
+    this._isConnected = false;
+    clearTimeout(this._updateHandle);
+    await this.createClient();
+    this._isConnected = true;
+    this.windowContext.sendToAllViews("discord.connected");
   }
   private async createClient(): Promise<[DiscordClient, Presence]> {
-    if (!this._enabled) return null;
+    if (!this._enabled || this.isConnected) return null;
+    this._enabled = true;
     const client = new DiscordClient({
       transport: "ipc",
     });
@@ -72,31 +77,26 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       "connected",
       () => (this.logger.debug("connected"), (this._isConnected = true))
     );
-    client.on(
-      "ready",
-      debounce(() => this.onClientReady(), 1000)
-    );
+    client.on("ready", () => this.onClientReady());
     this.presence = presence;
     this.client = client;
-    client
+    await client
       .login({
         clientId: CLIENT_ID,
       })
       .catch((err) => {
-        new Promise((resolve, reject) =>
+        this.logger.debug(err);
+        return new Promise((resolve, reject) =>
           setTimeout(() => {
-            this.createClient()
-              .then(resolve)
-              .catch(reject);
+            this.createClient().then(resolve).catch(reject);
           }, 5000)
         );
-        this.logger.debug(err);
       });
     return [client, presence];
   }
   private _refreshActivity() {
     if (this._updateHandle) clearTimeout(this._updateHandle);
-    if (this.client)
+    if (this.client && this._isConnected)
       this.setActivity(this.presence).then(
         () =>
           (this._updateHandle = setTimeout(
@@ -108,10 +108,10 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       this.createClient();
     }
   }
-  AfterInit() {
+  async AfterInit() {
     const settings = this.settingsInstance.instance;
     if (!settings.discord.enabled || !this._enabled) return;
-    this.createClient();
+    await this.createClient();
   }
   async updatePlayState(val: boolean, progress: number = 0) {
     if (this.trackService.trackData)
@@ -190,7 +190,12 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
   }
   @IpcHandle("req:discord.connected")
   private async __onDiscordStatus() {
-    return DISCORD_SERVICE_ENABLED && this.client && this._isConnected;
+    return (
+      DISCORD_SERVICE_ENABLED &&
+      this.client &&
+      this.enabled &&
+      this._isConnected
+    );
   }
   @IpcOn("track:change", {
     debounce: 100,

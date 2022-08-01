@@ -81,13 +81,14 @@ export default class MediaControlProvider extends BaseProvider
     const albumThumbnail = trackData.video.thumbnail.thumbnails
       .sort((a, b) => b.width - a.width)
       .find((x) => x.url)?.url;
-    this._mediaProvider.mediaType =
+    try {
+      this._mediaProvider.mediaType =
       {
         ["Video"]: XOSMS.MediaType.Video,
         ["Music"]: XOSMS.MediaType.Music,
         ["Image"]: XOSMS.MediaType.Image,
       }[trackData.context.category] ?? XOSMS.MediaType.Video;
-    this._mediaProvider.playbackStatus = XOSMS.PlaybackStatus.Changing;
+    this._mediaProvider.playbackStatus = XOSMS.PlaybackStatus.Playing;
     this._mediaProvider.albumArtist = trackData.video.author;
     this._mediaProvider.albumTitle = trackData.context.pageOwnerDetails.name;
     this._mediaProvider.artist = trackData.video.author;
@@ -96,6 +97,9 @@ export default class MediaControlProvider extends BaseProvider
     this._mediaProvider.trackId = trackData.video.videoId;
     this._mediaProvider.previousButtonEnabled = true;
     this._mediaProvider.nextButtonEnabled = true;
+    } catch (ex) {
+      this.logger.error(ex); // 
+    }
     this.logger.debug([
       this._mediaProvider.title,
       XOSMS.MediaType[this._mediaProvider.mediaType].toString(),
