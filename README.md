@@ -6,7 +6,10 @@
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Venipa/ytmdesktop2?style=for-the-badge)](https://github.com/Venipa/ytmdesktop2/releases/latest)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Venipa/ytmdesktop2?style=for-the-badge)
 
-![image](https://user-images.githubusercontent.com/17952364/149850118-825be632-23df-4964-ab6b-04987b114009.png)
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/17952364/149850118-825be632-23df-4964-ab6b-04987b114009.png" alt="banner" />
+</p>
 
 
 ## Features
