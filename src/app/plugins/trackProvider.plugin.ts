@@ -63,7 +63,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       (await this.getActiveTrackByDOM()) === track.video.videoId
     ) {
       this._activeTrackId = track.video.videoId;
-      serverMain.emit("track:change", this.trackData);
+      serverMain.emitServer("track:change", this.trackData);
     }
   }
   @IpcOn("track:title-change", {
@@ -72,13 +72,19 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   private __onTitleChange(ev, trackId: string) {
     if (trackId) this.__onActiveTrack(trackId);
   }
-  async currentSongIsLiked() {
-    return this.views.youtubeView.webContents
-      .executeJavaScript(
-        `document.querySelector("#like-button-renderer tp-yt-paper-icon-button.like").ariaPressed`
-      )
-      .then((x) => x === "true")
-      .catch(() => false);
+  async currentSongIsLiked(lazy?: boolean) {
+    return (
+      lazy
+        ? new Promise<void>((resolve) => setTimeout(() => resolve(), 500))
+        : Promise.resolve()
+    ).then(() =>
+      this.views.youtubeView.webContents
+        .executeJavaScript(
+          `document.querySelector("#like-button-renderer tp-yt-paper-icon-button.like").ariaPressed`
+        )
+        .then((x) => x === "true")
+        .catch(() => false)
+    );
   }
   getTrackDuration() {
     const td = this.trackData;
@@ -87,7 +93,9 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       td.context?.videoDetails?.durationSeconds ?? td.video?.lengthSeconds
     );
   }
-  @IpcOn("track:set-active")
+  @IpcOn("track:set-active", {
+    debounce: 1000
+  })
   private async __onActiveTrack(trackId: string) {
     if (this._activeTrackId === trackId) return;
 
@@ -96,17 +104,12 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     if (this.trackData) {
       const td = this.trackData;
       const isLiked = await this.currentSongIsLiked();
-      this._trackState = {
+      serverMain.emitServer("track:change", td);
+      this.setTrackState({
         id: trackId,
         playing: this.playing,
         duration: this.getTrackDuration(),
         liked: isLiked,
-        progress: 0,
-      };
-      serverMain.emit("track:change", this.trackData);
-      this.windowContext.sendToAllViews("track:play-state", {
-        ...(this.trackState ?? {}),
-        playing: true,
         progress: 0,
       });
     }
@@ -146,9 +149,10 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     const isLiked = await this.currentSongIsLiked();
     if (this._trackState) {
       this.setTrackState((state) => {
-        (state.playing = isPlaying),
-          (state.progress = currentUIProgress),
-          (state.liked = isLiked);
+        state.playing = isPlaying;
+        state.progress = currentUIProgress;
+        state.liked = isLiked;
+        state.duration = this.getTrackDuration();
       });
     } else {
       this.setTrackState({

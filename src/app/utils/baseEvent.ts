@@ -2,8 +2,12 @@ import logger from "@/utils/Logger";
 import { App, ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { Logger } from "winston";
 import { BaseProvider } from "./baseProvider";
+import { serverMain } from "./serverEvents";
 export interface OnEventExecute {
-  execute: (ev: IpcMainEvent | any, ...args: any[]) => Promise<any> | any | void;
+  execute: (
+    ev: IpcMainEvent | any,
+    ...args: any[]
+  ) => Promise<any> | any | void;
 }
 export interface OnEventHandle {
   handle: (ev: IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any;
@@ -53,10 +57,10 @@ export class BaseEvent implements IBaseEvent {
     const type = this.__type;
     const func = (...args: any[]) => {
       return type === "handle"
-        ? Promise.resolve((this as any)['handle'](...args))
-        : (this as any)['execute'](...args);
+        ? Promise.resolve((this as any)["handle"](...args))
+        : (this as any)["execute"](...args);
     };
     this.logger.debug(`registered "${this.__type}" event "${this.eventName}"`);
-    ipcMain[type](this.eventName, func);
+    serverMain[type](this.eventName, func);
   }
 }

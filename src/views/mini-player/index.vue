@@ -139,7 +139,7 @@ export default defineComponent({
     },
     time() {
       const { duration, progress } = this.playState ?? {};
-      if (!duration || !progress) return null;
+      if (typeof duration !== "number" || typeof progress !== "number") return null;
       const current = (({ hours, minutes, seconds }) => createInterval([hours, minutes, seconds]))(intervalToDuration({ start: (progress > duration ? duration : progress) * 1000, end: duration * 1000 }));
       const end = (({ hours, minutes, seconds }) => createInterval([hours, minutes, seconds]))(intervalToDuration({ start: 0, end: duration * 1000 }));
       return [current, end]
@@ -152,12 +152,11 @@ export default defineComponent({
     onMounted(() => {
       window.ipcRenderer.invoke("api/track").then(data => {
         setTrack(data);
-      }).then(() =>
-        new Promise<void>((resolve) => setTimeout(() => {
-          resolve();
-        }, 1000)).then(() => window.ipcRenderer.invoke("api/track/state").then(data => {
+      }).finally(() => {
+        window.ipcRenderer.invoke("api/track/state").then(data => {
           setPlayState(data);
-        })))
+        })
+      })
     })
     return {
       track,
