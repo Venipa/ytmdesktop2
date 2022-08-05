@@ -14,7 +14,8 @@ const builderOptions = {
   mac: {
     category: "public.app-category.music",
     icon: "src/assets/icons/mac/icon.icns",
-    hardenedRuntime: false,
+    hardenedRuntime: true,
+    gatekeeperAssess: false,
     target: {
       target: "default",
       arch: ["arm64", "x64"],
