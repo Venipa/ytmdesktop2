@@ -1,7 +1,6 @@
 const path = require("path");
 const webpackNodeExternals = require("webpack-node-externals");
 
-
 /**
  * @type {import("electron-builder").Configuration} builderOptions
  */
@@ -15,6 +14,10 @@ const builderOptions = {
   mac: {
     category: "public.app-category.music",
     icon: "src/assets/icons/mac/icon.icns",
+    target: {
+      target: "default",
+      arch: ["arm64", "x64"],
+    },
   },
   dmg: {
     icon: "src/assets/icons/mac/icon.icns",
@@ -23,7 +26,7 @@ const builderOptions = {
   linux: {
     target: ["AppImage"],
     category: "Music",
-    icon: "src/assets/icons/mac/icon.icns"
+    icon: "src/assets/icons/mac/icon.icns",
   },
   squirrelWindows: null,
   nsis: {
@@ -32,6 +35,10 @@ const builderOptions = {
   },
   win: {
     icon: "src/assets/icons/win/icon.ico",
+    target: {
+      target: "default",
+      arch: ["x64", "ia32"],
+    },
   },
 };
 /**
@@ -46,7 +53,13 @@ const electronBuilder = {
   },
   nodeIntegration: false,
   builderOptions,
-  externals: ["chokidar", "xosms", "express", "express-ws", ...Array.from(webpackNodeExternals())],
+  externals: [
+    "chokidar",
+    "xosms",
+    "express",
+    "express-ws",
+    ...Array.from(webpackNodeExternals()),
+  ],
   nodeModulesPath: ["./node_modules"],
 };
 // const TsConfigPaths = require("tsconfig-paths-webpack-plugin").default;
@@ -67,19 +80,18 @@ module.exports = {
       .loader("raw-loader")
       .end();
 
-      config.module.rules.delete('svg')
+    config.module.rules.delete("svg");
 
-      config.module
-        .rule('svg')
-        .test(/\.(svg)(\?.*)?$/)
-        .use('vue-loader')
-        .loader('vue-loader')
-        .end()
-        .use('vue-svg-loader')
-        .loader('vue-svg-loader')
-
+    config.module
+      .rule("svg")
+      .test(/\.(svg)(\?.*)?$/)
+      .use("vue-loader")
+      .loader("vue-loader")
+      .end()
+      .use("vue-svg-loader")
+      .loader("vue-svg-loader");
   },
   configureWebpack: {
-    devtool: "source-map"
+    devtool: "source-map",
   },
 };

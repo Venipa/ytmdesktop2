@@ -265,6 +265,6 @@ export default defineComponent({
 }
 
 .track-thumbnail {
-  @apply w-40 h-40 md: h-72 md:w-72 object-cover object-center flex-none rounded-lg bg-zinc-800;
+  @apply w-40 h-40 md:h-72 md:w-72 object-cover object-center flex-none rounded-lg bg-zinc-800;
 }
 </style>
