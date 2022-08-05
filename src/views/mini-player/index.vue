@@ -25,7 +25,7 @@
                loading="lazy"
                v-if="thumbnail" />
           <div v-else
-               class="track-thumbnail items-center justify-center">
+               class="track-thumbnail flex flex-shrink-0 items-center justify-center">
             <MiniPlayerIcon class="w-24 h-24 md:w-40 md:h-40 text-zinc-50" />
           </div>
           <div class="flex flex-col flex-1 h-full">

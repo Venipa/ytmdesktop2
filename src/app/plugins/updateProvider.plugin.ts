@@ -133,6 +133,9 @@ export default class UpdateProvider
     });
   }
   private async _checkUpdate() {
+    const beta = !!this.settingsInstance.instance?.app?.beta;
+    if (autoUpdater.allowPrerelease !== beta)
+      autoUpdater.allowPrerelease = beta;
     return await autoUpdater.checkForUpdates().then((x) => {
       if (!x?.updateInfo || !this.isUpdateInRange(x.updateInfo.version))
         throw new Error("No Update available");

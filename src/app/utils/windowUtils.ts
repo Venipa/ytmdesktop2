@@ -55,7 +55,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
     if (isDevelopment) win.webContents.openDevTools();
   } else {
     // Load the index.html when not in development
-    await win.loadURL("app://./#" + path.replace(/^\//, ""));
+    await win.loadURL("app://./index.html#/" + path.replace(/^\//, ""));
   }
   win.webContents.on("new-window", function (e, url) {
     if (url.startsWith("http")) {
