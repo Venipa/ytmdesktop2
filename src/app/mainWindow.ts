@@ -135,25 +135,20 @@ export default async function () {
         });
       }
     );
-    const toolbarView = await createApiView(
-      process.platform === "darwin"
-        ? "/youtube/toolbar-mac"
-        : "/youtube/toolbar",
-      (view) => {
-        win.addBrowserView(view);
-        win.setTopBrowserView(view);
-        const [width] = win.getSize();
-        view.setBounds({
-          height: 40,
-          width,
-          x: 0,
-          y: 0,
-        });
-        view.setBackgroundColor("transparent");
-        view.setAutoResize({ width: true });
-        if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
-      }
-    );
+    const toolbarView = await createApiView("/youtube/toolbar", (view) => {
+      win.addBrowserView(view);
+      win.setTopBrowserView(view);
+      const [width] = win.getSize();
+      view.setBounds({
+        height: 40,
+        width,
+        x: 0,
+        y: 0,
+      });
+      view.setBackgroundColor("transparent");
+      view.setAutoResize({ width: true });
+      if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
+    });
     serverMain.on("app.loadEnd", () => {
       win.removeBrowserView(loadingView);
       win.setTopBrowserView(toolbarView);
