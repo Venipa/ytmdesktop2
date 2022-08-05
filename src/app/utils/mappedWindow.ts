@@ -21,7 +21,12 @@ export function createWindowContext<T>(_data: {
     views: { [key: string]: BrowserView } & T = _data.views;
     sendToAllViews(ev: string, ...args: any[]): void {
       return (Object.values(this.views) as BrowserView[])
-        .filter((x) => !!x?.webContents)
+        .filter(
+          (x) => x &&
+            (x instanceof BrowserWindow
+              ? !x.isDestroyed() && !x.webContents.isDestroyed()
+              : !x.webContents.isDestroyed())
+        )
         .forEach((x: BrowserView) => x.webContents.send(ev, ...args));
     }
   })();

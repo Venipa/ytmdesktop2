@@ -1,16 +1,16 @@
 import { contextBridge } from "electron";
 import { basename } from "path";
 import { set, merge } from "lodash-es";
-import exposeData from "./preload";
+import exposeData from "./base";
 let exposedMain = false;
 Object.entries(exposeData).forEach(([key, endpoints]) => {
   if (key === "api")
     endpoints = {
       ...endpoints,
-      reloadCustomCss: () => ipcRenderer.send("settings.customCssUpdate"),
+      reloadCustomCss: () => window.ipcRenderer.emit("settings.customCssUpdate"),
       watchCustomCss: (enabled) =>
-        ipcRenderer.send("settings.customCssWatch", enabled),
-    };
+        window.ipcRenderer.emit("settings.customCssWatch", enabled),
+    } as any as typeof endpoints;
   try {
     contextBridge.exposeInMainWorld(key, endpoints);
     if (!exposedMain) exposedMain = true;

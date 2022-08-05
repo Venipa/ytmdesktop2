@@ -3,7 +3,6 @@ import { createRouter, createWebHashHistory } from "vue-router";
 import App from "./App.vue";
 import "./assets/app.scss";
 
-
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
@@ -34,6 +33,10 @@ const router = createRouter({
       ],
     },
     {
+      path: "/miniplayer",
+      component: () => import("./views/mini-player/index.vue"),
+    },
+    {
       path: "/youtube/toolbar",
       component: () => import("./views/youtube/toolbar.vue"),
     },
@@ -47,6 +50,4 @@ const router = createRouter({
     },
   ],
 });
-createApp(App)
-  .use(router)
-  .mount("#app");
+createApp(App).use(router).mount("#app");

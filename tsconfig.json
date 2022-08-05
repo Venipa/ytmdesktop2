@@ -47,8 +47,7 @@
     "src/**/*.js",
     "tests/**/*.ts",
     "tests/**/*.tsx",
-    "src/preload.js",
-    "src/preload*.js"
+    "src/preload/*.ts"
   ],
   "exclude": [
     "node_modules"

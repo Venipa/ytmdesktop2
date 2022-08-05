@@ -28,6 +28,7 @@ import {
 } from "./utils/serviceCollection";
 import { createApiView, createView } from "./utils/view";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
+import { createAppWindow } from "./utils/windowUtils";
 
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
@@ -260,44 +261,6 @@ export default async function () {
     };
     return createWindowContext<typeof __data.views>(__data);
   }
-  async function createAppWindow() {
-    // Create the browser window.
-    const win = new BrowserWindow({
-      width: 800,
-      height: 600,
-      minWidth: 800,
-      minHeight: 480,
-      minimizable: false,
-      backgroundColor: "#000000",
-      frame: false,
-      parent: mainWindow.main,
-      modal: true,
-      darkTheme: true,
-      webPreferences: {
-        // Use pluginOptions.nodeIntegration, leave this alone
-        // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-        nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-        contextIsolation: true,
-        preload: parseScriptPath("preload-api.js"),
-      },
-    });
-    if (process.env.WEBPACK_DEV_SERVER_URL) {
-      log.debug("dev url:", process.env.WEBPACK_DEV_SERVER_URL);
-      // Load the url of the dev server if in development mode
-      await win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
-      if (isDevelopment) win.webContents.openDevTools();
-    } else {
-      // Load the index.html when not in development
-      await win.loadURL("app://./index.html");
-    }
-    win.webContents.on("new-window", function (e, url) {
-      if (url.startsWith("http")) {
-        e.preventDefault();
-        shell.openExternal(url);
-      }
-    });
-    return win;
-  }
 
   // Quit when all windows are closed.
   app.on("window-all-closed", () => {
@@ -347,29 +310,6 @@ export default async function () {
     }, 50);
   });
 
-  let settingsWindow: BrowserWindow;
-  serverMain.on("settings.show", async () => {
-    try {
-      if (!settingsWindow || settingsWindow.isDestroyed()) {
-        settingsWindow = await createAppWindow();
-        mainWindow.views.settingsWindow = settingsWindow as any;
-      } else {
-        settingsWindow.show();
-      }
-    } catch (err) {
-      log.error(err);
-    }
-  });
-  serverMain.on("settings.close", async () => {
-    if (settingsWindow) {
-      settingsWindow.hide();
-      if (isDevelopment) settingsWindow.webContents.closeDevTools();
-      settingsWindow.close();
-
-      if (mainWindow.views.settingsWindow)
-        mainWindow.views.settingsWindow = null;
-    }
-  });
   serverMain.on("app.minimize", (ev) => {
     const window = BrowserWindow.fromWebContents(ev.sender);
     if (window && window.minimizable) window.minimize();

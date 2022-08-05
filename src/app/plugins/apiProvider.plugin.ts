@@ -4,18 +4,12 @@ import { ApiWorker, createApiWorker } from "@/api/createApiWorker";
 import SettingsProvider from "./settingsProvider.plugin";
 import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import TrackProvider from "./trackProvider.plugin";
-const API_ROUTES = {
-  TRACK_CURRENT: "api/track",
-  TRACK_CONTROL_NEXT: "api/track/next",
-  TRACK_CONTROL_PREV: "api/track/prev",
-  TRACK_CONTROL_PLAY: "api/track/play",
-  TRACK_CONTROL_PAUSE: "api/track/pause",
-  TRACK_CONTROL_TOGGLE_PLAY: "api/track/toggle-play-state",
-  TRACK_SOCKET: "api/socket"
-};
+import { API_ROUTES } from "../utils/eventNames";
 @IpcContext
-export default class ApiProvider extends BaseProvider
-  implements AfterInit, OnDestroy {
+export default class ApiProvider
+  extends BaseProvider
+  implements AfterInit, OnDestroy
+{
   private _thread: ApiWorker;
   private _renderer: BrowserWindow;
   constructor(private _app: App) {
@@ -69,11 +63,48 @@ export default class ApiProvider extends BaseProvider
   async getTrackInformation() {
     return (this.getProvider("track") as TrackProvider)?.trackData;
   }
+  @IpcHandle(API_ROUTES.TRACK_LIKE)
+  async postTrackLike(_ev, like: boolean) {
+    const doLike = (await this.trackProvider.currentSongIsLiked()) === like;
+    if (!doLike)
+      return this.views.youtubeView.webContents
+        .executeJavaScript(
+          `document.querySelector("#like-button-renderer tp-yt-paper-icon-button.like").click()`
+        )
+        .then(() => this.trackProvider.currentSongIsLiked())
+        .catch(() => false)
+        .then((isLiked) => {
+          this.trackProvider.setTrackState(state => {
+            state.liked = isLiked;
+          });
+          return isLiked;
+        })
+  }
+  @IpcHandle(API_ROUTES.TRACK_CURRENT_STATE)
+  async getTrackState() {
+    return (this.getProvider("track") as TrackProvider)?.trackState;
+  }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_NEXT)
   async nextTrack() {
     await this.views.youtubeView.webContents.executeJavaScript(
       `(el => el && el.click())(document.querySelector(".ytmusic-player-bar.next-button"))`
     );
+  }
+  @IpcHandle(API_ROUTES.TRACK_CONTROL_FORWARD)
+  async forwardTrack(_ev, data) {
+    const { time } = data ?? {};
+    if (typeof time === "number" && time !== 0)
+      this.views.youtubeView.webContents.send("track:seek", {
+        time,
+      });
+  }
+  @IpcHandle(API_ROUTES.TRACK_CONTROL_BACKWARD)
+  async backwardTrack(_ev, data) {
+    const { time } = data ?? {};
+    if (typeof time === "number" && time !== 0)
+      this.views.youtubeView.webContents.send("track:seek", {
+        time: -time,
+      });
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_PREV)
   async prevTrack() {

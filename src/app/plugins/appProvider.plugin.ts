@@ -1,10 +1,12 @@
-import { App } from "electron";
+import { App, BrowserWindow, IpcMainEvent } from "electron";
 import { BaseProvider, AfterInit } from "@/app/utils/baseProvider";
-import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
+import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import { setSentryEnabled } from "@/app/utils/sentry";
 import TrackProvider from "./trackProvider.plugin";
 import DiscordProvider from "./discordProvider.plugin";
 import { isDevelopment } from "../utils/devUtils";
+import { createAppWindow } from "../utils/windowUtils";
+import { serverMain } from "../utils/serverEvents";
 const STATE_PAUSE_TIME = isDevelopment ? 30e3 : 30e4;
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit {
@@ -58,5 +60,41 @@ export default class AppProvider extends BaseProvider implements AfterInit {
     } else {
       setSentryEnabled(false);
     }
+  }
+  @IpcOn("subwindow.show/settingsWindow")
+  private async __settingsWindowOpen(ev) {
+    let settingsWindow = this.views.settingsWindow as any as BrowserWindow;
+    try {
+      if (!settingsWindow || settingsWindow.isDestroyed()) {
+        settingsWindow = await createAppWindow({
+          parent: this.windowContext.main,
+        });
+        this.windowContext.views.settingsWindow = settingsWindow as any;
+      } else {
+        settingsWindow.show();
+      }
+    } catch (err) {
+      this.logger.error(err);
+    }
+  }
+  @IpcOn("subwindow.show")
+  private __onSubWindowOpen(_ev, windowName: string) {
+    if (!windowName) {
+      return;
+    }
+    const evName = "subwindow.show/" + windowName;
+    if (serverMain.eventNames().includes(evName))
+      serverMain.emitServer("subwindow.show/" + windowName, _ev);
+  }
+  @IpcOn("subwindow.close")
+  private __onSubWindowClose(_ev: IpcMainEvent, windowName?: string) {
+    if (!windowName) {
+      const wnd = BrowserWindow.fromWebContents(_ev.sender);
+      wnd?.close?.();
+      return;
+    }
+    const evName = "subwindow.close/" + windowName;
+    if (serverMain.eventNames().includes(evName))
+      serverMain.emit("subwindow.close/" + windowName, _ev);
   }
 }

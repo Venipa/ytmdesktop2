@@ -1,6 +1,6 @@
 import { contextBridge } from "electron";
 import { get, merge, set } from "lodash-es";
-import preloadRoot from "./preload";
+import preloadRoot from "./base";
 
 Object.entries(preloadRoot).forEach(([key, endpoints]) => {
   contextBridge.exposeInMainWorld(key, endpoints);

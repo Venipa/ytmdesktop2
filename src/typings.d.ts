@@ -1,24 +1,20 @@
-/* eslint-disable no-unused-vars */
+import type pd from "./preload/base";
+
+
 declare const __static: any;
 declare const __dirname: string;
 interface PreloadContext {
-  api: {
-    version: string;
-    settings: {
-      open(): void;
-      close(): void;
-    };
-    settingsProvider: {
-      get<T>(key: string, defaultValue?: T): Promise<T>;
-      set(key: string, value: T): Promise<void>;
-    };
-    emit: (event, ...data) => void;
-    emitTo: (id, event, ...data) => void;
-    on: (channel, func) => void;
-  };
+  api: typeof pd.api;
+  ipcRenderer: typeof pd.ipcRenderer;
+  process: typeof pd.process;
+  __ytd_plugins: any;
+  __ytd_settings: any;
+
 }
 declare global {
-  interface Window extends PreloadContext {
+  declare const __static: any;
+  declare const __dirname: string;
+  interface Window extends globalThis, PreloadContext {
     [key: string]: any;
   }
 }

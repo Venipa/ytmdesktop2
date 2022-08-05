@@ -24,6 +24,7 @@ export class BaseProvider {
     youtubeView: BrowserView;
     toolbarView: BrowserView;
     settingsWindow?: BrowserView;
+    miniPlayerWindow?: BrowserView;
   }>;
   get logger() {
     return this._loggerInstance;

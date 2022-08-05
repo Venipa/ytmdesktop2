@@ -40,8 +40,8 @@ const builderOptions = {
 const electronBuilder = {
   mainProcessTypeChecking: false,
   preload: {
-    "preload-yt": "src/preload-yt.js",
-    "preload-api": "src/preload-api.js",
+    "preload-yt": "src/preload/youtube.ts",
+    "preload-api": "src/preload/api.ts",
     api: "src/api/main.ts",
   },
   nodeIntegration: false,

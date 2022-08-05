@@ -5,14 +5,34 @@ import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
 import { serverMain } from "@/app/utils/serverEvents";
 import { TrackData } from "@/app/utils/trackData";
 import DiscordProvider from "./discordProvider.plugin";
-
+type TrackState = {
+  id: string;
+  playing: boolean;
+  progress: number;
+  duration: number;
+  liked: boolean;
+};
 const tracks: { [id: string]: TrackData } = {};
 @IpcContext
 export default class TrackProvider extends BaseProvider implements AfterInit {
   private _activeTrackId: string;
   private _playState: "playing" | "paused" | undefined;
+  private _trackState: TrackState;
   get playState() {
     return this._playState;
+  }
+  get trackState() {
+    return this._trackState;
+  }
+  setTrackState(fn: TrackState | ((d: TrackState) => void | TrackState)) {
+    const isFunc = typeof fn === "function";
+    const ret = isFunc ? fn(this._trackState) : fn;
+    const isVoid = ret === void 0 || ret === undefined;
+    this._trackState = !isVoid ? (ret as TrackState) : this._trackState;
+
+    this.windowContext.sendToAllViews("track:play-state", {
+      ...(this.trackState ?? {}),
+    });
   }
   get playing() {
     return this.playState === "playing";
@@ -52,17 +72,48 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   private __onTitleChange(ev, trackId: string) {
     if (trackId) this.__onActiveTrack(trackId);
   }
+  async currentSongIsLiked() {
+    return this.views.youtubeView.webContents
+      .executeJavaScript(
+        `document.querySelector("#like-button-renderer tp-yt-paper-icon-button.like").ariaPressed`
+      )
+      .then((x) => x === "true")
+      .catch(() => false);
+  }
+  getTrackDuration() {
+    const td = this.trackData;
+    if (!this.trackData) return null;
+    return ((dur) => (dur ? Number.parseInt(dur) : null))(
+      td.context?.videoDetails?.durationSeconds ?? td.video?.lengthSeconds
+    );
+  }
   @IpcOn("track:set-active")
-  private __onActiveTrack(trackId: string) {
+  private async __onActiveTrack(trackId: string) {
     if (this._activeTrackId === trackId) return;
 
     this.logger.debug(`active track:`, trackId);
     this._activeTrackId = trackId;
     if (this.trackData) {
+      const td = this.trackData;
+      const isLiked = await this.currentSongIsLiked();
+      this._trackState = {
+        id: trackId,
+        playing: this.playing,
+        duration: this.getTrackDuration(),
+        liked: isLiked,
+        progress: 0,
+      };
       serverMain.emit("track:change", this.trackData);
+      this.windowContext.sendToAllViews("track:play-state", {
+        ...(this.trackState ?? {}),
+        playing: true,
+        progress: 0,
+      });
     }
   }
-  @IpcOn("track:play-state")
+  @IpcOn("track:play-state", {
+    debounce: 100,
+  })
   private async __onPlayStateChange(
     _ev,
     isPlaying: boolean,
@@ -81,11 +132,32 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     );
     this._playState = isPlaying ? "playing" : "paused";
     const discordProvider = this.getProvider("discord") as DiscordProvider;
-    if (isPlaying && !discordProvider.isConnected && discordProvider.enabled) await discordProvider.enable();
-    if (uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1]) {
-      const [currentUIProgress] = uiTimeInfo;
-      return await discordProvider.updatePlayState(isPlaying, currentUIProgress);
+    if (isPlaying && !discordProvider.isConnected && discordProvider.enabled)
+      await discordProvider.enable();
+    const isUIViewRequired =
+      uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1];
+
+    const [currentUIProgress] = isUIViewRequired
+      ? uiTimeInfo
+      : [progressSeconds];
+    if (isUIViewRequired)
+      await discordProvider.updatePlayState(isPlaying, currentUIProgress);
+    else await discordProvider.updatePlayState(isPlaying, progressSeconds);
+    const isLiked = await this.currentSongIsLiked();
+    if (this._trackState) {
+      this.setTrackState((state) => {
+        (state.playing = isPlaying),
+          (state.progress = currentUIProgress),
+          (state.liked = isLiked);
+      });
+    } else {
+      this.setTrackState({
+        playing: isPlaying,
+        progress: currentUIProgress,
+        liked: isLiked,
+        duration: this.getTrackDuration(),
+        id: this._activeTrackId,
+      });
     }
-    return await discordProvider.updatePlayState(isPlaying, progressSeconds);
   }
 }
