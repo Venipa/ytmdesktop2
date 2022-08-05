@@ -12,17 +12,22 @@
       </control-bar>
       <div class="absolute h-48 inset-x-0 bg-gradient-to-b from-black to-black/0 -top-32 z-10"></div>
     </div>
-    <div class="absolute inset-0 bg-no-repeat bg-cover bg-center opacity-20 scale-110 blur-lg"
+    <div class="absolute inset-0 bg-no-repeat bg-cover bg-center opacity-20 scale-125 blur-lg"
          v-if="thumbnail"
          :style="{ backgroundImage: `url(${thumbnail})` }">
     </div>
     <div class="flex flex-col flex-1">
       <div class="flex flex-col relative z-10 pt-8 px-4 flex-1">
         <div class="flex items-start space-x-4">
-          <img :src="thumbnail ? thumbnail : null"
+          <img :src="thumbnail"
                alt=""
-               class="w-40 h-40 md:h-72 md:w-72 object-cover object-center flex-none rounded-lg bg-zinc-800"
-               loading="lazy" />
+               class="track-thumbnail"
+               loading="lazy"
+               v-if="thumbnail" />
+          <div v-else
+               class="track-thumbnail items-center justify-center">
+            <MiniPlayerIcon class="w-24 h-24 md:w-40 md:h-40 text-zinc-50" />
+          </div>
           <div class="flex flex-col flex-1 h-full">
             <div class="min-w-0 flex-auto space-y-1 font-semibold"
                  v-if="track?.video">
@@ -150,12 +155,9 @@ export default defineComponent({
     const [playState, setPlayState] = refIpc<{ playing: boolean, progress: number, duration: number, liked: boolean }>("TRACK_PLAYSTATE");
     const trackBusy = ref(false);
     onMounted(() => {
-      window.ipcRenderer.invoke("api/track").then(data => {
-        setTrack(data);
-      }).finally(() => {
-        window.ipcRenderer.invoke("api/track/state").then(data => {
-          setPlayState(data);
-        })
+      Promise.all([window.ipcRenderer.invoke("api/track"), window.ipcRenderer.invoke("api/track/state")]).then(([trackData, playStateData]) => {
+        setTrack(trackData);
+        setPlayState(playStateData);
       })
     })
     return {
@@ -260,5 +262,9 @@ export default defineComponent({
       @apply stroke-transparent;
     }
   }
+}
+
+.track-thumbnail {
+  @apply w-40 h-40 md: h-72 md:w-72 object-cover object-center flex-none rounded-lg bg-zinc-800;
 }
 </style>
