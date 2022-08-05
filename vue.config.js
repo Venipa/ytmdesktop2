@@ -14,6 +14,7 @@ const builderOptions = {
   mac: {
     category: "public.app-category.music",
     icon: "src/assets/icons/mac/icon.icns",
+    hardenedRuntime: false,
     target: {
       target: "default",
       arch: ["arm64", "x64"],
@@ -36,8 +37,8 @@ const builderOptions = {
   win: {
     icon: "src/assets/icons/win/icon.ico",
     target: {
-      target: "default",
-      arch: ["x64", "ia32"],
+      target: "nsis",
+      arch: "x64",
     },
   },
 };
