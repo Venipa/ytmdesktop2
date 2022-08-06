@@ -28,7 +28,7 @@ import {
 } from "./utils/serviceCollection";
 import { createApiView, createView } from "./utils/view";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
-import { createAppWindow } from "./utils/windowUtils";
+import { appIconPath, createAppWindow } from "./utils/windowUtils";
 
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
@@ -72,7 +72,7 @@ export default async function () {
       minWidth: 800,
       minHeight: 480,
       autoHideMenuBar: true,
-      icon: path.resolve(__static, "favicon.ico"),
+      icon: appIconPath,
       backgroundColor: "#000000",
       center: true,
       closable: true,
@@ -154,25 +154,20 @@ export default async function () {
         });
       }
     );
-    const toolbarView = await createApiView(
-      process.platform === "darwin"
-        ? "/youtube/toolbar-mac"
-        : "/youtube/toolbar",
-      (view) => {
-        win.addBrowserView(view);
-        win.setTopBrowserView(view);
-        const [width] = win.getSize();
-        view.setBounds({
-          height: 40,
-          width,
-          x: 0,
-          y: 0,
-        });
-        view.setBackgroundColor("transparent");
-        view.setAutoResize({ width: true });
-        if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
-      }
-    );
+    const toolbarView = await createApiView("/youtube/toolbar", (view) => {
+      win.addBrowserView(view);
+      win.setTopBrowserView(view);
+      const [width] = win.getSize();
+      view.setBounds({
+        height: 40,
+        width,
+        x: 0,
+        y: 0,
+      });
+      view.setBackgroundColor("transparent");
+      view.setAutoResize({ width: true });
+      if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
+    });
     serverMain.on("app.loadEnd", () => {
       win.removeBrowserView(loadingView);
       win.setTopBrowserView(toolbarView);
@@ -312,11 +307,11 @@ export default async function () {
 
   serverMain.on("app.minimize", (ev) => {
     const window = BrowserWindow.fromWebContents(ev.sender);
-    if (window && window.minimizable) window.minimize();
+    if (window && window.isMinimizable()) window.minimize();
   });
   serverMain.on("app.maximize", (ev) => {
     const window = BrowserWindow.fromWebContents(ev.sender);
-    if (window && window.maximizable)
+    if (window && window.isMaximizable())
       window.isMaximized() ? window.unmaximize() : window.maximize();
   });
   let forcedQuit = false;

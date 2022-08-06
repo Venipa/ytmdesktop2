@@ -69,6 +69,10 @@ export default class AppProvider extends BaseProvider implements AfterInit {
         settingsWindow = await createAppWindow({
           parent: this.windowContext.main,
         });
+        settingsWindow.setMinimizable(true);
+        settingsWindow.on("close", () => {
+          this.windowContext.main.show();
+        });
         this.windowContext.views.settingsWindow = settingsWindow as any;
       } else {
         settingsWindow.show();

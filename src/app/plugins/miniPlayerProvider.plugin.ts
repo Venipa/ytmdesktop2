@@ -22,7 +22,7 @@ export default class MiniPlayerProvider extends BaseProvider implements AfterIni
       .miniPlayerWindow as any as BrowserWindow;
     if (!mpWindow || mpWindow.isDestroyed()) {
       mpWindow = await createAppWindow({
-        parent: this.windowContext.main,
+        // parent: this.windowContext.main, 
         path: "/miniplayer",
         minWidth: 340,
         minHeight: 340,
@@ -31,7 +31,12 @@ export default class MiniPlayerProvider extends BaseProvider implements AfterIni
         height: 340,
         width: 540
       });
+      mpWindow.setMinimizable(true);
       this.windowContext.views.miniPlayerWindow = mpWindow as any;
+      this.windowContext.main.hide();
+      mpWindow.on("close", () => {
+        this.windowContext.main.show();
+      });
       mpId = mpWindow.id;
     } else {
       mpId = mpWindow.id;

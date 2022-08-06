@@ -1,8 +1,10 @@
 <template>
   <div class="h-full absolute inset-0 overflow-hidden bg-black flex flex-col">
     <div class="relative">
-      <control-bar title="Mini Player"
-                   class="bg-transparent border-b-0 z-20 relative">
+      <control-bar
+        title="Mini Player"
+        class="bg-transparent border-b-0 z-20 relative"
+      >
         <template #icon>
           <MiniPlayerIcon />
         </template>
@@ -10,69 +12,95 @@
           <span></span>
         </template>
       </control-bar>
-      <div class="absolute h-48 inset-x-0 bg-gradient-to-b from-black to-black/0 -top-32 z-10"></div>
+      <div
+        class="absolute h-48 inset-x-0 bg-gradient-to-b from-black to-black/0 -top-32 z-10"
+      ></div>
     </div>
-    <div class="absolute inset-0 bg-no-repeat bg-cover bg-center opacity-20 scale-125 blur-lg"
-         v-if="thumbnail"
-         :style="{ backgroundImage: `url(${thumbnail})` }">
-    </div>
+    <div
+      class="absolute inset-0 bg-no-repeat bg-cover bg-center opacity-20 scale-125 blur-lg"
+      v-if="thumbnail"
+      :style="{ backgroundImage: `url(${thumbnail})` }"
+    ></div>
     <div class="flex flex-col flex-1">
       <div class="flex flex-col relative z-10 pt-8 px-4 flex-1">
         <div class="flex items-start space-x-4">
-          <img :src="thumbnail"
-               alt=""
-               class="track-thumbnail"
-               loading="lazy"
-               v-if="thumbnail" />
-          <div v-else
-               class="track-thumbnail flex flex-shrink-0 items-center justify-center">
+          <img
+            :src="thumbnail"
+            alt=""
+            class="track-thumbnail"
+            loading="lazy"
+            v-if="thumbnail"
+          />
+          <div
+            v-else
+            class="track-thumbnail flex flex-shrink-0 items-center justify-center"
+          >
             <MiniPlayerIcon class="w-24 h-24 md:w-40 md:h-40 text-zinc-50" />
           </div>
           <div class="flex flex-col flex-1 h-full">
-            <div class="min-w-0 flex-auto space-y-1 font-semibold"
-                 v-if="track?.video">
-              <h2 class="text-zinc-400 text-sm md:text-base lg:text-lg leading-6 truncate">{{ track.video.title }}</h2>
-              <p class="text-zinc-50 text-lg"> {{ track.video.author }} </p>
-              <div class="text-zinc-400 text-sm space-x-1 flex items-center"
-                   v-if="time">
+            <div
+              class="min-w-0 flex-auto space-y-1 font-semibold"
+              v-if="track?.video"
+            >
+              <h2
+                class="text-zinc-400 text-sm md:text-base lg:text-lg leading-6 truncate"
+              >
+                {{ track.video.title }}
+              </h2>
+              <p class="text-zinc-50 text-lg">{{ track.video.author }}</p>
+              <div
+                class="text-zinc-400 text-sm space-x-1 flex items-center"
+                v-if="time"
+              >
                 <p>{{ time[1] }}</p>
               </div>
             </div>
             <div class="mt-auto flex-shrink-0">
-              <button type="button"
-                      class="player-btn"
-                      :class="{ 'active': !!playState?.liked }"
-                      @click="likeToggle"
-                      :disabled="trackBusy"
-                      aria-label="Like">
+              <button
+                type="button"
+                class="player-btn"
+                :class="{ active: !!playState?.liked }"
+                @click="likeToggle"
+                :disabled="trackBusy"
+                v-if="playState?.liked !== undefined"
+                aria-label="Like"
+              >
                 <LikeIcon />
               </button>
             </div>
           </div>
         </div>
       </div>
-      <div class="bg-zinc-50/5 mt-auto text-zinc-200 rounded-b-xl flex items-center relative z-10">
+      <div
+        class="bg-zinc-50/5 mt-auto text-zinc-200 rounded-b-xl flex items-center relative z-10"
+      >
         <div class="flex-auto flex items-center justify-evenly">
-          <button type="button"
-                  class="player-btn"
-                  :disabled="trackBusy"
-                  @click="prev"
-                  aria-label="Previous">
+          <button
+            type="button"
+            class="player-btn"
+            :disabled="trackBusy"
+            @click="prev"
+            aria-label="Previous"
+          >
             <PrevIcon />
           </button>
-          <button type="button"
-                  class="player-btn"
-                  :disabled="trackBusy"
-                  @click="() => backward()"
-                  aria-label="Rewind 10 seconds">
+          <button
+            type="button"
+            class="player-btn"
+            :disabled="trackBusy"
+            @click="() => backward()"
+            aria-label="Rewind 10 seconds"
+          >
             <BackwardIcon />
           </button>
         </div>
-        <button type="button"
-                class="player-btn-hero"
-                aria-label="Pause"
-                :disabled="trackBusy"
-                @click="() => !playing ? play() : pause()">
+        <button
+          type="button"
+          class="player-btn-hero"
+          aria-label="Pause"
+          :disabled="trackBusy"
+          @click="() => (!playing ? play() : pause())"
+        >
           <div class="h-10 w-10 fill-icon fill-zinc-700">
             <template v-if="playing">
               <PauseIcon />
@@ -83,18 +111,22 @@
           </div>
         </button>
         <div class="flex-auto flex items-center justify-evenly">
-          <button type="button"
-                  class="player-btn"
-                  :disabled="trackBusy"
-                  @click="() => forward()"
-                  aria-label="Skip 10 seconds">
+          <button
+            type="button"
+            class="player-btn"
+            :disabled="trackBusy"
+            @click="() => forward()"
+            aria-label="Skip 10 seconds"
+          >
             <ForwardIcon />
           </button>
-          <button type="button"
-                  class="player-btn"
-                  @click="next"
-                  :disabled="trackBusy"
-                  aria-label="Next">
+          <button
+            type="button"
+            class="player-btn"
+            @click="next"
+            :disabled="trackBusy"
+            aria-label="Next"
+          >
             <NextIcon />
           </button>
         </div>
@@ -129,12 +161,21 @@ import { TrackData } from "@/app/utils/trackData";
 import { refIpc } from "@/utils/Ipc";
 import { defineComponent, onMounted, ref } from "vue";
 import { intervalToDuration } from "date-fns";
-const zeroPad = (num) => String(num).padStart(2, '0');
-const createInterval = (dts: number[]) => dts.filter(Boolean)
-  .map(zeroPad)
-  .join(':');
+const zeroPad = (num) => String(num).padStart(2, "0");
+const createInterval = (dts: number[]) =>
+  dts.filter(Boolean).map(zeroPad).join(":");
 export default defineComponent({
-  components: { ControlBar, MiniPlayerIcon, PlayIcon, PauseIcon, NextIcon, PrevIcon, ForwardIcon, LikeIcon, BackwardIcon },
+  components: {
+    ControlBar,
+    MiniPlayerIcon,
+    PlayIcon,
+    PauseIcon,
+    NextIcon,
+    PrevIcon,
+    ForwardIcon,
+    LikeIcon,
+    BackwardIcon,
+  },
   computed: {
     thumbnail() {
       return this.track?.video.thumbnail.thumbnails[0]?.url;
@@ -144,22 +185,44 @@ export default defineComponent({
     },
     time() {
       const { duration, progress } = this.playState ?? {};
-      if (typeof duration !== "number" || typeof progress !== "number") return null;
-      const current = (({ hours, minutes, seconds }) => createInterval([hours, minutes, seconds]))(intervalToDuration({ start: (progress > duration ? duration : progress) * 1000, end: duration * 1000 }));
-      const end = (({ hours, minutes, seconds }) => createInterval([hours, minutes, seconds]))(intervalToDuration({ start: 0, end: duration * 1000 }));
-      return [current, end]
-    }
+      if (typeof duration !== "number" || typeof progress !== "number")
+        return null;
+      const current = (({ hours, minutes, seconds }) =>
+        createInterval([hours, minutes, seconds]))(
+        intervalToDuration({
+          start: (progress > duration ? duration : progress) * 1000,
+          end: duration * 1000,
+        })
+      );
+      const end = (({ hours, minutes, seconds }) =>
+        createInterval([hours, minutes, seconds]))(
+        intervalToDuration({ start: 0, end: duration * 1000 })
+      );
+      return [current, end];
+    },
   },
   setup() {
-    const [track, setTrack] = refIpc<TrackData>("TRACK_CHANGE", { ignoreUndefined: true, defaultValue: null });
-    const [playState, setPlayState] = refIpc<{ playing: boolean, progress: number, duration: number, liked: boolean }>("TRACK_PLAYSTATE");
+    const [track, setTrack] = refIpc<TrackData>("TRACK_CHANGE", {
+      ignoreUndefined: true,
+      defaultValue: null,
+    });
+    const [playState, setPlayState] = refIpc<{
+      playing: boolean;
+      progress: number;
+      duration: number;
+      liked: boolean;
+    }>("TRACK_PLAYSTATE");
     const trackBusy = ref(false);
     onMounted(() => {
-      Promise.all([window.ipcRenderer.invoke("api/track"), window.ipcRenderer.invoke("api/track/state")]).then(([trackData, playStateData]) => {
+      document.title = `YouTube Music - Mini Player`;
+      Promise.all([
+        window.ipcRenderer.invoke("api/track"),
+        window.ipcRenderer.invoke("api/track/state"),
+      ]).then(([trackData, playStateData]) => {
         setTrack(trackData);
         setPlayState(playStateData);
-      })
-    })
+      });
+    });
     return {
       track,
       trackBusy,
@@ -168,44 +231,51 @@ export default defineComponent({
         trackBusy.value = true;
         return window.ipcRenderer.invoke("api/track/next").finally(() => {
           trackBusy.value = false;
-        })
+        });
       },
       prev() {
         trackBusy.value = true;
         return window.ipcRenderer.invoke("api/track/prev").finally(() => {
           trackBusy.value = false;
-        })
+        });
       },
       forward(time = 10000) {
         trackBusy.value = true;
-        return window.ipcRenderer.invoke("api/track/forward", { time }).finally(() => {
-          trackBusy.value = false;
-        })
+        return window.ipcRenderer
+          .invoke("api/track/forward", { time })
+          .finally(() => {
+            trackBusy.value = false;
+          });
       },
       backward(time = 10000) {
         trackBusy.value = true;
-        return window.ipcRenderer.invoke("api/track/backward", { time }).finally(() => {
-          trackBusy.value = false;
-        })
+        return window.ipcRenderer
+          .invoke("api/track/backward", { time })
+          .finally(() => {
+            trackBusy.value = false;
+          });
       },
       pause() {
         trackBusy.value = true;
         return window.ipcRenderer.invoke("api/track/pause").finally(() => {
           trackBusy.value = false;
-        })
+        });
       },
       play() {
         trackBusy.value = true;
         return window.ipcRenderer.invoke("api/track/play").finally(() => {
           trackBusy.value = false;
-        })
+        });
       },
       likeToggle() {
+        if (typeof playState.value?.liked !== "boolean") return;
         trackBusy.value = true;
-        return window.ipcRenderer.invoke("api/track/like", !playState.value.liked).finally(() => {
-          trackBusy.value = false;
-        })
-      }
+        return window.ipcRenderer
+          .invoke("api/track/like", !playState.value.liked)
+          .finally(() => {
+            trackBusy.value = false;
+          });
+      },
     };
   },
 });
@@ -220,7 +290,6 @@ export default defineComponent({
   }
 
   &:active {
-
     @apply transform-gpu scale-95 bg-zinc-50/10;
   }
 
@@ -248,7 +317,6 @@ export default defineComponent({
     }
 
     &:active {
-
       @apply transform-gpu scale-95 bg-zinc-50/90;
     }
   }

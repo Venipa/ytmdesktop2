@@ -17,6 +17,7 @@ const log = logger.child({ label: "main" });
 export function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
 }
+export const appIconPath = path.resolve(__static, "favicon.ico");
 export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
   // eslint-disable-next-line prefer-const
   let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top } = appOptions ?? {};
@@ -32,9 +33,10 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
     minimizable: false,
     backgroundColor: "#000000",
     fullscreenable: !maxWidth && !maxWidth,
+    icon: appIconPath,
     frame: false,
     parent,
-    modal: top === true,
+    modal: parent && top === true,
     darkTheme: true,
     webPreferences: {
       // Use pluginOptions.nodeIntegration, leave this alone

@@ -18,7 +18,7 @@
     </div>
     <div @click="() => action('app.miniPlayer')"
          class="control-button relative w-4 h-4"
-         :disabled="!track"
+         :disabled="!playState?.playing"
          :class="miniPlayer && track ? { 'opacity-100': miniPlayer?.active, 'opacity-70': !miniPlayer?.active } : {}">
       <MiniPlayerIcon />
     </div>
@@ -75,6 +75,7 @@ export default defineComponent({
       defaultValue: null,
       ignoreUndefined: true,
     });
+    const [playState] = refIpc("TRACK_PLAYSTATE");
     const [isHome] = refIpc("nav.same-origin", {
       defaultValue: true,
       mapper: ([sameOrigin]) => !!sameOrigin,
