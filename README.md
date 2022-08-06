@@ -14,12 +14,14 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Venipa/ytmdesktop2?style=for-the-badge)](https://github.com/Venipa/ytmdesktop2/releases/latest)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Venipa/ytmdesktop2?style=for-the-badge)
 
-
 <p align="center">
   <img src="./screenshots/screenshot.jpg" alt="app" />
 </p>
 
 ## Features
+
+### Mini Player (Beta)
+![image](https://user-images.githubusercontent.com/17952364/183205288-abf687ed-7564-4158-859b-c7dad035db8d.png)
 
 ### Discord Rich Presence
 
