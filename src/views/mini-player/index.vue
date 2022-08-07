@@ -72,7 +72,7 @@
         </div>
       </div>
       <div
-        class="bg-zinc-50/5 mt-auto text-zinc-200 rounded-b-xl flex items-center relative z-10"
+        class="bg-zinc-50/5 mt-auto text-zinc-200 flex items-center relative z-10"
       >
         <div class="flex-auto flex items-center justify-evenly">
           <button
