@@ -13,12 +13,7 @@ const builderOptions = {
   },
   mac: {
     category: "public.app-category.music",
-    icon: "src/assets/icons/mac/icon.icns",
-    hardenedRuntime: true,
-    target: {
-      target: "default",
-      arch: ["arm64", "x64"],
-    },
+    icon: "src/assets/icons/mac/icon.icns"
   },
   dmg: {
     icon: "src/assets/icons/mac/icon.icns",
