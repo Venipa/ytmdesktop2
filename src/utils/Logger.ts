@@ -1,6 +1,6 @@
 import { createLogger, format, transports } from "winston";
 import { inspect } from "util";
-import DailyRotateFile from "winston-daily-rotate-file";
+// import DailyRotateFile from "winston-daily-rotate-file";
 import { app } from "electron";
 const myFormat = format.printf((info) => {
   const { level, message, timestamp, ...meta } = info;
@@ -43,17 +43,6 @@ if (process.env.NODE_ENV !== "production") {
       ),
     });
   logger.add(cliFormat("debug"));
-} else {
-  logger.add(
-    new DailyRotateFile({
-      filename: "error-%DATE%.log",
-      maxFiles: "14d",
-      maxSize: "10m",
-      zippedArchive: true,
-      level: "error",
-      dirname: app.getPath("appData")
-    })
-  );
 }
 
 export default logger;

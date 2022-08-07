@@ -41,7 +41,7 @@ export function refIpc<T, R = T>(
         const newVal = objMap((vArgs as any) as T, handlerName);
         if (ignoreUndefined && typeof newVal === "undefined") return;
         state.value = newVal;
-        console.log(`[IPC:Receiving@${handlerName}] `, ev, ...data);
+        // console.log(`[IPC:Receiving@${handlerName}] `, ev, ...data);
       }) as IpcHandler;
       return acc;
     },

@@ -7,6 +7,7 @@ export const API_ROUTES = {
   TRACK_CONTROL_FORWARD: "api/track/forward",
   TRACK_CONTROL_BACKWARD: "api/track/backward",
   TRACK_CONTROL_PLAY: "api/track/play",
+  TRACK_CONTROL_SEEK: "api/track/seek",
   TRACK_CONTROL_PAUSE: "api/track/pause",
   TRACK_CONTROL_TOGGLE_PLAY: "api/track/toggle-play-state",
   TRACK_SOCKET: "api/socket"

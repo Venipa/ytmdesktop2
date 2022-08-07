@@ -5,6 +5,7 @@ import SettingsProvider from "./settingsProvider.plugin";
 import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import TrackProvider from "./trackProvider.plugin";
 import { API_ROUTES } from "../utils/eventNames";
+import { clamp } from "lodash-es";
 @IpcContext
 export default class ApiProvider
   extends BaseProvider
@@ -74,11 +75,11 @@ export default class ApiProvider
         .then(() => this.trackProvider.currentSongIsLiked())
         .catch(() => false)
         .then((isLiked) => {
-          this.trackProvider.setTrackState(state => {
+          this.trackProvider.setTrackState((state) => {
             state.liked = isLiked;
           });
           return isLiked;
-        })
+        });
   }
   @IpcHandle(API_ROUTES.TRACK_CURRENT_STATE)
   async getTrackState() {
@@ -97,6 +98,13 @@ export default class ApiProvider
       this.views.youtubeView.webContents.send("track:seek", {
         time,
       });
+  }
+  @IpcHandle(API_ROUTES.TRACK_CONTROL_SEEK)
+  async seekTrack(_ev, time) {
+    if (typeof time !== "number") return;
+    this.views.youtubeView.webContents.send("track:seek", {
+      time,
+    });
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_BACKWARD)
   async backwardTrack(_ev, data) {

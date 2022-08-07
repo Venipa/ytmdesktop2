@@ -7,8 +7,11 @@ export default () => {
      */
     let media;
     if (data && typeof data.time === "number") {
-      if ((media = document.querySelector("video.video-stream.html5-main-video"))) {
-        media.currentTime += data.time / 1000;
+      if (
+        (media = document.querySelector("video.video-stream.html5-main-video"))
+      ) {
+        if (data.type === "seek") media.currentTime = data.time / 1000;
+        else media.currentTime += data.time / 1000;
       }
     }
   }

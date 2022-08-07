@@ -52,6 +52,8 @@
                 class="text-zinc-400 text-sm space-x-1 flex items-center"
                 v-if="time"
               >
+                <p>{{ time[0] }}</p>
+                <span>/</span>
                 <p>{{ time[1] }}</p>
               </div>
             </div>
@@ -71,64 +73,74 @@
           </div>
         </div>
       </div>
-      <div
-        class="bg-zinc-50/5 mt-auto text-zinc-200 flex items-center relative z-10"
-      >
-        <div class="flex-auto flex items-center justify-evenly">
-          <button
-            type="button"
-            class="player-btn"
-            :disabled="trackBusy"
-            @click="prev"
-            aria-label="Previous"
-          >
-            <PrevIcon />
-          </button>
-          <button
-            type="button"
-            class="player-btn"
-            :disabled="trackBusy"
-            @click="() => backward()"
-            aria-label="Rewind 10 seconds"
-          >
-            <BackwardIcon />
-          </button>
-        </div>
-        <button
-          type="button"
-          class="player-btn-hero"
-          aria-label="Pause"
-          :disabled="trackBusy"
-          @click="() => (!playing ? play() : pause())"
+      <div class="flex flex-col relative z-10">
+        <div
+          class="group pt-4 -mt-4"
+          v-if="time"
         >
-          <div class="h-10 w-10 fill-icon fill-zinc-700">
-            <template v-if="playing">
-              <PauseIcon />
-            </template>
-            <template v-else>
-              <PlayIcon />
-            </template>
+          <div
+            class="h-1 group-hover:h-2 bg-white transition-all ease-in-out duration-150"
+            :style="{ width: `${time[2]}%`, maxWidth: '100%' }"
+            ref="progressHandle"
+          ></div>
+        </div>
+        <div class="bg-zinc-50/5 mt-auto text-zinc-200 flex items-center">
+          <div class="flex-auto flex items-center justify-evenly">
+            <button
+              type="button"
+              class="player-btn"
+              :disabled="trackBusy"
+              @click="prev"
+              aria-label="Previous"
+            >
+              <PrevIcon />
+            </button>
+            <button
+              type="button"
+              class="player-btn"
+              :disabled="trackBusy"
+              @click="() => backward()"
+              aria-label="Rewind 10 seconds"
+            >
+              <BackwardIcon />
+            </button>
           </div>
-        </button>
-        <div class="flex-auto flex items-center justify-evenly">
           <button
             type="button"
-            class="player-btn"
+            class="player-btn-hero"
+            aria-label="Pause"
             :disabled="trackBusy"
-            @click="() => forward()"
-            aria-label="Skip 10 seconds"
+            @click="() => (!playing ? play() : pause())"
           >
-            <ForwardIcon />
+            <div class="h-10 w-10 fill-icon fill-zinc-700">
+              <template v-if="playing">
+                <PauseIcon />
+              </template>
+              <template v-else>
+                <PlayIcon />
+              </template>
+            </div>
           </button>
-          <button
-            type="button"
-            class="player-btn"
-            @click="next"
-            :disabled="trackBusy"
-            aria-label="Next"
-          >
-            <NextIcon />
-          </button>
+          <div class="flex-auto flex items-center justify-evenly">
+            <button
+              type="button"
+              class="player-btn"
+              :disabled="trackBusy"
+              @click="() => forward()"
+              aria-label="Skip 10 seconds"
+            >
+              <ForwardIcon />
+            </button>
+            <button
+              type="button"
+              class="player-btn"
+              @click="next"
+              :disabled="trackBusy"
+              aria-label="Next"
+            >
+              <NextIcon />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -162,8 +174,13 @@ import { refIpc } from "@/utils/Ipc";
 import { defineComponent, onMounted, ref } from "vue";
 import { intervalToDuration } from "date-fns";
 const zeroPad = (num) => String(num).padStart(2, "0");
-const createInterval = (dts: number[]) =>
-  dts.filter(Boolean).map(zeroPad).join(":");
+const createInterval = (dts: number[]): [string, number] => [
+  dts
+    .filter((p, i) => (i === 0 ? Boolean(p) : true))
+    .map(zeroPad)
+    .join(":"),
+  dts.length,
+];
 export default defineComponent({
   components: {
     ControlBar,
@@ -183,22 +200,27 @@ export default defineComponent({
     playing() {
       return !!this.playState?.playing;
     },
-    time() {
-      const { duration, progress } = this.playState ?? {};
+    time(): [string, string, number] {
+      const { duration, uiProgress: progress } = this.playState ?? {};
       if (typeof duration !== "number" || typeof progress !== "number")
         return null;
-      const current = (({ hours, minutes, seconds }) =>
+      const [current] = (({ hours, minutes, seconds }) =>
         createInterval([hours, minutes, seconds]))(
         intervalToDuration({
-          start: (progress > duration ? duration : progress) * 1000,
+          start:
+            duration * 1000 -
+            (progress > duration ? duration : Math.floor(progress)) * 1000,
           end: duration * 1000,
         })
       );
-      const end = (({ hours, minutes, seconds }) =>
+      const [end, endPad] = (({ hours, minutes, seconds }) =>
         createInterval([hours, minutes, seconds]))(
         intervalToDuration({ start: 0, end: duration * 1000 })
-      );
-      return [current, end];
+      ) as [string, number];
+      const timePad = endPad * 3 + 1;
+      const percentage =
+        ((progress > duration ? duration : progress) / duration) * 100;
+      return [current.padEnd(timePad), end.padStart(timePad), percentage];
     },
   },
   setup() {
@@ -223,10 +245,12 @@ export default defineComponent({
         setPlayState(playStateData);
       });
     });
+    const progressHandle = ref<HTMLElement>(null);
     return {
       track,
       trackBusy,
       playState,
+      progressHandle,
       next() {
         trackBusy.value = true;
         return window.ipcRenderer.invoke("api/track/next").finally(() => {
@@ -272,6 +296,29 @@ export default defineComponent({
         trackBusy.value = true;
         return window.ipcRenderer
           .invoke("api/track/like", !playState.value.liked)
+          .finally(() => {
+            trackBusy.value = false;
+          });
+      },
+      setCurrentTime(ev: PointerEvent) {
+        if (!this.playState) return;
+        const [el, progress] = [
+          ev.currentTarget as HTMLDivElement,
+          progressHandle.value,
+        ];
+        const percSelected = ev.x / el.clientWidth;
+        const percCurrent = progress.clientWidth / el.clientWidth
+        const { duration } = this.playState;
+        const seekTime = Math.floor(duration * (percSelected - percCurrent)) * 1000;
+        console.log({
+          progressMax: el.clientWidth,
+          progressValue: progress.clientWidth,
+          value: ev.x,
+          duration,
+        });
+        trackBusy.value = true;
+        return window.ipcRenderer
+          .invoke("api/track/seek", seekTime)
           .finally(() => {
             trackBusy.value = false;
           });

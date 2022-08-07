@@ -9,6 +9,7 @@ type TrackState = {
   id: string;
   playing: boolean;
   progress: number;
+  uiProgress?: number;
   duration: number;
   liked: boolean;
 };
@@ -111,6 +112,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
         duration: this.getTrackDuration(),
         liked: isLiked,
         progress: 0,
+        uiProgress: 0
       });
     }
   }
@@ -150,16 +152,18 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     if (this._trackState) {
       this.setTrackState((state) => {
         state.playing = isPlaying;
-        state.progress = currentUIProgress;
+        state.progress = progressSeconds;
+        state.uiProgress = uiTimeInfo[0];
         state.liked = isLiked;
-        state.duration = this.getTrackDuration();
+        state.duration = uiTimeInfo[1];
       });
     } else {
       this.setTrackState({
         playing: isPlaying,
-        progress: currentUIProgress,
+        progress: progressSeconds,
+        uiProgress: uiTimeInfo[0],
         liked: isLiked,
-        duration: this.getTrackDuration(),
+        duration: uiTimeInfo[1],
         id: this._activeTrackId,
       });
     }
