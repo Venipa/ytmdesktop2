@@ -6,6 +6,7 @@ import { MediaServiceProvider } from "xosms";
 import { XOSMS } from "@/app/utils/xosms-types";
 import { TrackData } from "@/app/utils/trackData";
 import ApiProvider from "./apiProvider.plugin";
+import IPC_EVENT_NAMES from "../utils/eventNames";
 
 @IpcContext
 export default class MediaControlProvider extends BaseProvider
@@ -46,7 +47,7 @@ export default class MediaControlProvider extends BaseProvider
       );
   }
 
-  @IpcOn("track:play-state")
+  @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE)
   private __handleTrackMediaOSControl(_ev, isPlaying: boolean) {
     if (!this.mediaProviderEnabled()) return;
 
@@ -98,7 +99,7 @@ export default class MediaControlProvider extends BaseProvider
     this._mediaProvider.previousButtonEnabled = true;
     this._mediaProvider.nextButtonEnabled = true;
     } catch (ex) {
-      this.logger.error(ex); // 
+      this.logger.error(ex); // rip media service
     }
     this.logger.debug([
       this._mediaProvider.title,

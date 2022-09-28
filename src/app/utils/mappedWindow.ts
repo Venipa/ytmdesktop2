@@ -7,6 +7,7 @@ export interface BrowserWindowViews<T> {
 }
 
 export function getViewObject(bwv: { [key: string]: BrowserView }) {
+  if (!bwv) return {};
   return Object.entries(bwv)
     .filter(([, view]) => view?.webContents)
     .map(([key, view]) => ({ id: view.webContents.id, name: key }))
@@ -18,7 +19,7 @@ export function createWindowContext<T>(_data: {
 }): BrowserWindowViews<T> {
   return new (class implements BrowserWindowViews<T> {
     main: BrowserWindow = _data.main;
-    views: { [key: string]: BrowserView } & T = _data.views;
+    views: { [key: string]: BrowserView } & T = _data.views || {} as any;
     sendToAllViews(ev: string, ...args: any[]): void {
       return (Object.values(this.views) as BrowserView[])
         .filter(

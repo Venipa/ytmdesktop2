@@ -16,9 +16,7 @@ const injectTrackListener = () => {
                 json
                   ? {
                       video: json.videoDetails,
-                      context: json.microformat
-                        ? json.microformat.microformatDataRenderer
-                        : null,
+                      context: json.microformat ? json.microformat.microformatDataRenderer : null,
                     }
                   : null
               );
@@ -28,7 +26,7 @@ const injectTrackListener = () => {
           }
         }
       },
-      false
+      { passive: true }
     );
     return xhr;
   }

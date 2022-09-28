@@ -1,6 +1,5 @@
 import type pd from "./preload/base";
 
-
 declare const __static: any;
 declare const __dirname: string;
 interface PreloadContext {
@@ -9,12 +8,16 @@ interface PreloadContext {
   process: typeof pd.process;
   __ytd_plugins: any;
   __ytd_settings: any;
-
 }
 declare global {
   declare const __static: any;
   declare const __dirname: string;
   interface Window extends globalThis, PreloadContext {
     [key: string]: any;
+  }
+  declare module '*.svg' {
+    import type Vue, {VueConstructor} from 'vue';
+    const content: VueConstructor<Vue>;
+    export default content;
   }
 }

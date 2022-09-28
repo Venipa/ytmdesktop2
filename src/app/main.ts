@@ -86,7 +86,7 @@ export default async function () {
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
         contextIsolation: true,
-        backgroundThrottling: false,
+        backgroundThrottling: false
       },
       ...(options || {}),
     });

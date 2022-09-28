@@ -1,7 +1,8 @@
+import IPC_EVENT_NAMES from "@/app/utils/eventNames";
+
 const requiredClasses = ["video-stream", "html5-main-video"];
 function getUITimeInfo() {
-  const timeInfoId =
-    'ytmusic-player-bar[slot="player-bar"] .left-controls .time-info';
+  const timeInfoId = 'ytmusic-player-bar[slot="player-bar"] .left-controls .time-info';
   const el = document.body.querySelector(timeInfoId);
   const parseTime = function (time) {
     const sec = time
@@ -23,8 +24,7 @@ function getUITimeInfo() {
     return sec;
   };
   if (el) {
-    const [start, end] = ((x) =>
-      x && x.length > 1 ? x.map(parseTime) : [null, null])(
+    const [start, end] = ((x) => (x && x.length > 1 ? x.map(parseTime) : [null, null]))(
       el.innerText.match(/(\d+)\:(\d+)/g)
     );
     return [start, end];
@@ -41,30 +41,20 @@ export default () => {
    */
   function progressFn() {
     const uiTime = getUITimeInfo();
-    window.api.emit("track:play-state", !this.paused, this.currentTime, uiTime);
+    window.api.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, !this.paused, this.currentTime, uiTime);
   }
   HTMLVideoElement.prototype.play = function () {
     defaultPlay.call(this, ...arguments);
     if (requiredClasses.every((x) => this.classList.contains(x))) {
       const uiTime = getUITimeInfo();
-      window.api.emit(
-        "track:play-state",
-        !this.paused,
-        this.currentTime,
-        uiTime
-      );
+      window.api.emit("track:play-state", !this.paused, this.currentTime, uiTime);
     }
   };
   HTMLVideoElement.prototype.pause = function () {
     defaultPause.call(this, ...arguments);
     if (requiredClasses.every((x) => this.classList.contains(x))) {
       const uiTime = getUITimeInfo();
-      window.api.emit(
-        "track:play-state",
-        !this.paused,
-        this.currentTime,
-        uiTime
-      );
+      window.api.emit("track:play-state", !this.paused, this.currentTime, uiTime);
     }
   };
   HTMLVideoElement.prototype.load = function () {
@@ -75,7 +65,7 @@ export default () => {
       this.getAttribute(progressFnHookName) !== "true"
     ) {
       this.setAttribute(progressFnHookName, "true");
-      this.addEventListener("timeupdate", progressFn);
+      this.addEventListener("timeupdate", progressFn, { passive: true });
     }
   };
 };

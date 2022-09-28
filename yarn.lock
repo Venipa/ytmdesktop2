@@ -4140,10 +4140,10 @@ electron-updater@^5.2.1:
     semver "^7.3.5"
     typed-emitter "^2.1.0"
 
-electron@^19.0.10:
-  version "19.0.11"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-19.0.11.tgz#0c0a52abc08694fd38916d9270baf45bb7752a27"
-  integrity sha512-GPM6C1Ze17/gR4koTE171MxrI5unYfFRgXQdkMdpWM2Cd55LMUrVa0QHCsfKpsaloufv9T65lsOn0uZuzCw5UA==
+electron@^19.1.0:
+  version "19.1.0"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-19.1.0.tgz#ba37cd7419b645c82ac627af7be81b6d5e2828de"
+  integrity sha512-5o9EEYx0bI0p+L0eSoS8n3gLrEvkdnzwSZ/hnkPoUfuAs/CONCI/TEqswSppeeJ/pi5gXf3/B7hVTNaZZbIdnw==
   dependencies:
     "@electron/get" "^1.14.1"
     "@types/node" "^16.11.26"

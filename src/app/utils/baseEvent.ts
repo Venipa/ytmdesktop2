@@ -4,10 +4,7 @@ import { Logger } from "winston";
 import { BaseProvider } from "./baseProvider";
 import { serverMain } from "./serverEvents";
 export interface OnEventExecute {
-  execute: (
-    ev: IpcMainEvent | any,
-    ...args: any[]
-  ) => Promise<any> | any | void;
+  execute: (ev: IpcMainEvent | any, ...args: any[]) => Promise<any> | any | void;
 }
 export interface OnEventHandle {
   handle: (ev: IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any;
@@ -18,9 +15,9 @@ export interface IBaseEvent {
   readonly getProvider: <T>(name: string) => BaseProvider & T;
   readonly app: App;
 }
-
+type BaseEventType = "on" | "once" | "handle" | "server";
 export class BaseEvent implements IBaseEvent {
-  private __type: "on" | "once" | "handle";
+  private __type: BaseEventType;
   private _loggerInstance: Logger;
   private _providers: { [key: string]: BaseProvider & any } = {};
   private _app: App;
@@ -42,11 +39,8 @@ export class BaseEvent implements IBaseEvent {
   __registerApp(app: App) {
     this._app = app;
   }
-  constructor(
-    private _eventName: string,
-    type: "on" | "once" | "handle" = "on"
-  ) {
-    if (!["on", "once", "handle"].includes(type)) {
+  constructor(private _eventName: string, type: BaseEventType = "server") {
+    if (!["on", "once", "handle", "server"].includes(type)) {
       throw new Error(`Invalid event type ${type}`);
     }
     this._loggerInstance = logger.child({ moduleName: `event/${_eventName}` });
@@ -56,11 +50,10 @@ export class BaseEvent implements IBaseEvent {
   __prepare() {
     const type = this.__type;
     const func = (...args: any[]) => {
-      return type === "handle"
-        ? Promise.resolve((this as any)["handle"](...args))
-        : (this as any)["execute"](...args);
+      return type === "handle" ? Promise.resolve((this as any)["handle"](...args)) : (this as any)["execute"](...args);
     };
     this.logger.debug(`registered "${this.__type}" event "${this.eventName}"`);
-    serverMain[type](this.eventName, func);
+    if (type === "server") serverMain.onServer(this.eventName, func);
+    else serverMain[type](this.eventName, func);
   }
 }

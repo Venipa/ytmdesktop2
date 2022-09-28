@@ -22,7 +22,7 @@
     ],
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ],
       "@src/*": [
         "./src/*"
@@ -44,7 +44,6 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "src/**/*.svg",
-    "src/**/*.js",
     "tests/**/*.ts",
     "tests/**/*.tsx",
     "src/preload/*.ts"

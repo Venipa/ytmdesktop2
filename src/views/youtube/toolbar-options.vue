@@ -18,8 +18,8 @@
     </button>
     <button @click="() => action('app.miniPlayer')"
             class="control-button relative w-4 h-4"
-            :disabled="!playState?.playing"
-            :class="miniPlayer && track ? { 'opacity-100': miniPlayer?.active, 'opacity-70': !miniPlayer?.active } : {}">
+            :disabled="!playState"
+            :class="miniPlayer ? { 'opacity-100': miniPlayer?.active, 'opacity-70': !miniPlayer?.active } : {}">
       <MiniPlayerIcon />
     </button>
     <button @click="() => toggleSetting('discord.enabled')"

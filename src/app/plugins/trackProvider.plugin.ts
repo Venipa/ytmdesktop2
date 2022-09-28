@@ -5,6 +5,9 @@ import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
 import { serverMain } from "@/app/utils/serverEvents";
 import { TrackData } from "@/app/utils/trackData";
 import DiscordProvider from "./discordProvider.plugin";
+import IPC_EVENT_NAMES from "../utils/eventNames";
+import { clone } from "lodash-es";
+import ApiProvider from "./apiProvider.plugin";
 type TrackState = {
   id: string;
   playing: boolean;
@@ -13,7 +16,9 @@ type TrackState = {
   duration: number;
   liked: boolean;
 };
-const tracks: { [id: string]: TrackData } = {};
+const tracks: {
+  [id: string]: TrackData;
+} = {};
 @IpcContext
 export default class TrackProvider extends BaseProvider implements AfterInit {
   private _activeTrackId: string;
@@ -47,9 +52,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   }
   async getActiveTrackByDOM() {
     return this.views.youtubeView.webContents
-      .executeJavaScript(
-        `document.querySelector("a.ytp-title-link.yt-uix-sessionlink").href`
-      )
+      .executeJavaScript(`document.querySelector("a.ytp-title-link.yt-uix-sessionlink").href`)
       .then((href) => new URLSearchParams(href.split("?")[1])?.get("v"))
       .catch(() => null);
   }
@@ -64,7 +67,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       (await this.getActiveTrackByDOM()) === track.video.videoId
     ) {
       this._activeTrackId = track.video.videoId;
-      serverMain.emitServer("track:change", this.trackData);
+      this.pushTrackToViews(track);
     }
   }
   @IpcOn("track:title-change", {
@@ -75,9 +78,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   }
   async currentSongIsLiked(lazy?: boolean) {
     return (
-      lazy
-        ? new Promise<void>((resolve) => setTimeout(() => resolve(), 500))
-        : Promise.resolve()
+      lazy ? new Promise<void>((resolve) => setTimeout(() => resolve(), 500)) : Promise.resolve()
     ).then(() =>
       this.views.youtubeView.webContents
         .executeJavaScript(
@@ -95,7 +96,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     );
   }
   @IpcOn("track:set-active", {
-    debounce: 1000
+    debounce: 1000,
   })
   private async __onActiveTrack(trackId: string) {
     if (this._activeTrackId === trackId) return;
@@ -105,18 +106,25 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     if (this.trackData) {
       const td = this.trackData;
       const isLiked = await this.currentSongIsLiked();
-      serverMain.emitServer("track:change", td);
+      this.pushTrackToViews(td);
       this.setTrackState({
         id: trackId,
         playing: this.playing,
         duration: this.getTrackDuration(),
         liked: isLiked,
         progress: 0,
-        uiProgress: 0
+        uiProgress: 0,
       });
     }
   }
-  @IpcOn("track:play-state", {
+  public async pushTrackToViews(track: TrackData) {
+    this.views.toolbarView.webContents.send("track:title", track?.video?.title);
+    this.views.youtubeView.webContents.send("track.change", track.video.videoId);
+    this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
+    const api = this.getProvider("api") as ApiProvider;
+    api.sendMessage("track:change", { ...track });
+  }
+  @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, {
     debounce: 100,
   })
   private async __onPlayStateChange(
@@ -139,14 +147,10 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     const discordProvider = this.getProvider("discord") as DiscordProvider;
     if (isPlaying && !discordProvider.isConnected && discordProvider.enabled)
       await discordProvider.enable();
-    const isUIViewRequired =
-      uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1];
+    const isUIViewRequired = uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1];
 
-    const [currentUIProgress] = isUIViewRequired
-      ? uiTimeInfo
-      : [progressSeconds];
-    if (isUIViewRequired)
-      await discordProvider.updatePlayState(isPlaying, currentUIProgress);
+    const [currentUIProgress] = isUIViewRequired ? uiTimeInfo : [progressSeconds];
+    if (isUIViewRequired) await discordProvider.updatePlayState(isPlaying, currentUIProgress);
     else await discordProvider.updatePlayState(isPlaying, progressSeconds);
     const isLiked = await this.currentSongIsLiked();
     if (this._trackState) {

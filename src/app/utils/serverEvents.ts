@@ -25,6 +25,10 @@ class ElectronEmitter extends EventEmitter {
     const validEmit = super.emit(type, ...args);
     return validEmit;
   }
+  onServer(type: string, listener: Listener): this {
+    super.on(type, listener);
+    return this;
+  }
   handle: typeof ipcMain.handle = (type: string, listener: Listener) => {
     return ipcMain.handle(type, listener);
   }
