@@ -4,6 +4,7 @@ export const createApiView = async (path: string, postFunc?: (ctx: BrowserView) 
   const view = new BrowserView({
     webPreferences: {
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
+      sandbox: false,
       contextIsolation: true,
       preload: resolve(__dirname, "preload-api.js")
     },
@@ -22,6 +23,7 @@ export const createView = async (preload: string, postFunc?: (ctx: BrowserView) 
     webPreferences: {
       disableHtmlFullscreenWindowResize: true,
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
+      sandbox: false,
       contextIsolation: false, // window object is required to be rewritten for tracking current track
       preload,
     },

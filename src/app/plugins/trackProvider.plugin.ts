@@ -15,6 +15,7 @@ type TrackState = {
   uiProgress?: number;
   duration: number;
   liked: boolean;
+  disliked: boolean;
 };
 const tracks: {
   [id: string]: TrackData;
@@ -76,16 +77,21 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   private __onTitleChange(ev, trackId: string) {
     if (trackId) this.__onActiveTrack(trackId);
   }
-  async currentSongIsLiked(lazy?: boolean) {
+  /**
+   * 
+   * @param lazy 500ms timeout before throwing
+   * @returns [like, dislike] tuple
+   */
+  async currentSongLikeState(lazy?: boolean): Promise<[boolean, boolean]> {
     return (
       lazy ? new Promise<void>((resolve) => setTimeout(() => resolve(), 500)) : Promise.resolve()
     ).then(() =>
       this.views.youtubeView.webContents
         .executeJavaScript(
-          `document.querySelector("#like-button-renderer tp-yt-paper-icon-button.like").ariaPressed`
+          `[document.querySelector("#like-button-renderer tp-yt-paper-icon-button.like").ariaPressed, document.querySelector("#like-button-renderer tp-yt-paper-icon-button.dislike").ariaPressed]`
         )
-        .then((x) => x === "true")
-        .catch(() => false)
+        .then((values: string[]) => values.map(x => x === "true") as any)
+        .catch(() => [false, false])
     );
   }
   getTrackDuration() {
@@ -105,13 +111,14 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     this._activeTrackId = trackId;
     if (this.trackData) {
       const td = this.trackData;
-      const isLiked = await this.currentSongIsLiked();
+      const [isLiked, isDLiked] = await this.currentSongLikeState();
       this.pushTrackToViews(td);
       this.setTrackState({
         id: trackId,
         playing: this.playing,
         duration: this.getTrackDuration(),
         liked: isLiked,
+        disliked: isDLiked,
         progress: 0,
         uiProgress: 0,
       });
@@ -125,7 +132,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     api.sendMessage("track:change", { ...track });
   }
   @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, {
-    debounce: 100,
+    debounce: 100
   })
   private async __onPlayStateChange(
     _ev,
@@ -152,13 +159,14 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     const [currentUIProgress] = isUIViewRequired ? uiTimeInfo : [progressSeconds];
     if (isUIViewRequired) await discordProvider.updatePlayState(isPlaying, currentUIProgress);
     else await discordProvider.updatePlayState(isPlaying, progressSeconds);
-    const isLiked = await this.currentSongIsLiked();
+    const [isLiked, isDLiked] = await this.currentSongLikeState();
     if (this._trackState) {
       this.setTrackState((state) => {
         state.playing = isPlaying;
         state.progress = progressSeconds;
         state.uiProgress = uiTimeInfo[0];
         state.liked = isLiked;
+        state.disliked = isDLiked;
         state.duration = uiTimeInfo[1];
       });
     } else {
@@ -167,6 +175,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
         progress: progressSeconds,
         uiProgress: uiTimeInfo[0],
         liked: isLiked,
+        disliked: isDLiked,
         duration: uiTimeInfo[1],
         id: this._activeTrackId,
       });

@@ -2,12 +2,14 @@ import { IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { debounce } from "lodash-es";
 import { serverMain } from "./serverEvents";
 const classIpcStoreSymbol = Symbol("__ipcEvents");
+type IpcFilterOption<T extends Event> = (ev: T, ...args: any[]) => boolean;
 interface IpcContextEvent {
   name: string;
   type?: "once" | "handle";
   options?: {
     debounce?: number;
-    filter?: (ev: IpcMainEvent | IpcMainInvokeEvent, ...args: any[]) => boolean;
+    filter?: IpcFilterOption<IpcMainEvent> | IpcFilterOption<IpcMainInvokeEvent> | ((...args: any[]) => boolean);
+    passive?: boolean;
   };
 }
 export function IpcContextWithOptions() {
@@ -18,7 +20,7 @@ export function getRegisteredEventNames(classRef: any) {
     ?.filter(([, value]) => Boolean(value))
     .map(([, value]: [string, IpcContextEvent]) => value.name);
 }
-export function IpcContext<T extends { new (...args: any[]): {} }>(
+export function IpcContext<T extends { new(...args: any[]): {} }>(
   IpcContextBase: T
 ) {
   return class extends IpcContextBase {
@@ -35,8 +37,8 @@ export function IpcContext<T extends { new (...args: any[]): {} }>(
               if (
                 typeof (this as any)[method] === "function" &&
                 (options &&
-                options.filter &&
-                typeof options.filter === "function"
+                  options.filter &&
+                  typeof options.filter === "function"
                   ? options.filter(args[0], ...args.slice(1))
                   : true)
               ) {
@@ -62,7 +64,7 @@ export function IpcContext<T extends { new (...args: any[]): {} }>(
 }
 
 export function IpcOnce(event: string): MethodDecorator {
-  return function<T>(
+  return function <T>(
     target: any,
     propertyKey: string | symbol,
     _descriptor?: TypedPropertyDescriptor<T>
@@ -76,12 +78,9 @@ export function IpcOnce(event: string): MethodDecorator {
 }
 export function IpcOn(
   event: string,
-  options?: {
-    debounce?: number;
-    filter?: (ev: IpcMainEvent | string, ...args: any[]) => boolean;
-  }
+  options?: IpcContextEvent["options"]
 ): MethodDecorator {
-  return function<T>(
+  return function <T>(
     target: any,
     propertyKey: string | symbol,
     _descriptor?: TypedPropertyDescriptor<T>
@@ -95,12 +94,9 @@ export function IpcOn(
 }
 export function IpcHandle(
   event: string,
-  options?: {
-    debounce?: number;
-    filter?: (ev: IpcMainEvent | string, ...args: any[]) => boolean;
-  }
+  options?: IpcContextEvent["options"]
 ): MethodDecorator {
-  return function<T>(
+  return function <T>(
     target: any,
     propertyKey: string | symbol,
     _descriptor?: TypedPropertyDescriptor<T>

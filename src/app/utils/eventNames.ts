@@ -2,6 +2,8 @@ export const API_ROUTES = {
   TRACK_CURRENT: "api/track",
   TRACK_CURRENT_STATE: "api/track/state",
   TRACK_LIKE: "api/track/like",
+  TRACK_DISLIKE: "api/track/dislike",
+  TRACK_ACCENT: "api/track/accent",
   TRACK_CONTROL_NEXT: "api/track/next",
   TRACK_CONTROL_PREV: "api/track/prev",
   TRACK_CONTROL_FORWARD: "api/track/forward",

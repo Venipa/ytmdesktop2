@@ -3,7 +3,7 @@
     <svg
       class="loader"
       viewBox="0 0 100 100"
-      :style="{ width: size, height: size, color: color }"
+      :style="{ width: size, height: size, color: $attrs.color || color }"
       xmlns="http://www.w3.org/2000/svg"
     >
       <circle cx="50" cy="50" r="45" />
@@ -12,10 +12,12 @@
 </template>
 
 <script lang="ts">
+import { ref } from 'vue';
+
 export default {
   setup(p: any) {
-    const size = (p.size || 32) + "px";
-    const color = p.color || "#fff";
+    const size = ref((p.size || 32) + "px");
+    const color = ref(p.color || "#fff");
     return {
       enabled: p.enabled,
       size,

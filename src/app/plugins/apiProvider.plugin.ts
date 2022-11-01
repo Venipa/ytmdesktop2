@@ -6,11 +6,12 @@ import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import TrackProvider from "./trackProvider.plugin";
 import { API_ROUTES } from "../utils/eventNames";
 import { clamp } from "lodash-es";
+import Vibrant from "node-vibrant";
+import fetch from "node-fetch";
 @IpcContext
 export default class ApiProvider
   extends BaseProvider
-  implements AfterInit, OnDestroy
-{
+  implements AfterInit, OnDestroy {
   private _thread: ApiWorker;
   private _renderer: BrowserWindow;
   constructor(private _app: App) {
@@ -64,21 +65,52 @@ export default class ApiProvider
   async getTrackInformation() {
     return (this.getProvider("track") as TrackProvider)?.trackData;
   }
+  @IpcHandle(API_ROUTES.TRACK_ACCENT)
+  async getTrackAccent() {
+    const track = await this.getTrackInformation();
+    if (!track || !track.video || !track.video.thumbnail.thumbnails[0]?.url) return null;
+    return await fetch(track.video.thumbnail.thumbnails[0].url)
+      .then((th) => th.buffer())
+      .then((file) => Vibrant.from(file))
+      .then((clr) => clr.getPalette())
+      .then((clr) => clr.Vibrant.hex)
+      .catch(err => {
+        this.logger.error(err);
+        return null;
+      })
+  }
   @IpcHandle(API_ROUTES.TRACK_LIKE)
   async postTrackLike(_ev, like: boolean) {
-    const doLike = (await this.trackProvider.currentSongIsLiked()) === like;
+    const doLike = (await this.trackProvider.currentSongLikeState())?.[0] === like;
     if (!doLike)
       return this.views.youtubeView.webContents
         .executeJavaScript(
           `document.querySelector("#like-button-renderer tp-yt-paper-icon-button.like").click()`
         )
-        .then(() => this.trackProvider.currentSongIsLiked())
-        .catch(() => false)
-        .then((isLiked) => {
+        .then(() => this.trackProvider.currentSongLikeState())
+        .catch(() => [false])
+        .then(([isLiked]) => {
           this.trackProvider.setTrackState((state) => {
             state.liked = isLiked;
           });
           return isLiked;
+        });
+  }
+  @IpcHandle(API_ROUTES.TRACK_DISLIKE)
+  async postTrackDisLike(_ev, like: boolean) {
+    const likeState = (await this.trackProvider.currentSongLikeState())?.[1] === like;
+    if (!likeState)
+      return this.views.youtubeView.webContents
+        .executeJavaScript(
+          `document.querySelector("#like-button-renderer tp-yt-paper-icon-button.dislike").click()`
+        )
+        .then(() => this.trackProvider.currentSongLikeState())
+        .catch(() => [false, false])
+        .then(([, _likeState]) => {
+          this.trackProvider.setTrackState((state) => {
+            state.disliked = _likeState;
+          });
+          return _likeState;
         });
   }
   @IpcHandle(API_ROUTES.TRACK_CURRENT_STATE)

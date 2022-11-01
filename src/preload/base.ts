@@ -13,7 +13,8 @@ export default {
   process: {
     version: pkg.version,
     environment: process.env.NODE_ENV,
-    platform: process.platform
+    platform: process.platform,
+    isWin11: () => ipcRenderer.invoke("app.isWin11").catch(() => false)
   },
   api: {
     version: pkg.version,

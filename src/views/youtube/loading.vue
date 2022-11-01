@@ -59,7 +59,7 @@ $borderSize: 10px;
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background-image: url(../../assets/icons/png/512x512.png);
+    background-image: url(@/assets/icons/png/512x512.png);
     background-size: #{$size - $borderSize*2} #{$size - $borderSize*2};
     background-position: center;
     background-repeat: no-repeat;

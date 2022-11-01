@@ -7,6 +7,8 @@ import DiscordProvider from "./discordProvider.plugin";
 import { isDevelopment } from "../utils/devUtils";
 import { createAppWindow } from "../utils/windowUtils";
 import { serverMain } from "../utils/serverEvents";
+import { release as osRelease } from "os";
+const OS_RELEASE = osRelease();
 const STATE_PAUSE_TIME = isDevelopment ? 30e3 : 30e4;
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit {
@@ -89,6 +91,10 @@ export default class AppProvider extends BaseProvider implements AfterInit {
     const evName = "subwindow.show/" + windowName;
     if (serverMain.eventNames().includes(evName))
       serverMain.emitServer("subwindow.show/" + windowName, _ev);
+  }
+  @IpcHandle("app.isWin11")
+  async handleIsWin11() {
+    return OS_RELEASE?.startsWith("11.")
   }
   @IpcOn("subwindow.close")
   private __onSubWindowClose(_ev: IpcMainEvent, windowName?: string) {
