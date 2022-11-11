@@ -1,7 +1,6 @@
 import translations from "@/translations";
 import { Client as DiscordClient, Presence } from "discord-rpc";
 import { App } from "electron";
-import { debounce } from "lodash-es";
 
 import { AfterInit, BaseProvider } from "@/app/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
