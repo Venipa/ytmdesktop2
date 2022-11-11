@@ -24,6 +24,12 @@ jobs:
           sudo apt install libdbus-1-dev snapd
           sudo snap install snapcraft --classic
 
+      - if: matrix.os == 'windows-latest'
+        name: install windows deps
+        uses: GuillaumeFalourd/setup-windows10-sdk-action@v1.8
+        with:
+          sdk-version: 19041
+
       - name: Install Node.js, NPM and Yarn
         uses: actions/setup-node@v3
         with:
