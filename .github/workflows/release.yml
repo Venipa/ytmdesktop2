@@ -29,11 +29,16 @@ jobs:
         uses: GuillaumeFalourd/setup-windows10-sdk-action@v1.8
         with:
           sdk-version: 19041
-
+      - if: matrix.os == 'windows-latest'
+        name: Install windows deps (node-gyp)
+        shell: powershell
+        run: |
+          npm install --global node-gyp@latest
+          npm prefix -g | % {npm config set node_gyp "$_\node_modules\node-gyp\bin\node-gyp.js"}
       - name: Install Node.js, NPM and Yarn
         uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: 16.16.0
 
       - name: Install dependencies
         run: |
