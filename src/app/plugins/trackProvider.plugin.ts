@@ -8,6 +8,7 @@ import DiscordProvider from "./discordProvider.plugin";
 import IPC_EVENT_NAMES from "../utils/eventNames";
 import { clone } from "lodash-es";
 import ApiProvider from "./apiProvider.plugin";
+import { firstBy } from "thenby";
 type TrackState = {
   id: string;
   playing: boolean;
@@ -47,7 +48,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   constructor(private app: App) {
     super("track");
   }
-  async AfterInit() {}
+  async AfterInit() { }
   get trackData() {
     return tracks[this._activeTrackId];
   }
@@ -61,7 +62,12 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   @IpcOn("track:info-req")
   private async __onTrackInfo(ev, track: TrackData) {
     if (!track.video) return;
-    tracks[track.video.videoId] = track;
+    tracks[track.video.videoId] = {
+      ...track,
+      meta: {
+        thumbnail: track?.video?.thumbnail?.thumbnails?.sort(firstBy(d => d.height, 'desc'))[0]?.url
+      }
+    };
 
     if (
       track.video.videoId === this._activeTrackId ||
@@ -127,7 +133,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   public async pushTrackToViews(track: TrackData) {
     this.views.toolbarView.webContents.send("track:title", track?.video?.title);
     this.views.youtubeView.webContents.send("track.change", track.video.videoId);
-    this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
+    this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, { ...track });
     const api = this.getProvider("api") as ApiProvider;
     api.sendMessage("track:change", { ...track });
   }

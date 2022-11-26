@@ -85,7 +85,7 @@
               <img
                 :src="thumbnail"
                 alt=""
-                class="w-full object-center object-contain z-[6]"
+                class="w-full object-center object-contain z-[6] rounded-[inherit]"
                 loading="lazy"
               />
             </template>
@@ -268,7 +268,7 @@ export default defineComponent({
   },
   computed: {
     thumbnail() {
-      return this.track?.video.thumbnail.thumbnails[0]?.url;
+      return this.track?.meta?.thumbnail;
     },
     playing() {
       return !!this.playState?.playing;
