@@ -61,12 +61,13 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   }
 
   @IpcOn("track:info-req")
-  private async __onTrackInfo(ev, track: TrackData) {
-    if (!track.video) return;
-    tracks[track.video.videoId] = {
-      ...track,
+  private async __onTrackInfo(ev, ytTrack: TrackData) {
+    if (!ytTrack.video) return;
+    const track = tracks[ytTrack.video.videoId] = {
+      ...ytTrack,
       meta: {
-        thumbnail: (track?.video?.thumbnail?.thumbnails ?? track?.context?.thumbnail?.thumbnails)?.sort(firstBy(d => d.height, 'desc'))[0]?.url
+        thumbnail: (ytTrack?.video?.thumbnail?.thumbnails ?? ytTrack?.context?.thumbnail?.thumbnails)?.sort(firstBy(d => d.height, 'desc'))[0]?.url,
+        isAudioExclusive: ytTrack?.video?.musicVideoType === "MUSIC_VIDEO_TYPE_ATV"
       }
     };
 
@@ -131,13 +132,14 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       });
     }
   }
-  public async pushTrackToViews(track: TrackData) {
+  public async pushTrackToViews(trackRef: TrackData) {
+    const track = clone(trackRef);
     this.views.toolbarView.webContents.send("track:title", track?.video?.title);
     this.views.youtubeView.webContents.send("track.change", track.video.videoId);
-    this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, { ...track });
-    const api = this.getProvider("api") as ApiProvider;
-    api.sendMessage("track:change", { ...track });
+    this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
     this.getProvider<MediaControlProvider>("mediaController")?.handleTrackMediaOSControlChange(track);
+    const api = this.getProvider("api") as ApiProvider;
+    api.sendMessage("track:change", track);
   }
   @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, {
     debounce: 100
