@@ -22,10 +22,7 @@ export default class MediaControlProvider extends BaseProvider
     app.commandLine.appendSwitch("no-sandbox"); // avoid freeze, todo: workaround/await fix
   }
   async AfterInit() {
-    this._mediaProvider = ((msp) => {
-      msp.isEnabled = true;
-      return msp;
-    })(new MediaServiceProvider(this.app.name, this.app.name));
+    this._mediaProvider = (new MediaServiceProvider(this.app.name, this.app.name));
     if (this._mediaProvider) {
       this._mediaProvider.buttonPressed = (keyName, ...args) => {
         this.xosmsLog.debug(["button press", keyName, ...args]);
@@ -68,7 +65,7 @@ export default class MediaControlProvider extends BaseProvider
           `IsPlaying State: ${isPlaying}`,
           `XOSMS: ${XOSMS.PlaybackStatus[
             this._mediaProvider.playbackStatus
-          ]?.toString?.()}`,
+          ]?.toString?.()}`
         ].join(", ")
       );
     }
@@ -76,28 +73,28 @@ export default class MediaControlProvider extends BaseProvider
   private mediaProviderEnabled() {
     return this._mediaProvider && this._mediaProvider.isEnabled;
   }
-  @IpcOn("track:change")
-  private __handleTrackMediaOSControlChange(trackData: TrackData) {
-    if (!this.mediaProviderEnabled() || !trackData) return;
-    const albumThumbnail = trackData.video.thumbnail.thumbnails
-      .sort((a, b) => b.width - a.width)
-      .find((x) => x.url)?.url;
+  handleTrackMediaOSControlChange(trackData: TrackData) {
+    let isEnabled = this.mediaProviderEnabled();
+    if (isEnabled !== !!trackData) this._mediaProvider.isEnabled = isEnabled = !!trackData
+    if (!isEnabled) return;
+    const albumThumbnail = trackData.meta.thumbnail;
     try {
       this._mediaProvider.mediaType =
-      {
-        ["Video"]: XOSMS.MediaType.Video,
-        ["Music"]: XOSMS.MediaType.Music,
-        ["Image"]: XOSMS.MediaType.Image,
-      }[trackData.context.category] ?? XOSMS.MediaType.Video;
-    this._mediaProvider.playbackStatus = XOSMS.PlaybackStatus.Playing;
-    this._mediaProvider.albumArtist = trackData.video.author;
-    this._mediaProvider.albumTitle = trackData.context.pageOwnerDetails.name;
-    this._mediaProvider.artist = trackData.video.author;
-    this._mediaProvider.setThumbnail(XOSMS.ThumbnailType.Uri, albumThumbnail);
-    this._mediaProvider.title = trackData.video.title;
-    this._mediaProvider.trackId = trackData.video.videoId;
-    this._mediaProvider.previousButtonEnabled = true;
-    this._mediaProvider.nextButtonEnabled = true;
+        {
+          ["Video"]: XOSMS.MediaType.Video,
+          ["Music"]: XOSMS.MediaType.Music,
+          ["Image"]: XOSMS.MediaType.Image,
+        }[trackData.context.category] ?? XOSMS.MediaType.Video;
+      this._mediaProvider.playbackStatus = XOSMS.PlaybackStatus.Playing;
+      this._mediaProvider.albumArtist = trackData.video.author;
+      this._mediaProvider.albumTitle = trackData.context.pageOwnerDetails.name;
+      this._mediaProvider.artist = trackData.video.author;
+      this._mediaProvider.title = trackData.video.title;
+      if (albumThumbnail)
+        this._mediaProvider.setThumbnail(XOSMS.ThumbnailType.Uri, albumThumbnail);
+      this._mediaProvider.trackId = trackData.video.videoId;
+      this._mediaProvider.previousButtonEnabled = true;
+      this._mediaProvider.nextButtonEnabled = true;
     } catch (ex) {
       this.logger.error(ex); // rip media service
     }

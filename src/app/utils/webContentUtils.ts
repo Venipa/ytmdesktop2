@@ -1,5 +1,5 @@
 import { WebContents } from "electron";
-import { render } from "sass";
+import { compileAsync } from "sass";
 // @ts-ignore
 import youtubeInjectScript from "!raw-loader!../../youtube-inject.js";
 import logger from "@/utils/Logger";
@@ -18,12 +18,7 @@ export async function rootWindowInjectCustomCss(
   webContents: WebContents,
   scssFile: string
 ) {
-  const css = await new Promise<string>((resolve, reject) => {
-    render({ file: scssFile, outputStyle: "compressed" }, (err, result) => {
-      if (err) reject(err);
-      resolve(result ? result.css.toString() : null);
-    });
-  }).catch(() => null);
+  const css = await compileAsync(scssFile).then(r => (r.css)).catch(() => null);
   await webContents.executeJavaScript(
     `initializeYoutubeCustomCSS({ customCss: \`${css || ""}\` })`
   );

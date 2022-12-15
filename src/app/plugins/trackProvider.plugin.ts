@@ -9,6 +9,7 @@ import IPC_EVENT_NAMES from "../utils/eventNames";
 import { clone } from "lodash-es";
 import ApiProvider from "./apiProvider.plugin";
 import { firstBy } from "thenby";
+import MediaControlProvider from "./mediaControlProvider.plugin";
 type TrackState = {
   id: string;
   playing: boolean;
@@ -65,7 +66,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     tracks[track.video.videoId] = {
       ...track,
       meta: {
-        thumbnail: track?.video?.thumbnail?.thumbnails?.sort(firstBy(d => d.height, 'desc'))[0]?.url
+        thumbnail: (track?.video?.thumbnail?.thumbnails ?? track?.context?.thumbnail?.thumbnails)?.sort(firstBy(d => d.height, 'desc'))[0]?.url
       }
     };
 
@@ -136,6 +137,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, { ...track });
     const api = this.getProvider("api") as ApiProvider;
     api.sendMessage("track:change", { ...track });
+    this.getProvider<MediaControlProvider>("mediaController")?.handleTrackMediaOSControlChange(track);
   }
   @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, {
     debounce: 100

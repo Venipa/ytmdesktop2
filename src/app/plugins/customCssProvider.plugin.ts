@@ -42,9 +42,8 @@ export default class EventProvider extends BaseProvider implements AfterInit {
     ) {
       if (this.scssUpdateHandler)
         fs.unwatchFile(this.scssUpdateHandler), (this.scssUpdateHandler = null);
-      return;
     }
-    if (!this.scssUpdateHandler) {
+    if (!this.scssUpdateHandler && config.scssFileWatch) {
       fs.watchFile(
         config.scssFile,
         { interval: 1000 },

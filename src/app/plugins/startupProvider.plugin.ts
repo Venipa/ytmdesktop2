@@ -4,6 +4,7 @@ import { BaseProvider, AfterInit, BeforeStart } from "@/app/utils/baseProvider";
 import { basename, resolve } from "path";
 import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
 import { createTrayMenu } from "@/app/utils/trayMenu";
+import { isDevelopment } from "../utils/devUtils";
 @IpcContext
 export default class EventProvider extends BaseProvider
   implements AfterInit, BeforeStart {
@@ -17,9 +18,12 @@ export default class EventProvider extends BaseProvider
   constructor(private app: App) {
     super("startup");
     app.commandLine.appendSwitch("disable-http-cache");
-    app.setAsDefaultProtocolClient("ytm", process.execPath);
+    app.commandLine.appendSwitch("enable-gpu-rasterization", "enable-zero-copy"); // performance feature flags
+    app.commandLine.appendSwitch("enable-features", "CanvasOopRasterization,EnableDrDc"); // Enables Display Compositor to use a new gpu thread. todo: testing
+    if (isDevelopment)
+      app.commandLine.appendSwitch("disable-web-security"); // disable cors (also disables other security features) - currently dev only
   }
-  async BeforeStart() {}
+  async BeforeStart() { }
   private async initializeTray() {
     this._tray = new Tray(resolve(__static, "favicon.ico"));
     this._tray.setToolTip(`YouTube Music for Desktop`);
