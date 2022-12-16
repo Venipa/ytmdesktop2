@@ -42,11 +42,9 @@ tp-yt-paper-icon-button.ytmusic-settings-button {
   width: 40px;
   height: 40px;
 }
-#browse-page,
-#search-page,
-ytmusic-browse-response[hidden] {
-  &,
-  &[hidden] {
+
+ytmusic-browse-response {
+  &:not([hidden]) {
     display: block !important;
     visibility: visible !important;
   }
