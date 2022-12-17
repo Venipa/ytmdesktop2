@@ -2,8 +2,8 @@ import logger from "@/utils/Logger";
 import { App } from "electron";
 import { BrowserView } from "electron/main";
 import { Logger } from "winston";
+import { BaseProviderNames } from "ytmd";
 import { BrowserWindowViews } from "./mappedWindow";
-interface BaseProviderNames extends ProviderNames {}
 
 export interface BeforeStart {
   BeforeStart(app?: App): void | Promise<void>;

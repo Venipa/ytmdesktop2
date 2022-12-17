@@ -12,8 +12,8 @@ import type TrayProvider from "@/app/plugins/trayProvider.plugin";
 import type UpdateProvider from "@/app/plugins/updateProvider.plugin";
 import type AppProvider from "@/app/plugins/appProvider.plugin";
 
-declare global {
-  interface ProviderNames {
+declare module "ytmd" {
+  interface BaseProviderNames {
     api: ApiProvider
     app: AppProvider
     settings: SettingsProvider

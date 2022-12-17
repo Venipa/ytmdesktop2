@@ -21,3 +21,4 @@ declare global {
     export default content;
   }
 }
+
