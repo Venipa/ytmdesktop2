@@ -323,12 +323,12 @@ export default async function () {
     // dont allow prevent of quit if update queued
     if (
       forcedQuit ||
-      serviceCollection.getProvider<UpdateProvider>("update")
+      serviceCollection.getProvider("update")
         .updateQueuedForInstall
     )
       return;
     const settings =
-      serviceCollection.getProvider<SettingsProvider>("settings");
+      serviceCollection.getProvider("settings");
     if (settings.get("app.minimizeTrayOverride")) {
       serverMain.emit("app.trayState", null, "hidden");
       ev.preventDefault(); // prevent quit - minimize to tray

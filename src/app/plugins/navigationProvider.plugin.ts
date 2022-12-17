@@ -4,7 +4,7 @@ import { defaultUrl } from "@/app/utils/devUtils";
 import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 
 @IpcContext
-export default class EventProvider extends BaseProvider implements AfterInit {
+export default class NavigationProvider extends BaseProvider implements AfterInit {
   constructor(private app: App) {
     super("navigation");
   }

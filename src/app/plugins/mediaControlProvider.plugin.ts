@@ -1,12 +1,11 @@
-import { App } from "electron";
-import { BaseProvider, AfterInit, BeforeStart } from "@/app/utils/baseProvider";
-import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
-import TrackProvider from "./trackProvider.plugin";
-import { MediaServiceProvider } from "xosms";
-import { XOSMS } from "@/app/utils/xosms-types";
-import { TrackData } from "@/app/utils/trackData";
-import ApiProvider from "./apiProvider.plugin";
-import IPC_EVENT_NAMES from "../utils/eventNames";
+import { AfterInit, BaseProvider, BeforeStart } from '@/app/utils/baseProvider';
+import { IpcContext, IpcOn } from '@/app/utils/onIpcEvent';
+import { TrackData } from '@/app/utils/trackData';
+import { XOSMS } from '@/app/utils/xosms-types';
+import { App } from 'electron';
+import { MediaServiceProvider } from 'xosms';
+
+import IPC_EVENT_NAMES from '../utils/eventNames';
 
 @IpcContext
 export default class MediaControlProvider extends BaseProvider
@@ -27,7 +26,7 @@ export default class MediaControlProvider extends BaseProvider
     if (this._mediaProvider) {
       this._mediaProvider.buttonPressed = (keyName, ...args) => {
         this.xosmsLog.debug(["button press", keyName, ...args]);
-        const trackProvider = this.getProvider<ApiProvider>("api");
+        const trackProvider = this.getProvider("api");
         if (keyName === "pause") trackProvider.pauseTrack();
         else if (keyName === "play") trackProvider.playTrack();
         else if (keyName === "next") trackProvider.nextTrack();
@@ -49,7 +48,7 @@ export default class MediaControlProvider extends BaseProvider
   private __handleTrackMediaOSControl(_ev, isPlaying: boolean) {
     if (!this.mediaProviderEnabled()) return;
 
-    const { trackData } = this.getProvider<TrackProvider>("track");
+    const { trackData } = this.getProvider("track");
     if (!trackData) {
       this._mediaProvider.playbackStatus = XOSMS.PlaybackStatus.Stopped;
       this._mediaProvider.playButtonEnabled = true;

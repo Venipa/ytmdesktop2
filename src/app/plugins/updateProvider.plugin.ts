@@ -1,12 +1,12 @@
-import { AfterInit, BaseProvider, BeforeStart } from "@/app/utils/baseProvider";
-import { isDevelopment } from "@/app/utils/devUtils";
-import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
-import { App, BrowserWindow, dialog } from "electron";
-import { autoUpdater, CancellationToken, UpdateInfo } from "electron-updater";
-import semver from "semver";
+import { AfterInit, BaseProvider, BeforeStart } from '@/app/utils/baseProvider';
+import { isDevelopment } from '@/app/utils/devUtils';
+import { IpcContext, IpcHandle, IpcOn } from '@/app/utils/onIpcEvent';
+import { App, BrowserWindow, dialog } from 'electron';
+import { autoUpdater, CancellationToken, UpdateInfo } from 'electron-updater';
+import semver from 'semver';
 
-import IPC_EVENT_NAMES from "../utils/eventNames";
-import SettingsProvider from "./settingsProvider.plugin";
+import IPC_EVENT_NAMES from '../utils/eventNames';
+import SettingsProvider from './settingsProvider.plugin';
 
 if (isDevelopment) process.env.__SKIP_BUILD == null;
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] =

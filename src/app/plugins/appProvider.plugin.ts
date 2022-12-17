@@ -1,13 +1,13 @@
-import { App, BrowserWindow, IpcMainEvent, powerSaveBlocker } from "electron";
-import { BaseProvider, AfterInit, BeforeStart } from "@/app/utils/baseProvider";
-import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
-import { setSentryEnabled } from "@/app/utils/sentry";
-import TrackProvider from "./trackProvider.plugin";
-import DiscordProvider from "./discordProvider.plugin";
-import { isDevelopment } from "../utils/devUtils";
-import { createAppWindow } from "../utils/windowUtils";
-import { serverMain } from "../utils/serverEvents";
-import OS_RELEASE from "../utils/os";
+import { AfterInit, BaseProvider, BeforeStart } from '@/app/utils/baseProvider';
+import { IpcContext, IpcHandle, IpcOn } from '@/app/utils/onIpcEvent';
+import { setSentryEnabled } from '@/app/utils/sentry';
+import { App, BrowserWindow, IpcMainEvent, powerSaveBlocker } from 'electron';
+
+import { isDevelopment } from '../utils/devUtils';
+import OS_RELEASE from '../utils/os';
+import { serverMain } from '../utils/serverEvents';
+import { createAppWindow } from '../utils/windowUtils';
+
 const STATE_PAUSE_TIME = isDevelopment ? 30e3 : 30e4;
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit, BeforeStart {
@@ -27,10 +27,10 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
   private _blurTimestamp: Date = null;
   private _blurAfkHandle: any;
   private get isPlaying() {
-    return !!this.getProvider<TrackProvider>("track")?.playing;
+    return !!this.getProvider("track")?.playing;
   }
   private get discord() {
-    return this.getProvider<DiscordProvider>("discord");
+    return this.getProvider("discord");
   }
   private windowBlur() {
     if (this.isPlaying) return;

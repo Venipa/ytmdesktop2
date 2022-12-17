@@ -1,15 +1,14 @@
-import { App } from "electron";
+import { AfterInit, BaseProvider } from '@/app/utils/baseProvider';
+import { IpcContext, IpcOn } from '@/app/utils/onIpcEvent';
+import { TrackData } from '@/app/utils/trackData';
+import { App } from 'electron';
+import { clone } from 'lodash-es';
+import { firstBy } from 'thenby';
 
-import { AfterInit, BaseProvider } from "@/app/utils/baseProvider";
-import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
-import { serverMain } from "@/app/utils/serverEvents";
-import { TrackData } from "@/app/utils/trackData";
-import DiscordProvider from "./discordProvider.plugin";
-import IPC_EVENT_NAMES from "../utils/eventNames";
-import { clone } from "lodash-es";
-import ApiProvider from "./apiProvider.plugin";
-import { firstBy } from "thenby";
-import MediaControlProvider from "./mediaControlProvider.plugin";
+import IPC_EVENT_NAMES from '../utils/eventNames';
+import ApiProvider from './apiProvider.plugin';
+import DiscordProvider from './discordProvider.plugin';
+
 type TrackState = {
   id: string;
   playing: boolean;
@@ -137,7 +136,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     this.views.toolbarView.webContents.send("track:title", track?.video?.title);
     this.views.youtubeView.webContents.send("track.change", track.video.videoId);
     this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
-    this.getProvider<MediaControlProvider>("mediaController")?.handleTrackMediaOSControlChange(track);
+    this.getProvider("mediaController")?.handleTrackMediaOSControlChange(track);
     const api = this.getProvider("api") as ApiProvider;
     api.sendMessage("track:change", track);
   }

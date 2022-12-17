@@ -3,6 +3,8 @@ import { App } from "electron";
 import { BrowserView } from "electron/main";
 import { Logger } from "winston";
 import { BrowserWindowViews } from "./mappedWindow";
+interface BaseProviderNames extends ProviderNames {}
+
 export interface BeforeStart {
   BeforeStart(app?: App): void | Promise<void>;
 }
@@ -15,7 +17,6 @@ export interface AfterInit {
 export interface OnDestroy {
   OnDestroy(app?: App): void | Promise<void>;
 }
-
 export class BaseProvider {
   __type = "service_provider";
   private _providers: { [key: string]: BaseProvider & any } = {};
@@ -35,7 +36,7 @@ export class BaseProvider {
   get windowContext() {
     return this._views;
   }
-  constructor(private name: string, private displayName: string = name) {
+  constructor(private name: keyof BaseProviderNames & string, private displayName: string = name) {
     this._loggerInstance = logger.child({ moduleName: this.name });
   }
 
@@ -57,8 +58,8 @@ export class BaseProvider {
   ) {
     this._views = views;
   }
-  getProvider<T = any>(name: string) {
-    return this._providers[name] as T;
+  getProvider<T extends BaseProviderNames[K], K extends keyof BaseProviderNames & string>(name: K): T {
+    return (this._providers as BaseProviderNames)[name] as T;
   }
   queryProvider(): BaseProvider[] {
     return Object.values(this._providers);

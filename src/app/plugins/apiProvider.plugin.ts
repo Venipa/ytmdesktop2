@@ -1,13 +1,13 @@
-import { App, BrowserWindow } from "electron";
-import { BaseProvider, AfterInit, OnDestroy } from "@/app/utils/baseProvider";
-import { ApiWorker, createApiWorker } from "@/api/createApiWorker";
-import SettingsProvider from "./settingsProvider.plugin";
-import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
-import TrackProvider from "./trackProvider.plugin";
-import { API_ROUTES } from "../utils/eventNames";
-import { clamp } from "lodash-es";
-import Vibrant from "node-vibrant";
-import fetch from "node-fetch";
+import { ApiWorker, createApiWorker } from '@/api/createApiWorker';
+import { AfterInit, BaseProvider, OnDestroy } from '@/app/utils/baseProvider';
+import { IpcContext, IpcHandle, IpcOn } from '@/app/utils/onIpcEvent';
+import { App, BrowserWindow } from 'electron';
+import fetch from 'node-fetch';
+import Vibrant from 'node-vibrant';
+
+import { API_ROUTES } from '../utils/eventNames';
+import TrackProvider from './trackProvider.plugin';
+
 @IpcContext
 export default class ApiProvider
   extends BaseProvider
@@ -27,10 +27,10 @@ export default class ApiProvider
     return this._thread?.send("socket", ...args);
   }
   private get settingsProvider() {
-    return this.getProvider("settings") as SettingsProvider;
+    return this.getProvider("settings");
   }
   private get trackProvider() {
-    return this.getProvider<TrackProvider>("track");
+    return this.getProvider("track");
   }
   async AfterInit() {
     if (this._thread) this._thread.destroy();

@@ -1,8 +1,5 @@
-import ApiProvider from "../plugins/apiProvider.plugin";
-import { BaseEvent, OnEventExecute } from "@/app/utils/baseEvent";
-import { TrackData } from "@/app/utils/trackData";
-import IPC_EVENT_NAMES from "../utils/eventNames";
-import TrackProvider from "../plugins/trackProvider.plugin";
+import { BaseEvent, OnEventExecute } from '@/app/utils/baseEvent';
+import { TrackData } from '@/app/utils/trackData';
 
 
 // todo: remove nested server event calls
@@ -11,7 +8,7 @@ export default class TrackInfoChange extends BaseEvent implements OnEventExecute
     super("track:change");
   }
   execute(track: TrackData) {
-    const trackProvider = this.getProvider<TrackProvider>("track");
+    const trackProvider = this.getProvider("track");
     trackProvider.pushTrackToViews(track);
   }
 }

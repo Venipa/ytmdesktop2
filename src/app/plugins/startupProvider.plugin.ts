@@ -1,19 +1,16 @@
-import { App, BrowserWindow, Tray } from "electron";
-import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit, BeforeStart } from "@/app/utils/baseProvider";
-import { basename, resolve } from "path";
-import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
-import { createTrayMenu } from "@/app/utils/trayMenu";
-import { isDevelopment } from "../utils/devUtils";
+import { AfterInit, BaseProvider, BeforeStart } from '@/app/utils/baseProvider';
+import { IpcContext, IpcOn } from '@/app/utils/onIpcEvent';
+import { App } from 'electron';
+import { basename } from 'path';
+
+import { isDevelopment } from '../utils/devUtils';
+import SettingsProvider from './settingsProvider.plugin';
+
 @IpcContext
-export default class EventProvider extends BaseProvider
+export default class StartupProvider extends BaseProvider
   implements AfterInit, BeforeStart {
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
-  }
-  private _tray: Tray;
-  get Tray() {
-    return this._tray;
   }
   constructor(private app: App) {
     super("startup");
@@ -24,17 +21,6 @@ export default class EventProvider extends BaseProvider
       app.commandLine.appendSwitch("disable-web-security"); // disable cors (also disables other security features) - currently dev only
   }
   async BeforeStart() { }
-  private async initializeTray() {
-    this._tray = new Tray(resolve(__static, "favicon.ico"));
-    this._tray.setToolTip(`YouTube Music for Desktop`);
-    this._tray.addListener("click", () =>
-      BrowserWindow.fromBrowserView(this.views.youtubeView)?.show()
-    );
-    this._tray.setContextMenu(this.buildMenu());
-  }
-  private buildMenu() {
-    return createTrayMenu(this);
-  }
   private get startArgs() {
     return ["--processStart", `"${basename(process.execPath)}"`];
   }
@@ -52,13 +38,7 @@ export default class EventProvider extends BaseProvider
         args: this.startArgs,
       });
     }
-    this.initializeTray();
-  }
-  @IpcOn("settingsProvider.change", {
-    debounce: 50,
-  })
-  private onSettingsChange() {
-    if (this._tray) this._tray.setContextMenu(this.buildMenu());
+    this.getProvider("tray").initializeTray();
   }
   @IpcOn("settingsProvider.change", {
     debounce: 1000,

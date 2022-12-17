@@ -1,8 +1,11 @@
-import logger from "@/utils/Logger";
-import { App, ipcMain, IpcMainEvent, IpcMainInvokeEvent } from "electron";
-import { Logger } from "winston";
-import { BaseProvider } from "./baseProvider";
-import { serverMain } from "./serverEvents";
+import logger from '@/utils/Logger';
+import { App, IpcMainEvent, IpcMainInvokeEvent } from 'electron';
+import { Logger } from 'winston';
+
+import { BaseProvider } from './baseProvider';
+import { serverMain } from './serverEvents';
+
+interface BaseProviderNames extends ProviderNames {}
 export interface OnEventExecute {
   execute: (ev: IpcMainEvent | any, ...args: any[]) => Promise<any> | any | void;
 }
@@ -12,7 +15,7 @@ export interface OnEventHandle {
 export interface IBaseEvent {
   readonly eventName: string;
   readonly logger: Logger;
-  readonly getProvider: <T>(name: string) => BaseProvider & T;
+  getProvider<T extends BaseProviderNames[K], K extends keyof BaseProviderNames & string>(name: K): T
   readonly app: App;
 }
 type BaseEventType = "on" | "once" | "handle" | "server";
@@ -30,8 +33,8 @@ export class BaseEvent implements IBaseEvent {
   get app() {
     return this._app;
   }
-  getProvider<T>(name: string): BaseProvider & T {
-    return this._providers[name] as any;
+  getProvider<T extends BaseProviderNames[K], K extends keyof BaseProviderNames & string>(name: K): T {
+    return (this._providers as BaseProviderNames)[name] as T;
   }
   __registerProviders(p: BaseProvider[]) {
     this._providers = p.reduce((l, r) => ({ ...l, [r.getName()]: r }), {});
