@@ -36,19 +36,22 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
   set presence(val: Presence) {
     this._presence = val;
   }
-  get settingsInstance(): SettingsProvider {
+  get settingsInstance() {
     return this.getProvider("settings");
   }
-  get trackService(): TrackProvider {
+  get trackService() {
     return this.getProvider("track");
   }
   constructor(private app: App) {
     super("discord");
   }
+  get settingsEnabled() {
+    return !!this.settingsInstance.instance?.discord?.enabled
+  }
   async disable() {
     if (!this.client) return;
     this._isConnected = false;
-    await this.client.destroy();
+    this.client.destroy();
     clearTimeout(this._updateHandle);
     this.client = null;
     this.windowContext.sendToAllViews("discord.disconnected");
@@ -103,7 +106,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
             DISCORD_UPDATE_INTERVAL
           ))
       );
-    else if (this.settingsInstance.get("discord.enabled") && this._enabled) {
+    else if (this.settingsEnabled && this._enabled) {
       this.createClient();
     }
   }
@@ -113,7 +116,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     await this.createClient();
   }
   async updatePlayState(val: boolean, progress: number = 0) {
-    if (this.trackService.trackData)
+    if (this.trackService.trackData && this.isConnected)
       await this.setActivity(
         discordEmbedFromTrack(this.trackService.trackData, val, progress)
       );
@@ -154,14 +157,10 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     debounce: 1000,
   })
   private async __onToggleEnabled(key: string, enabled: boolean) {
-    if (enabled && (!this.client || !this._isConnected)) {
-      this.createClient();
-    } else if (this.client) {
-      this.client.destroy();
-      this.client = null;
-      this._isConnected = false;
-      this.windowContext.sendToAllViews("discord.disconnected");
-    }
+    if (!this._enabled) return;
+    await (enabled ? this.enable : this.disable)().catch(err => {
+      this.logger.error(err);
+    })
   }
   @IpcOn("settingsProvider.change", {
     filter: (key: string) => key === "discord.buttons",
@@ -200,7 +199,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     debounce: 100,
   })
   private async __onTrackInfo(track: TrackData) {
-    if (!this.client || !track?.video) return;
+    if (!this.client || !track?.video || !this.isConnected) return;
     this.setActivity(discordEmbedFromTrack(track));
   }
 }
