@@ -52,7 +52,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
     this._blurTimestamp = null;
     clearTimeout(this._blurAfkHandle);
     this._blurAfkHandle = null;
-    this.discord.enable();
+    if (this.discord.settingsEnabled) this.discord.enable();
   }
   @IpcOn("settingsProvider.change", {
     filter: (key: string) => key === "app.enableStatisticsAndErrorTracing",

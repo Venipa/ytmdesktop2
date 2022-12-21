@@ -6,8 +6,6 @@ import { AfterInit, BaseProvider } from "@/app/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import { discordEmbedFromTrack, TrackData } from "@/app/utils/trackData";
 import { YoutubeMatcher } from "@/app/utils/youtubeMatcher";
-import SettingsProvider from "./settingsProvider.plugin";
-import TrackProvider from "./trackProvider.plugin";
 
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
 const DEFAULT_PRESENCE: Presence = {
@@ -46,19 +44,24 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     super("discord");
   }
   get settingsEnabled() {
-    return !!this.settingsInstance.instance?.discord?.enabled
+    return !!this.settingsInstance.get("discord.enabled", false)
   }
   async disable() {
     if (!this.client) return;
-    this._isConnected = false;
-    this.client.destroy();
     clearTimeout(this._updateHandle);
+    this._isConnected = false;
+    await this.client.clearActivity();
+    await this.client.destroy().finally(() => {
+
+      this.windowContext.sendToAllViews("discord.disconnected");
+    }).catch(err => {
+      this.logger.error(err);
+    });
     this.client = null;
-    this.windowContext.sendToAllViews("discord.disconnected");
+    this.presence = null;
   }
   async enable() {
     if (this.client) return;
-    this._isConnected = false;
     clearTimeout(this._updateHandle);
     await this.createClient();
     this._isConnected = true;
@@ -74,7 +77,6 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       largeImageKey: "logo",
       largeImageText: translations.appName,
     };
-    client.on("ready", () => this.logger.debug("ready"));
     client.on(
       "connected",
       () => (this.logger.debug("connected"), (this._isConnected = true))
@@ -96,15 +98,15 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       });
     return [client, presence];
   }
-  private _refreshActivity() {
+  private _refreshActivity(initial?: boolean) {
     if (this._updateHandle) clearTimeout(this._updateHandle);
     if (this.client && this._isConnected)
-      this.setActivity(this.presence).then(
+      (initial ? Promise.resolve() : this.setActivity(this.presence)).then(
         () =>
-          (this._updateHandle = setTimeout(
-            () => this._refreshActivity(),
-            DISCORD_UPDATE_INTERVAL
-          ))
+        (this._updateHandle = setTimeout(
+          () => this._refreshActivity(),
+          DISCORD_UPDATE_INTERVAL
+        ))
       );
     else if (this.settingsEnabled && this._enabled) {
       this.createClient();
@@ -122,7 +124,6 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       );
   }
   async setActivity(presence: Partial<Presence>) {
-    if (!this.presence) return;
     this.presence = { ...presence, ...DEFAULT_PRESENCE };
     if (this.presence.buttons) {
       if (
@@ -147,18 +148,17 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     if (this.presence.startTimestamp === null)
       delete this.presence.startTimestamp;
     if (this.presence.endTimestamp === null) delete this.presence.endTimestamp;
-    if (this.client)
-      return await this.client
-        .setActivity(this.presence || DEFAULT_PRESENCE, process.pid)
-        .catch(() => null);
+    if (!this.client || !this.isConnected) return;
+    return await this.client
+      .setActivity(this.presence || DEFAULT_PRESENCE)
+      .catch(() => null);
   }
   @IpcOn("settingsProvider.change", {
     filter: (key: string) => key === "discord.enabled",
     debounce: 1000,
   })
   private async __onToggleEnabled(key: string, enabled: boolean) {
-    if (!this._enabled) return;
-    await (enabled ? this.enable : this.disable)().catch(err => {
+    await this[!enabled ? "disable" : "enable"].bind(this)().catch((err: any) => {
       this.logger.error(err);
     })
   }
@@ -170,20 +170,10 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     if (this.client) this.onClientReady();
   }
   async onClientReady() {
+    this.logger.debug("ready");
     const track = this.trackService.trackData;
     if (track) this.setActivity(discordEmbedFromTrack(track));
-    else
-      this.setActivity({
-        ...DEFAULT_PRESENCE,
-        state: "Browsing...",
-        buttons: [],
-      });
-    if (this._updateHandle) clearTimeout(this._updateHandle);
-    this._updateHandle = setTimeout(
-      () => this._refreshActivity(),
-      DISCORD_UPDATE_INTERVAL
-    );
-
+    this._refreshActivity(true);
     this.windowContext.sendToAllViews("discord.connected");
   }
   @IpcHandle("req:discord.connected")

@@ -1,11 +1,11 @@
 import logger from '@/utils/Logger';
 import { App, IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import { Logger } from 'winston';
+import { BaseProviderNames } from 'ytmd';
 
 import { BaseProvider } from './baseProvider';
 import { serverMain } from './serverEvents';
 
-interface BaseProviderNames extends ProviderNames {}
 export interface OnEventExecute {
   execute: (ev: IpcMainEvent | any, ...args: any[]) => Promise<any> | any | void;
 }

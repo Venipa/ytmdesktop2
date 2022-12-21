@@ -1,9 +1,9 @@
 import { App } from 'electron';
+import { BaseProviderNames } from 'ytmd';
 
 import { BaseEvent } from './baseEvent';
 import { BaseProvider } from './baseProvider';
 
-interface BaseProviderNames extends ProviderNames {}
 export async function createPluginCollection(app: App) {
   return (() => {
     const collectionContext = require.context(

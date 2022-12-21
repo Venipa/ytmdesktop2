@@ -161,7 +161,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     );
     this._playState = isPlaying ? "playing" : "paused";
     const discordProvider = this.getProvider("discord") as DiscordProvider;
-    if (isPlaying && !discordProvider.isConnected && discordProvider.enabled)
+    if (isPlaying && !discordProvider.isConnected && discordProvider.enabled && discordProvider.settingsEnabled)
       await discordProvider.enable();
     const isUIViewRequired = uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1];
 
