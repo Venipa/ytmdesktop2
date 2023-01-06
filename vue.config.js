@@ -27,6 +27,7 @@ const builderOptions = {
   squirrelWindows: null,
   nsis: {
     installerIcon: "src/assets/icons/win/icon.ico",
+    installerHeaderIcon: "src/assets/icons/win/icon.ico",
     deleteAppDataOnUninstall: true,
   },
   win: {
@@ -35,6 +36,7 @@ const builderOptions = {
       target: "nsis",
       arch: "x64",
     },
+    compression: "maximum"
   },
 };
 /**

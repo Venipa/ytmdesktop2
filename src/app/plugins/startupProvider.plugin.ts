@@ -15,7 +15,8 @@ export default class StartupProvider extends BaseProvider
   constructor(private app: App) {
     super("startup");
     app.commandLine.appendSwitch("disable-http-cache");
-    app.commandLine.appendSwitch("enable-gpu-rasterization", "enable-zero-copy"); // performance feature flags
+    app.commandLine.appendSwitch("enable-gpu-rasterization"); // performance feature flags
+    app.commandLine.appendSwitch("enable-zero-copy");
     app.commandLine.appendSwitch("enable-features", "CanvasOopRasterization,EnableDrDc"); // Enables Display Compositor to use a new gpu thread. todo: testing
     if (isDevelopment)
       app.commandLine.appendSwitch("disable-web-security"); // disable cors (also disables other security features) - currently dev only
