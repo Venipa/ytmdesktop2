@@ -1,20 +1,17 @@
-import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import {
-  BaseProvider,
-  OnDestroy,
-  BeforeStart,
-  AfterInit,
+  AfterInit, BaseProvider, BeforeStart, OnDestroy
 } from "@/app/utils/baseProvider";
-import fs from "fs";
-import { existsSync } from "fs";
-import path from "path";
-import { debounce, get as _get, set as _set } from "lodash-es";
-import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
-import { rootWindowInjectUtils } from "@/app/utils/webContentUtils";
-import { getViewObject } from "@/app/utils/mappedWindow";
 import { defaultUri, defaultUrl, isDevelopment } from "@/app/utils/devUtils";
 import eventNames from "@/app/utils/eventNames";
+import { getViewObject } from "@/app/utils/mappedWindow";
+import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import { serverMain } from "@/app/utils/serverEvents";
+import { rootWindowInjectUtils } from "@/app/utils/webContentUtils";
+import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import fs, { existsSync } from "fs";
+import { debounce, get as _get, set as _set } from "lodash-es";
+import path from "path";
+import { LastFMSettings } from "ytmd";
 const defaultSettings = {
   api: {
     enabled: isDevelopment ? true : false,
@@ -43,6 +40,10 @@ const defaultSettings = {
   state: {
     currentUrl: null,
   },
+  lastfm: {
+    enabled: false,
+    auth: null
+  } as LastFMSettings
 };
 let _settingsStore: SettingsStore = defaultSettings;
 export type SettingsStore = typeof defaultSettings & { [key: string]: any };
