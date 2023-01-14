@@ -154,7 +154,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       this.trackChangeTimeout = setTimeout(() => {
         lastfm.handleTrackChange(track)
         clearTimeout(this.trackChangeTimeout);
-      }, clamp(track.meta.duration * 0.65, 30) * 1000);
+      }, clamp(track.meta.duration * 0.65, 30, 90) * 1000);
     }
   }
   @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, {
