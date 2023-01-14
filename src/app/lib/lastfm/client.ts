@@ -1,0 +1,104 @@
+import { createHash } from "crypto";
+import got, { Got, Method } from "got";
+import fetch from "node-fetch";
+export class LastFMClient {
+  private client: Got;
+  private token: string;
+  private session: string;
+  private sessionName: string;
+  constructor(private key: { api: string, secret: string }) {
+    this.client = got.extend({
+      prefixUrl: "https://ws.audioscrobbler.com/2.0/",
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0'
+      },
+      hooks: {
+        beforeRequest: [(options) => {
+          if (!options.searchParams) options.searchParams = new URLSearchParams();
+          if (!options.searchParams.has("api_key")) options.searchParams.set("api_key", this.key.api);
+          if (this.token) {
+            options.searchParams.set("token", this.token)
+            let requestSourceData = "";
+            const requestSourceHashable = ["api_key", "method", "token"]
+            options.searchParams.sort();
+            for (const [key, value] of options.searchParams.entries()) {
+              if (requestSourceHashable.includes(key)) requestSourceData += key + value;
+            }
+            requestSourceData += this.key.secret;
+            options.searchParams.set("api_sig", createHash("md5").update(requestSourceData).digest('hex'))
+          }
+          options.searchParams.set("format", "json")
+          console.log("[API::LASTFM@BeforeRequest]", options, "params:", { ...options.searchParams });
+        }],
+      }
+    })
+  }
+  private async callMethod<T = any>(method: string, type: Method = 'post', payload: Partial<{
+    body: Record<string | number, any>,
+    query: Record<string | number, any>
+  }> = {}) {
+    const query = Object.assign({}, payload.query || {}, { method });
+    const searchParams = new URLSearchParams(query);
+    // const request = this.client
+    //   .extend({ method: type })[type.toLowerCase()] as GotRequestFunction;
+    // return await request('', {
+    //   ...(payload.body ? {body: JSON.stringify(payload.body)} : {}),
+    //   searchParams: new URLSearchParams(query)
+    // })
+    //   .json<T>()
+
+    searchParams.set("api_key", this.key.api);
+    if (this.token) {
+      searchParams.set("token", this.token)
+
+      let requestSourceData = "";
+      searchParams.sort();
+      for (const [key, value] of searchParams.entries()) {
+        requestSourceData += key + value;
+      }
+      requestSourceData += this.key.secret;
+      searchParams.set("api_sig", createHash("md5").update(requestSourceData, 'utf8').digest('hex'))
+    }
+    searchParams.set("format", "json")
+    return await fetch(`https://ws.audioscrobbler.com/2.0/?${searchParams.toString()}`, {
+      method: type.toLowerCase(),
+      headers: {
+        "user-agent": "ytmd (github.com/Venipa/ytmdesktop2)"
+      }
+    }).then(r => r.json() as Promise<T>)
+  }
+  async authorize() {
+    const token = await this.callMethod<{ token: string }>("auth.getToken", 'get').then(d => d.token)
+    return this.token = token;
+  }
+  async getSession() {
+    const { session: s } = await this.callMethod<{ session: { name: string, key: string } }>("auth.getSession", 'get')
+    this.sessionName = s.name;
+    return this.session = s.key;
+  }
+  async scrobble(...tracks: { artist: string, track: string, timestamp: number, album?: string, duration?: number }[]) {
+    if (!this.session) throw new Error("Invalid session");
+    return await this.callMethod("track.scrobble", "post", {
+      query: {
+        sk: this.session,
+        ...tracks[0]
+      }
+    })
+  }
+  getUserAuthorizeUrl() {
+    if (!this.token) throw new Error("Invalid token");
+    return `https://www.last.fm/api/auth?api_key=${this.key.api}&token=${this.token}`
+  }
+  getName() {
+    if (!this.session) throw new Error("Missing lastfm session");
+    return this.sessionName;
+  }
+  isConnected() {
+    return !!this.session
+  }
+  setAuthorize({ token, session }: { token: string, session?: string }) {
+    this.token = token;
+    if (session)
+      this.session = session;
+  }
+}

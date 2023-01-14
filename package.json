@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@headlessui/vue": "^1.6.7",
+    "@poppinss/utils": "^5.0.0",
     "@sentry/electron": "^3.0.7",
     "@tailwindcss/line-clamp": "^0.4.2",
     "@types/node": "^18.6.3",
@@ -32,6 +33,8 @@
     "events": "^3.3.0",
     "express": "^4.18.1",
     "express-ws": "^5.0.2",
+    "got": "^11.8.6",
+    "keytar": "^7.9.0",
     "lodash-es": "^4.17.21",
     "node-fetch": "^2.6.7",
     "node-vibrant": "^3.2.1-alpha.1",

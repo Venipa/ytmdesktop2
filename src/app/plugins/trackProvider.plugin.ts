@@ -21,6 +21,12 @@ type TrackState = {
 const tracks: {
   [id: string]: TrackData;
 } = {};
+const parseTrackDuration = (td: TrackData) => {
+
+  return ((dur) => (dur ? Number.parseInt(dur) : null))(
+    td.context?.videoDetails?.durationSeconds ?? td.video?.lengthSeconds
+  );
+}
 @IpcContext
 export default class TrackProvider extends BaseProvider implements AfterInit {
   private _activeTrackId: string;
@@ -66,7 +72,9 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       ...ytTrack,
       meta: {
         thumbnail: (ytTrack?.video?.thumbnail?.thumbnails ?? ytTrack?.context?.thumbnail?.thumbnails)?.sort(firstBy(d => d.height, 'desc'))[0]?.url,
-        isAudioExclusive: ytTrack?.video?.musicVideoType === "MUSIC_VIDEO_TYPE_ATV"
+        isAudioExclusive: ytTrack?.video?.musicVideoType === "MUSIC_VIDEO_TYPE_ATV",
+        startedAt: new Date().getTime() / 1000,
+        duration: parseTrackDuration(ytTrack)
       }
     };
 
@@ -103,10 +111,8 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   }
   getTrackDuration() {
     const td = this.trackData;
-    if (!this.trackData) return null;
-    return ((dur) => (dur ? Number.parseInt(dur) : null))(
-      td.context?.videoDetails?.durationSeconds ?? td.video?.lengthSeconds
-    );
+    if (!td) return null;
+    return parseTrackDuration(td);
   }
   @IpcOn("track:set-active", {
     debounce: 1000,
@@ -131,7 +137,9 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       });
     }
   }
+  private trackChangeTimeout: any;
   public async pushTrackToViews(trackRef: TrackData) {
+    trackRef.meta.startedAt = new Date().getTime() / 1000;
     const track = clone(trackRef);
     this.views.toolbarView.webContents.send("track:title", track?.video?.title);
     this.views.youtubeView.webContents.send("track.change", track.video.videoId);
@@ -139,6 +147,11 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     this.getProvider("mediaController")?.handleTrackMediaOSControlChange(track);
     const api = this.getProvider("api") as ApiProvider;
     api.sendMessage("track:change", track);
+    if (this.trackChangeTimeout) clearTimeout(this.trackChangeTimeout);
+    this.trackChangeTimeout = setTimeout(() => {
+      this.getProvider("lastfm")?.handleTrackChange(track)
+      clearTimeout(this.trackChangeTimeout);
+    }, 15000);
   }
   @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, {
     debounce: 100

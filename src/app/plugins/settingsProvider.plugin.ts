@@ -42,7 +42,8 @@ const defaultSettings = {
   },
   lastfm: {
     enabled: false,
-    auth: null
+    auth: null,
+    name: null
   } as LastFMSettings
 };
 let _settingsStore: SettingsStore = defaultSettings;

@@ -82,6 +82,8 @@ export interface TrackMicroFormatData {
 interface TrackMeta {
   thumbnail?: string
   isAudioExclusive: boolean
+  startedAt: number,
+  duration: number
 }
 export interface TrackData {
   video: TrackVideoData;

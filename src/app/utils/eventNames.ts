@@ -23,6 +23,8 @@ const IPC_EVENT_NAMES = {
   APP_UPDATE_CHECKING: "app.updateChecking",
   APP_UPDATE_PROGRESS: "app.updateProgress",
   APP_UPDATE_DOWNLOADED: "app.updateDownloaded",
+  LAST_FM_AUTHORIZE: "lastfm.authorize",
+  LAST_FM_STATUS: "lastfm.status",
   ...API_ROUTES
 };
 export default IPC_EVENT_NAMES;

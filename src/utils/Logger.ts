@@ -1,7 +1,6 @@
-import { createLogger, format, transports } from "winston";
 import { inspect } from "util";
+import { createLogger, format, transports } from "winston";
 // import DailyRotateFile from "winston-daily-rotate-file";
-import { app } from "electron";
 const myFormat = format.printf((info) => {
   const { level, message, timestamp, ...meta } = info;
   // @ts-ignore
