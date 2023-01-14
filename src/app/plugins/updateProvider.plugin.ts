@@ -65,6 +65,20 @@ export default class UpdateProvider
         false
       );
     });
+    autoUpdater.on("update-cancelled", () => {
+      this.windowContext.sendToAllViews(
+        IPC_EVENT_NAMES.APP_UPDATE_CHECKING,
+        false
+      );
+    })
+    
+    autoUpdater.on("error", () => {
+      this.windowContext.sendToAllViews(
+        IPC_EVENT_NAMES.APP_UPDATE_CHECKING,
+        false
+      );
+    })
+    
     autoUpdater.on("checking-for-update", () => {
       this.windowContext.sendToAllViews(
         IPC_EVENT_NAMES.APP_UPDATE_CHECKING,
