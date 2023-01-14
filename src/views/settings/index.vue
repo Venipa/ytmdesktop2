@@ -17,6 +17,9 @@
             <router-link to="/custom-css"
                          class="tab tab-bordered"
                          active-class="tab-active active">Custom CSS</router-link>
+            <router-link to="/integrations"
+                         class="tab tab-bordered"
+                         active-class="tab-active active">Integrations</router-link>
             <router-link to="/about"
                          class="tab tab-bordered"
                          active-class="tab-active active">About</router-link>
@@ -47,8 +50,8 @@
 </template>
 
 <script>
-import ControlBar from "@/components/ControlBar";
 import LogoIcon from "@/assets/logo.svg";
+import ControlBar from "@/components/ControlBar";
 import { onMounted } from "vue";
 export default {
   components: {
@@ -83,6 +86,12 @@ export default {
         @apply btn-active;
       }
     }
+  }
+}
+.tab {
+  @apply text-gray-300;
+  &.active {
+    @apply text-gray-50;
   }
 }
 </style>

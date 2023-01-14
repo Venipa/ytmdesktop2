@@ -27,6 +27,10 @@ const router = createRouter({
           component: () => import("./views/settings/customcss-settings.vue"),
         },
         {
+          path: "/integrations",
+          component: () => import("./views/settings/integration-settings.vue"),
+        },
+        {
           path: "/about",
           component: () => import("./views/settings/about-settings.vue"),
         },

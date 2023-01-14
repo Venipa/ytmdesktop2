@@ -1,13 +1,15 @@
 import { AfterInit, BaseProvider, OnInit } from '@/app/utils/baseProvider';
 import { IpcContext, IpcHandle } from '@/app/utils/onIpcEvent';
 import { string } from "@poppinss/utils/build/helpers";
-import { App, BrowserWindow } from 'electron';
+import { App, BrowserWindow, shell } from 'electron';
 import keytar from "keytar";
+import { LastFMSettings } from 'ytmd';
 import { parseJson, stringifyJson } from '../lib/json';
 import { APP_KEYTAR, LASTFM_KEYTAR_SESSION, LASTFM_KEYTAR_TOKEN } from '../lib/keytar';
 import { LastFMClient } from '../lib/lastfm';
 import IPC_EVENT_NAMES from '../utils/eventNames';
 import { TrackData } from '../utils/trackData';
+import { appIconPath } from '../utils/windowUtils';
 
 export interface LastFMUserState {
   siteSection: string;
@@ -28,26 +30,30 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     return lastFmClient;
   }
   async OnInit() {
-
-    this.logger.debug(`Loaded Keys :: API=${process.env.VUE_APP_LASTFM_API}`)
-    const creds = await keytar.findCredentials(APP_KEYTAR);
-    const lastFMState = creds.reduce((acc, r) => {
-      if (r.account === LASTFM_KEYTAR_TOKEN) acc.token = r.password;
-      else if (r.account === LASTFM_KEYTAR_SESSION) acc.session = r.password;
-      return acc;
-    }, {} as any as { token: string, session: string });
-    if (lastFMState.session)
-      this.client.setAuthorize({
-        token: lastFMState.token,
-        session: lastFMState.session
-      })
+    const lastfm = this.getProvider("settings").get("lastfm") as LastFMSettings;
+    if (lastfm.enabled) {
+      const creds = await keytar.findCredentials(APP_KEYTAR);
+      const lastFMState = creds.reduce((acc, r) => {
+        if (r.account === LASTFM_KEYTAR_TOKEN) acc.token = r.password;
+        else if (r.account === LASTFM_KEYTAR_SESSION) acc.session = r.password;
+        return acc;
+      }, {} as any as { token: string, session: string });
+      if (lastFMState.session)
+        this.client.setAuthorize({
+          token: lastFMState.token,
+          session: lastFMState.session,
+          name: string.escapeHTML(lastfm.name)
+        })
+    }
   }
   async AfterInit() {
     this.views.toolbarView.webContents.on("did-finish-load", () => {
       this.sendState();
     })
   }
+  private authProgress = false;
   private async authorizeSession() {
+    if (this.authProgress) return;
     const token = await this.client.authorize()
     const win = new BrowserWindow({
       width: 480,
@@ -57,6 +63,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
       alwaysOnTop: true,
       parent: this.windowContext.main,
       title: "LastFM Authorize",
+      icon: appIconPath,
       paintWhenInitiallyHidden: true,
       show: false,
       autoHideMenuBar: true,
@@ -85,7 +92,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
             setTimeout(() => {
               if (win.isEnabled())
                 win.close();
-            }, 1500);
+            }, 500);
           }
 
           this.logger.debug(`[Auth]> Authenticated: ${sessionToken}`);
@@ -97,35 +104,76 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
       this.sendState();
     });
     win.show();
+    this.authProgress = true;
+    this.sendState();
+    win.once("closed", () => {
+      this.authProgress = false;
+      this.sendState();
+    })
   }
   getState() {
+    const lastfm = this.getProvider("settings")?.instance.lastfm;
     return {
       connected: this.client.isConnected(),
-      name: this.client.getName() || this.getProvider("settings")?.instance.lastfm.name
+      name: this.client.getName() || (lastfm.enabled ? lastfm.name : null),
+      error: this.client.hasError(),
+      processing: this.authProgress
     }
   }
   sendState() {
     this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_STATUS, this.getState())
   }
-  @IpcHandle("action:lastfm.status")
+  @IpcHandle("action:" + IPC_EVENT_NAMES.LAST_FM_STATUS)
   async handleLastFMState() {
     return this.getState()
   }
+  @IpcHandle("action:" + IPC_EVENT_NAMES.LAST_FM_PROFILE)
+  async handleLastFMProfile() {
+    if (!this.client.isConnected()) return
+    const username = this.client.getName() || this.getProvider("settings")?.instance.lastfm.name;
+    return await shell.openExternal(`https://www.last.fm/user/${string.escapeHTML(username)}/`)
+  }
   @IpcHandle(IPC_EVENT_NAMES.LAST_FM_AUTHORIZE)
   async handleLastFMAuth() {
-    return await this.authorizeSession().then(() => true).catch(err => {
-      console.error(err);
-      return false;
-    })
+    return await this.authorizeSession()
+      .then(() => true)
+      .catch(err => {
+        console.error(err);
+        return false;
+      })
   }
+  @IpcHandle("action:" + IPC_EVENT_NAMES.LAST_FM_TOGGLE)
+  async handleLastFMToggle(_, state: boolean) {
+    if (state === undefined) return;
+    const settings = this.getProvider("settings");
+    settings.set("lastfm.enabled", !!state);
+    settings.saveToDrive();
+    if (state) {
+      this.client.setAuthorize({ token: null, session: null });
+      await this.handleLastFMAuth();
+    } else {
+      this.client.setAuthorize({ token: null, session: null });
+      settings.set("lastfm.name", null);
+      await (Promise.all([
+        keytar.deletePassword(APP_KEYTAR, LASTFM_KEYTAR_SESSION).catch(() => null),
+        keytar.deletePassword(APP_KEYTAR, LASTFM_KEYTAR_TOKEN).catch(() => null)
+      ]));
+    }
+    this.sendState();
+    return this.getState()
+  }
+
   async handleTrackChange(track: TrackData) {
+    if (!this.client.isConnected()) return;
     await this.client.scrobble({
       artist: track.video.author,
       track: track.video.title,
       timestamp: track.meta.startedAt,
       duration: track.meta.duration
-    }).then(stringifyJson).then(d => this.logger.debug(d)).catch(err => {
-      this.logger.error(err);
-    })
+    }).then(stringifyJson)
+      .then(d => this.logger.debug(d))
+      .catch(err => {
+        this.logger.error(err);
+      })
   }
 }

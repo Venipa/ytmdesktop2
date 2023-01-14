@@ -173,6 +173,13 @@ export default defineComponent({
       lastFMLoading,
       authorizeLastFM() {
         lastFMLoading.value = true;
+        if (lastFM.value.connected) {
+
+          this.action("lastfm.profile").finally(() => {
+          lastFMLoading.value = false;
+        });
+          return;
+        }
         this.invoke("lastfm.authorize").finally(() => {
           lastFMLoading.value = false;
         });

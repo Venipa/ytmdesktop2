@@ -25,6 +25,8 @@ const IPC_EVENT_NAMES = {
   APP_UPDATE_DOWNLOADED: "app.updateDownloaded",
   LAST_FM_AUTHORIZE: "lastfm.authorize",
   LAST_FM_STATUS: "lastfm.status",
+  LAST_FM_PROFILE: "lastfm.profile",
+  LAST_FM_TOGGLE: "lastfm.toggle",
   ...API_ROUTES
 };
 export default IPC_EVENT_NAMES;

@@ -6,6 +6,7 @@ export class LastFMClient {
   private token: string;
   private session: string;
   private sessionName: string;
+  private lastError: null;
   constructor(private key: { api: string, secret: string }) {
     this.client = got.extend({
       prefixUrl: "https://ws.audioscrobbler.com/2.0/",
@@ -60,12 +61,16 @@ export class LastFMClient {
       searchParams.set("api_sig", createHash("md5").update(requestSourceData, 'utf8').digest('hex'))
     }
     searchParams.set("format", "json")
+    this.lastError = null;
     return await fetch(`https://ws.audioscrobbler.com/2.0/?${searchParams.toString()}`, {
       method: type.toLowerCase(),
       headers: {
         "user-agent": "ytmd (github.com/Venipa/ytmdesktop2)"
       }
-    }).then(r => r.json() as Promise<T>)
+    }).then(r => r.json() as Promise<T>).catch((err) => {
+      this.lastError = err;
+      return Promise.reject(err);
+    })
   }
   async authorize() {
     const token = await this.callMethod<{ token: string }>("auth.getToken", 'get').then(d => d.token)
@@ -86,19 +91,28 @@ export class LastFMClient {
     })
   }
   getUserAuthorizeUrl() {
-    if (!this.token) throw new Error("Invalid token");
+    if (!this.token) {
+      throw new Error("Invalid token");
+
+    }
     return `https://www.last.fm/api/auth?api_key=${this.key.api}&token=${this.token}`
   }
   getName() {
-    if (!this.session) throw new Error("Missing lastfm session");
+    if (!this.session) return null;
     return this.sessionName;
+  }
+  hasError() {
+    return !!this.lastError;
   }
   isConnected() {
     return !!this.session
   }
-  setAuthorize({ token, session }: { token: string, session?: string }) {
+  setAuthorize({ token, session, name }: { token: string, session?: string, name?: string; }) {
     this.token = token;
-    if (session)
-      this.session = session;
+    this.session = session;
+    if (!this.session) this.sessionName = null;
+    else this.sessionName = name;
+
+    this.lastError = null;
   }
 }
