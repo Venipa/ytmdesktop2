@@ -2,7 +2,7 @@ import { AfterInit, BaseProvider } from '@/app/utils/baseProvider';
 import { IpcContext, IpcOn } from '@/app/utils/onIpcEvent';
 import { TrackData } from '@/app/utils/trackData';
 import { App } from 'electron';
-import { clone } from 'lodash-es';
+import { clamp, clone } from 'lodash-es';
 import { firstBy } from 'thenby';
 
 import IPC_EVENT_NAMES from '../utils/eventNames';
@@ -147,11 +147,15 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     this.getProvider("mediaController")?.handleTrackMediaOSControlChange(track);
     const api = this.getProvider("api") as ApiProvider;
     api.sendMessage("track:change", track);
-    if (this.trackChangeTimeout) clearTimeout(this.trackChangeTimeout);
-    this.trackChangeTimeout = setTimeout(() => {
-      this.getProvider("lastfm")?.handleTrackChange(track)
-      clearTimeout(this.trackChangeTimeout);
-    }, 15000);
+    const lastfm = this.getProvider("lastfm");
+    const lastfmState = lastfm.getState();
+    if (lastfm && lastfmState.connected && !lastfmState.processing) {
+      if (this.trackChangeTimeout) clearTimeout(this.trackChangeTimeout);
+      this.trackChangeTimeout = setTimeout(() => {
+        lastfm.handleTrackChange(track)
+        clearTimeout(this.trackChangeTimeout);
+      }, clamp(track.meta.duration * 0.65, 30) * 1000);
+    }
   }
   @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, {
     debounce: 100
