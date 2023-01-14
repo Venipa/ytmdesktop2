@@ -52,4 +52,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VUE_APP_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           VUE_APP_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          VUE_APP_LASTFM_API: ${{ secrets.LASTFM_API }}
+          VUE_APP_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           VUE_APP_GITHUB_REPOSITORY: ${{ github.repository }}
