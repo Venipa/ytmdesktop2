@@ -11,6 +11,7 @@ import { createAppWindow } from '../utils/windowUtils';
 const STATE_PAUSE_TIME = isDevelopment ? 30e3 : 30e4;
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit, BeforeStart {
+  private appLock: boolean;
   constructor(private _app: App) {
     super("app");
   }
@@ -19,6 +20,15 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
   }
   async BeforeStart() {
     powerSaveBlocker.start('prevent-app-suspension')
+    this.appLock = this._app.requestSingleInstanceLock();
+    if (!this.appLock) {
+      serverMain.emit("app.quit", true)
+    } else if (this.windowContext.main) {
+      const wnd = this.windowContext.main;
+      if (wnd.isMinimized()) wnd.restore();
+      wnd.focus();
+
+    }
   }
   async AfterInit() {
     this._app.on("browser-window-focus", this.windowFocus.bind(this));
