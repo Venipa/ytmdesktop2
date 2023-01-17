@@ -6,29 +6,26 @@ import {
   BrowserWindow,
   BrowserWindowConstructorOptions,
   IpcMainEvent,
-  protocol,
-  shell,
+  protocol
 } from "electron";
 import { debounce } from "lodash-es";
 import path from "path";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
-import SettingsProvider from "./plugins/settingsProvider.plugin";
-import UpdateProvider from "./plugins/updateProvider.plugin";
 
 import { defaultUrl, isDevelopment } from "./utils/devUtils";
 import {
   BrowserWindowViews,
   createWindowContext,
-  getViewObject,
+  getViewObject
 } from "./utils/mappedWindow";
 import { serverMain } from "./utils/serverEvents";
 import {
   createEventCollection,
-  createPluginCollection,
+  createPluginCollection
 } from "./utils/serviceCollection";
 import { createApiView, createView } from "./utils/view";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
-import { appIconPath, createAppWindow } from "./utils/windowUtils";
+import { appIconPath } from "./utils/windowUtils";
 
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
@@ -208,7 +205,7 @@ export default async function () {
         serviceCollection.providers.forEach((p) =>
           p.__registerWindows(mainWindow)
         );
-    } catch {}
+    } catch { }
     let fromMaximized = false;
     win.on("maximize", () => {
       fromMaximized = true;
@@ -332,6 +329,8 @@ export default async function () {
     if (settings.get("app.minimizeTrayOverride")) {
       serverMain.emit("app.trayState", null, "hidden");
       ev.preventDefault(); // prevent quit - minimize to tray
+    } else {
+      serviceCollection.getProvider("settings")?.saveToDrive();
     }
   });
   serverMain.on("app.restore", () => {

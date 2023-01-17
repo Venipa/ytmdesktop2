@@ -12,6 +12,7 @@ import fs, { existsSync } from "fs";
 import { debounce, get as _get, set as _set } from "lodash-es";
 import path from "path";
 import { LastFMSettings } from "ytmd";
+import { parseJson } from "../lib/json";
 const defaultSettings = {
   api: {
     enabled: isDevelopment ? true : false,
@@ -55,24 +56,24 @@ export default class SettingsProvider extends BaseProvider
   constructor(private app: App) {
     super("settings");
   }
-  private async getConfigPath() {
-    return await path.resolve(
+  private getConfigPath() {
+    return path.resolve(
       this.app.getPath("userData"),
       "app-settings.json"
     );
   }
   async BeforeStart() {
-    const configFile = await this.getConfigPath();
+    const configFile = this.getConfigPath();
     this.logger.debug(configFile);
     if (existsSync(configFile)) {
       _settingsStore = {
         ...defaultSettings,
-        ...JSON.parse(fs.readFileSync(configFile).toString()),
+        ...parseJson(fs.readFileSync(configFile).toString()),
       };
     } else {
       _settingsStore = { ...defaultSettings };
     }
-    await this.saveToDrive();
+    this.saveToDrive();
   }
   get instance() {
     return _settingsStore;
@@ -91,14 +92,14 @@ export default class SettingsProvider extends BaseProvider
     return this;
   }
   @IpcOn("settingsProvider.save", {
-    debounce: 10000,
+    debounce: 5000,
   })
-  async saveToDrive() {
-    const configFile = await this.getConfigPath();
+  saveToDrive() {
+    const configFile = this.getConfigPath();
     fs.writeFileSync(configFile, JSON.stringify(_settingsStore));
   }
   async OnDestroy() {
-    await this.saveToDrive();
+    this.saveToDrive();
   }
   AfterInit() {
     this.views.youtubeView.webContents.on(
@@ -163,7 +164,7 @@ export default class SettingsProvider extends BaseProvider
     const [key, value] = args;
     this.logger.debug(key, value);
     this.set(key, value);
-    await this.saveToDrive();
+    this.saveToDrive();
     return value;
   }
 }
