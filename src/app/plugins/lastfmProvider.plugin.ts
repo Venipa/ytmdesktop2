@@ -89,10 +89,8 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
           if (sessionToken) {
 
             await keytar.setPassword(APP_KEYTAR, LASTFM_KEYTAR_SESSION, sessionToken);
-            setTimeout(() => {
-              if (win.isEnabled())
-                win.close();
-            }, 500);
+            if (win.isEnabled())
+              win.close();
           }
 
           this.logger.debug(`[Auth]> Authenticated: ${sessionToken}`);
