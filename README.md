@@ -20,14 +20,16 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 
 ## Features
 
+### Last.FM (Scrobble)
+![feature-lastfm2](https://user-images.githubusercontent.com/17952364/212539540-c1efc587-1047-4748-9583-64b609a1ec97.jpg)
+
 ### Mini Player (Beta)
 ![image](https://user-images.githubusercontent.com/17952364/183205288-abf687ed-7564-4158-859b-c7dad035db8d.png)
 
 ### Discord Rich Presence
+![image](https://user-images.githubusercontent.com/17952364/212539572-0fe93d02-fb6e-48fe-a301-a09c7ff42703.png)
 
-![image](https://user-images.githubusercontent.com/17952364/149850075-8130daf0-3d76-4fdb-902b-b1756a6c4712.png)
 ### Custom CSS
-
 ![image](https://user-images.githubusercontent.com/17952364/149849609-fe5d3819-7303-4467-9f8e-56fa1e306c87.png)
 
 ### OBS Implementation
