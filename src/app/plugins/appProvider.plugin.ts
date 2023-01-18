@@ -14,20 +14,30 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
   private appLock: boolean;
   constructor(private _app: App) {
     super("app");
+
   }
   get app() {
     return this._app;
   }
   async BeforeStart() {
     powerSaveBlocker.start('prevent-app-suspension')
-    this.appLock = this._app.requestSingleInstanceLock();
-    if (!this.appLock) {
-      serverMain.emit("app.quit", true)
-    } else if (this.windowContext.main) {
-      const wnd = this.windowContext.main;
-      if (wnd.isMinimized()) wnd.restore();
-      wnd.focus();
 
+    if (process.platform !== "darwin") {
+      this.appLock = this._app.requestSingleInstanceLock();
+      if (!this.appLock) {
+        this.app.exit();
+      } else {
+        this.app.on("second-instance", () => {
+          const wnd = this.windowContext.main;
+          if (!wnd) return;
+          if (wnd.isMinimized()) wnd.restore();
+          if (!wnd.isVisible()) {
+            wnd.show();
+            wnd.setSkipTaskbar(false);
+          }
+          wnd.focus();
+        })
+      }
     }
   }
   async AfterInit() {
