@@ -11,7 +11,7 @@
           </p>
         </div>
         <div class="mt-3 text-sm">
-          <a href="https://ytmdesktop.app/" target="_blank" class="font-medium text-indigo-400 hover:text-indigo-300">
+          <a href="https://youtube-music.app/" target="_blank" class="font-medium text-indigo-400 hover:text-indigo-300">
             Learn more about our features
             <span aria-hidden="true">&rarr;</span></a>
         </div>
