@@ -78,7 +78,7 @@ export default class SettingsProvider extends BaseProvider
   get instance() {
     return _settingsStore;
   }
-  get(key: string, defaultValue?: any) {
+  get<T = any>(key: string, defaultValue?: any): T {
     return _get(_settingsStore, key, defaultValue);
   }
   set(key: string, value: any) {

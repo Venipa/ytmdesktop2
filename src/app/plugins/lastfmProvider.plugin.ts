@@ -20,14 +20,15 @@ export interface LastFMUserState {
   userType: string;
   userId: string;
 }
+const lastFmClient = new LastFMClient({ api: process.env.VUE_APP_LASTFM_API, secret: process.env.VUE_APP_LASTFM_SECRET });
+
 @IpcContext
 export default class LastFMProvider extends BaseProvider implements AfterInit, OnInit {
-  private lastFmClient = new LastFMClient({ api: process.env.VUE_APP_LASTFM_API, secret: process.env.VUE_APP_LASTFM_SECRET });
   constructor(private app: App) {
     super("lastfm");
   }
   get client() {
-    return this.lastFmClient;
+    return lastFmClient;
   }
   async OnInit() {
     const lastfm = this.getProvider("settings").get("lastfm") as LastFMSettings;
@@ -111,7 +112,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     })
   }
   getState() {
-    const lastfm = this.getProvider("settings")?.get("lastfm") as LastFMSettings;
+    const lastfm = this.getProvider("settings")?.get<LastFMSettings>("lastfm");
     return {
       connected: this.client.isConnected(),
       name: this.client.getName() || (lastfm.enabled ? lastfm.name : null),
