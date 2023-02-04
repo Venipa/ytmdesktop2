@@ -34,7 +34,7 @@ const defaultSettings = {
     skipDisliked: false,
     res: {
       enabled: false,
-      prefer: "hd1080"
+      prefer: "auto"
     } as VideoResSetting
   },
   discord: {
