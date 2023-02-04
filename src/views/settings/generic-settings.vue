@@ -48,7 +48,7 @@
           </div>
         </div>
       </settings-checkbox>
-      <div :class="['flex flex-col gap-y-1', apiEnabledSetting ? 'bg-black bg-opacity-20 -mx-4 px-4 pt-1.5 pb-2.5 rounded-lg' : 'mt-1.5']">
+      <div :class="['flex flex-col gap-y-1 border -mx-3 px-3', apiEnabledSetting ? 'border-gray-500 pt-1.5 pb-2.5 rounded-lg' : 'border-gray-500/0 mt-1.5']">
         <settings-checkbox configKey="api.enabled" class="group">
           <div class="flex flex-col">
             <div>Enable API</div>
@@ -58,7 +58,7 @@
         </settings-checkbox>
 
         <template v-if="apiEnabledSetting">
-          <settings-input configKey="api.port" type="number" :min="13000" :max="39999" placeholder="13000-39999" class="bg-transparent border-0 -mx-2.5">
+          <settings-input configKey="api.port" type="number" :min="13000" :max="39999" placeholder="13000-39999">
             <template v-slot:label>
               API Port
             </template>

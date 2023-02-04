@@ -1,6 +1,6 @@
 import { contextBridge } from "electron";
+import { merge, set } from "lodash-es";
 import { basename } from "path";
-import { set, merge } from "lodash-es";
 import exposeData from "./base";
 let exposedMain = false;
 Object.entries(exposeData).forEach(([key, endpoints]) => {
@@ -21,6 +21,21 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
 });
 
 (() => {
+
+  function ensureDomLoaded(f) {
+    if (["interactive", "complete"].indexOf(document.readyState) > -1) {
+      f()
+    }
+    else {
+      let triggered = false
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!triggered) {
+          triggered = true
+          setTimeout(f, 1)
+        }
+      })
+    }
+  }
   const window = document.defaultView;
   const plugins = (() => {
     const plugins = require.context(
@@ -33,7 +48,7 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
       return {
         file: m,
         exec: func,
-        name: basename(m),
+        name: basename(m)
       };
     });
   })();
@@ -43,21 +58,31 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
     return _loadedYTM;
   };
 
-  window.api.settingsProvider
+  const settingsLoadPromise = window.api.settingsProvider
     .getAll({})
     .then((x) => (window.__ytd_settings = merge({}, window.__ytd_settings, x)));
   window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
     console.log("settings.change", key, value);
     window.__ytd_settings = set(window.__ytd_settings, key, value);
   });
-  document.addEventListener("DOMContentLoaded", () => {
-    window.__ytd_plugins = Object.freeze(plugins);
-    const pluginContext = { settings: new Proxy(window.__ytd_settings, {}) };
-    plugins.forEach((m) => {
-      console.log("Client Plugin ::", m.name, m.exec);
-      m.exec(pluginContext);
-    });
-    window.api.emit("app.loadEnd");
-    _loadedYTM = true; // todo
-  });
+  settingsLoadPromise.finally(() => {
+    ensureDomLoaded(() => {
+      window.__ytd_plugins = Object.freeze(plugins);
+      const pluginContext = { settings: new Proxy(window.__ytd_settings, {}) };
+      const destroyFns = plugins.map((m) => {
+        console.log("Client Plugin ::", m.name, m.exec);
+        const destroyFn = m.exec(pluginContext);
+        return destroyFn;
+      });
+      const currentUrl = new URL(location.href);
+      window.addEventListener("beforeunload",
+      function () {
+        if (destroyFns && currentUrl.hostname !== this.location.hostname && destroyFns.length > 0)
+          destroyFns.filter(fn => fn && typeof fn === "function").forEach(fn => fn());
+      })
+      window.api.emit("app.loadEnd");
+      _loadedYTM = true; // todo
+
+    })
+  })
 })();

@@ -295,7 +295,9 @@ export default async function () {
       getViewObject(mainWindow.views)
     );
     serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
-    serviceCollection.exec("AfterInit");
+    mainWindow.views.youtubeView.webContents.once("did-finish-load", () => {
+      serviceCollection.exec("AfterInit");
+    })
     mainWindow.main.blur();
     setTimeout(() => {
       mainWindow.main.focus(); // fix hibernation/standby expired window cache

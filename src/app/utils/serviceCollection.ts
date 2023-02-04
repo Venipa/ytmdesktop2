@@ -1,3 +1,4 @@
+import logger from '@/utils/Logger';
 import { App } from 'electron';
 import { BaseProviderNames } from 'ytmd';
 
@@ -19,12 +20,14 @@ export async function createPluginCollection(app: App) {
       })
       .map((provider: any) => new provider(app));
     providers.forEach((p: BaseProvider) => p.__registerProviders(providers));
+    const getProviderNames = () => providers.map((x: BaseProvider) => x.getName());
     return {
       providers,
-      getProviderNames: () => providers.map((x: BaseProvider) => x.getName()),
+      getProviderNames,
       exec: async (
         event: "OnInit" | "OnDestroy" | "AfterInit" | "BeforeStart"
       ) => {
+        logger.debug(`executing provider event: "${event}" for ${getProviderNames().join(", ")}`);
         return await Promise.all(
           providers
             .filter((x) => typeof x[event] === "function")

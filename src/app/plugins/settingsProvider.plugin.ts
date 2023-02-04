@@ -7,12 +7,15 @@ import { getViewObject } from "@/app/utils/mappedWindow";
 import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import { serverMain } from "@/app/utils/serverEvents";
 import { rootWindowInjectUtils } from "@/app/utils/webContentUtils";
+import { VideoResSetting } from "@/utils/ISettings";
 import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import fs, { existsSync } from "fs";
 import { debounce, get as _get, set as _set } from "lodash-es";
 import path from "path";
+import { distinctUntilChanged, filter, map, startWith, Subject, takeUntil } from "rxjs";
 import { LastFMSettings } from "ytmd";
-import { parseJson } from "../lib/json";
+import { parseJson, stringifyJson } from "../lib/json";
+
 const defaultSettings = {
   api: {
     enabled: isDevelopment ? true : false,
@@ -28,7 +31,11 @@ const defaultSettings = {
     enableStatisticsAndErrorTracing: true
   },
   player: {
-    skipDisliked: false
+    skipDisliked: false,
+    res: {
+      enabled: false,
+      prefer: "hd1080"
+    } as VideoResSetting
   },
   discord: {
     enabled: true,
@@ -53,6 +60,11 @@ export type SettingsStore = typeof defaultSettings & { [key: string]: any };
 @IpcContext
 export default class SettingsProvider extends BaseProvider
   implements OnDestroy, BeforeStart, AfterInit {
+  readonly onChange = new Subject<SettingsStore>();
+  onChangeProp(key: string) {
+    const settings = this.instance;
+    return this.onChange.pipe(takeUntil(this.onChange), startWith(settings)).pipe(map(value => _get(value, key, null)), filter(Boolean), distinctUntilChanged((l, r) => stringifyJson(l) === stringifyJson(r)))
+  }
   constructor(private app: App) {
     super("settings");
   }
@@ -83,9 +95,10 @@ export default class SettingsProvider extends BaseProvider
   }
   set(key: string, value: any) {
     _set(_settingsStore, key, value);
+    this.onChange.next(_settingsStore);
     try {
       serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value),
-      this.windowContext.sendToAllViews(eventNames.SERVER_SETTINGS_CHANGE, key, value);
+        this.windowContext.sendToAllViews(eventNames.SERVER_SETTINGS_CHANGE, key, value);
     } catch (ex) {
       this.logger.error(ex);
     }
@@ -99,6 +112,7 @@ export default class SettingsProvider extends BaseProvider
     fs.writeFileSync(configFile, JSON.stringify(_settingsStore));
   }
   async OnDestroy() {
+    this.onChange.complete();
     this.saveToDrive();
   }
   AfterInit() {
@@ -167,4 +181,5 @@ export default class SettingsProvider extends BaseProvider
     this.saveToDrive();
     return value;
   }
+  
 }

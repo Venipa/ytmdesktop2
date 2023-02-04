@@ -1,16 +1,16 @@
 <template>
   <div class="form-control">
-    <label class="cursor-pointer label">
-      <span class="label-text text-gray-300"><slot></slot></span>
-      <div>
-        <input
-          type="checkbox"
-          class="checkbox checkbox-primary"
-          v-bind:checked="value"
-          @change="(ev) => updateSetting(!!ev.target.checked)"
-        />
-        <span class="checkbox-mark"></span>
-      </div>
+    <label class="flex flex-col space-y-2 label items-start">
+      <span class="label-text text-gray-300" v-if="$slots.label">
+        <slot name="label"></slot>
+      </span>
+      <select
+        class="select select-bordered w-full"
+        v-bind:value="value" v-if="$slots.options"
+        @change="(ev: any) => updateSetting(ev.target.value)"
+      >
+        <slot name="options"></slot>
+      </select>
     </label>
   </div>
 </template>
@@ -25,12 +25,13 @@ export default defineComponent({
       required: true,
     },
     defaultValue: Object,
+    label: String,
   },
   methods: {
     updateSetting: (_value: boolean) => null,
   },
   setup(context) {
-    const value = ref<boolean>();
+    const value = ref<string>();
     onMounted(async () => {
       value.value = await (window as any).api.settingsProvider.get(
         context.configKey,
@@ -42,13 +43,11 @@ export default defineComponent({
     };
   },
   created() {
-    this.updateSetting = debounce((value: boolean) => {
+    this.updateSetting = debounce((value: string) => {
       if (this.configKey) {
-        (window as any).api.settingsProvider
-          .update(this.configKey, !!value)
-          .then((v) => {
-            (this.value = v), this.$emit("change", v);
-          });
+        (window as any).api.settingsProvider.update(this.configKey, value).then((v: any) => {
+          (this.value = v), this.$emit("change", v);
+        });
       }
     }, 200);
   },
