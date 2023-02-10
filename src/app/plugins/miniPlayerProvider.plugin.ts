@@ -26,8 +26,6 @@ export default class MiniPlayerProvider extends BaseProvider implements AfterIni
         path: "/miniplayer",
         minWidth: 340,
         minHeight: 340,
-        maxWidth: 600,
-        maxHeight: 400,
         height: 340,
         width: 540
       });
