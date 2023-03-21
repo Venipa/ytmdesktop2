@@ -25,7 +25,7 @@ import {
 } from "./utils/serviceCollection";
 import { createApiView, createView } from "./utils/view";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
-import { appIconPath } from "./utils/windowUtils";
+import { appIconPath, wrapWindowHandler } from "./utils/windowUtils";
 
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
@@ -63,9 +63,12 @@ export default async function () {
    */
   async function createRootWindow(options?: BrowserWindowConstructorOptions) {
     // Create the browser window.
-    const win = new BrowserWindow({
+    const winSize = {
       width: 1500,
       height: 800,
+    }
+    const win = new BrowserWindow({
+      ...winSize,
       minWidth: 800,
       minHeight: 480,
       autoHideMenuBar: true,
@@ -185,6 +188,9 @@ export default async function () {
         win.setTopBrowserView(loadingView);
       }, 100)
     );
+    const { state } = await wrapWindowHandler(win, "root", { ...winSize });
+    if (state.maximized) win.maximize();
+    else win.setBounds({ ...state });
     serverMain.emit("app.loadStart");
     await youtubeView.webContents.loadURL(defaultUrl).then(() => {
       if (isDevelopment)

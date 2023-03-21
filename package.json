@@ -1,6 +1,6 @@
 {
   "name": "ytmdesktop2",
-  "version": "0.10.10",
+  "version": "0.10.11",
   "private": false,
   "author": "Venipa <admin@venipa.net>",
   "scripts": {
@@ -28,6 +28,7 @@
     "daisyui": "^2.20.0",
     "date-fns": "^2.29.1",
     "discord-rpc": "^4.0.1",
+    "electron-store": "^8.1.0",
     "electron-threads": "^1.0.2",
     "electron-updater": "^5.2.1",
     "events": "^3.3.0",
