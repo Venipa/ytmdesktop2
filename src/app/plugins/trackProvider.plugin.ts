@@ -93,7 +93,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     if (trackId) this.__onActiveTrack(trackId);
   }
   /**
-   * 
+   *
    * @param lazy 500ms timeout before throwing
    * @returns [like, dislike] tuple
    */
@@ -150,6 +150,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     const lastfm = this.getProvider("lastfm");
     const lastfmState = lastfm.getState();
     if (lastfm && lastfmState.connected && !lastfmState.processing) {
+      await lastfm.handleTrackStart(track)
       if (this.trackChangeTimeout) clearTimeout(this.trackChangeTimeout);
       this.trackChangeTimeout = setTimeout(() => {
         lastfm.handleTrackChange(track)
