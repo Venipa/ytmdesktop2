@@ -216,6 +216,9 @@ devDependencies:
   svg-inline-loader:
     specifier: ^0.8.2
     version: 0.8.2
+  ts-loader:
+    specifier: ^9.5.1
+    version: 9.5.1(typescript@4.9.5)(webpack@5.90.3)
   tsconfig-paths-webpack-plugin:
     specifier: ^4.0.0
     version: 4.0.0
@@ -331,7 +334,7 @@ packages:
       debug: 4.3.4
       gensync: 1.0.0-beta.2
       json5: 2.2.1
-      semver: 6.3.0
+      semver: 6.3.1
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -403,7 +406,7 @@ packages:
       '@babel/core': 7.18.10
       '@babel/helper-validator-option': 7.18.6
       browserslist: 4.21.3
-      semver: 6.3.0
+      semver: 6.3.1
     dev: true
 
   /@babel/helper-compilation-targets@7.18.9(@babel/core@7.24.0):
@@ -416,7 +419,7 @@ packages:
       '@babel/core': 7.24.0
       '@babel/helper-validator-option': 7.18.6
       browserslist: 4.21.3
-      semver: 6.3.0
+      semver: 6.3.1
     dev: true
 
   /@babel/helper-compilation-targets@7.23.6:
@@ -1734,7 +1737,7 @@ packages:
       fs-extra: 8.1.0
       got: 9.6.0
       progress: 2.0.3
-      semver: 6.3.0
+      semver: 6.3.1
       sumchecker: 3.0.1
     optionalDependencies:
       global-agent: 3.0.0
@@ -2784,7 +2787,7 @@ packages:
       debug: 4.3.4
       globby: 11.1.0
       is-glob: 4.0.3
-      semver: 7.3.7
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@4.9.5)
       typescript: 4.9.5
     transitivePeerDependencies:
@@ -2980,7 +2983,7 @@ packages:
       babel-plugin-dynamic-import-node: 2.3.3
       core-js: 3.24.1
       core-js-compat: 3.24.1
-      semver: 7.3.7
+      semver: 7.5.4
       vue: 3.2.37
     transitivePeerDependencies:
       - supports-color
@@ -3149,7 +3152,7 @@ packages:
       fork-ts-checker-webpack-plugin: 6.5.2(eslint@8.21.0)(typescript@4.9.5)(webpack@5.74.0)
       globby: 11.1.0
       thread-loader: 3.0.4(webpack@5.74.0)
-      ts-loader: 9.3.1(typescript@4.9.5)(webpack@5.74.0)
+      ts-loader: 9.5.1(typescript@4.9.5)(webpack@5.74.0)
       typescript: 4.9.5
       vue: 3.2.37
       webpack: 5.74.0
@@ -3342,7 +3345,7 @@ packages:
       open: 8.4.0
       ora: 5.4.1
       read-pkg: 5.2.0
-      semver: 7.3.7
+      semver: 7.5.4
       strip-ansi: 6.0.1
     transitivePeerDependencies:
       - encoding
@@ -5463,7 +5466,7 @@ packages:
       postcss-modules-scope: 3.0.0(postcss@8.4.18)
       postcss-modules-values: 4.0.0(postcss@8.4.18)
       postcss-value-parser: 4.2.0
-      semver: 7.3.7
+      semver: 7.5.4
       webpack: 5.90.3
     dev: true
 
@@ -6927,7 +6930,7 @@ packages:
       memfs: 3.4.7
       minimatch: 3.1.2
       schema-utils: 2.7.0
-      semver: 7.3.7
+      semver: 7.5.4
       tapable: 1.1.3
       typescript: 4.9.5
       webpack: 5.74.0
@@ -6987,7 +6990,7 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       at-least-node: 1.0.0
-      graceful-fs: 4.2.10
+      graceful-fs: 4.2.11
       jsonfile: 6.1.0
       universalify: 2.0.0
     dev: true
@@ -9409,7 +9412,7 @@ packages:
       cosmiconfig: 7.0.1
       klona: 2.0.5
       postcss: 8.4.18
-      semver: 7.3.7
+      semver: 7.5.4
       webpack: 5.74.0
     dev: true
 
@@ -10329,11 +10332,6 @@ packages:
     hasBin: true
     dev: true
 
-  /semver@6.3.0:
-    resolution: {integrity: sha512-b39TBaTSfV6yBrapU89p5fKekE2m/NwnDocOVruQFS1/veMgdzuPcnOM34M6CwxW8jH/lxEa5rBoDeUwu5HHTw==}
-    hasBin: true
-    dev: true
-
   /semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
@@ -10641,6 +10639,11 @@ packages:
   /source-map@0.6.1:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
+
+  /source-map@0.7.4:
+    resolution: {integrity: sha512-l3BikUxvPOcn5E74dZiq5BGsTb5yEwhaTSzccU6t4sDOH8NWJCstKO5QT2CvtFoK6F0saL7p9xHAqHOlCPJygA==}
+    engines: {node: '>= 8'}
+    dev: true
 
   /sourcemap-codec@1.4.8:
     resolution: {integrity: sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==}
@@ -11220,19 +11223,36 @@ packages:
     resolution: {integrity: sha512-cXzueh9pzBCsLzhToB4X4gZCb3KYkrsAcBAX97JnazE74HOl3cpBJYEV7nabHeG/6/WXCU5Yujlde/WPBUwnsg==}
     dev: false
 
-  /ts-loader@9.3.1(typescript@4.9.5)(webpack@5.74.0):
-    resolution: {integrity: sha512-OkyShkcZTsTwyS3Kt7a4rsT/t2qvEVQuKCTg4LJmpj9fhFR7ukGdZwV6Qq3tRUkqcXtfGpPR7+hFKHCG/0d3Lw==}
+  /ts-loader@9.5.1(typescript@4.9.5)(webpack@5.74.0):
+    resolution: {integrity: sha512-rNH3sK9kGZcH9dYzC7CewQm4NtxJTjSEVRJ2DyBZR7f8/wcta+iV44UPCXc5+nzDzivKtlzV6c9P4e+oFhDLYg==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
       typescript: '*'
       webpack: ^5.0.0
     dependencies:
       chalk: 4.1.2
-      enhanced-resolve: 5.10.0
+      enhanced-resolve: 5.15.1
       micromatch: 4.0.5
-      semver: 7.3.7
+      semver: 7.5.4
+      source-map: 0.7.4
       typescript: 4.9.5
       webpack: 5.74.0
+    dev: true
+
+  /ts-loader@9.5.1(typescript@4.9.5)(webpack@5.90.3):
+    resolution: {integrity: sha512-rNH3sK9kGZcH9dYzC7CewQm4NtxJTjSEVRJ2DyBZR7f8/wcta+iV44UPCXc5+nzDzivKtlzV6c9P4e+oFhDLYg==}
+    engines: {node: '>=12.0.0'}
+    peerDependencies:
+      typescript: '*'
+      webpack: ^5.0.0
+    dependencies:
+      chalk: 4.1.2
+      enhanced-resolve: 5.15.1
+      micromatch: 4.0.5
+      semver: 7.5.4
+      source-map: 0.7.4
+      typescript: 4.9.5
+      webpack: 5.90.3
     dev: true
 
   /tsconfig-paths-webpack-plugin@4.0.0:
@@ -11715,7 +11735,7 @@ packages:
       espree: 9.3.3
       esquery: 1.4.0
       lodash: 4.17.21
-      semver: 7.3.7
+      semver: 7.5.4
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -11890,7 +11910,7 @@ packages:
     engines: {node: '>=10.13.0'}
     dependencies:
       glob-to-regexp: 0.4.1
-      graceful-fs: 4.2.10
+      graceful-fs: 4.2.11
     dev: true
 
   /wbuf@1.7.3:
@@ -11976,7 +11996,7 @@ packages:
       connect-history-api-fallback: 2.0.0
       default-gateway: 6.0.3
       express: 4.18.1
-      graceful-fs: 4.2.10
+      graceful-fs: 4.2.11
       html-entities: 2.3.3
       http-proxy-middleware: 2.0.6(@types/express@4.17.13)(debug@4.3.4)
       ipaddr.js: 2.0.1
@@ -12039,12 +12059,12 @@ packages:
       acorn-import-assertions: 1.8.0(acorn@8.8.0)
       browserslist: 4.21.3
       chrome-trace-event: 1.0.3
-      enhanced-resolve: 5.10.0
+      enhanced-resolve: 5.15.1
       es-module-lexer: 0.9.3
       eslint-scope: 5.1.1
       events: 3.3.0
       glob-to-regexp: 0.4.1
-      graceful-fs: 4.2.10
+      graceful-fs: 4.2.11
       json-parse-even-better-errors: 2.3.1
       loader-runner: 4.3.0
       mime-types: 2.1.35
