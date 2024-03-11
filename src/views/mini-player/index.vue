@@ -6,7 +6,7 @@
     }"
   >
     <div class="relative">
-      <control-bar title="Mini Player" class="bg-transparent border-b-0 z-20 pl-4 relative">
+      <control-bar title="Mini Player" class="bg-transparent border-b-0 z-20 pl-4 relative group">
         <template #icon>
           <MiniPlayerIcon class="antialiased" />
         </template>
@@ -17,6 +17,15 @@
           >
             Beta
           </span>
+
+          <button
+            @click="() => toggleStayTop()"
+            class="control-button relative w-4 group-hover:w-auto group-hover:px-2 group-hover:space-x-2 h-4"
+          >
+          <LockIcon class="group-hover:opacity-100" v-if="isTop"></LockIcon>
+          <UnLockIcon class="opacity-60" v-else></UnLockIcon>
+            <span class="hidden group-hover:flex text-sm">Stay on Top</span>
+          </button>
         </template>
       </control-bar>
       <div
@@ -231,20 +240,22 @@
 </template>
 
 <script lang="ts">
-import ControlBar from "@/components/ControlBar.vue";
-import Loading from "@/components/Loading.vue";
-import MiniPlayerIcon from "@/assets/icons/mini-player.svg";
-import PlayIcon from "@/assets/icons/play.svg";
-import PauseIcon from "@/assets/icons/pause.svg";
-import NextIcon from "@/assets/icons/next.svg";
-import PrevIcon from "@/assets/icons/prev.svg";
+import { TrackData } from "@/app/utils/trackData";
+import BackwardIcon from "@/assets/icons/backward10.svg";
 import ForwardIcon from "@/assets/icons/forward10.svg";
 import LikeIcon from "@/assets/icons/like.svg";
-import BackwardIcon from "@/assets/icons/backward10.svg";
-import { TrackData } from "@/app/utils/trackData";
+import LockIcon from "@/assets/icons/lock.svg";
+import MiniPlayerIcon from "@/assets/icons/mini-player.svg";
+import NextIcon from "@/assets/icons/next.svg";
+import PauseIcon from "@/assets/icons/pause.svg";
+import PlayIcon from "@/assets/icons/play.svg";
+import PrevIcon from "@/assets/icons/prev.svg";
+import UnLockIcon from "@/assets/icons/unlock.svg";
+import ControlBar from "@/components/ControlBar.vue";
+import Loading from "@/components/Loading.vue";
 import { refIpc } from "@/utils/Ipc";
-import { defineComponent, onMounted, ref, watch, watchEffect } from "vue";
 import { intervalToDuration } from "date-fns";
+import { defineComponent, onMounted, ref } from "vue";
 const zeroPad = (num) => String(num).padStart(2, "0");
 const createInterval = (dts: number[]): [string, number] => [
   dts
@@ -264,6 +275,8 @@ export default defineComponent({
     ForwardIcon,
     LikeIcon,
     BackwardIcon,
+    LockIcon,
+    UnLockIcon,
     Loading,
   },
   computed: {
@@ -307,16 +320,19 @@ export default defineComponent({
     }>("TRACK_PLAYSTATE");
     const showWinBorder = ref(false);
     const trackBusy = ref(false);
+    const isTop = ref(false);
     onMounted(() => {
       document.title = `YouTube Music - Mini Player`;
       Promise.all([
         window.ipcRenderer.invoke("api/track"),
         window.ipcRenderer.invoke("api/track/state"),
         window.process.isWin11(),
-      ]).then(([trackData, playStateData, isWin11]) => {
+        window.ipcRenderer.invoke("miniplayer.stayOnTop"),
+      ]).then(([trackData, playStateData, isWin11, stayTop]) => {
         setTrack(trackData);
         setPlayState(playStateData);
         showWinBorder.value = window.process.platform === "win32" ? !isWin11 : false;
+        isTop.value = stayTop;
       });
     });
     const progressHandle = ref<HTMLElement>(null);
@@ -327,6 +343,7 @@ export default defineComponent({
       progressHandle,
       accentColor,
       showWinBorder,
+      isTop,
       next() {
         trackBusy.value = true;
         return window.ipcRenderer
@@ -411,6 +428,16 @@ export default defineComponent({
         return window.ipcRenderer.invoke("api/track/seek", seekTime).finally(() => {
           trackBusy.value = false;
         });
+      },
+      async toggleStayTop() {
+        const result = await window.api.action("miniplayer.stayOnTop");
+        isTop.value = result;
+      },
+      action(actionParam, ...params) {
+        return window.api.action(actionParam, ...params);
+      },
+      invoke(invokeParam, ...params) {
+        return window.api.invoke(invokeParam, ...params);
       },
     };
   },

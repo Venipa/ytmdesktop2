@@ -144,7 +144,9 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     this.views.toolbarView.webContents.send("track:title", track?.video?.title);
     this.views.youtubeView.webContents.send("track.change", track.video.videoId);
     this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
-    this.getProvider("mediaController")?.handleTrackMediaOSControlChange(track);
+    const media = this.getProvider("mediaController");
+    if (media)
+      await media.handleTrackMediaOSControlChange(track);
     const api = this.getProvider("api") as ApiProvider;
     api.sendMessage("track:change", track);
     const lastfm = this.getProvider("lastfm");
@@ -181,10 +183,11 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     if (isPlaying && !discordProvider.isConnected && discordProvider.enabled && discordProvider.settingsEnabled)
       await discordProvider.enable();
     const isUIViewRequired = uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1];
-
-    const [currentUIProgress] = isUIViewRequired ? uiTimeInfo : [progressSeconds];
+    const [currentUIProgress, currentUIDuration] = isUIViewRequired ? uiTimeInfo : [progressSeconds, uiTimeInfo[1]];
     if (isUIViewRequired) await discordProvider.updatePlayState(isPlaying, currentUIProgress);
     else await discordProvider.updatePlayState(isPlaying, progressSeconds);
+
+    this.getProvider("mediaController")?.instance?.setTimeline(currentUIDuration, currentUIProgress);
     const [isLiked, isDLiked] = await this.currentSongLikeState();
     if (this._trackState) {
       this.setTrackState((state) => {
@@ -193,7 +196,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
         state.uiProgress = uiTimeInfo[0];
         state.liked = isLiked;
         state.disliked = isDLiked;
-        state.duration = uiTimeInfo[1];
+        state.duration = currentUIDuration;
       });
     } else {
       this.setTrackState({
@@ -202,7 +205,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
         uiProgress: uiTimeInfo[0],
         liked: isLiked,
         disliked: isDLiked,
-        duration: uiTimeInfo[1],
+        duration: currentUIDuration,
         id: this._activeTrackId,
       });
     }

@@ -49,7 +49,8 @@
     "vue-router": "^4.0.5",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.2",
-    "winston-transport": "^4.4.0"
+    "winston-transport": "^4.4.0",
+    "xosms": "^0.6.0"
   },
   "devDependencies": {
     "@types/electron-devtools-installer": "^2.2.0",
@@ -94,12 +95,8 @@
   },
   "license": "MIT",
   "optionalDependencies": {
-    "@nodert-win10-rs4/windows.foundation": "^0.4.4",
-    "@nodert-win10-rs4/windows.media": "^0.4.4",
-    "@nodert-win10-rs4/windows.storage.streams": "^0.4.4",
     "@types/discord-rpc": "^4.0.3",
     "bufferutil": "^4.0.6",
-    "mpris-service": "^2.1.2",
     "utf-8-validate": "^5.0.8"
   },
   "repository": "https://github.com/Venipa/ytmdesktop2",

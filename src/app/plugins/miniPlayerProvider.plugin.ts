@@ -14,6 +14,19 @@ export default class MiniPlayerProvider extends BaseProvider implements AfterIni
   }
   async AfterInit() {
   }
+  @IpcHandle("action:miniplayer.stayOnTop")
+  private async __onPlayerTop() {
+    const window = this.windowContext.views.miniPlayerWindow as any as BrowserWindow;
+    const isOnTop = !window.isAlwaysOnTop();
+    window.setAlwaysOnTop(isOnTop);
+    return isOnTop;
+  }
+  @IpcHandle("miniplayer.stayOnTop")
+  private async __isPlayerTop() {
+    const window = this.windowContext.views.miniPlayerWindow as any as BrowserWindow;
+    const isOnTop = window.isAlwaysOnTop();
+    return isOnTop;
+  }
   @IpcHandle("action:app.miniPlayer")
   @IpcHandle("app.miniPlayer")
   private async __playerWindow() {
