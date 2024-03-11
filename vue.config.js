@@ -8,7 +8,7 @@ const builderOptions = {
   publish: ["github"],
   appId: "net.venipa.ytmdesktop",
   productName: "YouTube Music for Desktop",
-  artifactName: "${productName}-${arch}-${platform}.${ext}",
+  artifactName: "${productName}-${version}_${arch}.${ext}",
   extraMetadata: {
     name: "YouTube Music for Desktop",
   },
