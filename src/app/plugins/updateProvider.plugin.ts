@@ -2,7 +2,7 @@ import { AfterInit, BaseProvider, BeforeStart } from '@/app/utils/baseProvider';
 import { isDevelopment } from '@/app/utils/devUtils';
 import { IpcContext, IpcHandle, IpcOn } from '@/app/utils/onIpcEvent';
 import { App, BrowserWindow, dialog } from 'electron';
-import { autoUpdater, CancellationToken, UpdateInfo } from 'electron-updater';
+import { CancellationToken, UpdateInfo, autoUpdater } from 'electron-updater';
 import semver from 'semver';
 
 import IPC_EVENT_NAMES from '../utils/eventNames';
@@ -142,7 +142,7 @@ export default class UpdateProvider
   }
   private isUpdateInRange(ver: string) {
     if (isDevelopment) return true;
-    return semver.gt(ver, this.app.getVersion(), {
+    return semver.gtr(ver, this.app.getVersion(), {
       includePrerelease: true,
     });
   }

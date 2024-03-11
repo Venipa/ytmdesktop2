@@ -21,10 +21,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      - name: "setup pnpm"
-        uses: pnpm/action-setup@v3
-        with:
-          version: 8
         # install dbus-1 dep for xosms
       - if: matrix.os == 'ubuntu-latest'
         name: install ubuntu deps
@@ -41,10 +37,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm i
+          yarn config set ignore-engines true
+          yarn
 
       - name: Build Electron release
-        run: pnpm release
+        run: yarn release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VUE_APP_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
