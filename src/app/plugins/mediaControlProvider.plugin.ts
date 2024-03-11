@@ -34,6 +34,7 @@ export default class MediaControlProvider extends BaseProvider
     this._mediaProvider.seekEnabled = false; // to be added
     if (this._mediaProvider) {
       this._mediaProvider.addEventListener("buttonpressed", this.onKeyPressed);
+      this._mediaProvider.activate();
     }
     if (!this.mediaProviderEnabled())
       this.xosmsLog.warn(
@@ -100,5 +101,6 @@ export default class MediaControlProvider extends BaseProvider
   }
   OnDestroy(): void | Promise<void> {
     this._mediaProvider?.removeEventListener("buttonpressed", this.onKeyPressed);
+    this._mediaProvider?.deactivate();
   }
 }
