@@ -21,7 +21,6 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
   }
   async BeforeStart() {
     powerSaveBlocker.start('prevent-app-suspension')
-
     if (process.platform !== "darwin") {
       this.appLock = this._app.requestSingleInstanceLock();
       if (!this.appLock) {

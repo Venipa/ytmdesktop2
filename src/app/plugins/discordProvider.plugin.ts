@@ -1,10 +1,10 @@
 import translations from "@/translations";
-import { Client as DiscordClient, Presence } from "discord-rpc";
+import { Client as DiscordClient, SetActivity as Presence } from "@xhayper/discord-rpc";
 import { App } from "electron";
 
 import { AfterInit, BaseProvider } from "@/app/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
-import { discordEmbedFromTrack, TrackData } from "@/app/utils/trackData";
+import { TrackData, discordEmbedFromTrack } from "@/app/utils/trackData";
 import { YoutubeMatcher } from "@/app/utils/youtubeMatcher";
 
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
@@ -50,7 +50,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     if (!this.client) return;
     clearTimeout(this._updateHandle);
     this._isConnected = false;
-    await this.client.clearActivity();
+    await this.client.user?.clearActivity();
     await this.client.destroy().finally(() => {
 
       this.windowContext.sendToAllViews("discord.disconnected");
@@ -71,7 +71,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     if (!this._enabled || this.isConnected) return null;
     this._enabled = true;
     const client = new DiscordClient({
-      transport: "ipc",
+      clientId: CLIENT_ID
     });
     const presence: Presence = {
       largeImageKey: "logo",
@@ -85,9 +85,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     this.presence = presence;
     this.client = client;
     await client
-      .login({
-        clientId: CLIENT_ID,
-      })
+      .login()
       .catch((err) => {
         this.logger.debug(err);
         return new Promise((resolve, reject) =>
@@ -150,7 +148,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     if (this.presence.endTimestamp === null) delete this.presence.endTimestamp;
     if (!this.client || !this.isConnected) return;
     return await this.client
-      .setActivity(this.presence || DEFAULT_PRESENCE)
+      .user?.setActivity(this.presence || DEFAULT_PRESENCE)
       .catch(() => null);
   }
   @IpcOn("settingsProvider.change", {
