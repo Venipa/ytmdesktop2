@@ -20,7 +20,7 @@ export default class MediaControlProvider extends BaseProvider
     app.commandLine.appendSwitch("in-progress-gpu"); // gpu paint not working on some devices, todo: workaround/await fix
     app.commandLine.appendSwitch("no-sandbox"); // avoid freeze, todo: workaround/await fix
   }
-  private onKeyPressed(keyName, ...args) {
+  private onKeyPressed(ev, keyName, ...args) {
     this.xosmsLog.debug(["button press", keyName, ...args]);
     const trackProvider = this.getProvider("api");
     if (keyName === "pause") trackProvider.pauseTrack();
@@ -33,7 +33,7 @@ export default class MediaControlProvider extends BaseProvider
     this._mediaProvider = new MediaServiceProvider(this.app.name, this.app.name);
     this._mediaProvider.seekEnabled = false; // to be added
     if (this._mediaProvider) {
-      this._mediaProvider.addEventListener("buttonpressed", this.onKeyPressed);
+      this._mediaProvider.addEventListener("buttonpressed", this.onKeyPressed.bind(this));
       this._mediaProvider.activate();
     }
     if (!this.mediaProviderEnabled())
@@ -66,6 +66,7 @@ export default class MediaControlProvider extends BaseProvider
       this._mediaProvider.playButtonEnabled = !isPlaying;
       this._mediaProvider.pauseButtonEnabled = isPlaying;
     }
+    this._mediaProvider.update();
   }
   private mediaProviderEnabled() {
     return !!this._mediaProvider;
@@ -90,6 +91,7 @@ export default class MediaControlProvider extends BaseProvider
       this._mediaProvider.trackId = trackData.video.videoId;
       this._mediaProvider.previousButtonEnabled = true;
       this._mediaProvider.nextButtonEnabled = true;
+      this._mediaProvider.update();
     } catch (ex) {
       this.logger.error(ex); // rip media service
     }
