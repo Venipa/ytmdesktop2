@@ -81,6 +81,15 @@ export class LastFMClient {
     this.sessionName = s.name;
     return this.session = s.key;
   }
+  async updateNowPlaying(...tracks: { artist: string, track: string, album?: string, duration?: number }[]) {
+    if (!this.session) throw new Error("Invalid session");
+    const updatePromise = this.callMethod("track.updateNowPlaying", "post", {
+      query: {
+        sk: this.session,
+        ...tracks[0]
+      }
+    })
+  }
   async scrobble(...tracks: { artist: string, track: string, timestamp: number, album?: string, duration?: number }[]) {
     if (!this.session) throw new Error("Invalid session");
     return await this.callMethod("track.scrobble", "post", {

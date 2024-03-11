@@ -163,6 +163,19 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     return this.getState()
   }
 
+  async handleTrackStart(track: TrackData) {{
+      if (!this.client.isConnected()) return;
+      await this.client.updateNowPlaying({
+          artist: track.video.author,
+          track: track.video.title,
+          duration: track.meta.duration
+      }).then(stringifyJson)
+          .then(d => this.logger.debug(d))
+          .catch(err => {
+              this.logger.error(err);
+          })
+  }}
+
   async handleTrackChange(track: TrackData) {
     if (!this.client.isConnected()) return;
     await this.client.scrobble({
