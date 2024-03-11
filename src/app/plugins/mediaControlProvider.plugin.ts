@@ -32,6 +32,8 @@ export default class MediaControlProvider extends BaseProvider
   async AfterInit() {
     this._mediaProvider = new MediaServiceProvider(this.app.name, this.app.name);
     this._mediaProvider.seekEnabled = false; // to be added
+    this._mediaProvider.previousButtonEnabled = true;
+    this._mediaProvider.nextButtonEnabled = true;
     if (this._mediaProvider) {
       this._mediaProvider.addEventListener("buttonpressed", this.onKeyPressed.bind(this));
       this._mediaProvider.activate();
