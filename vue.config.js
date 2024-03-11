@@ -8,19 +8,24 @@ const builderOptions = {
   publish: ["github"],
   appId: "net.venipa.ytmdesktop",
   productName: "YouTube Music for Desktop",
+  artifactName: "${productName}-${arch}-${platform}.${ext}",
   extraMetadata: {
     name: "YouTube Music for Desktop",
   },
   mac: {
     category: "public.app-category.music",
-    icon: "src/assets/icons/mac/icon.icns"
+    icon: "src/assets/icons/mac/icon.icns",
+    target: [
+      { target: "dmg", arch: "x64" },
+      { target: "dmg", arch: "arm64" }
+    ]
   },
   dmg: {
     icon: "src/assets/icons/mac/icon.icns",
     title: "Install/Update ${productName} ${version}",
   },
   linux: {
-    target: ["AppImage"],
+    target: [{ target: "AppImage", arch: "x64" }, { target: "AppImage", arch: "arm64" }],
     category: "Music",
     icon: "src/assets/icons/mac/icon.icns",
   },
@@ -32,10 +37,8 @@ const builderOptions = {
   },
   win: {
     icon: "src/assets/icons/win/icon.ico",
-    target: {
-      target: "nsis",
-      arch: "x64",
-    },
+    target: [{ target: "nsis", arch: ["x64"] }, { target: "nsis", arch: ["arm64"] }],
+
     compression: "maximum"
   },
 };
