@@ -26,6 +26,7 @@ export class BaseProvider {
     toolbarView: BrowserView;
     settingsWindow?: BrowserView;
     miniPlayerWindow?: BrowserView;
+    taskViewWindow?: BrowserView;
   }>;
   get logger() {
     return this._loggerInstance;

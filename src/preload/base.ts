@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron";
 import pkg from "../../package.json";
+import translations from "../translations";
 console.log(window);
 export default {
   ipcRenderer: {
@@ -50,4 +51,5 @@ export default {
     on: (channel: string, func) => ipcRenderer.on(channel, func),
     off: (channel: string, func) => ipcRenderer.off(channel, func),
   },
+  translations
 };

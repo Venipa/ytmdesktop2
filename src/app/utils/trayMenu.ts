@@ -16,7 +16,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
     onCheckUpdate: checkUpdate,
     onAutoUpdateRun: applyUpdate,
   } = provider.getProvider("update") as UpdateProvider;
-  return Menu.buildFromTemplate([
+  const menu = Menu.buildFromTemplate([
     {
       label: translations.appName,
       sublabel: `Version: ${app.getVersion()}`,
@@ -121,4 +121,5 @@ export const createTrayMenu = (provider: BaseProvider) => {
       click: () => serverMain.emit("app.quit", null, true),
     },
   ]);
+  return menu;
 };

@@ -22,3 +22,14 @@ declare global {
   }
 }
 
+declare module '@vue/runtime-core' {
+  interface ComponentCustomProperties {
+    window: typeof window;
+    console: typeof console;
+    api: typeof window.api;
+    translations: Record<string, string>;
+  }
+}
+
+export { }; // Important!
+

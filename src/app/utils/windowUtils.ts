@@ -12,7 +12,10 @@ type WindowOptions = {
   maxWidth?: number;
   height?: number;
   width?: number;
-  top?: boolean
+  top?: boolean;
+  showTaskBar?: boolean;
+  maximizeable?: boolean;
+  minimizeable?: boolean;
 };
 const log = logger.child({ label: "main" });
 export function parseScriptPath(p: string) {
@@ -21,7 +24,7 @@ export function parseScriptPath(p: string) {
 export const appIconPath = path.resolve(__static, "favicon.ico");
 export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
   // eslint-disable-next-line prefer-const
-  let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top } = appOptions ?? {};
+  let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top, showTaskBar, minimizeable, maximizeable } = appOptions ?? {};
   if (!path) path = "/";
   // Create the browser window.
   const win = new BrowserWindow({
@@ -31,13 +34,15 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
     minHeight: minHeight ?? 480,
     maxWidth,
     maxHeight,
-    minimizable: false,
+    minimizable: minimizeable === true,
+    maximizable: maximizeable === true,
     backgroundColor: "#000000",
     fullscreenable: !maxWidth && !maxWidth,
     icon: appIconPath,
     frame: false,
     parent,
     modal: parent && top === true,
+    skipTaskbar: showTaskBar === false,
     darkTheme: true,
     webPreferences: {
       // Use pluginOptions.nodeIntegration, leave this alone

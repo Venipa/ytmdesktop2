@@ -39,13 +39,19 @@
       <settings-checkbox configKey="app.enableDev" class="group">
         <div class="flex flex-col">
           <div>Enable Developer Mode</div>
-          <div class="select-none opacity-80 group-hover:opacity-100 text-xs font-medium">... to design or test additional functionality</div>
+          <div class="select-none opacity-80 group-hover:opacity-100 text-xs font-medium">... to design or test additional functionality.</div>
           <div class="select-none flex flex-col opacity-80 group-hover:opacity-100 text-xs font-medium">
             <div class="flex space-x-1">
               <div class="uppercase font-bold text-red-500">Hold Up!</div> If someone told you to copy/paste something here you have an 11/10 chance you're being scammed.
             </div>
             <div>Pasting anything in the console could give attackers access to your Google/YouTube account.</div>
           </div>
+        </div>
+      </settings-checkbox>
+      <settings-checkbox configKey="app.disableHardwareAccel" class="group">
+        <div class="flex flex-col">
+          <div>Disable Hardware Acceleration Mode</div>
+          <div class="select-none opacity-80 group-hover:opacity-100 text-xs font-medium">updating this setting requires app restart.</div>
         </div>
       </settings-checkbox>
       <div :class="['flex flex-col gap-y-1 border -mx-3 px-3', apiEnabledSetting ? 'border-gray-500 pt-1.5 pb-2.5 rounded-lg' : 'border-gray-500/0 mt-1.5']">

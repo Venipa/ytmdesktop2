@@ -10,9 +10,9 @@ import { rootWindowInjectUtils } from "@/app/utils/webContentUtils";
 import { VideoResSetting } from "@/utils/ISettings";
 import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import fs, { existsSync } from "fs";
-import { debounce, get as _get, set as _set } from "lodash-es";
+import { get as _get, set as _set, debounce } from "lodash-es";
 import path from "path";
-import { distinctUntilChanged, filter, map, startWith, Subject, takeUntil } from "rxjs";
+import { Subject, distinctUntilChanged, filter, map, startWith, takeUntil } from "rxjs";
 import { LastFMSettings } from "ytmd";
 import { parseJson, stringifyJson } from "../lib/json";
 
@@ -28,7 +28,8 @@ const defaultSettings = {
     getstarted: true,
     enableDev: false,
     minimizeTrayOverride: false,
-    enableStatisticsAndErrorTracing: true
+    enableStatisticsAndErrorTracing: true,
+    disableHardwareAccel: false
   },
   player: {
     skipDisliked: false,

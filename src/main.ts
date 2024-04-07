@@ -41,6 +41,10 @@ const router = createRouter({
       component: () => import("./views/mini-player/index.vue"),
     },
     {
+      path: "/taskview",
+      component: () => import("./views/task-view/index.vue"),
+    },
+    {
       path: "/youtube/toolbar",
       component: () => import("./views/youtube/toolbar.vue"),
     },
@@ -54,4 +58,11 @@ const router = createRouter({
     },
   ],
 });
-createApp(App).use(router).mount("#app");
+createApp(App).use(router).use(app => {
+  app.config.globalProperties.window = window;
+  app.config.globalProperties.console = console;
+  app.config.globalProperties.api = window.api;
+  app.config.globalProperties.translations = window.translations;
+  console.log(app.config.globalProperties);
+  return app;
+}).mount("#app");

@@ -21,7 +21,9 @@ export default class StartupProvider extends BaseProvider
     if (isDevelopment)
       app.commandLine.appendSwitch("disable-web-security"); // disable cors (also disables other security features) - currently dev only
   }
-  async BeforeStart() { }
+  async BeforeStart() {
+    if (this.settingsInstance.instance.app.disableHardwareAccel) this.app.disableHardwareAcceleration();
+  }
   private get startArgs() {
     return ["--processStart", `"${basename(process.execPath)}"`];
   }
