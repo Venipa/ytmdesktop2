@@ -8,7 +8,6 @@ const builderOptions = {
   publish: ["github"],
   appId: "net.venipa.ytmdesktop",
   productName: "YouTube Music for Desktop",
-  artifactName: "${productName}-${version}_${arch}.${ext}",
   extraMetadata: {
     name: "YouTube Music for Desktop",
   },
@@ -37,7 +36,7 @@ const builderOptions = {
   },
   win: {
     icon: "src/assets/icons/win/icon.ico",
-    target: [{ target: "nsis", arch: ["x64"] }, { target: "nsis", arch: ["arm64"] }],
+    target: { target: "nsis", arch: "x64" },
 
     compression: "maximum"
   },
