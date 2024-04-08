@@ -50,6 +50,7 @@ const electronBuilder = {
   preload: {
     "preload-yt": "src/preload/youtube.ts",
     "preload-api": "src/preload/api.ts",
+    "preload-login": "src/preload/login.ts",
     api: "src/api/main.ts",
   },
   nodeIntegration: false,

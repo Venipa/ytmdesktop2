@@ -23,7 +23,7 @@ import {
   createEventCollection,
   createPluginCollection
 } from "./utils/serviceCollection";
-import { createApiView, createView } from "./utils/view";
+import { createApiView, createView, googleLoginPopup } from "./utils/view";
 import { rootWindowInjectUtils } from "./utils/webContentUtils";
 import { appIconPath, wrapWindowHandler } from "./utils/windowUtils";
 
@@ -144,6 +144,24 @@ export default async function () {
         view.webContents.on("did-navigate", (ev, location) => {
           lastLocation = location;
         });
+        let isGoogleLoginProcessing = false;
+        view.webContents.on("will-navigate", (ev, location) => {
+          if (isGoogleLoginProcessing) ev.preventDefault(); // prevent any navigation if google login is processing
+          if (location?.match(/^http?s\:\/\/(accounts)?.google.(\w+)/)) {
+            ev.preventDefault(); // prevent redirect, use popup
+            isGoogleLoginProcessing = true;
+            googleLoginPopup(location, win).then((isAuthenticated) => {
+              isGoogleLoginProcessing = false
+              if (isAuthenticated) {
+                youtubeView.webContents.reload();
+                return new Promise<void>((resolve) => youtubeView.webContents.once("did-finish-load", () => resolve()))
+              };
+
+            }).finally(() => {
+              isGoogleLoginProcessing = false;
+            })
+          }
+        })
         view.webContents.on("will-navigate", (ev, location) => {
           if (
             !lastLocation?.match(defaultUrl) &&
