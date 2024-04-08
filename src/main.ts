@@ -49,6 +49,10 @@ const router = createRouter({
       component: () => import("./views/youtube/toolbar.vue"),
     },
     {
+      path: "/youtube/login-notice",
+      component: () => import("./views/youtube/login-notice.vue"),
+    },
+    {
       path: "/youtube/toolbar-mac",
       component: () => import("./views/youtube/toolbar-mac.vue"),
     },
