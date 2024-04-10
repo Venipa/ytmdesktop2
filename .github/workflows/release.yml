@@ -49,3 +49,20 @@ jobs:
           VUE_APP_LASTFM_API: ${{ secrets.LASTFM_API }}
           VUE_APP_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           VUE_APP_GITHUB_REPOSITORY: ${{ github.repository }}
+      - if: matrix.os == 'ubuntu-latest'
+        name: Upload release source maps to sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          # Install Sentry CLI
+          curl -sL https://sentry.io/get-cli/ | bash
+
+          # Create new Sentry release
+          export SENTRY_RELEASE=$(sentry-cli releases propose-version)
+          sentry-cli releases new -p $SENTRY_PROJECT $SENTRY_RELEASE
+          sentry-cli releases set-commits --auto $SENTRY_RELEASE
+          sentry-cli releases finalize $SENTRY_RELEASE
+
+          # Create new deploy for this Sentry release
+          sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_DEPLOY_ENVIRONMENT
+        
