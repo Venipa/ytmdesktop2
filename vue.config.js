@@ -26,7 +26,7 @@ const builderOptions = {
   linux: {
       target: [
           { target: "AppImage", arch: "x64" },
-          { target: "rpm", arch: "arm64" }
+          { target: "rpm", arch: "x64" }
       ],
     category: "Music",
     icon: "src/assets/icons/mac/icon.icns",
