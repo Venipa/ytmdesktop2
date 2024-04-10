@@ -24,7 +24,10 @@ const builderOptions = {
     title: "Install/Update ${productName} ${version}",
   },
   linux: {
-    target: [{ target: "AppImage", arch: "x64" }, { target: "AppImage", arch: "arm64" }],
+      target: [
+          { target: "AppImage", arch: "x64" },
+          { target: "rpm", arch: "arm64" }
+      ],
     category: "Music",
     icon: "src/assets/icons/mac/icon.icns",
   },
