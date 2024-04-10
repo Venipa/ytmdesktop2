@@ -1,4 +1,5 @@
-import { ipcRenderer } from "electron"
+import { contextBridge, ipcRenderer } from "electron";
+import preloadRoot from "./base";
 
 
 (() => {
@@ -21,5 +22,13 @@ import { ipcRenderer } from "electron"
     ipcRenderer.send("g-login-success");
   }
   const prefixHost = "music.youtube";
-  if (window && document.location.host.indexOf(prefixHost) === 0) reportLoginSuccess();
+  const isYoutubeWindow = window && document.location.host.indexOf(prefixHost) === 0;
+  if (isYoutubeWindow) reportLoginSuccess();
+
+
+  contextBridge.exposeInMainWorld("ytdapi", {
+    isYoutubeWindow,
+    api: preloadRoot.api,
+    process: preloadRoot.process
+  });
 })()

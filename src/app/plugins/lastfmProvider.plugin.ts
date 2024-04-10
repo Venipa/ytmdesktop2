@@ -20,7 +20,7 @@ export interface LastFMUserState {
   userType: string;
   userId: string;
 }
-const lastFmClient = new LastFMClient({ api: process.env.VUE_APP_LASTFM_API, secret: process.env.VUE_APP_LASTFM_SECRET });
+const lastFmClient = process.env.VUE_APP_LASTFM_SECRET && new LastFMClient({ api: process.env.VUE_APP_LASTFM_API, secret: process.env.VUE_APP_LASTFM_SECRET }) ||  null;
 
 @IpcContext
 export default class LastFMProvider extends BaseProvider implements AfterInit, OnInit {
@@ -31,6 +31,10 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     return lastFmClient;
   }
   async OnInit() {
+    if (!lastFmClient) {
+      this.getProvider("settings").set("lastfm.enabled", false);
+      return;
+    }
     const lastfm = this.getProvider("settings").get("lastfm") as LastFMSettings;
     if (lastfm.enabled) {
       const creds = await keytar.findCredentials(APP_KEYTAR);
@@ -163,18 +167,20 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     return this.getState()
   }
 
-  async handleTrackStart(track: TrackData) {{
+  async handleTrackStart(track: TrackData) {
+    {
       if (!this.client.isConnected()) return;
       await this.client.updateNowPlaying({
-          artist: track.video.author,
-          track: track.video.title,
-          duration: track.meta.duration
+        artist: track.video.author,
+        track: track.video.title,
+        duration: track.meta.duration
       }).then(stringifyJson)
-          .then(d => this.logger.debug(d))
-          .catch(err => {
-              this.logger.error(err);
-          })
-  }}
+        .then(d => this.logger.debug(d))
+        .catch(err => {
+          this.logger.error(err);
+        })
+    }
+  }
 
   async handleTrackChange(track: TrackData) {
     if (!this.client.isConnected()) return;

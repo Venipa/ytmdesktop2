@@ -1,5 +1,5 @@
 import translations from "@/translations";
-import { BrowserView, BrowserWindow, BrowserWindowConstructorOptions } from "electron";
+import { BrowserView, BrowserWindow, BrowserWindowConstructorOptions, ipcMain } from "electron";
 import { resolve } from "path";
 import { defaultUrl, isDevelopment } from "./devUtils";
 import { appIconPath, parseScriptPath } from "./windowUtils";
@@ -55,11 +55,10 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
     nodeIntegration: false,
     nodeIntegrationInSubFrames: false,
     nodeIntegrationInWorker: false,
-    webSecurity: true,
-    sandbox: true,
-    contextIsolation: false,
+    webSecurity: false,
+    sandbox: false,
+    contextIsolation: true,
     allowRunningInsecureContent: false,
-    disableHtmlFullscreenWindowResize: true,
     preload: parseScriptPath("preload-login.js"),
   };
   const popup = await createPopup({
@@ -69,6 +68,7 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
     width: 800,
     resizable: false,
     maximizable: false,
+    frame: false,
     fullscreenable: false,
     minimizable: false,
     alwaysOnTop: true,
@@ -79,17 +79,18 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
   popup.setMenu(null);
   const secureBrowserHeaders = `User-Agent: ${GoogleUA}`;
   const noticeView = await createApiView("youtube/login-notice");
-  const [width, height] = popup.getSize();
-  noticeView.setBounds({ height: 68, width, x: 0, y: 0 });
+  popup.addBrowserView(noticeView);
+  const [width, height] = popup.getContentSize();
+  const noticeHeight = 120;
+  noticeView.setBounds({ height: noticeHeight, width, x: 0, y: 0 });
   noticeView.setAutoResize({ width: true });
   const loginView = new BrowserView({
     webPreferences
   });
-  loginView.setBounds({ height, width, x: 0, y: 68 });
-  loginView.setAutoResize({ width: true, height: true });
-  popup.addBrowserView(noticeView);
   popup.addBrowserView(loginView);
-  popup.setTopBrowserView(noticeView);
+  loginView.setBounds({ height: height - noticeHeight, width, x: 0, y: noticeHeight });
+  loginView.setAutoResize({ width: true });
+  popup.setTopBrowserView(loginView);
   loginView.webContents.setUserAgent(GoogleUA);
   await loginView.webContents.loadURL(authUrl, {
     userAgent: GoogleUA,
@@ -115,13 +116,19 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
     loginView.webContents.openDevTools({ mode: "detach" });
     noticeView.webContents.openDevTools({ mode: "detach" })
   }
+
+  let timeoutHandler: NodeJS.Timeout; // timeout after 10 minutes
+  const clearGC = () => {
+    timeoutHandler && clearTimeout(timeoutHandler);
+  }
+  ipcMain.once("subwindow.close/loginView", () => {
+    popup.close();
+    clearGC();
+  })
   return await new Promise<boolean>((resolve, reject) => {
-    const timeoutHandler = setTimeout(() => {
+    timeoutHandler = setTimeout(() => {
       reject();
-    }, 10 * 60 * 1000); // timeout after 10 minutes
-    const clearGC = () => {
-      clearTimeout(timeoutHandler);
-    }
+    }, 10 * 60 * 1000);
     let isAuthenticated = false;
     popup.on("close", () => {
       resolve(isAuthenticated);
