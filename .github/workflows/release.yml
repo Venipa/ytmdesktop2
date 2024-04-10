@@ -28,7 +28,7 @@ jobs:
           sudo apt update
           sudo apt install libdbus-1-dev snapd
           sudo snap install snapcraft --classic
-          sudo apt install rpmbuild fakeroot
+          sudo apt install rpm rpmdev
 
       - if: matrix.os == 'windows-latest'
         name: install windows deps
