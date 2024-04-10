@@ -53,6 +53,8 @@ jobs:
         name: Upload release source maps to sentry
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_PROJECT: ytmdesktop
+          SENTRY_DEPLOY_ENVIRONMENT: production
         run: |
           # Install Sentry CLI
           curl -sL https://sentry.io/get-cli/ | bash
