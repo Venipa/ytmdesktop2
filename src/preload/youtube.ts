@@ -22,20 +22,6 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
 
 (() => {
 
-  function ensureDomLoaded(f) {
-    if (["interactive", "complete"].indexOf(document.readyState) > -1) {
-      f()
-    }
-    else {
-      let triggered = false
-      document.addEventListener("DOMContentLoaded", () => {
-        if (!triggered) {
-          triggered = true
-          setTimeout(f, 1)
-        }
-      })
-    }
-  }
   const window = document.defaultView;
   const plugins = (() => {
     const plugins = require.context(
@@ -44,10 +30,14 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
       /plugin.js$/
     );
     return plugins.keys().map((m) => {
-      const func = plugins(m).default;
+      const p = plugins(m);
+      const meta = p.meta;
+      const func = p.default;
       return {
         file: m,
         exec: func,
+        meta,
+        afterInit: p.afterInit,
         name: basename(m)
       };
     });
@@ -66,20 +56,45 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
     window.__ytd_settings = set(window.__ytd_settings, key, value);
   });
   settingsLoadPromise.finally(() => {
-    ensureDomLoaded(() => {
+    window.domUtils.ensureDomLoaded(async () => {
       window.__ytd_plugins = Object.freeze(plugins);
       const pluginContext = { settings: new Proxy(window.__ytd_settings, {}) };
       const destroyFns = plugins.map((m) => {
-        console.log("Client Plugin ::", m.name, m.exec);
-        const destroyFn = m.exec(pluginContext);
+        if (m.meta) console.log("Client Plugin ::", m.meta.name);
+        else console.log("Client Plugin ::", m.name, m.meta);
+        const destroyFn = m.exec?.(pluginContext);
         return destroyFn;
       });
       const currentUrl = new URL(location.href);
       window.addEventListener("beforeunload",
-      function () {
-        if (destroyFns && currentUrl.hostname !== this.location.hostname && destroyFns.length > 0)
-          destroyFns.filter(fn => fn && typeof fn === "function").forEach(fn => fn());
-      })
+        function () {
+          if (destroyFns && currentUrl.hostname !== this.location.hostname && destroyFns.length > 0)
+            destroyFns.filter(fn => fn && typeof fn === "function").forEach(fn => fn());
+        })
+      if (currentUrl.host === "music.youtube.com") {
+        let timeoutHandle: any;
+        await new Promise<void>((resolve, reject) => {
+          let checkHandle: any;
+          const checkYTRoot = () => {
+            if (!timeoutHandle) timeoutHandle = setTimeout(() => {
+              clearTimeout(checkHandle);
+              reject(new Error("Unable to hook yt player"));
+            }, 30*1000);
+            const ready = !!exposeData.domUtils.playerApi()?.isReady();
+            if (!ready) {
+              checkHandle = setTimeout(checkYTRoot, 300);
+            }
+            else {
+              clearTimeout(checkHandle);
+              clearTimeout(timeoutHandle);
+              resolve();
+            }
+          }
+          checkYTRoot();
+        })
+        console.log("ytplayer loaded");
+        plugins.map(p => p.afterInit?.(pluginContext));
+      }
       window.api.emit("app.loadEnd");
       _loadedYTM = true; // todo
 

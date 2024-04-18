@@ -2,6 +2,21 @@ import { ipcRenderer } from "electron";
 import pkg from "../../package.json";
 import translations from "../translations";
 console.log(window);
+
+function ensureDomLoaded(f: () => void) {
+  if (["interactive", "complete"].indexOf(document.readyState) > -1) {
+    f()
+  }
+  else {
+    let triggered = false
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!triggered) {
+        triggered = true
+        setTimeout(f, 1)
+      }
+    })
+  }
+}
 export default {
   ipcRenderer: {
     emit: (event, ...data) => ipcRenderer.send(event, ...data),
@@ -51,5 +66,14 @@ export default {
     on: (channel: string, func) => ipcRenderer.on(channel, func),
     off: (channel: string, func) => ipcRenderer.off(channel, func),
   },
-  translations
+  translations,
+  domUtils: {
+    ensureDomLoaded,
+    ensureWindowLoaded(f: () => void) {
+      return ensureDomLoaded(() => {
+        window.addEventListener("load", f);
+      })
+    },
+    playerApi: () => (document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as any)?.playerApi
+  }
 };

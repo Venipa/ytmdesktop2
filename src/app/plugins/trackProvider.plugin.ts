@@ -166,47 +166,35 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   private async __onPlayStateChange(
     _ev,
     isPlaying: boolean,
-    progressSeconds: number = 0,
-    uiTimeInfo: [number, number] = null
+    progressSeconds: number = 0
   ) {
-    this.logger.debug(
-      [
-        "play state change",
-        isPlaying ? "playing" : "paused",
-        ", progress: ",
-        progressSeconds,
-        ", ui progress: ",
-        ...(uiTimeInfo?.length > 0 ? uiTimeInfo : ["-"]),
-      ].join(" ")
-    );
+    if (!this.trackData?.meta) return;
     this._playState = isPlaying ? "playing" : "paused";
     const discordProvider = this.getProvider("discord") as DiscordProvider;
     if (isPlaying && !discordProvider.isConnected && discordProvider.enabled && discordProvider.settingsEnabled)
       await discordProvider.enable();
-    const isUIViewRequired = uiTimeInfo?.[1] && progressSeconds > uiTimeInfo?.[1];
-    const [currentUIProgress, currentUIDuration] = isUIViewRequired ? uiTimeInfo : [progressSeconds, uiTimeInfo[1]];
-    if (isUIViewRequired) await discordProvider.updatePlayState(isPlaying, currentUIProgress);
-    else await discordProvider.updatePlayState(isPlaying, progressSeconds);
+    const [progress, duration] = [progressSeconds, Number(this.trackData.meta.duration)];
+    await discordProvider.updatePlayState(isPlaying, progressSeconds);
 
-    this.getProvider("mediaController")?.instance?.setTimeline(currentUIDuration, currentUIProgress);
+    this.getProvider("mediaController")?.instance?.setTimeline(duration, progress);
     const [isLiked, isDLiked] = await this.currentSongLikeState();
     if (this._trackState) {
       this.setTrackState((state) => {
         state.playing = isPlaying;
         state.progress = progressSeconds;
-        state.uiProgress = uiTimeInfo[0];
+        state.uiProgress = progress;
         state.liked = isLiked;
         state.disliked = isDLiked;
-        state.duration = currentUIDuration;
+        state.duration = duration;
       });
     } else {
       this.setTrackState({
         playing: isPlaying,
         progress: progressSeconds,
-        uiProgress: uiTimeInfo[0],
+        uiProgress: progress,
         liked: isLiked,
         disliked: isDLiked,
-        duration: currentUIDuration,
+        duration: duration,
         id: this._activeTrackId,
       });
     }
