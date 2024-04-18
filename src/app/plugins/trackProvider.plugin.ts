@@ -18,9 +18,33 @@ type TrackState = {
   liked: boolean;
   disliked: boolean;
 };
-const tracks: {
-  [id: string]: TrackData;
-} = {};
+type TrackEntry = { id: string } & TrackData;
+const trackCollection = new class {
+  private _tracks = new Array<TrackEntry>();
+  constructor() { }
+  private _add(id: string, value: TrackEntry) {
+    if (this._tracks.length > 10) this._tracks.shift();
+    value.id = id;
+    this._tracks.push(value);
+  }
+  private _update(id: string, value: TrackEntry, idx?: number) {
+    this._tracks.splice(idx ?? this._tracks.findIndex(x => x.id === id), 1, value);
+  }
+  addOrUpdate(id: string, value: Omit<TrackEntry, "id">) {
+    const idx = this._tracks.findIndex(x => x.id === id);
+    if (idx === -1) this._add(id, value as TrackEntry);
+    else this._update(id, value as TrackEntry, idx);
+    return value;
+  }
+
+  remove(id: string) {
+    return this._tracks.splice(this._tracks.findIndex(x => x.id === id), 1);
+  }
+  findById(id: string) {
+    return this._tracks.find(x => x.id === id);
+  }
+}
+
 const parseTrackDuration = (td: TrackData) => {
 
   return ((dur) => (dur ? Number.parseInt(dur) : null))(
@@ -55,8 +79,10 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     super("track");
   }
   async AfterInit() { }
+  private _trackDataCache: TrackEntry;
   get trackData() {
-    return tracks[this._activeTrackId];
+    if (this._trackDataCache?.id === this._activeTrackId) return this._trackDataCache;
+    return this._trackDataCache = trackCollection.findById(this._activeTrackId);
   }
   async getActiveTrackByDOM() {
     return this.views.youtubeView.webContents
@@ -68,7 +94,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   @IpcOn("track:info-req")
   private async __onTrackInfo(ev, ytTrack: TrackData) {
     if (!ytTrack.video) return;
-    const track = tracks[ytTrack.video.videoId] = {
+    const track = {
       ...ytTrack,
       meta: {
         thumbnail: (ytTrack?.video?.thumbnail?.thumbnails ?? ytTrack?.context?.thumbnail?.thumbnails)?.sort(firstBy(d => d.height, 'desc'))[0]?.url,
@@ -77,6 +103,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
         duration: parseTrackDuration(ytTrack)
       }
     };
+    trackCollection.addOrUpdate(ytTrack.video.videoId, ytTrack);
 
     if (
       track.video.videoId === this._activeTrackId ||
