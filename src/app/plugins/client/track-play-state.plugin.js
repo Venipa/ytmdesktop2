@@ -3,7 +3,7 @@ export const meta = {
   name: "Track play state"
 }
 export const afterInit = () => {
-  window.domUtils.ensureWindowLoaded(() => {
+  window.domUtils.ensureDomLoaded(() => {
     const playerApi = window.domUtils.playerApi();
     const isPlaying = () => playerApi.getPlayerState() === 1;
     playerApi.addEventListener("onVideoProgress", progress => {

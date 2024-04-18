@@ -58,20 +58,20 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
   settingsLoadPromise.finally(() => {
     window.domUtils.ensureDomLoaded(async () => {
       window.__ytd_plugins = Object.freeze(plugins);
-      const pluginContext = { settings: new Proxy(window.__ytd_settings, {}) };
-      const destroyFns = plugins.map((m) => {
-        if (m.meta) console.log("Client Plugin ::", m.meta.name);
-        else console.log("Client Plugin ::", m.name, m.meta);
-        const destroyFn = m.exec?.(pluginContext);
-        return destroyFn;
-      });
       const currentUrl = new URL(location.href);
-      window.addEventListener("beforeunload",
-        function () {
-          if (destroyFns && currentUrl.hostname !== this.location.hostname && destroyFns.length > 0)
-            destroyFns.filter(fn => fn && typeof fn === "function").forEach(fn => fn());
-        })
       if (currentUrl.host === "music.youtube.com") {
+        const pluginContext = { settings: new Proxy(window.__ytd_settings, {}) };
+        const destroyFns = plugins.map((m) => {
+          if (m.meta) console.log("Client Plugin ::", m.meta.name);
+          else console.log("Client Plugin ::", m.name, m.meta);
+          const destroyFn = m.exec?.(pluginContext);
+          return destroyFn;
+        });
+        window.addEventListener("beforeunload",
+          function () {
+            if (destroyFns && currentUrl.hostname !== this.location.hostname && destroyFns.length > 0)
+              destroyFns.filter(fn => fn && typeof fn === "function").forEach(fn => fn());
+          })
         let timeoutHandle: any;
         await new Promise<void>((resolve, reject) => {
           let checkHandle: any;
@@ -79,10 +79,10 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
             if (!timeoutHandle) timeoutHandle = setTimeout(() => {
               clearTimeout(checkHandle);
               reject(new Error("Unable to hook yt player"));
-            }, 30*1000);
+            }, 30 * 1000);
             const ready = !!exposeData.domUtils.playerApi()?.isReady();
             if (!ready) {
-              checkHandle = setTimeout(checkYTRoot, 300);
+              checkHandle = setTimeout(checkYTRoot, 100);
             }
             else {
               clearTimeout(checkHandle);
@@ -93,7 +93,11 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
           checkYTRoot();
         })
         console.log("ytplayer loaded");
-        plugins.map(p => p.afterInit?.(pluginContext));
+        plugins.forEach(p => {
+          if (!p.afterInit) return;
+          p.afterInit(pluginContext);
+          console.log(`[CP][${p.name}] :: afterInit execute`);
+        });
       }
       window.api.emit("app.loadEnd");
       _loadedYTM = true; // todo

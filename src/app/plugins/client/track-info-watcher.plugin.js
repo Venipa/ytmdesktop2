@@ -4,7 +4,7 @@ export const meta = {
 
 export const afterInit = () => {
   const videoDataChangeLoadedType = ["dataupdated", "dataloaded"]
-  window.domUtils.ensureWindowLoaded(() => {
+  window.domUtils.ensureDomLoaded(() => {
     const playerApi = window.domUtils.playerApi();
     playerApi.addEventListener("onVideoDataChange", ev => {
       console.log("onVideoDataChange", ev);
