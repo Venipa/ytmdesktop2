@@ -93,6 +93,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 
   @IpcOn("track:info-req")
   private async __onTrackInfo(ev, ytTrack: TrackData) {
+    this.log("info-req", ytTrack);
     if (!ytTrack.video) return;
     const track = {
       ...ytTrack,
@@ -103,7 +104,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
         duration: parseTrackDuration(ytTrack)
       }
     };
-    trackCollection.addOrUpdate(ytTrack.video.videoId, ytTrack);
+    trackCollection.addOrUpdate(ytTrack.video.videoId, track);
 
     if (
       track.video.videoId === this._activeTrackId ||
@@ -147,7 +148,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
   private async __onActiveTrack(trackId: string) {
     if (this._activeTrackId === trackId) return;
 
-    this.logger.debug(`active track:`, trackId);
+    this.log(`active track:`, trackId);
     this._activeTrackId = trackId;
     if (this.trackData) {
       const td = this.trackData;

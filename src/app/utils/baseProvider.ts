@@ -3,6 +3,7 @@ import { App } from "electron";
 import { BrowserView } from "electron/main";
 import { Logger } from "winston";
 import { BaseProviderNames } from "ytmd";
+import { stringifyJson } from "../lib/json";
 import { BrowserWindowViews } from "./mappedWindow";
 
 export interface BeforeStart {
@@ -30,6 +31,9 @@ export class BaseProvider {
   }>;
   get logger() {
     return this._loggerInstance;
+  }
+  log(...args: any) {
+    return this._loggerInstance.debug(stringifyJson([...args]));
   }
   get views() {
     return this._views.views;
