@@ -7,7 +7,7 @@ export const createApiView = async (path: string, postFunc?: (ctx: BrowserView) 
   const view = new BrowserView({
     webPreferences: {
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-      sandbox: false,
+      sandbox: true,
       contextIsolation: true,
       preload: resolve(__dirname, "preload-api.js")
     },
@@ -26,7 +26,7 @@ export const createView = async (preload: string, postFunc?: (ctx: BrowserView) 
     webPreferences: {
       disableHtmlFullscreenWindowResize: true,
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-      sandbox: false,
+      sandbox: true,
       contextIsolation: false, // window object is required to be rewritten for tracking current track
       preload,
     },
@@ -56,7 +56,7 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
     nodeIntegrationInSubFrames: false,
     nodeIntegrationInWorker: false,
     webSecurity: false,
-    sandbox: false,
+    sandbox: true,
     contextIsolation: true,
     allowRunningInsecureContent: false,
     preload: parseScriptPath("preload-login.js"),
