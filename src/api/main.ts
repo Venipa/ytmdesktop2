@@ -14,7 +14,7 @@ const { app, getWss } = expressWs(createApp());
 let appConfig: SettingsStore;
 const log = logger.child("api-server");
 const router = Router() as expressWs.Router;
-const whitelist = ['http://localhost', 'https://localhost']
+const whitelist = ['http://localhost', 'https://localhost', 'file://']
 app.use(cors({
   origin: function (origin, callback) {
     if (whitelist.find(x => origin.indexOf(x) === 0)) callback(null, true); // allow any localhost
