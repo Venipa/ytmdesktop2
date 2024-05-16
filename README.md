@@ -33,10 +33,12 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 ![image](https://user-images.githubusercontent.com/17952364/149849609-fe5d3819-7303-4467-9f8e-56fa1e306c87.png)
 
 ### OBS Implementation
-[OBS Browser Source Files](https://github.com/Venipa/ytmdesktop2/releases/download/v0.9.0/Zyphen.s.Now.Playing.zip)
+[OBS Browser Source Files](https://github.com/Venipa/ytmdesktop2/releases/download/v0.12.11/Zyphen.s.Now.Playing.zip)
 /
 [OBS Plugin Thread](https://obsproject.com/forum/threads/zyphens-now-playing-overlay.125383/post-557409),
 don't forget to enable the api inside the ytmdesktop2 app
+
+also make sure to set a custom the port (`append ?port=<custom port> to source file protocol`) if changed in the app (default is 13091)
 
 ---------------
 
