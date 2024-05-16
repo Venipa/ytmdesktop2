@@ -1,6 +1,6 @@
 {
   "name": "ytmdesktop2",
-  "version": "0.12.8",
+  "version": "0.12.9",
   "private": false,
   "author": "Venipa <admin@venipa.net>",
   "scripts": {
@@ -26,6 +26,7 @@
     "autoprefixer": "^10.4.8",
     "chalk": "^5.0.1",
     "core-js": "^3.24.1",
+    "cors": "^2.8.5",
     "daisyui": "^2.20.0",
     "date-fns": "^2.29.1",
     "electron-store": "^8.1.0",
@@ -53,6 +54,7 @@
     "xosms": "^0.6.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
     "@types/electron-devtools-installer": "^2.2.0",
     "@types/events": "^3.0.0",
     "@types/express": "^4.17.13",

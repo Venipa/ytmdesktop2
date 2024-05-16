@@ -1,6 +1,7 @@
 import { isDevelopment } from '@/app/utils/devUtils';
 import { TrackData } from '@/app/utils/trackData';
 import logger from '@/utils/Logger';
+import cors from "cors";
 import { ipcRenderer } from 'electron';
 import createApp, { Router } from 'express';
 import expressWs from 'express-ws';
@@ -9,10 +10,20 @@ import { apiChannelName } from './apiWorkerHelper';
 
 import type { SettingsStore } from "@/app/plugins/settingsProvider.plugin";
 import { Server } from 'http';
-const {app, getWss} = expressWs(createApp());
+const { app, getWss } = expressWs(createApp());
 let appConfig: SettingsStore;
 const log = logger.child("api-server");
 const router = Router() as expressWs.Router;
+const whitelist = ['http://localhost', 'https://localhost']
+app.use(cors({
+  origin: function (origin, callback) {
+    if (whitelist.find(x => origin.indexOf(x) === 0)) callback(null, true); // allow any localhost
+    callback(null, false);
+  },
+  optionsSuccessStatus: 200,
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'device-remember-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
+}))
 router.ws("/", (_ws, _req) => {
   log.debug("socket", _ws.readyState);
   if (isDevelopment) {
@@ -22,17 +33,16 @@ router.ws("/", (_ws, _req) => {
   }
   _ws.on("open", async () => {
     const track: TrackData = await ipcRenderer.invoke("api/track");
-    if (track)
-    {
-      
-  const data = JSON.stringify({
-    event: "track:change",
-    data: [{...track}]
-  });
-  _ws.send(data, {binary: false})
+    if (track) {
+
+      const data = JSON.stringify({
+        event: "track:change",
+        data: [{ ...track }]
+      });
+      _ws.send(data, { binary: false })
     } else {
       const data = null
-      _ws.send(data, {binary: false})
+      _ws.send(data, { binary: false })
     };
   })
 });
@@ -42,15 +52,15 @@ router.ws("/ping", (s, _req) => {
 app.use("/socket", router);
 app.get("/", async (req, res) => {
   try {
-    
-  const availableEvents: string[] = await ipcRenderer.invoke("api/routes");
-  res.json({
-    name: "YTMDesktop2 Api",
-    beta: appConfig?.app.beta,
-    player: appConfig?.player,
-    routes: availableEvents
-  })
-  } catch(err) {
+
+    const availableEvents: string[] = await ipcRenderer.invoke("api/routes");
+    res.json({
+      name: "YTMDesktop2 Api",
+      beta: appConfig?.app.beta,
+      player: appConfig?.player,
+      routes: availableEvents
+    })
+  } catch (err) {
     res.status(500).json(err);
   }
 })
@@ -63,7 +73,7 @@ app.post("/track/*", async (req, res) => {
   res.json(track);
 })
 app.on("error", log.error);
-const initialize = async ({config}: {config: SettingsStore}) => {
+const initialize = async ({ config }: { config: SettingsStore }) => {
   appConfig = config;
   const serverPort = config.api.port;
   let server: Server;
@@ -74,14 +84,14 @@ const initialize = async ({config}: {config: SettingsStore}) => {
   log.debug("routes: ", [app.routes]);
   return process.pid;
 }
-const close = async () => {}
+const close = async () => { }
 const sendMessage = async (name: string, ...args: any[]) => {
   const { clients } = getWss();
   const data = JSON.stringify({
     event: name,
     data: [...args]
   });
-  clients.forEach(x => x.send(data, {binary: false}));
+  clients.forEach(x => x.send(data, { binary: false }));
 }
 const evName = apiChannelName;
 const functionCollection = {
