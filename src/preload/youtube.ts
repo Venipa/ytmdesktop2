@@ -1,6 +1,5 @@
 import { contextBridge } from "electron";
 import { merge, set } from "lodash-es";
-import { basename } from "path";
 import exposeData from "./base";
 let exposedMain = false;
 Object.entries(exposeData).forEach(([key, endpoints]) => {
@@ -38,7 +37,7 @@ Object.entries(exposeData).forEach(([key, endpoints]) => {
         exec: func,
         meta,
         afterInit: p.afterInit,
-        name: basename(m)
+        name: m.split(".").slice(0, -1).join(".")
       };
     });
   })();

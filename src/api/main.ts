@@ -1,7 +1,6 @@
 import { isDevelopment } from '@/app/utils/devUtils';
 import { TrackData } from '@/app/utils/trackData';
 import logger from '@/utils/Logger';
-import cors from "cors";
 import { ipcRenderer } from 'electron';
 import createApp, { Router } from 'express';
 import expressWs from 'express-ws';
@@ -14,16 +13,11 @@ const { app, getWss } = expressWs(createApp());
 let appConfig: SettingsStore;
 const log = logger.child("api-server");
 const router = Router() as expressWs.Router;
-const whitelist = ['http://localhost', 'https://localhost', 'file://']
-app.use(cors({
-  origin: function (origin, callback) {
-    if (whitelist.find(x => origin.indexOf(x) === 0)) callback(null, true); // allow any localhost
-    callback(null, false);
-  },
-  optionsSuccessStatus: 200,
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'device-remember-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
-}))
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
 router.ws("/", (_ws, _req) => {
   log.debug("socket", _ws.readyState);
   if (isDevelopment) {
