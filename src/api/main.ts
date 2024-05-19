@@ -1,22 +1,24 @@
+import type { SettingsStore } from "@/app/plugins/settingsProvider.plugin";
 import { isDevelopment } from '@/app/utils/devUtils';
 import { TrackData } from '@/app/utils/trackData';
 import logger from '@/utils/Logger';
+import { createAdaptorServer as serve } from "@hono/node-server";
 import { ipcRenderer } from 'electron';
-import createApp, { Router } from 'express';
+import { Router } from 'express';
 import expressWs from 'express-ws';
-
+import { Hono } from "hono";
+import { hc } from "hono/client";
 import { apiChannelName } from './apiWorkerHelper';
 
-import type { SettingsStore } from "@/app/plugins/settingsProvider.plugin";
-import { Server } from 'http';
-const { app, getWss } = expressWs(createApp());
+const c = hc()
+const app = new Hono();
 let appConfig: SettingsStore;
 const log = logger.child("api-server");
 const router = Router() as expressWs.Router;
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
+app.use(async ({ res }, next) => {
+  res.headers.set("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
+  res.headers.set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  await next();
 });
 router.ws("/", (_ws, _req) => {
   log.debug("socket", _ws.readyState);
@@ -43,8 +45,8 @@ router.ws("/", (_ws, _req) => {
 router.ws("/ping", (s, _req) => {
   s.on("message", () => s.send("Pong!"));
 });
-app.use("/socket", router);
-app.get("/", async (req, res) => {
+// app.use("/socket", upgrade);
+app.get("/", async (res) => {
   try {
 
     const availableEvents: string[] = await ipcRenderer.invoke("api/routes");
@@ -55,26 +57,35 @@ app.get("/", async (req, res) => {
       routes: availableEvents
     })
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500);
+    res.json(err);
   }
 })
-app.get("/track", async (req, res) => {
+app.get("/track", async (res) => {
   const track = await ipcRenderer.invoke("api/track");
   res.json(track);
 })
-app.post("/track/*", async (req, res) => {
+app.post("/track/*", async ({ req, json: rjson }) => {
   const track = await ipcRenderer.invoke("api/" + req.path.replace(/^\//g, ""));
-  res.json(track);
+  rjson(track);
 })
-app.on("error", log.error);
+app.onError((err, c) => {
+  log.error(err);
+  return c.json(err, 500);
+});
 const initialize = async ({ config }: { config: SettingsStore }) => {
   appConfig = config;
   const serverPort = config.api.port;
-  let server: Server;
-  await new Promise<void>((resolve) => server = app.listen(serverPort, () => {
-    return resolve();
-  }));
-  log.debug(`${app.settings} - listening on ${serverPort}, state: ${server.listening ? 'active' : 'listening failed'}`);
+  let server: ReturnType<typeof serve>;
+  await new Promise<void>((resolve, reject) => {
+    server = serve({ port: serverPort, fetch: app.fetch }).listen(serverPort);
+    server.once("listening", resolve);
+    server.once("error", (err) => {
+      if (err && /^EADDR/.test(err.name)) reject(err);
+      log.error("hono listening error ::", err);
+    })
+  });
+  log.debug(`Hono - listening on ${serverPort}, state: ${server.listening ? 'active' : 'listening failed'}`);
   log.debug("routes: ", [app.routes]);
   return process.pid;
 }
