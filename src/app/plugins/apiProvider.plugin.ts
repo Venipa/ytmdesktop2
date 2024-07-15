@@ -141,7 +141,7 @@ export default class ApiProvider
     if (typeof time !== "number") return;
     this.views.youtubeView.webContents.send("track:seek", {
       time,
-      type // "seek" else forward/backward seek
+      type // "seek" to else forward/backward seek
     });
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_BACKWARD)
