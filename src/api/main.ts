@@ -63,7 +63,7 @@ app.get("/track", async (req, res) => {
   res.json(track);
 })
 app.post("/track/*", async (req, res) => {
-  const track = await ipcRenderer.invoke("api/" + req.path.replace(/^\//g, ""));
+  const track = await ipcRenderer.invoke("api/" + req.path.replace(/^\//g, ""), req.body);
   res.json(track);
 })
 app.on("error", log.error);
