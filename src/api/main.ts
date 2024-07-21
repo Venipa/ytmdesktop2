@@ -2,7 +2,7 @@ import { isDevelopment } from '@/app/utils/devUtils';
 import { TrackData } from '@/app/utils/trackData';
 import logger from '@/utils/Logger';
 import { ipcRenderer } from 'electron';
-import createApp, { Router } from 'express';
+import createApp, { json, Router } from 'express';
 import expressWs from 'express-ws';
 
 import { apiChannelName } from './apiWorkerHelper';
@@ -43,6 +43,7 @@ router.ws("/", (_ws, _req) => {
 router.ws("/ping", (s, _req) => {
   s.on("message", () => s.send("Pong!"));
 });
+app.use(json());
 app.use("/socket", router);
 app.get("/", async (req, res) => {
   try {

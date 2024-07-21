@@ -137,7 +137,9 @@ export default class ApiProvider
       });
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_SEEK)
-  async seekTrack(_ev, { time, type }: Partial<{ time: number, type?: "seek" }> = {}) {
+  async seekTrack(_ev, data: Partial<{ time: number, type?: "seek" }>) {
+    const { time, type } = data || {};
+    console.log("seek", type, time);
     if (typeof time !== "number") return;
     this.views.youtubeView.webContents.send("track:seek", {
       time,
