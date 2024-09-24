@@ -48,7 +48,7 @@
       ></div>
     </div>
     <div class="flex flex-col flex-1">
-      <div class="flex flex-col relative z-10 pt-8 px-6 flex-1">
+      <div class="flex flex-col relative z-10 px-6 flex-1 centeronscreen">
         <div class="flex items-start space-x-6">
           <div
             class="track-thumbnail flex flex-shrink-0 items-center shadow justify-center relative"
@@ -500,8 +500,18 @@ export default defineComponent({
   }
 }
 
+.centeronscreen {
+  @apply flex flex-col justify-center;
+}
+
 .track-thumbnail {
-  @apply w-40 h-40 md:h-72 md:w-72 flex-none rounded-lg bg-zinc-800;
+  @apply flex-none rounded-lg bg-zinc-800;
+
+  height: calc(100vh - 10rem);
+  width: calc(100vh - 10rem);
+  max-width: calc(100vw - 16rem);
+  max-height: calc(100vw - 16rem);
+
   img {
     @apply object-cover object-center;
   }
