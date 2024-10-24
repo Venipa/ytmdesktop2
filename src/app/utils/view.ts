@@ -1,17 +1,19 @@
 import translations from "@/translations";
-import { BrowserView, BrowserWindow, BrowserWindowConstructorOptions, ipcMain } from "electron";
+import { BrowserWindow, BrowserWindowConstructorOptions, ipcMain, WebContentsView, WebContentsViewConstructorOptions } from "electron";
 import { resolve } from "path";
 import { defaultUrl, isDevelopment } from "./devUtils";
+import { LockSizeOptions, lockSizeToParent } from "./webContentUtils";
 import { appIconPath, parseScriptPath } from "./windowUtils";
-export const createApiView = async (path: string, postFunc?: (ctx: BrowserView) => Promise<void> | void): Promise<BrowserView> => {
-  const view = new BrowserView({
+type CreateApiViewOptions = { lockSize: LockSizeOptions }
+export const createApiView = async <T extends WebContentsView>(path: string, postFunc?: (ctx: T) => Promise<void> | void, options?: CreateApiViewOptions): Promise<T> => {
+  const view = new WebContentsView({
     webPreferences: {
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
       sandbox: true,
       contextIsolation: true,
       preload: resolve(__dirname, "preload-api.js")
     },
-  });
+  }) as T;
   await view.webContents.loadURL(
     (process.env.WEBPACK_DEV_SERVER_URL
       ? process.env.WEBPACK_DEV_SERVER_URL
@@ -19,19 +21,24 @@ export const createApiView = async (path: string, postFunc?: (ctx: BrowserView) 
     ).concat(`#${path}`)
   );
   if (postFunc) await Promise.resolve(postFunc(view));
+  const wnd = BrowserWindow.getAllWindows().find(d => d.contentView.children.find(d => d === view));
+  if (wnd) lockSizeToParent(wnd, options?.lockSize)(view);
   return view;
 };
-export const createView = async (preload: string, postFunc?: (ctx: BrowserView) => Promise<void> | void): Promise<BrowserView> => {
-  const view = new BrowserView({
+export const createView = async <T extends WebContentsView>(preload: string, postFunc?: (ctx: T) => Promise<void> | void, options: WebContentsViewConstructorOptions["webPreferences"] = {}): Promise<T> => {
+  const view = new WebContentsView({
     webPreferences: {
       disableHtmlFullscreenWindowResize: true,
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
-      sandbox: true,
-      contextIsolation: false, // window object is required to be rewritten for tracking current track
-      preload,
-    },
-  });
+      sandbox: false,
+      contextIsolation: true,
+      ...options,
+      preload
+    }
+  }) as T;
   if (postFunc) await Promise.resolve(postFunc(view));
+  const wnd = BrowserWindow.getAllWindows().find(d => d.contentView.children.find(d => d === view));
+  if (wnd) lockSizeToParent(wnd)(view);
   return view;
 };
 export const createPopup = async (options?: BrowserWindowConstructorOptions) => {
@@ -47,7 +54,9 @@ export const createPopup = async (options?: BrowserWindowConstructorOptions) => 
       ...(options?.webPreferences ? options.webPreferences : {})
     }
   });
-  return wnd;
+  
+  const lockSize = lockSizeToParent(wnd);
+  return {popup: wnd, lockSize};
 }
 export const GoogleUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0";
 export const googleLoginPopup = async (authUrl: string, parent?: Electron.BrowserWindow) => {
@@ -61,7 +70,7 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
     allowRunningInsecureContent: false,
     preload: parseScriptPath("preload-login.js"),
   };
-  const popup = await createPopup({
+  const {lockSize, popup} = await createPopup({
     icon: appIconPath,
     title: translations.appName,
     height: 580,
@@ -79,18 +88,15 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
   popup.setMenu(null);
   const secureBrowserHeaders = `User-Agent: ${GoogleUA}`;
   const noticeView = await createApiView("youtube/login-notice");
-  popup.addBrowserView(noticeView);
+  popup.contentView.addChildView(noticeView);
   const [width, height] = popup.getContentSize();
   const noticeHeight = 120;
   noticeView.setBounds({ height: noticeHeight, width, x: 0, y: 0 });
-  noticeView.setAutoResize({ width: true });
-  const loginView = new BrowserView({
+  const loginView = new WebContentsView({
     webPreferences
   });
-  popup.addBrowserView(loginView);
+  popup.contentView.addChildView(loginView, 0);
   loginView.setBounds({ height: height - noticeHeight, width, x: 0, y: noticeHeight });
-  loginView.setAutoResize({ width: true });
-  popup.setTopBrowserView(loginView);
   loginView.webContents.setUserAgent(GoogleUA);
   await loginView.webContents.loadURL(authUrl, {
     userAgent: GoogleUA,

@@ -1,6 +1,5 @@
 import logger from "@/utils/Logger";
-import { App } from "electron";
-import { BrowserView } from "electron/main";
+import { App, BrowserWindow, WebContentsView } from "electron";
 import { Logger } from "winston";
 import { BaseProviderNames } from "ytmd";
 import { stringifyJson } from "../lib/json";
@@ -18,16 +17,17 @@ export interface AfterInit {
 export interface OnDestroy {
   OnDestroy(app?: App): void | Promise<void>;
 }
-export class BaseProvider {
+export type ProviderNameKey = keyof BaseProviderNames | ({} & string)
+export class BaseProvider<TView extends WebContentsView = WebContentsView> {
   __type = "service_provider";
   private _providers: { [key: string]: BaseProvider & any } = {};
   private _loggerInstance: Logger;
   private _views: BrowserWindowViews<{
-    youtubeView: BrowserView;
-    toolbarView: BrowserView;
-    settingsWindow?: BrowserView;
-    miniPlayerWindow?: BrowserView;
-    taskViewWindow?: BrowserView;
+    youtubeView: TView;
+    toolbarView: TView;
+    settingsWindow?: BrowserWindow;
+    miniPlayerWindow?: BrowserWindow;
+    taskViewWindow?: BrowserWindow;
   }>;
   get logger() {
     return this._loggerInstance;
@@ -41,7 +41,7 @@ export class BaseProvider {
   get windowContext() {
     return this._views;
   }
-  constructor(private name: keyof BaseProviderNames & string, private displayName: string = name) {
+  constructor(private name: ProviderNameKey, private displayName: string = name) {
     this._loggerInstance = logger.child({ moduleName: this.name });
   }
 
@@ -55,11 +55,7 @@ export class BaseProvider {
     this._providers = p.reduce((l, r) => ({ ...l, [r.getName()]: r }), {});
   }
   __registerWindows(
-    views: BrowserWindowViews<{
-      youtubeView: BrowserView;
-      toolbarView: BrowserView;
-      settingsWindow?: BrowserView;
-    }>
+    views: BrowserWindowViews<any>
   ) {
     this._views = views;
   }

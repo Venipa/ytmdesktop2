@@ -1,4 +1,4 @@
-import { IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import { Event, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { debounce } from "lodash-es";
 import { serverMain } from "./serverEvents";
 const classIpcStoreSymbol = Symbol("__ipcEvents");
@@ -8,7 +8,7 @@ interface IpcContextEvent {
   type?: "once" | "handle";
   options?: {
     debounce?: number;
-    filter?: IpcFilterOption<IpcMainEvent> | IpcFilterOption<IpcMainInvokeEvent> | ((...args: any[]) => boolean);
+    filter?: IpcFilterOption<(IpcMainEvent | IpcMainInvokeEvent)> | ((...args: any[]) => boolean);
     passive?: boolean;
   };
 }

@@ -8,6 +8,8 @@ interface PreloadContext {
   process: typeof pd.process;
   __ytd_plugins: any;
   __ytd_settings: any;
+  __initYTMD: () => Promise<void>;
+  isYTMLoaded: () => boolean;
 }
 declare global {
   declare const __static: any;

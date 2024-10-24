@@ -67,6 +67,9 @@ const electronBuilder = {
 // const tsConfigAliasMapping = Object.entries(tsconfig.compilerOptions.paths).map(([alias, paths]) => {
 //   return [alias.split("/*", 2)[0], path.resolve(__dirname, paths[0].split("/*", 2)[0])];
 // });
+/**
+ * @type {import('@vue/cli-service').ProjectOptions}
+ */
 module.exports = {
   pluginOptions: {
     electronBuilder,
@@ -82,7 +85,6 @@ module.exports = {
       .end();
 
     config.module.rules.delete("svg");
-
     config.module
       .rule("svg")
       .test(/\.(svg)(\?.*)?$/)
@@ -91,8 +93,10 @@ module.exports = {
       .end()
       .use("vue-svg-loader")
       .loader("vue-svg-loader");
+    config.devtool(false)
+    console.log({ config: config.toConfig().devtool })
   },
   configureWebpack: {
-    devtool: "source-map",
-  },
+    devtool: false,
+  }
 };

@@ -1,13 +1,13 @@
-import { App } from "electron";
+import { AfterInit, BaseProvider } from "@/app/utils/baseProvider";
 import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
-import fs from "fs";
-import path from "path";
-import SettingsProvider from "./settingsProvider.plugin";
-import { BaseProvider, AfterInit } from "@/app/utils/baseProvider";
 import {
   rootWindowClearCustomCss,
   rootWindowInjectCustomCss,
 } from "@/app/utils/webContentUtils";
+import { App } from "electron";
+import fs from "fs";
+import path from "path";
+import SettingsProvider from "./settingsProvider.plugin";
 // @ts-ignore
 import customDefaultCss from "!raw-loader!../../assets/default-custom.scss";
 import { serverMain } from "@/app/utils/serverEvents";
@@ -61,7 +61,7 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
     }
     this.logger.debug(`ytd loading custom css from ${scssPath}`);
     rootWindowInjectCustomCss(
-      this.views.youtubeView.webContents,
+      this.views.youtubeView,
       scssPath
     ).catch(() => null);
   }
@@ -70,11 +70,11 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
     debounce: 1000,
   })
   private async _event_toggleCss(_key: string, value: boolean) {
-    if (!value) rootWindowClearCustomCss(this.views.youtubeView.webContents);
+    if (!value) rootWindowClearCustomCss(this.views.youtubeView);
     else {
       const scssFile = this.getScssPath();
       if (scssFile) await this._initializeSCSS();
-      rootWindowInjectCustomCss(this.views.youtubeView.webContents, scssFile);
+      rootWindowInjectCustomCss(this.views.youtubeView, scssFile);
     }
   }
   async AfterInit() {

@@ -1,4 +1,4 @@
-import { ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
 import pkg from "../../package.json";
 import translations from "../translations";
 console.log(window);
@@ -17,10 +17,10 @@ function ensureDomLoaded(f: () => void) {
     })
   }
 }
+export const setContext = (key: string, value: any) => process.contextIsolated ? contextBridge.exposeInMainWorld(key, value) : (window[key] = Object.freeze(value))
 export default {
   ipcRenderer: {
     emit: (event, ...data) => ipcRenderer.send(event, ...data),
-    emitTo: (id, event, ...data) => ipcRenderer.sendTo(id, event, ...data),
     on: (channel, func) => ipcRenderer.on(channel, func),
     off: (channel, func) => ipcRenderer.off(channel, func),
     invoke: (channel, ...data) => ipcRenderer.invoke(channel, ...data),
@@ -62,9 +62,10 @@ export default {
     action: (event: string, ...data: any[]) => ipcRenderer.invoke(`action:${event}`, ...data),
     invoke: (event: string, ...data: any[]) => ipcRenderer.invoke(event, ...data),
     emit: (event: string, ...data: any[]) => ipcRenderer.send(event, ...data),
-    emitTo: (id: number, event: string, ...data: any[]) => ipcRenderer.sendTo(id, event, ...data),
     on: (channel: string, func) => ipcRenderer.on(channel, func),
     off: (channel: string, func) => ipcRenderer.off(channel, func),
+    reloadCustomCss: () => ipcRenderer.emit("settings.customCssUpdate"),
+    watchCustomCss: (enabled: boolean) => ipcRenderer.emit("settings.customCssWatch", enabled),
   },
   translations,
   domUtils: {
@@ -73,6 +74,11 @@ export default {
       return ensureDomLoaded(() => {
         window.addEventListener("load", f);
       })
+    },
+    ensureWindow() {
+      return new Promise<Window>((resolve) => window.addEventListener("DOMContentLoaded", function() {
+        resolve(this);
+      }, { once: true }))
     },
     playerApi: () => (document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as any)?.playerApi
   }

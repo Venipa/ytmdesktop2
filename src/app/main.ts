@@ -2,11 +2,11 @@ import translations from "@/translations";
 import logger from "@/utils/Logger";
 import {
   app,
-  BrowserView,
   BrowserWindow,
   BrowserWindowConstructorOptions,
   IpcMainEvent,
-  protocol
+  protocol,
+  WebContentsView
 } from "electron";
 import { debounce } from "lodash-es";
 import path from "path";
@@ -24,7 +24,7 @@ import {
   createPluginCollection
 } from "./utils/serviceCollection";
 import { createApiView, createView, googleLoginPopup } from "./utils/view";
-import { rootWindowInjectUtils } from "./utils/webContentUtils";
+import { callWindowListeners, rootWindowInjectUtils } from "./utils/webContentUtils";
 import { appIconPath, wrapWindowHandler } from "./utils/windowUtils";
 
 function parseScriptPath(p: string) {
@@ -86,7 +86,9 @@ export default async function () {
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
         contextIsolation: true,
-        backgroundThrottling: false
+        sandbox: false,
+        backgroundThrottling: false,
+        ...(options?.webPreferences || {}),
       },
       ...(options || {}),
     });
@@ -115,7 +117,7 @@ export default async function () {
       }
     );
     const loadingView = await createApiView("/youtube/loading", (view) => {
-      win.addBrowserView(view);
+      win.contentView.addChildView(view);
       if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
 
       const [width, height] = win.getSize();
@@ -125,13 +127,13 @@ export default async function () {
         width,
         height,
       });
-      view.setAutoResize({ width: true, height: true });
-      win.setTopBrowserView(view);
+      // view.setAutoResize({ width: true, height: true });
+      win.contentView.addChildView(view);
     });
     const youtubeView = await createView(
       parseScriptPath("preload-yt.js"),
       (view) => {
-        win.addBrowserView(view);
+        win.contentView.addChildView(view);
         const [width, height] = win.getSize();
         view.setBounds({
           y: 40,
@@ -139,7 +141,7 @@ export default async function () {
           height: height - 40,
           width,
         });
-        view.setAutoResize({ width: true, height: true });
+        // view.setAutoResize({ width: true, height: true });
         let lastLocation: string;
         view.webContents.on("did-navigate", (ev, location) => {
           lastLocation = location;
@@ -170,11 +172,13 @@ export default async function () {
             serverMain.emit("app.loadStart");
           }
         });
+      },
+      {
+        contextIsolation: false // true is currently bugged electron@32.2.2
       }
     );
     const toolbarView = await createApiView("/youtube/toolbar", (view) => {
-      win.addBrowserView(view);
-      win.setTopBrowserView(view);
+      win.contentView.addChildView(view);
       const [width] = win.getSize();
       view.setBounds({
         height: 40,
@@ -183,32 +187,31 @@ export default async function () {
         y: 0,
       });
       view.setBackgroundColor("transparent");
-      view.setAutoResize({ width: true });
       if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
-    });
+    }, { lockSize: { resize: "width" } });
     serverMain.on("app.loadEnd", () => {
-      win.removeBrowserView(loadingView);
-      win.setTopBrowserView(toolbarView);
+      win.contentView.removeChildView(loadingView);
+      win.contentView.addChildView(toolbarView);
     });
     serverMain.on(
       "app.loadStart",
       debounce(() => {
         if (
           !win
-            .getBrowserViews()
+            .contentView.children
             ?.find(
               (x) =>
                 loadingView.webContents &&
-                x.webContents.id === loadingView.webContents.id
+                x === loadingView
             )
         )
-          win.addBrowserView(loadingView);
-        win.setTopBrowserView(loadingView);
+          win.contentView.addChildView(loadingView);
       }, 100)
     );
     const { state } = await wrapWindowHandler(win, "root", { ...winSize });
     if (state.maximized) win.maximize();
     else win.setBounds({ ...state });
+    callWindowListeners(win, "will-resize", state);
     serverMain.emit("app.loadStart");
     await youtubeView.webContents.loadURL(defaultUrl).then(() => {
       if (isDevelopment)
@@ -288,8 +291,8 @@ export default async function () {
   });
 
   let mainWindow: BrowserWindowViews<{
-    youtubeView: BrowserView;
-    toolbarView: BrowserView;
+    youtubeView: WebContentsView;
+    toolbarView: WebContentsView;
   }>;
   app.on("activate", async () => {
     // On macOS it's common to re-create a window in the app when the

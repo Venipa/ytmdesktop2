@@ -18,7 +18,7 @@ export default class MediaControlProvider extends BaseProvider
   async BeforeStart(app?: App) {
     app.commandLine.appendSwitch("disable-features", "MediaSessionService");
     app.commandLine.appendSwitch("in-progress-gpu"); // gpu paint not working on some devices, todo: workaround/await fix
-    app.commandLine.appendSwitch("no-sandbox"); // avoid freeze, todo: workaround/await fix
+    // app.commandLine.appendSwitch("no-sandbox"); // avoid freeze, todo: workaround/await fix
   }
   private onKeyPressed(ev, keyName, ...args) {
     this.xosmsLog.debug(["button press", keyName, ...args]);

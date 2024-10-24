@@ -199,7 +199,7 @@ export default class UpdateProvider
           .trimStart();
         return dialog
           .showMessageBox(
-            BrowserWindow.fromBrowserView(this.views.youtubeView),
+            BrowserWindow.fromWebContents(this.views.youtubeView.webContents),
             {
               title: `Update available (${x.updateInfo.version})`,
               message: `Hey there, there is a new version which you can update to.\n\n${

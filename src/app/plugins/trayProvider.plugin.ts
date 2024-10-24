@@ -34,12 +34,12 @@ export default class TrayProvider extends BaseProvider
     this._tray = new Tray(resolve(__static, "favicon.ico"));
     this._tray.setToolTip(`YouTube Music for Desktop`);
     this._tray.addListener("click", () =>
-      BrowserWindow.fromBrowserView(this.views.youtubeView)?.show()
+      BrowserWindow.fromWebContents(this.views.youtubeView.webContents)?.show()
     );
     this._tray.setContextMenu(this.buildMenu());
     this._tray.setIgnoreDoubleClickEvents(true);
     this._tray.on("click", (ev) => {
-      if (ev.triggeredByAccelerator) BrowserWindow.fromBrowserView(this.views.youtubeView)?.show();
+      if (ev.triggeredByAccelerator) BrowserWindow.fromWebContents(this.views.youtubeView.webContents)?.show();
       // if (!ev.triggeredByAccelerator && isDevelopment) this.__trayWindow(); // todo
       
     })

@@ -1,13 +1,13 @@
 {
   "name": "ytmdesktop2",
-  "version": "0.12.17",
+  "version": "0.13.0",
   "private": false,
   "author": "Venipa <admin@venipa.net>",
   "scripts": {
     "serve": "vue-cli-service electron:serve",
     "build": "vue-cli-service electron:build --mode development",
     "lint": "vue-cli-service lint",
-    "dev": "npm run serve",
+    "dev": "npm run serve --watch",
     "electron:build": "vue-cli-service electron:build",
     "electron:serve": "vue-cli-service electron:serve",
     "postinstall": "electron-builder install-app-deps",
@@ -21,14 +21,16 @@
     "@poppinss/utils": "^5.0.0",
     "@sentry/electron": "^3.0.7",
     "@tailwindcss/line-clamp": "^0.4.2",
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^18.6.3",
-    "@xhayper/discord-rpc": "^1.1.2",
+    "@xhayper/discord-rpc": "^1.2.0",
     "autoprefixer": "^10.4.8",
     "chalk": "^5.0.1",
     "core-js": "^3.24.1",
     "cors": "^2.8.5",
     "daisyui": "^2.20.0",
     "date-fns": "^2.29.1",
+    "dompurify": "^3.1.7",
     "electron-store": "^8.1.0",
     "electron-threads": "^1.0.2",
     "electron-updater": "^5.2.1",
@@ -51,7 +53,7 @@
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.2",
     "winston-transport": "^4.4.0",
-    "xosms": "^0.6.0"
+    "xosms": "^0.6.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -75,12 +77,12 @@
     "@vue/eslint-config-typescript": "^11.0.0",
     "babel-eslint": "^10.1.0",
     "cross-env": "^7.0.3",
-    "electron": "^20.3.3",
-    "electron-builder": "^24.9.1",
+    "electron": "^32.2.2",
+    "electron-builder": "^25.1.8",
     "electron-devtools-installer": "^3.2.0",
     "eslint": "^8.20.0",
     "eslint-plugin-vue": "^9.3.0",
-    "node-gyp": "^9.3.0",
+    "node-gyp": "^10.2.0",
     "postcss-import": "^14.1.0",
     "raw-loader": "^4.0.2",
     "sass": "^1.32.8",
@@ -104,8 +106,12 @@
     "bufferutil": "^4.0.6",
     "utf-8-validate": "^5.0.8"
   },
+  "packageManager": "yarn@1.22.22",
   "repository": "https://github.com/Venipa/ytmdesktop2",
   "resolutions": {
-    "webpack": "^5.54"
+    "webpack": "^5.54",
+    "terser": "^5.36.0",
+    "node-gyp": "^10.2.0",
+    "@achrinza/node-ipc": "^10.1.11"
   }
 }

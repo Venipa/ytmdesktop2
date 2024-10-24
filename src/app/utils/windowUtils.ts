@@ -65,11 +65,11 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
     // Load the index.html when not in development
     await win.loadURL("app://./index.html#/" + path.replace(/^\//, ""));
   }
-  win.webContents.on("new-window", function (e, url) {
+  win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("http")) {
-      e.preventDefault();
       shell.openExternal(url);
     }
+    return { action: "deny" }
   });
   return win;
 }
@@ -131,7 +131,6 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
     }
     store.set(key, state);
   };
-
   state = ensureVisibleOnSomeDisplay(restore());
   win.on("close", saveState);
   return { state, saveState };
