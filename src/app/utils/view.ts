@@ -1,7 +1,7 @@
 import translations from "@/translations";
 import { BrowserWindow, BrowserWindowConstructorOptions, ipcMain, WebContentsView, WebContentsViewConstructorOptions } from "electron";
 import { resolve } from "path";
-import { defaultUrl, isDevelopment } from "./devUtils";
+import { defaultUrl, isDevelopment, isProduction } from "./devUtils";
 import { LockSizeOptions, lockSizeToParent } from "./webContentUtils";
 import { appIconPath, parseScriptPath } from "./windowUtils";
 type CreateApiViewOptions = { lockSize: LockSizeOptions }
@@ -11,6 +11,8 @@ export const createApiView = async <T extends WebContentsView>(path: string, pos
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
       sandbox: true,
       contextIsolation: true,
+      webSecurity: isProduction,
+      allowRunningInsecureContent: !isProduction,
       preload: resolve(__dirname, "preload-api.js")
     },
   }) as T;
@@ -21,7 +23,7 @@ export const createApiView = async <T extends WebContentsView>(path: string, pos
     ).concat(`#${path}`)
   );
   if (postFunc) await Promise.resolve(postFunc(view));
-  const wnd = BrowserWindow.getAllWindows().find(d => d.contentView.children.find(d => d === view));
+  const wnd = BrowserWindow.fromWebContents(view.webContents);
   if (wnd) lockSizeToParent(wnd, options?.lockSize)(view);
   return view;
 };
@@ -31,13 +33,15 @@ export const createView = async <T extends WebContentsView>(preload: string, pos
       disableHtmlFullscreenWindowResize: true,
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
       sandbox: false,
+      webSecurity: isProduction,
+      allowRunningInsecureContent: !isProduction,
       contextIsolation: true,
       ...options,
       preload
     }
   }) as T;
   if (postFunc) await Promise.resolve(postFunc(view));
-  const wnd = BrowserWindow.getAllWindows().find(d => d.contentView.children.find(d => d === view));
+  const wnd = BrowserWindow.fromWebContents(view.webContents);
   if (wnd) lockSizeToParent(wnd)(view);
   return view;
 };
@@ -50,6 +54,7 @@ export const createPopup = async (options?: BrowserWindowConstructorOptions) => 
       disableHtmlFullscreenWindowResize: true,
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
       sandbox: true,
+      webSecurity: isProduction,
       contextIsolation: false, // window object is required to be rewritten for tracking current track
       ...(options?.webPreferences ? options.webPreferences : {})
     }

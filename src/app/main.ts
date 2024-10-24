@@ -12,11 +12,10 @@ import { debounce } from "lodash-es";
 import path from "path";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 
-import { defaultUrl, isDevelopment } from "./utils/devUtils";
+import { defaultUrl, isDevelopment, isProduction } from "./utils/devUtils";
 import {
   BrowserWindowViews,
-  createWindowContext,
-  getViewObject
+  createWindowContext
 } from "./utils/mappedWindow";
 import { serverMain } from "./utils/serverEvents";
 import {
@@ -24,7 +23,7 @@ import {
   createPluginCollection
 } from "./utils/serviceCollection";
 import { createApiView, createView, googleLoginPopup } from "./utils/view";
-import { callWindowListeners, rootWindowInjectUtils } from "./utils/webContentUtils";
+import { callWindowListeners } from "./utils/webContentUtils";
 import { appIconPath, wrapWindowHandler } from "./utils/windowUtils";
 
 function parseScriptPath(p: string) {
@@ -87,6 +86,8 @@ export default async function () {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
         contextIsolation: true,
         sandbox: false,
+        webSecurity: isProduction,
+        allowRunningInsecureContent: !isProduction,
         backgroundThrottling: false,
         ...(options?.webPreferences || {}),
       },
@@ -179,6 +180,7 @@ export default async function () {
     );
     const toolbarView = await createApiView("/youtube/toolbar", (view) => {
       win.contentView.addChildView(view);
+      win.contentView.addChildView(loadingView);
       const [width] = win.getSize();
       view.setBounds({
         height: 40,
@@ -299,10 +301,6 @@ export default async function () {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = await createRootWindow();
-      rootWindowInjectUtils(
-        mainWindow.views.youtubeView.webContents,
-        getViewObject(mainWindow.views)
-      );
 
       if (serviceCollection)
         serviceCollection.providers.forEach((p) =>
@@ -317,18 +315,8 @@ export default async function () {
     }
     await serviceCollection.exec("OnInit");
     mainWindow = await createRootWindow();
-    rootWindowInjectUtils(
-      mainWindow.views.youtubeView.webContents,
-      getViewObject(mainWindow.views)
-    );
     serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
-    mainWindow.views.youtubeView.webContents.once("did-finish-load", () => {
-      serviceCollection.exec("AfterInit");
-    })
-    mainWindow.main.blur();
-    setTimeout(() => {
-      mainWindow.main.focus(); // fix hibernation/standby expired window cache
-    }, 50);
+    serviceCollection.exec("AfterInit");
   });
 
   serverMain.on("app.minimize", (ev) => {

@@ -7,7 +7,7 @@ setContext("appVersion", appVersion);
 Object.entries(exposeData).forEach(([key, endpoints]) => {
   setContext(key, endpoints);
 });
-window.trustedTypes.createPolicy("default", {
+const trusted = window.trustedTypes.createPolicy("default", {
   createHTML: (string) => DOMPurify.sanitize(string, { RETURN_TRUSTED_TYPE: true }) as any,
   createScriptURL: string => string, // warning: this is unsafe!
   createScript: string => string, // warning: this is unsafe!
@@ -95,5 +95,7 @@ const initFn = async (force?: boolean) => {
   }))
 }
 setContext("__initYTMD", initFn)
+setContext("__ytdCss", trusted.createHTML)
+setContext("__ytdJs", trusted.createScript)
 
 await initFn();

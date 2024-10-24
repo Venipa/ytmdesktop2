@@ -43,6 +43,7 @@ export default class TrayProvider extends BaseProvider
       // if (!ev.triggeredByAccelerator && isDevelopment) this.__trayWindow(); // todo
       
     })
+    return this._tray;
   }
   @IpcOn("settingsProvider.change", {
     debounce: 50,

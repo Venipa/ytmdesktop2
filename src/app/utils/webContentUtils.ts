@@ -1,32 +1,21 @@
 import { BrowserWindow, Rectangle, WebContents, WebContentsView } from "electron";
 import { compileAsync } from "sass";
-// @ts-ignore
-import youtubeInjectScript from "!raw-loader!../../youtube-inject.js";
-import logger from "@/utils/Logger";
-const log = logger.child({ moduleName: "rootWindowInject" });
-export async function rootWindowInjectUtils(
-  webContents: WebContents,
-  data?: { [key: string]: any }
-) {
-  await webContents.executeJavaScript(youtubeInjectScript).catch((...args) => log.error('init', ...args));
-  await webContents.executeJavaScript(
-    `window.__ytd_window_data = ${data ? JSON.stringify(data) : "null"};`
-  ).catch((...args) => log.error('init', ...args));
-  await webContents.executeJavaScript(`initializeYoutubeDesktop()`).catch((...args) => log.error('init', ...args));
-}
+const cssWindowIdMap: Record<string, string> = {}
 export async function rootWindowInjectCustomCss(
   { webContents }: WebContentsView,
   scssFile: string
 ) {
+  const wid = String(webContents.id);
+  if (cssWindowIdMap[wid]) await rootWindowClearCustomCss({ webContents } as WebContentsView);
   const css = await compileAsync(scssFile).then(r => (r.css)).catch(() => null);
-  await webContents.executeJavaScript(
-    `initializeYoutubeCustomCSS({ customCss: \`${css || ""}\` })`
-  );
+  if (css) cssWindowIdMap[wid] = await webContents.insertCSS(css)
+
+  return true
 }
 export async function rootWindowClearCustomCss({ webContents }: WebContentsView) {
-  await webContents.executeJavaScript(
-    `initializeYoutubeCustomCSS({ customCss: "" })`
-  );
+  const wid = String(webContents.id);
+  if (!cssWindowIdMap[wid]) return;
+  await webContents.removeInsertedCSS(wid)
 }
 export type LockSizeOptions = { resize: "both" | "width" | "height" }
 export function lockSizeToParent(win: BrowserWindow, options: LockSizeOptions = { resize: "both" }) {

@@ -43,7 +43,9 @@ export default class StartupProvider extends BaseProvider
         args: this.startArgs,
       });
     }
-    this.getProvider("tray").initializeTray();
+    this.getProvider("tray").initializeTray().then(() => {
+      this.logger.debug("tray initialized");
+    });
   }
   @IpcOn("settingsProvider.change", {
     debounce: 1000,

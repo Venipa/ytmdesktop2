@@ -3,10 +3,8 @@ import {
 } from "@/app/utils/baseProvider";
 import { defaultUri, defaultUrl, isDevelopment } from "@/app/utils/devUtils";
 import eventNames from "@/app/utils/eventNames";
-import { getViewObject } from "@/app/utils/mappedWindow";
 import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import { serverMain } from "@/app/utils/serverEvents";
-import { rootWindowInjectUtils } from "@/app/utils/webContentUtils";
 import { VideoResSetting } from "@/utils/ISettings";
 import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import fs, { existsSync } from "fs";
@@ -136,12 +134,9 @@ export default class SettingsProvider extends BaseProvider
             url.hostname === defaultUri.hostname &&
             previousHostname !== url.hostname
           ) {
-            rootWindowInjectUtils(
-              this.views.youtubeView.webContents,
-              getViewObject(this.views)
-            );
             serverMain.emit("settings.customCssUpdate");
             serverMain.emit("settings.customCssWatch");
+            this.getProvider("customcss").initializeSCSS();
           }
           previousHostname = url.hostname;
           if (url.hostname !== defaultUri.hostname) {

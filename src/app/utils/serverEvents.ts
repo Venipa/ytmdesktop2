@@ -1,7 +1,10 @@
 import { ipcMain } from "electron";
-import EventEmitter from "events"
+import EventEmitter from "events";
 
 type Listener = (...args: any[]) => void;
+/**
+ * allows sending ipc main to ipc main
+ */
 class ElectronEmitter extends EventEmitter {
   constructor() {
     super();
@@ -37,4 +40,4 @@ const serverMain = new ElectronEmitter();
 
 export {
   serverMain
-}
+};

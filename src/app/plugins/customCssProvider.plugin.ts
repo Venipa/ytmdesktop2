@@ -1,5 +1,5 @@
 import { AfterInit, BaseProvider } from "@/app/utils/baseProvider";
-import { IpcContext, IpcOn } from "@/app/utils/onIpcEvent";
+import { IpcContext, IpcHandle, IpcOn } from "@/app/utils/onIpcEvent";
 import {
   rootWindowClearCustomCss,
   rootWindowInjectCustomCss,
@@ -77,6 +77,16 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
       rootWindowInjectCustomCss(this.views.youtubeView, scssFile);
     }
   }
+  @IpcOn("app.loadEnd")
+  private async _onLoadEnd() {
+    return await this.AfterInit();
+  }
+  @IpcHandle("action:css")
+  async injectCSS() {
+    const scssFile = this.getScssPath();
+    if (scssFile) await this._initializeSCSS();
+    return await rootWindowInjectCustomCss(this.views.youtubeView, scssFile);
+  }
   async AfterInit() {
     this._initializeSCSS().then(() => {
       if (this.settingsInstance.instance?.customcss?.enabled)
@@ -101,4 +111,5 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
     }
     return false;
   }
+  readonly initializeSCSS = () => this._initializeSCSS().then(() => this._event_toggleCss(null, !!this.settingsInstance.instance?.customcss?.enabled));
 }

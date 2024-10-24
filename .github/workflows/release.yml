@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-12]
-        node-version: [22.10.0]
+        node-version: [20.15.0]
 
     steps:
       - name: Check out Git repository
@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: |
           yarn config set ignore-engines true
-          yarn
+          yarn --frozen-lockfile
 
       - name: Build Electron release
         run: yarn release
