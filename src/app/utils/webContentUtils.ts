@@ -16,6 +16,7 @@ export async function rootWindowClearCustomCss({ webContents }: WebContentsView)
   const wid = String(webContents.id);
   if (!cssWindowIdMap[wid]) return;
   await webContents.removeInsertedCSS(wid)
+  delete cssWindowIdMap[wid];
 }
 export type LockSizeOptions = { resize: "both" | "width" | "height" }
 export function lockSizeToParent(win: BrowserWindow, options: LockSizeOptions = { resize: "both" }) {
