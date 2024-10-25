@@ -17,7 +17,7 @@
   &:hover,
   &:active,
   &:focus {
-    @apply bg-gray-600;
+    @apply bg-gray-100/20;
   }
   &:active {
     @apply transform-gpu scale-95;

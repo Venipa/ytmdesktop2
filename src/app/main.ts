@@ -85,7 +85,7 @@ export default async function () {
       webPreferences: {
         nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION === "true",
         contextIsolation: true,
-        sandbox: false,
+        sandbox: true,
         webSecurity: isProduction,
         allowRunningInsecureContent: !isProduction,
         backgroundThrottling: false,
@@ -175,7 +175,8 @@ export default async function () {
         });
       },
       {
-        contextIsolation: false // true is currently bugged electron@32.2.2
+        sandbox: true,
+        contextIsolation: false // true is currently bugged electron@^30
       }
     );
     const toolbarView = await createApiView("/youtube/toolbar", (view) => {

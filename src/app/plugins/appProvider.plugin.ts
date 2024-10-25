@@ -3,8 +3,8 @@ import { IpcContext, IpcHandle, IpcOn } from '@/app/utils/onIpcEvent';
 import { setSentryEnabled } from '@/app/utils/sentry';
 import { App, BrowserWindow, IpcMainEvent, powerSaveBlocker } from 'electron';
 
+import { version as releaseVersion } from "node:os";
 import { isDevelopment } from '../utils/devUtils';
-import OS_RELEASE from '../utils/os';
 import { serverMain } from '../utils/serverEvents';
 import { createAppWindow } from '../utils/windowUtils';
 
@@ -91,8 +91,9 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
       if (!settingsWindow || settingsWindow.isDestroyed()) {
         settingsWindow = await createAppWindow({
           parent: this.windowContext.main,
+          minimizeable: false,
+          
         });
-        settingsWindow.setMinimizable(true);
         settingsWindow.on("close", () => {
           this.windowContext.main.show();
         });
@@ -115,7 +116,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
   }
   @IpcHandle("app.isWin11")
   async handleIsWin11() {
-    return OS_RELEASE?.startsWith("11.")
+    return releaseVersion()?.toLowerCase().startsWith("windows 11")
   }
   @IpcOn("subwindow.close")
   private __onSubWindowClose(_ev: IpcMainEvent, windowName?: string) {

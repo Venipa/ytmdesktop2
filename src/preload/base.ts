@@ -66,6 +66,7 @@ export default {
     off: (channel: string, func) => ipcRenderer.off(channel, func),
     reloadCustomCss: () => ipcRenderer.emit("settings.customCssUpdate"),
     watchCustomCss: (enabled: boolean) => ipcRenderer.emit("settings.customCssWatch", enabled),
+    windowState: () => ipcRenderer.invoke("windowState")
   },
   translations,
   domUtils: {
@@ -76,7 +77,7 @@ export default {
       })
     },
     ensureWindow() {
-      return new Promise<Window>((resolve) => window.addEventListener("DOMContentLoaded", function() {
+      return new Promise<Window>((resolve) => window.addEventListener("DOMContentLoaded", function () {
         resolve(this);
       }, { once: true }))
     },

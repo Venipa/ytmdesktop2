@@ -7,7 +7,7 @@
     "serve": "vue-cli-service electron:serve",
     "build": "vue-cli-service electron:build --mode development",
     "lint": "vue-cli-service lint",
-    "dev": "npm run serve --watch",
+    "dev": "npm run serve --watch --debug",
     "electron:build": "vue-cli-service electron:build",
     "electron:serve": "vue-cli-service electron:serve",
     "postinstall": "electron-builder install-app-deps",
@@ -109,7 +109,8 @@
   "packageManager": "yarn@1.22.22",
   "repository": "https://github.com/Venipa/ytmdesktop2",
   "resolutions": {
-    "webpack": "^5.54",
+    "webpack": "^5.84.1",
+    "webpack-dev-server": "^5.1.0",
     "terser": "^5.36.0",
     "node-gyp": "^10.2.0",
     "@achrinza/node-ipc": "^10.1.11"

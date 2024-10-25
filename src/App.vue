@@ -2,12 +2,7 @@
   <router-view></router-view>
 </template>
 
-<script>
-export default {
-  name: "App",
-  computed: {},
-};
-</script>
+<script setup></script>
 
 <style>
 #app,

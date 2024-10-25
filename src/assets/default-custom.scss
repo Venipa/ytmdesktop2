@@ -80,7 +80,7 @@ ytmusic-player-bar.ytmusic-app {
   background: transparent;
 }
 #player-bar-background.ytmusic-app-layout {
-  background-color: rgba(#000, 0.92);
+  background-color: rgba(#000, 0.92)!important;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
@@ -93,7 +93,7 @@ ytmusic-player.ytmusic-player-page {
 }
 tp-yt-paper-dialog,
 tp-yt-paper-listbox.ytmusic-menu-popup-renderer {
-  background-color: rgba(#000, .6);
+  background-color: rgba(#000, .6)!important;
   backdrop-filter: blur(10px);
   border: 0;
   box-shadow: 0px 4.1px 5.3px rgba(0, 0, 0, 0.028),

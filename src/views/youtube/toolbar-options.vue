@@ -106,7 +106,7 @@ export default defineComponent({
         ignoreUndefined: true,
       }
     );
-    const [miniPlayer, setMiniPlayer] = refIpc("miniplayer.state", {
+    const [miniPlayer] = refIpc("miniplayer.state", {
       defaultValue: null,
       ignoreUndefined: true,
     });

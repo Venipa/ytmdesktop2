@@ -12,6 +12,7 @@ import type StartupProvider from "@/app/plugins/startupProvider.plugin";
 import type TrackProvider from "@/app/plugins/trackProvider.plugin";
 import type TrayProvider from "@/app/plugins/trayProvider.plugin";
 import type UpdateProvider from "@/app/plugins/updateProvider.plugin";
+import type WindowUtilsProvider from "@/app/plugins/windowProvider.plugin";
 import type YoutubeControlProvider from "@/app/plugins/youtubeProvider.plugin";
 
 declare module "ytmd" {
@@ -31,5 +32,6 @@ declare module "ytmd" {
     update: UpdateProvider
     lastfm: LastFMProvider
     youtube: YoutubeControlProvider
+    window: WindowUtilsProvider
   }
 }

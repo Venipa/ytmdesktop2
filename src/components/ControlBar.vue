@@ -18,14 +18,15 @@
     </div>
     <div class="flex items-center space-x-2">
       <slot name="divider">
-        <div class="w-px h-6 bg-gray-600"></div>
+        <div class="w-px h-6 bg-gray-50/10"></div>
       </slot>
       <div class="flex items-center space-x-1">
+        
         <template v-if="!isMac">
-          <div @click="onMin" class="control-button" v-if="showMin">
+          <div @click="onMin" class="control-button" v-if="state?.minimizable">
             <MinIcon />
           </div>
-          <div @click="onMax" class="control-button" v-if="showMax">
+          <div @click="onMax" class="control-button" v-if="state?.maximizable">
             <MaxIcon />
           </div>
         </template>
@@ -41,6 +42,7 @@
 import CloseIcon from "@/assets/icons/close.svg";
 import MaxIcon from "@/assets/icons/max-window.svg";
 import MinIcon from "@/assets/icons/min-window.svg";
+import { refWindowState } from "@/utils/Ipc";
 import { defineComponent, PropType } from "vue";
 type ControlType = 'close' | 'maximize' | 'minimize';
 
@@ -79,8 +81,9 @@ export default defineComponent({
     }
   },
   setup() {
+    const [state] = refWindowState();
     return {
-
+      state,
       onClose() {
         window.api.closeWindow();
       },

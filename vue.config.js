@@ -1,5 +1,9 @@
 const path = require("path");
 const webpackNodeExternals = require("webpack-node-externals");
+const webpack = require("webpack");
+const isVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
+const appVersion = process.env.APP_VERSION && isVersion.test(process.env.APP_VERSION) && process.env.APP_VERSION || undefined;
+if (appVersion) console.log("using custom app version", appVersion)
 
 /**
  * @type {import("electron-builder").Configuration} builderOptions
@@ -10,6 +14,7 @@ const builderOptions = {
   productName: "YouTube Music for Desktop",
   extraMetadata: {
     name: "YouTube Music for Desktop",
+    ...(appVersion ? { version: appVersion } : {})
   },
   mac: {
     category: "public.app-category.music",
@@ -93,10 +98,9 @@ module.exports = {
       .end()
       .use("vue-svg-loader")
       .loader("vue-svg-loader");
-    config.devtool(false)
     console.log({ config: config.toConfig().devtool })
   },
   configureWebpack: {
-    devtool: false,
+    devtool: false
   }
 };

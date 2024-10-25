@@ -25,10 +25,19 @@ export function createWindowContext<T, TView extends WebContentsView = WebConten
         .filter(
           (x) => x &&
             (x instanceof BrowserWindow
-              ? !x.isDestroyed() && !x.webContents.isDestroyed()
-              : !x.webContents.isDestroyed())
+              ? !x.isDestroyed() && !x.webContents.isDestroyed() :
+              x.webContents && !x.webContents.isDestroyed())
         )
-        .forEach((x: TView) => x.webContents.send(ev, ...args));
+        .forEach((x: TView) => {
+          try {
+            x.webContents.send(ev, ...args)
+          } catch (ex) {
+            console.error({
+              error: ex,
+              disposed: x.webContents.isDestroyed()
+            });
+          }
+        });
     }
   })();
 }

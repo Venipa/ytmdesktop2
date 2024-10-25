@@ -3,6 +3,7 @@ import { BrowserWindow, screen, shell } from "electron";
 import Store from "electron-store";
 import path from "path";
 import { isDevelopment } from "./devUtils";
+import { syncWindowStateToWebContents } from "./webContentUtils";
 type WindowOptions = {
   path: string;
   parent: BrowserWindow;
@@ -71,6 +72,8 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
     }
     return { action: "deny" }
   });
+  syncWindowStateToWebContents(win)(win.webContents);
+  console.log(`[${win.id}, show], syncWindowStateToWebContents, ${win.title}`)
   return win;
 }
 
