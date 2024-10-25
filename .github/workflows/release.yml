@@ -35,6 +35,23 @@ jobs:
         with:
           sdk-version: 19041
 
+      - if: github.ref_type == 'tag'
+        id: getVersion
+        uses: actions/github-script@7.0.1
+        env: 
+          REF_NAME: ${{ github.ref_name }}
+        with:
+          script: |
+            const isVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+            const id = process.env.REF_NAME && process.env.REF_NAME.split('v')[1] || process.env.REF_NAME
+            return { value: id, ok: isVersion.test(id) }
+      - if: github.ref_type == 'tag' && steps.getVersion.outputs.ok
+        name: set app version
+        uses: jossef/action-set-json-field@v2.2
+        with:
+          file: package.json
+          field: version
+          value: "${{ steps.getVersion.outputs.value }}"
       - name: Install dependencies
         run: |
           yarn config set ignore-engines true
