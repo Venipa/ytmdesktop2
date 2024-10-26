@@ -1,11 +1,12 @@
-import * as Sentry from "@sentry/electron";
 import { isDevelopment } from "@/app/utils/devUtils";
 import logger from "@/utils/Logger";
+import Sentry from "@sentry/electron/main";
 
-export const sentryInstance = Sentry.getCurrentHub();
 let enabledReporting = true;
 export const setSentryEnabled = (enable: boolean) => {
   if (enabledReporting !== enable) enabledReporting = enable;
+  if (!enable) logger.child("Sentry").warn("Sentry has been disabled");
+  else logger.child("Sentry").warn("Sentry has been enabled");
 };
 
 if (!isDevelopment) {
