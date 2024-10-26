@@ -20,6 +20,10 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 
 ## Features
 
+### Ad Skipping
+A smooth and uninterrupted listening experience!\
+Build-in, without any additional setup required.
+
 ### Last.FM (Scrobble)
 ![feature-lastfm2](https://user-images.githubusercontent.com/17952364/212539540-c1efc587-1047-4748-9583-64b609a1ec97.jpg)
 
