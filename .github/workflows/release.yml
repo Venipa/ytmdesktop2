@@ -72,7 +72,7 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_PROJECT: ytmdesktop
-          SENTRY_ORG: venipa.net
+          SENTRY_ORG: venipa
           SENTRY_DEPLOY_ENVIRONMENT: production
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_URL: ${{ secrets.SENTRY_URL }}
