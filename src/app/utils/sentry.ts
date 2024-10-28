@@ -1,6 +1,5 @@
-import { isDevelopment } from "@/app/utils/devUtils";
 import logger from "@/utils/Logger";
-import * as Sentry from "@sentry/electron/main";
+import * as Sentry from "@sentry/electron";
 let enabledReporting = true;
 export const setSentryEnabled = (enable: boolean) => {
   if (enabledReporting !== enable) enabledReporting = enable;
@@ -8,15 +7,14 @@ export const setSentryEnabled = (enable: boolean) => {
   else logger.child("Sentry").warn("Sentry has been enabled");
 };
 
-if (!isDevelopment && process.type !== "renderer") {
-  if (process.env.VUE_APP_SENTRY_DSN)
-    Sentry.init({
-      dsn: process.env.VUE_APP_SENTRY_DSN,
-      enabled: true,
-      beforeSend: (ev) => {
-        if (!enabledReporting) return null;
-        return ev;
-      },
-    });
-  else logger.child("Sentry").warn("Sentry is not enabled");
-}
+if (process.env.VUE_APP_SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.VUE_APP_SENTRY_DSN,
+    enabled: true,
+    beforeSend: (ev) => {
+      if (!enabledReporting) return null;
+      return ev;
+    },
+  })
+  logger.child("Sentry").info("Sentry has been initialized");
+} else logger.child("Sentry").warn("Sentry is not enabled");
