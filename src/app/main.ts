@@ -13,6 +13,7 @@ import path from "path";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 
 import { defaultUrl, isDevelopment, isProduction } from "./utils/devUtils";
+import { initializeCustomElectronEnvironment } from "./utils/electron";
 import {
   BrowserWindowViews,
   createWindowContext
@@ -23,9 +24,9 @@ import {
   createPluginCollection
 } from "./utils/serviceCollection";
 import { createApiView, createView, googleLoginPopup } from "./utils/view";
-import { callWindowListeners } from "./utils/webContentUtils";
+import { callWindowListeners, pushWindowStates } from "./utils/webContentUtils";
 import { appIconPath, wrapWindowHandler } from "./utils/windowUtils";
-
+initializeCustomElectronEnvironment();
 function parseScriptPath(p: string) {
   return path.resolve(__dirname, p);
 }
@@ -146,6 +147,7 @@ export default async function () {
         let lastLocation: string;
         view.webContents.on("did-navigate", (ev, location) => {
           lastLocation = location;
+          pushWindowStates(view.webContents.id);
         });
         let isGoogleLoginProcessing = false;
         view.webContents.on("will-navigate", (ev, location) => {
@@ -171,8 +173,10 @@ export default async function () {
             !!location?.match(defaultUrl)
           ) {
             serverMain.emit("app.loadStart");
-          }
+          } else pushWindowStates(view.webContents.id);
         });
+        
+        pushWindowStates(view.webContents.id);
       },
       {
         sandbox: true,
@@ -329,6 +333,11 @@ export default async function () {
     if (window && window.isMaximizable())
       window.isMaximized() ? window.unmaximize() : window.maximize();
   });
+  serverMain.on("app.goback", () => {
+    const {youtubeView} = mainWindow.views ?? {}
+    if (!youtubeView || youtubeView.webContents.isDestroyed() || !youtubeView.webContents.navigationHistory.canGoBack()) return;
+    youtubeView.webContents.navigationHistory.goBack();
+  })
   let forcedQuit = false;
   serverMain.on("app.quit", (ev: IpcMainEvent, forceQuit: boolean) => {
     forcedQuit = !!forceQuit;

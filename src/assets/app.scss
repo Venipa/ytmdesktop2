@@ -23,7 +23,7 @@
     @apply transform-gpu scale-95;
   }
   &:disabled, &.disabled {
-    @apply scale-100 opacity-60;
+    @apply scale-100 opacity-60 hover:bg-transparent cursor-not-allowed;
   }
   svg {
     @apply w-4 h-4;

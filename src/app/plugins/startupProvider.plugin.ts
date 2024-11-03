@@ -3,7 +3,6 @@ import { IpcContext, IpcOn } from '@/app/utils/onIpcEvent';
 import { App } from 'electron';
 import { basename } from 'path';
 
-import { isDevelopment } from '../utils/devUtils';
 import SettingsProvider from './settingsProvider.plugin';
 
 @IpcContext
@@ -20,8 +19,6 @@ export default class StartupProvider extends BaseProvider
       app.commandLine.appendSwitch("enable-zero-copy");
       app.commandLine.appendSwitch("enable-features", "CanvasOopRasterization,EnableDrDc"); // Enables Display Compositor to use a new gpu thread. todo: testing
     }
-    if (isDevelopment)
-      app.commandLine.appendSwitch("disable-web-security"); // disable cors (also disables other security features) - currently dev only
   }
   async BeforeStart() {
     if (this.settingsInstance.instance.app.disableHardwareAccel) this.app.disableHardwareAcceleration();

@@ -69,7 +69,7 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
     nodeIntegration: false,
     nodeIntegrationInSubFrames: false,
     nodeIntegrationInWorker: false,
-    webSecurity: false,
+    webSecurity: isProduction,
     sandbox: true,
     contextIsolation: true,
     allowRunningInsecureContent: false,

@@ -1,6 +1,10 @@
+import { createLogger } from "@/utils/console";
 import { BrowserWindow, WebContents, WebContentsView } from "electron";
 import { debounce } from "lodash-es";
 import { compileAsync } from "sass";
+import { EventEmitter } from "stream";
+import { defaultUri } from "./devUtils";
+import { BrowserWindowViews } from "./mappedWindow";
 const cssWindowIdMap: Record<string, string> = {}
 export async function rootWindowInjectCustomCss(
   { webContents }: WebContentsView,
@@ -70,6 +74,30 @@ export function getWindowState(win: BrowserWindow) {
     ...win.getBounds()
   };
 }
+export function getWindowStateFromContext({main: win, views: {youtubeView}}: BrowserWindowViews<{ youtubeView: WebContentsView }>) {
+  if (!win || win.isDestroyed()) return null;
+  const { maximizable, minimizable, movable, fullScreen, fullScreenable, menuBarVisible, id, resizable, title, closable } = win;
+  const historyEntry = youtubeView && youtubeView.webContents.navigationHistory.getEntryAtIndex(youtubeView.webContents.navigationHistory.getActiveIndex());
+  return {
+    id,
+    maximized: win.isMaximized(),
+    minimized: win.isMinimized(),
+    alwaysOnTop: win.isAlwaysOnTop(),
+    closable,
+    maximizable,
+    minimizable,
+    movable,
+    resizable,
+    menuBarVisible,
+    fullScreen,
+    fullScreenable,
+    title,
+    ...win.getBounds(),
+    navigation: historyEntry && new URL(historyEntry.url).hostname === defaultUri.hostname && { canGoBack: youtubeView.webContents.navigationHistory.canGoBack(), index: youtubeView.webContents.navigationHistory.getActiveIndex() },
+  };
+}
+const manualSyncEmitter = new EventEmitter();
+export const pushWindowStates = (contentsId?: number) => manualSyncEmitter.emit("push", contentsId);
 export function syncWindowStateToWebContents(win: BrowserWindow) {
   let hidden = false;
   return (view: WebContents) => {
@@ -82,18 +110,28 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
       })
       return h;
     }
+    const handleManualPush = (contentsId?: number) => {
+      if (!contentsId) return handleStates();
+      if (!view || view.isDestroyed() || view.id !== contentsId) return;
+      createLogger(`windowState:${contentsId}`).debug(`pushing window state update for ${view.getTitle()}`);
+      return handleStates();
+    }
     const handleStates = () => {
       if (hidden) return;
-      view.send("windowState", getWindowState(win))
+      const state = getWindowState(win);
+      if (!state) view.send("windowState", state);
+      else view.send("windowState", Object.assign({}, state, { navigation: { canGoBack: view.navigationHistory.canGoBack(), index: view.navigationHistory.getActiveIndex() }  }))
     }
     addHandle(["unmaximize", "maximize", "blur", "focus", "minimize", "show"], handleStates);
     addHandle(["will-resize"], debounce(handleStates, 50))
     addHandle("hide", () => hidden = true)
     addHandle("restore", () => hidden = false);
+    manualSyncEmitter.on("push", handleManualPush);
     win.once("close", () => {
       Object.entries(handles).forEach(([k, h]) => {
         h.forEach(handle => win.off(k as any, handle))
       })
+      manualSyncEmitter.off("push", handleManualPush);
     })
 
     return () => handleStates();

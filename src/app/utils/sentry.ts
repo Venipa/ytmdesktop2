@@ -8,7 +8,7 @@ export const setSentryEnabled = (enable: boolean) => {
 };
 
 if (process.env.VUE_APP_SENTRY_DSN) {
-  Sentry.init({
+  Sentry && Sentry.init({
     dsn: process.env.VUE_APP_SENTRY_DSN,
     enabled: true,
     beforeSend: (ev) => {

@@ -1,6 +1,12 @@
 <template>
   <div class="h-full overflow-hidden">
     <div class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2 space-x-2">
+      <button class="control-button self-center cursor-pointer"
+              :class="{ 'disabled': !state?.navigation?.canGoBack }"
+              :disabled="!state?.navigation?.canGoBack"
+              @click="onGoBack">
+        <ArrowLeftIcon />
+      </button>
       <div class="flex items-center flex-1 drag space-x-2 appear">
         <div class="flex items-center space-x-1"
              v-if="!isDarwin">
@@ -52,81 +58,58 @@
     </div>
   </div>
 </template>
-
-<script>
-import { defineComponent, ref } from "vue";
-import CloseIcon from "@/assets/icons/close.svg";
-import MaxIcon from "@/assets/icons/max-window.svg";
-import MinIcon from "@/assets/icons/min-window.svg";
+<script setup lang="ts">
+import { refIpc, refMainWindowState } from "@/utils/Ipc";
+import { ArrowLeftIcon, XIcon as CloseIcon, MaximizeIcon as MaxIcon, Minimize2 as MinIcon } from "lucide-vue-next";
+import { ref } from "vue";
 import ToolbarOptions from "./toolbar-options.vue";
-import { refIpc } from "@/utils/Ipc";
 const appVersion = ref(window.api.version);
 const isDarwin = ref(window.process.platform === "darwin");
-export default defineComponent({
-  components: {
-    CloseIcon,
-    MaxIcon,
-    MinIcon,
-    ToolbarOptions,
-  },
-  setup() {
-    const [title] = refIpc("TRACK_TITLE_CHANGE", {
-      ignoreUndefined: true,
-      defaultValue: null,
-    });
-    const [updateInfo, setUpdateInfo] = refIpc("APP_UPDATE", {
-      ignoreUndefined: true,
-      defaultValue: null,
-    });
-    const [updateInfoProgress] = refIpc("APP_UPDATE_PROGRESS", {
-      ignoreUndefined: true,
-      defaultValue: null,
-    });
-    const [updateDownloaded] = refIpc("APP_UPDATE_DOWNLOADED", {
-      ignoreUndefined: true,
-      defaultValue: null,
-      mapper: (x) => !!x,
-    });
-    const isInstalling = ref(false);
-    return {
-      title,
-      appVersion,
-      updateInfo,
-      updateInfoProgress,
-      updateDownloaded,
-      isDarwin,
-      runUpdate() {
-        if (isInstalling.value) return;
-        isInstalling.value = true;
-        return window.api
-          .action("app.installUpdate")
-          .then(() => {
-            setUpdateInfo(null);
-          })
-          .finally(() => {
-            isInstalling.value = false;
-          });
-      },
-    };
-  },
-  beforeRouteLeave() {
-    return;
-  },
-  methods: {
-    onClose() {
-      window.api.quit();
-    },
-    onMax() {
-      window.api.maximize();
-    },
-    onMin() {
-      window.api.minimize();
-    },
-  },
-  created() { },
+const [state] = refMainWindowState();
+const [title] = refIpc("TRACK_TITLE_CHANGE", {
+  ignoreUndefined: true,
+  defaultValue: null,
+})
+const [updateInfo, setUpdateInfo] = refIpc("APP_UPDATE", {
+  ignoreUndefined: true,
+  defaultValue: null,
 });
+const [updateInfoProgress] = refIpc("APP_UPDATE_PROGRESS", {
+  ignoreUndefined: true,
+  defaultValue: null,
+});
+const [updateDownloaded] = refIpc("APP_UPDATE_DOWNLOADED", {
+  ignoreUndefined: true,
+  defaultValue: null,
+  mapper: (x) => !!x,
+});
+const isInstalling = ref(false);
+function runUpdate() {
+  if (isInstalling.value) return;
+  isInstalling.value = true;
+  return window.api
+    .action("app.installUpdate")
+    .then(() => {
+      setUpdateInfo(null);
+    })
+    .finally(() => {
+      isInstalling.value = false;
+    });
+}
+function onClose() {
+  window.api.quit();
+}
+function onMax() {
+  window.api.maximize();
+}
+function onMin() {
+  window.api.minimize();
+}
+function onGoBack() {
+  window.api.goback();
+}
+console.log({state})
 </script>
-
 <style lang="scss">
 html,
 body {

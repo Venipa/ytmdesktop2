@@ -52,12 +52,17 @@ export function refIpcSetting<T = any>(key: string) {
   })
   return refVal
 }
-export function refWindowState<T extends { height: number; width: number; x: number; y: number; id: number; maximized: boolean; minimized: boolean; closable: boolean; maximizable: boolean; minimizable: boolean; movable: boolean; resizable: boolean; menuBarVisible: boolean; fullScreen: boolean; fullScreenable: boolean; title: string; }>() {
-  const refVal = refIpc<T>("windowState", {
-    debug: true
-  });
+export function refWindowState<T extends { height: number; width: number; x: number; y: number; id: number; maximized: boolean; minimized: boolean; closable: boolean; maximizable: boolean; minimizable: boolean; movable: boolean; resizable: boolean; menuBarVisible: boolean; fullScreen: boolean; fullScreenable: boolean; title: string; navigation: { canGoBack: boolean, index: number } }>() {
+  const refVal = refIpc<T>("windowState");
   onMounted(() => {
     window.api.windowState().then(refVal[1])
+  })
+  return refVal;
+}
+export function refMainWindowState<T extends { height: number; width: number; x: number; y: number; id: number; maximized: boolean; minimized: boolean; closable: boolean; maximizable: boolean; minimizable: boolean; movable: boolean; resizable: boolean; menuBarVisible: boolean; fullScreen: boolean; fullScreenable: boolean; title: string; navigation: { canGoBack: boolean, index: number } }>() {
+  const refVal = refIpc<T>("mainWindowState");
+  onMounted(() => {
+    window.api.mainWindowState().then(refVal[1])
   })
   return refVal;
 }

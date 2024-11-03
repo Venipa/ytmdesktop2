@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import pkg from "../../package.json";
 import translations from "../translations";
 console.log(window);
-
+const appVersion = process.env.APP_VERSION || pkg.version;
 function ensureDomLoaded(f: () => void) {
   if (["interactive", "complete"].indexOf(document.readyState) > -1) {
     f()
@@ -24,16 +24,16 @@ export default {
     on: (channel, func) => ipcRenderer.on(channel, func),
     off: (channel, func) => ipcRenderer.off(channel, func),
     invoke: (channel, ...data) => ipcRenderer.invoke(channel, ...data),
-    appVersion: pkg.version,
+    appVersion: appVersion,
   },
   process: {
-    version: pkg.version,
+    version: appVersion,
     environment: process.env.NODE_ENV,
     platform: process.platform,
     isWin11: () => ipcRenderer.invoke("app.isWin11").catch(() => false)
   },
   api: {
-    version: pkg.version,
+    version: appVersion,
     plugins: [],
     settings: {
       open: (windowName: string) => ipcRenderer.send("subwindow.show", windowName),
@@ -58,7 +58,8 @@ export default {
     },
     minimize: () => ipcRenderer.send("app.minimize"),
     maximize: () => ipcRenderer.send("app.maximize"),
-    quit: (force) => ipcRenderer.send("app.quit", !!force),
+    goback: () => ipcRenderer.send("app.goback"),
+    quit: (force?: boolean) => ipcRenderer.send("app.quit", !!force),
     action: (event: string, ...data: any[]) => ipcRenderer.invoke(`action:${event}`, ...data),
     invoke: (event: string, ...data: any[]) => ipcRenderer.invoke(event, ...data),
     emit: (event: string, ...data: any[]) => ipcRenderer.send(event, ...data),
@@ -66,6 +67,7 @@ export default {
     off: (channel: string, func) => ipcRenderer.off(channel, func),
     reloadCustomCss: () => ipcRenderer.emit("settings.customCssUpdate"),
     watchCustomCss: (enabled: boolean) => ipcRenderer.emit("settings.customCssWatch", enabled),
+    mainWindowState: () => ipcRenderer.invoke("mainWindowState"),
     windowState: () => ipcRenderer.invoke("windowState")
   },
   translations,
