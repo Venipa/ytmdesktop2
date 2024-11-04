@@ -8,20 +8,20 @@ export interface BeforeStart {
   BeforeStart(app?: App): void | Promise<void>;
 }
 export interface OnInit {
-  OnInit(app?: App): void | Promise<void>;
+  OnInit(app: App): void | Promise<void>;
 }
 export interface AfterInit {
-  AfterInit(app?: App): void | Promise<void>;
+  AfterInit(app: App): void | Promise<void>;
 }
 export interface OnDestroy {
-  OnDestroy(app?: App): void | Promise<void>;
+  OnDestroy(app: App): void | Promise<void>;
 }
 export type ProviderNameKey = keyof BaseProviderNames | ({} & string);
 export class BaseProvider<TView extends WebContentsView = WebContentsView> {
   __type = "service_provider";
   private _providers: { [key: string]: BaseProvider & any } = {};
   private _loggerInstance: Logger;
-  private _views: BrowserWindowViews<{
+  private _views!: BrowserWindowViews<{
     youtubeView: TView;
     toolbarView: TView;
     settingsWindow?: BrowserWindow;

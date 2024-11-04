@@ -25,7 +25,7 @@ export class BaseEvent implements IBaseEvent {
   private __type: BaseEventType;
   private _loggerInstance: Logger;
   private _providers: { [key: string]: BaseProvider & any } = {};
-  private _app: App;
+  private _app!: App;
   get eventName() {
     return this._eventName;
   }

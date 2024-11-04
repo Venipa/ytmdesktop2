@@ -18,7 +18,7 @@ import { BrowserWindowViews, createWindowContext } from "./utils/mappedWindow";
 import { serverMain } from "./utils/serverEvents";
 import { createEventCollection, createPluginCollection } from "./utils/serviceCollection";
 import { createApiView, createView, googleLoginPopup } from "./utils/view";
-import { callWindowListeners, pushWindowStates } from "./utils/webContentUtils";
+import { callWindowListeners, pushWindowStates, syncMainWindowStates } from "./utils/webContentUtils";
 import { wrapWindowHandler } from "./utils/windowUtils";
 initializeCustomElectronEnvironment();
 const log = logger.child("main");
@@ -196,7 +196,7 @@ const runApp = async function () {
       }, 100),
     );
     const { state } = await wrapWindowHandler(win, "root", { ...winSize });
-    if (state.maximized) win.maximize();
+    if (state?.maximized) win.maximize();
     else win.setBounds({ ...state });
     callWindowListeners(win, "will-resize", state);
     serverMain.emit("app.loadStart");
@@ -214,8 +214,10 @@ const runApp = async function () {
     });
 
     try {
-      if (serviceCollection)
-        serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
+      if (serviceCollection) {
+        const preContext = createWindowContext({main: win, views: {youtubeView}});
+        serviceCollection.providers.forEach((p) => p.__registerWindows(preContext));
+      }
     } catch {}
     let fromMaximized = false;
     win.on("maximize", () => {
@@ -262,7 +264,9 @@ const runApp = async function () {
         toolbarView,
       },
     };
-    return createWindowContext<typeof __data.views>(__data);
+    const _context = createWindowContext<typeof __data.views>(__data);
+    syncMainWindowStates(_context);
+    return _context;
   }
 
   // Quit when all windows are closed.

@@ -1,6 +1,6 @@
+import { createYmlStore } from "@main/lib/store/createYmlStore";
 import { createLogger } from "@shared/utils/console";
 import { BrowserWindow, screen, shell } from "electron";
-import Store from "electron-store";
 import path, { join } from "path";
 import appIconPath from "~/build/favicon.ico?asset";
 import { isDevelopment } from "./devUtils";
@@ -77,7 +77,6 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
     return { action: "deny" };
   });
   syncWindowStateToWebContents(win)(win.webContents);
-  console.log(`[${win.id}, show], syncWindowStateToWebContents, ${win.title}`);
   return win;
 }
 
@@ -88,12 +87,12 @@ export async function wrapWindowHandler(
 ) {
   const key = "window-state";
   const name = `window-state-${windowName}`;
-  const store = new Store({ name });
+  const store = createYmlStore(name);
   const defaultSize = {
     width: defaultWidth,
     height: defaultHeight,
   };
-  let state: { width: number; height: number; x: number; y: number; maximized?: boolean } = null;
+  let state: { width: number; height: number; x: number; y: number; maximized?: boolean } | null = null;
   const restore = () => store.get(key, defaultSize);
 
   const getCurrentPosition = () => {
@@ -138,7 +137,7 @@ export async function wrapWindowHandler(
   };
   const saveState = () => {
     if (!win.isMinimized() && !win.isMaximized()) {
-      Object.assign(state, getCurrentPosition());
+      state = Object.assign({}, state, getCurrentPosition());
     }
     store.set(key, state);
   };

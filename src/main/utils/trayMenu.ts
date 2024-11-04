@@ -94,9 +94,9 @@ export const createTrayMenu = (provider: BaseProvider) => {
         },
         {
           label: "Open selected CSS File",
-          enabled: settings.customcss.enabled,
+          enabled: settings.customcss.enabled && !!settings.customcss.scssFile,
           click: (item) => {
-            if (item.enabled) shell.openExternal(settings.customcss.scssFile);
+            if (item.enabled) shell.openExternal(settings.customcss.scssFile!);
           },
         },
         {

@@ -1,5 +1,5 @@
 import { is } from "@electron-toolkit/utils";
-import { createLogger } from "@shared/utils/console";
+import { createLogger, logger } from "@shared/utils/console";
 import { BrowserWindow, WebContents, WebContentsView } from "electron";
 import { debounce } from "lodash-es";
 import { join } from "path";
@@ -164,6 +164,7 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
     const handleStates = () => {
       if (hidden) return;
       const state = getWindowState(win);
+      logger.debug("handleStates trigger", state)
       if (!state) view.send("windowState", state);
       else
         view.send(
@@ -203,6 +204,61 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
     return () => handleStates();
   };
 }
+export function syncMainWindowStates<
+T1 extends BrowserWindowViews<{ youtubeView: WebContentsView }> = BrowserWindowViews<{
+  youtubeView: WebContentsView;
+  toolbarView: WebContentsView;
+}>,
+>(ctx: T1) {
+  let hidden = false;
+    const handles: Record<string, any[]> = {};
+    const addHandle = (key: string | string[], h: any) => {
+      [key].flat().forEach((k) => {
+        if (!handles[k]) handles[k] = [];
+        handles[k].push(h);
+        ctx.main.on(k as any, h);
+      });
+      return h;
+    };
+    const handleStates = () => {
+      if (hidden) return;
+      const state = getWindowState(ctx.main);
+      ctx.sendToAllViews(
+          "mainWindowState",
+          Object.assign({}, state || {}, {
+            navigation: {
+              canGoBack: ctx.views.youtubeView.webContents.navigationHistory.canGoBack(),
+              index: ctx.views.youtubeView.webContents.navigationHistory.getActiveIndex(),
+            },
+          }),
+        );
+    };
+    addHandle(["unmaximize", "maximize", "blur", "focus", "minimize", "show"], handleStates);
+    addHandle(["will-resize"], debounce(handleStates, 50));
+    addHandle("hide", () => (hidden = true));
+    addHandle("restore", () => (hidden = false));
+    const subs: Subscription[] = [];
+    subs.push(
+      fromEvent(ctx.views.youtubeView.webContents, "did-navigate-in-page").subscribe(handleStates),
+      manualSyncEmitter
+        .pipe(
+          filter((x) => x === ctx.views.youtubeView.webContents.id),
+          takeWhile(() => ctx.views.youtubeView.webContents && !ctx.views.youtubeView.webContents.isDestroyed()),
+        )
+        .subscribe(() => {
+          handleManualPushLog.debug("triggered: manual window state");
+          handleStates();
+        }),
+    );
+    ctx.main.once("close", () => {
+      Object.entries(handles).forEach(([k, h]) => {
+        h.forEach((handle) => ctx.main.off(k as any, handle));
+      });
+      subs.forEach((s) => !s.closed && s.unsubscribe());
+    });
+
+    return () => handleStates();
+}
 export function callWindowListeners(win: BrowserWindow, eventName: string, ...args: any[]) {
   return win.listeners(eventName).forEach((caller) => caller(null, ...args));
 }
@@ -241,4 +297,5 @@ export const loadUrlOfWebContents = (win: WebContents, path?: string) => {
     return win.loadFile(indexPath, { hash: hashPath });
   }
 };
-export {};
+export { };
+

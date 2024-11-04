@@ -13,7 +13,7 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
-  private _tray: Tray;
+  private _tray!: Tray;
   get Tray() {
     return this._tray;
   }

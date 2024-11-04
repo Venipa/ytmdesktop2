@@ -1,16 +1,18 @@
+import { createYmlStore } from "@main/lib/store/createYmlStore";
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/utils/baseProvider";
 import { defaultUri, defaultUrl, isDevelopment } from "@main/utils/devUtils";
 import eventNames from "@main/utils/eventNames";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { serverMain } from "@main/utils/serverEvents";
+import { logger } from "@shared/utils/console";
 import { VideoResSetting } from "@shared/utils/ISettings";
-import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
-import fs, { existsSync } from "fs";
-import { get as _get, set as _set, debounce } from "lodash-es";
-import path from "path";
-import { Subject, distinctUntilChanged, filter, map, startWith, takeUntil } from "rxjs";
+import { app, App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import { readFileSync, rmSync, statSync } from "fs";
+import { get as _get, debounce } from "lodash-es";
+import path, { basename } from "path";
+import { distinctUntilChanged, filter, map, startWith, Subject, takeUntil } from "rxjs";
 import { LastFMSettings } from "ytmd";
-import { parseJson, stringifyJson } from "../lib/json";
+import { stringifyJson } from "../lib/json";
 
 const defaultSettings = {
   api: {
@@ -47,12 +49,32 @@ const defaultSettings = {
   },
   lastfm: {
     enabled: false,
-    auth: null,
-    name: null,
   } as LastFMSettings,
 };
-let _settingsStore: SettingsStore = defaultSettings;
 export type SettingsStore = typeof defaultSettings & { [key: string]: any };
+const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
+  defaults: defaultSettings as SettingsStore,
+	beforeEachMigration: (store, context) => {
+		logger.debug(`[${basename(store.path)}] migrate from ${context.fromVersion} → ${context.toVersion}`);
+	},
+  migrations: {
+    ">=0.14.0-rc0": (store) => {
+      const {migratedFromJson} = store.store?.__meta ?? {};
+      if (migratedFromJson) return;
+      const oldConfigPath = path.resolve(app.getPath("userData"), "app-settings.json");
+      if (!statSync(oldConfigPath, {throwIfNoEntry: false})) {
+        store.set("__meta.migratedFromJson", true)
+        return;
+      }
+      const oldConfigBody = readFileSync(oldConfigPath, "utf8");
+      if (!oldConfigBody) return;
+      rmSync(oldConfigPath);
+      const oldConfig = JSON.parse(oldConfigBody);
+      store.set(oldConfig);
+      store.set("__meta.migratedFromJson", true)
+    },
+  },
+});
 
 @IpcContext
 export default class SettingsProvider
@@ -77,25 +99,16 @@ export default class SettingsProvider
   async BeforeStart() {
     const configFile = this.getConfigPath();
     this.logger.debug(configFile);
-    if (existsSync(configFile)) {
-      _settingsStore = {
-        ...defaultSettings,
-        ...parseJson(fs.readFileSync(configFile).toString()),
-      };
-    } else {
-      _settingsStore = { ...defaultSettings };
-    }
-    this.saveToDrive();
   }
   get instance() {
-    return _settingsStore;
+    return _settingsStore.store;
   }
   get<T = any>(key: string, defaultValue?: any): T {
-    return _get(_settingsStore, key, defaultValue);
+    return _settingsStore.get(key, defaultValue);
   }
   set(key: string, value: any) {
-    _set(_settingsStore, key, value);
-    this.onChange.next(_settingsStore);
+    _settingsStore.set(key, value);
+    this.onChange.next(_settingsStore.store);
     try {
       serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value),
         this.windowContext.sendToAllViews(eventNames.SERVER_SETTINGS_CHANGE, key, value);
@@ -107,10 +120,7 @@ export default class SettingsProvider
   @IpcOn("settingsProvider.save", {
     debounce: 5000,
   })
-  saveToDrive() {
-    const configFile = this.getConfigPath();
-    fs.writeFileSync(configFile, JSON.stringify(_settingsStore));
-  }
+  saveToDrive() {}
   async OnDestroy() {
     this.onChange.complete();
     this.saveToDrive();
@@ -150,7 +160,7 @@ export default class SettingsProvider
   @IpcHandle("settingsProvider.getAll")
   private _onEventGetAll(ev: IpcMainInvokeEvent, ...args: any[]) {
     const [value] = args;
-    const returnValue = _settingsStore;
+    const returnValue = _settingsStore.store;
     return returnValue === undefined || returnValue === null ? value : returnValue;
   }
   @IpcOn("settingsProvider.set")

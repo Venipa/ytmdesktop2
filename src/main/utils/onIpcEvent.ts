@@ -15,11 +15,6 @@ interface IpcContextEvent {
 export function IpcContextWithOptions() {
   return IpcContext; // todo: add options to ipc base to allow setting prefixes to events
 }
-export function getRegisteredEventNames(classRef: any) {
-  return Array.from(classRef)
-    ?.filter(([, value]) => Boolean(value))
-    .map(([, value]: [string, IpcContextEvent]) => value.name);
-}
 export function IpcContext<T extends { new (...args: any[]): {} }>(IpcContextBase: T) {
   return class extends IpcContextBase {
     public get __registeredIpcEvents() {

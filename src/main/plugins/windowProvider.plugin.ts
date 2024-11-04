@@ -1,5 +1,5 @@
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy, OnInit } from "@main/utils/baseProvider";
-import { App, BrowserWindow, Event, IpcMainInvokeEvent, session } from "electron";
+import { BrowserWindow, Event, IpcMainInvokeEvent, session } from "electron";
 import { isDevelopment } from "../utils/devUtils";
 import { IpcContext, IpcHandle } from "../utils/onIpcEvent";
 import {
@@ -19,7 +19,7 @@ export default class WindowUtilsProvider
     super("window");
   }
   async BeforeStart() {}
-  async OnInit(app?: App) {
+  async OnInit() {
     if (isDevelopment)
       session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
         callback({
@@ -33,7 +33,7 @@ export default class WindowUtilsProvider
   @IpcHandle("windowState")
   async _getWindowState(_ev: IpcMainInvokeEvent) {
     try {
-      const win = BrowserWindow.fromWebContents(_ev.sender);
+      const win = BrowserWindow.fromWebContents(_ev.sender)!;
       const state = getWindowState(win);
       if (!state) return state;
       return {

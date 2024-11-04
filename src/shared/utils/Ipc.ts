@@ -47,12 +47,12 @@ export function refIpc<T, R = T>(
   }, {});
   onMounted(() => {
     handlerNames.forEach((handlerName) =>
-      (window as any).api.on(handlerName, handlers[handlerName]),
+      window.api.on(handlerName, handlers[handlerName]),
     );
   });
   onUnmounted(() => {
     handlerNames.forEach((handlerName) =>
-      (window as any).api.off(handlerName, handlers[handlerName]),
+      window.api.off(handlerName, handlers[handlerName]),
     );
   });
   return [state, (val: R) => (state.value = val)];
@@ -119,7 +119,7 @@ export function refMainWindowState<
     navigation: { canGoBack: boolean; index: number };
   },
 >() {
-  const refVal = refIpc<T>("windowState");
+  const refVal = refIpc<T>("mainWindowState", {debug: true});
   onMounted(() => {
     window.api.mainWindowState().then(refVal[1]);
   });

@@ -1,7 +1,7 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { isDevelopment } from "@main/utils/devUtils";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
-import { App, BrowserWindow, dialog } from "electron";
+import { App, dialog } from "electron";
 import { CancellationToken, UpdateInfo, autoUpdater } from "electron-updater";
 import semver from "semver";
 
@@ -15,8 +15,8 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
-  private _update: UpdateInfo;
-  private _updateAvailable: boolean;
+  private _update: UpdateInfo | null = null;
+  private _updateAvailable: boolean = false;
   private _updateQueuedForInstall: boolean = false;
   get updateQueuedForInstall() {
     return this._updateQueuedForInstall;
@@ -24,7 +24,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
   public get updateAvailable() {
     return this._updateAvailable;
   }
-  private _updateDownloaded: boolean;
+  private _updateDownloaded: boolean = false;
   public get updateDownloaded() {
     return this._updateDownloaded;
   }
@@ -122,17 +122,19 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
       return x;
     });
   }
-  private _downloadToken: CancellationToken;
+  private _downloadToken: CancellationToken | null = null;
   @IpcOn("app.downloadUpdate")
-  onDownloadUpdate() {
+  onDownloadUpdate(): [Promise<string[]>, () => void] {
     if (!this.updateAvailable || this.updateDownloaded || this.updateQueuedForInstall) return;
     this._downloadToken = new CancellationToken();
     return [
       autoUpdater.downloadUpdate(this._downloadToken),
       () => {
-        this._downloadToken.cancel();
-        this._downloadToken.dispose();
-        this._downloadToken = null;
+        if (this._downloadToken) {
+          this._downloadToken.cancel();
+          this._downloadToken.dispose();
+          this._downloadToken = null;
+        }
         this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, null);
       },
     ];
@@ -156,7 +158,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
           ?.replace(/<[^>]+>/g, "")
           .trimStart();
         return dialog
-          .showMessageBox(BrowserWindow.fromWebContents(this.views.youtubeView.webContents), {
+          .showMessageBox(this.windowContext.main, {
             title: `Update available (${x.updateInfo.version})`,
             message: `Hey there, there is a new version which you can update to.\n\n${
               process.platform === "win32" ? releaseNotes : x.updateInfo.releaseName

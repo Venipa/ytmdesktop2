@@ -5851,6 +5851,13 @@ encoding@^0.1.13:
   dependencies:
     iconv-lite "^0.6.2"
 
+encryption.js@^0.1.5:
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/encryption.js/-/encryption.js-0.1.5.tgz#84548c094ad0d49abdf45d7f85d5adb9a817e95d"
+  integrity sha512-sVOfyQ7IJgR1Bj9DqjCWZLAnbWP8ZrroXLg6I6fb+r4PB6dW1M6b2JHUu6nKRsep3TU21AJg0PXcnWCrbgqHxQ==
+  dependencies:
+    "@poppinss/utils" "^5.0.0"
+
 end-of-stream@^1.1.0, end-of-stream@^1.4.1:
   version "1.4.4"
   resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.4.4.tgz#5ae64a5f45057baf3626ec14da0ca5e4b2431eb0"
@@ -12450,7 +12457,7 @@ yaml@^1.10.0, yaml@^1.10.2, yaml@^1.7.2:
   resolved "https://registry.yarnpkg.com/yaml/-/yaml-1.10.2.tgz#2301c5ffbf12b467de8da2333a459e29e7920e4b"
   integrity sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==
 
-yaml@^2.3.4:
+yaml@^2.3.4, yaml@^2.6.0:
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/yaml/-/yaml-2.6.0.tgz#14059ad9d0b1680d0f04d3a60fe00f3a857303c3"
   integrity sha512-a6ae//JvKDEra2kdi1qzCyrJW/WZCgFi8ydDV+eXExl95t+5R+ijnqHJbz9tmMh8FUjx3iv2fCQ4dclAQlO2UQ==

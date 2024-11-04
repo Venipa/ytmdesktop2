@@ -55,9 +55,9 @@ const parseTrackDuration = (td: TrackData) => {
 };
 @IpcContext
 export default class TrackProvider extends BaseProvider implements AfterInit {
-  private _activeTrackId: string;
+  private _activeTrackId!: string;
   private _playState: "playing" | "paused" | undefined;
-  private _trackState: TrackState;
+  private _trackState!: TrackState;
   get playState() {
     return this._playState;
   }
@@ -81,10 +81,10 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     super("track");
   }
   async AfterInit() {}
-  private _trackDataCache: TrackEntry;
+  private _trackDataCache!: TrackEntry;
   get trackData() {
     if (this._trackDataCache?.id === this._activeTrackId) return this._trackDataCache;
-    return (this._trackDataCache = trackCollection.findById(this._activeTrackId));
+    return (this._trackDataCache = trackCollection.findById(this._activeTrackId)!);
   }
   async getActiveTrackByDOM() {
     return this.views.youtubeView.webContents
@@ -107,14 +107,14 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
         duration: parseTrackDuration(ytTrack),
       },
     };
-    trackCollection.addOrUpdate(ytTrack.video.videoId, track);
+    trackCollection.addOrUpdate(ytTrack.video.videoId, track as TrackData);
 
     if (
       track.video.videoId === this._activeTrackId ||
       (await this.getActiveTrackByDOM()) === track.video.videoId
     ) {
       this._activeTrackId = track.video.videoId;
-      this.pushTrackToViews(track);
+      this.pushTrackToViews(track as TrackData);
     }
   }
   @IpcOn("track:title-change", {
@@ -160,7 +160,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       this.setTrackState({
         id: trackId,
         playing: this.playing,
-        duration: this.getTrackDuration(),
+        duration: this.getTrackDuration()!,
         liked: isLiked,
         disliked: isDLiked,
         progress: 0,

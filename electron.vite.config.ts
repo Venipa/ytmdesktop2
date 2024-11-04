@@ -24,7 +24,6 @@ export default defineConfig({
     ...resolveOptions,
     plugins: [externalizeDepsPlugin({ exclude: [...externalizedEsmDeps] })],
     build: {
-      dynamicImportVarsOptions: {include: ["sass"]},
       rollupOptions: {
         input: {
           index: resolve(__dirname, "src/main/main.ts"),

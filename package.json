@@ -6,7 +6,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "format": "prettier --write .",
-    "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
+    "lint": "eslint \"src/*\" --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
@@ -42,6 +42,7 @@
     "electron-store": "^8.1.0",
     "electron-threads": "^1.0.2",
     "electron-updater": "^6.3.9",
+    "encryption.js": "^0.1.5",
     "events": "^3.3.0",
     "express": "^4.18.1",
     "express-ws": "^5.0.2",
@@ -64,7 +65,8 @@
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.2",
     "winston-transport": "^4.4.0",
-    "xosms": "^0.6.2"
+    "xosms": "^0.6.2",
+    "yaml": "^2.6.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",
