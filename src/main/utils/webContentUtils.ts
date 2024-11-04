@@ -1,9 +1,9 @@
 import { is } from "@electron-toolkit/utils";
 import { createLogger } from "@shared/utils/console";
 import { BrowserWindow, WebContents, WebContentsView } from "electron";
-import { EventEmitter } from "events";
 import { debounce } from "lodash-es";
 import { join } from "path";
+import { filter, fromEvent, Subject, Subscription, takeWhile } from "rxjs";
 import { compileAsync } from "sass";
 import { defaultUri } from "./devUtils";
 import { BrowserWindowViews } from "./mappedWindow";
@@ -92,10 +92,10 @@ export function getWindowState(win: BrowserWindow) {
     ...win.getBounds(),
   };
 }
-export function getWindowStateFromContext({
+export function getWindowStateFromContext<T1 extends BrowserWindowViews<{ youtubeView: WebContentsView }> = BrowserWindowViews<{ youtubeView: WebContentsView }>>({
   main: win,
   views: { youtubeView },
-}: BrowserWindowViews<{ youtubeView: WebContentsView }>) {
+}: T1 = {} as T1) {
   if (!win || win.isDestroyed()) return null;
   const {
     maximizable,
@@ -136,8 +136,9 @@ export function getWindowStateFromContext({
       },
   };
 }
-const manualSyncEmitter = new EventEmitter();
-export const pushWindowStates = (contentsId?: number) => manualSyncEmitter.emit("push", contentsId);
+const manualSyncEmitter = new Subject<number>();
+const handleManualPushLog = createLogger("manualSyncEmitter.push");
+export const pushWindowStates = (contentsId?: number) => manualSyncEmitter.next(contentsId!);
 export function syncWindowStateToWebContents(win: BrowserWindow) {
   let hidden = false;
   return (view: WebContents) => {
@@ -151,11 +152,9 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
       return h;
     };
     const handleManualPush = (contentsId?: number) => {
+      handleManualPushLog.debug({contentsId},`pushing window state update for ${view.getTitle()}`);
       if (!contentsId) return handleStates();
       if (!view || view.isDestroyed() || view.id !== contentsId) return;
-      createLogger(`windowState:${contentsId}`).debug(
-        `pushing window state update for ${view.getTitle()}`,
-      );
       return handleStates();
     };
     const handleStates = () => {
@@ -177,12 +176,19 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
     addHandle(["will-resize"], debounce(handleStates, 50));
     addHandle("hide", () => (hidden = true));
     addHandle("restore", () => (hidden = false));
-    manualSyncEmitter.on("push", handleManualPush);
+    const subs: Subscription[] = [];
+    subs.push(
+      fromEvent(view, "did-navigate-in-page").subscribe(handleStates),
+      manualSyncEmitter.pipe(filter(x => x === view.id), takeWhile(() => view && !view.isDestroyed())).subscribe(() => {
+        handleManualPushLog.debug("triggered: manual window state");
+        handleStates()
+      })
+    )
     win.once("close", () => {
       Object.entries(handles).forEach(([k, h]) => {
         h.forEach((handle) => win.off(k as any, handle));
       });
-      manualSyncEmitter.off("push", handleManualPush);
+      subs.forEach(s => !s.closed && s.unsubscribe())
     });
 
     return () => handleStates();
@@ -226,3 +232,4 @@ export const loadUrlOfWebContents = (win: WebContents, path?: string) => {
     return win.loadFile(indexPath, { hash: hashPath });
   }
 };
+export { };

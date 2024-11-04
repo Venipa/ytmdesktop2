@@ -52,6 +52,7 @@ export default class WindowUtilsProvider
   }
   @IpcHandle("mainWindowState")
   async _getMainWindowState(_ev: IpcMainInvokeEvent) {
+    if (!this.windowContext) return null;
     try {
       const state = getWindowStateFromContext(this.windowContext);
       if (!state) return state;
@@ -73,6 +74,7 @@ export default class WindowUtilsProvider
       "did-navigate-in-page",
       this._handleNavigation.bind(this),
     );
+    this.logger.debug("Watching nav changes for window state...");
   }
   async OnDestroy() {}
 }

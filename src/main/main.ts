@@ -21,7 +21,7 @@ import { createApiView, createView, googleLoginPopup } from "./utils/view";
 import { callWindowListeners, pushWindowStates } from "./utils/webContentUtils";
 import { wrapWindowHandler } from "./utils/windowUtils";
 initializeCustomElectronEnvironment();
-const log = logger.child({ label: "main" });
+const log = logger.child("main");
 const runApp = async function () {
   const serviceCollection = await createPluginCollection(app),
     eventCollection = await createEventCollection(app, serviceCollection.providers);

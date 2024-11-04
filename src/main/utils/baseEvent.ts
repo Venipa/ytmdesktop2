@@ -1,8 +1,8 @@
 import logger from "@shared/utils/Logger";
 import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
-import { Logger } from "winston";
 import { BaseProviderNames } from "ytmd";
 
+import { Logger } from "@shared/utils/console";
 import { BaseProvider } from "./baseProvider";
 import { serverMain } from "./serverEvents";
 
@@ -53,7 +53,7 @@ export class BaseEvent implements IBaseEvent {
     if (!["on", "once", "handle", "server"].includes(type)) {
       throw new Error(`Invalid event type ${type}`);
     }
-    this._loggerInstance = logger.child({ moduleName: `event/${_eventName}` });
+    this._loggerInstance = logger.child(`event/${_eventName}`);
     this.__type = type;
   }
 

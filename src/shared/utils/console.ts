@@ -30,6 +30,8 @@
  * If you want to process logs through other outputs than console, you can add LogOutput functions to Logger.outputs.
  */
 
+import format from "date-fns/format";
+
 /**
  * The possible log levels.
  * LogLevel.Off is never emitted and only used with Logger.level property to disable logs.
@@ -107,7 +109,7 @@ export class Logger {
   private log(func: Function, level: LogLevel, objects: any[]) {
     if (level <= Logger.level) {
       const now = new Date();
-      const log = this.source ? [`${now.toLocaleTimeString()} [${this.source}]`].concat(...[objects].flat()) : [objects].flat();
+      const log = this.source ? [`${format(now, "HH:mm:ss'.'SSS")} [${this.source}]`].concat(...[objects].flat()) : [objects].flat();
 
       func.apply(console, log);
       Logger.outputs.forEach((output) =>

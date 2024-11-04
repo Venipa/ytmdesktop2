@@ -29,7 +29,7 @@
           </div>
         </div>
       </div>
-      <div class="overflow-auto relative flex-auto">
+      <div class="overflow-auto relative flex-auto router-content">
         <div class="container absolute inset-0 mb-8 mx-auto flex flex-col">
           <router-view></router-view>
           <div class="flex-auto mb-6"></div>
@@ -87,8 +87,11 @@ export default {
 </script>
 
 <style lang="scss">
+.router-content {
+  @apply bg-black/30;
+}
 .navbar {
-  @apply bg-black bg-opacity-20 border-b border-gray-700 pt-2;
+  @apply bg-black/80 border-b border-gray-700 pt-2;
 
   .nav-items {
     @apply flex flex-row items-center gap-2 select-none;

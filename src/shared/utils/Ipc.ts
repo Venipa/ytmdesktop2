@@ -119,7 +119,7 @@ export function refMainWindowState<
     navigation: { canGoBack: boolean; index: number };
   },
 >() {
-  const refVal = refIpc<T>("mainWindowState");
+  const refVal = refIpc<T>("windowState");
   onMounted(() => {
     window.api.mainWindowState().then(refVal[1]);
   });

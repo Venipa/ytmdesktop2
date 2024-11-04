@@ -1,8 +1,7 @@
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/utils/baseProvider";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
 import { TrackData } from "@main/utils/trackData";
-import { XOSMS } from "@main/utils/xosms-types";
-import { App } from "electron";
+import { app, type App } from "electron";
 import {
   MediaPlayerMediaType,
   MediaPlayerPlaybackStatus,
@@ -14,13 +13,16 @@ import {
 import IPC_EVENT_NAMES from "../utils/eventNames";
 
 @IpcContext
-export default class MediaControlProvider extends BaseProvider implements AfterInit, BeforeStart, OnDestroy {
+export default class MediaControlProvider
+  extends BaseProvider
+  implements AfterInit, BeforeStart, OnDestroy
+{
   private _mediaProvider: MediaServiceProvider;
   private xosmsLog = this.logger.child("xosms");
   constructor(private app: App) {
     super("mediaController");
   }
-  async BeforeStart(app?: App) {
+  async BeforeStart() {
     app.commandLine.appendSwitch("disable-features", "MediaSessionService");
     app.commandLine.appendSwitch("in-progress-gpu"); // gpu paint not working on some devices, todo: workaround/await fix
     // app.commandLine.appendSwitch("no-sandbox"); // avoid freeze, todo: workaround/await fix
@@ -33,30 +35,49 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
     else if (keyName === "next") trackProvider.nextTrack();
     else if (keyName === "previous") trackProvider.prevTrack();
   }
+  private onPosChange(ev, pos) {
+    this.logger.debug("onPosChange", pos);
+    return this.api.seekTrack(null, {
+      type: "seek", // seeking to pos
+      time: pos * 1000,
+    });
+  }
+  private onPosSeek(ev, seek) {
+    this.logger.debug("onPosSeek", seek);
+    return this.api.seekTrack(null, {
+      time: seek * 1000, // adjust player pos to seeked value
+    });
+  }
 
   async AfterInit() {
     this._mediaProvider = new MediaServiceProvider(this.app.name, this.app.name);
-    this._mediaProvider.seekEnabled = false; // to be added
+    this._mediaProvider.seekEnabled = true; // to be added
     this._mediaProvider.previousButtonEnabled = true;
     this._mediaProvider.nextButtonEnabled = true;
     if (this._mediaProvider) {
       this._mediaProvider.addEventListener("buttonpressed", this.onKeyPressed.bind(this));
+      this._mediaProvider.addEventListener("positionchanged", this.onPosChange.bind(this));
+      this._mediaProvider.addEventListener("positionseeked", this.onPosSeek.bind(this));
       this._mediaProvider.activate();
     }
     if (!this.mediaProviderEnabled())
       this.xosmsLog.warn(
-        [
-          "XOSMS is disabled",
-          ":: Status:",
-          `Provider: ${!!this._mediaProvider}, Enabled: ${this.mediaProviderEnabled()}`,
-        ].join(", "),
+        "XOSMS is disabled",
+        ":: Status:",
+        `Provider: ${!!this._mediaProvider}, Enabled: ${this.mediaProviderEnabled()}`,
       );
   }
   get instance() {
     return this._mediaProvider;
   }
+  get trackData() {
+    return this.getProvider("track").trackData;
+  }
+  get api() {
+    return this.getProvider("api");
+  }
   @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE)
-  private __handleTrackMediaOSControl(_ev, isPlaying: boolean) {
+  private __handleTrackMediaOSControl(_ev, isPlaying: boolean, progressSeconds: number = 0) {
     if (!this.mediaProviderEnabled()) return;
 
     const { trackData } = this.getProvider("track");
@@ -71,6 +92,8 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 
       this._mediaProvider.playButtonEnabled = !isPlaying;
       this._mediaProvider.pauseButtonEnabled = isPlaying;
+      const [progress, duration] = [progressSeconds, Number(this.trackData!.meta.duration)];
+      this._mediaProvider.setTimeline(duration, progress);
     }
     this._mediaProvider.update();
   }
@@ -82,11 +105,7 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
     if (!isEnabled || !trackData?.video) return;
     const albumThumbnail = trackData.meta.thumbnail;
     try {
-      this._mediaProvider.mediaType =
-        {
-          ["Video"]: MediaPlayerMediaType.Music,
-          ["Music"]: MediaPlayerMediaType.Music,
-        }[trackData.context.category] ?? MediaPlayerMediaType.Unknown;
+      this._mediaProvider.mediaType = MediaPlayerMediaType.Music; // always music for now.
       this._mediaProvider.playbackStatus = MediaPlayerPlaybackStatus.Playing;
       this._mediaProvider.artist = trackData.video.author;
       this._mediaProvider.albumTitle = trackData.context.pageOwnerDetails.name;
@@ -104,11 +123,9 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
       this.logger.error(ex); // rip media service
     }
     this.logger.debug(
-      [
-        this._mediaProvider.title,
-        XOSMS.MediaType[this._mediaProvider.mediaType].toString(),
-        this._mediaProvider.trackId,
-      ].join(", "),
+      this._mediaProvider.title,
+      this._mediaProvider.mediaType,
+      this._mediaProvider.trackId,
     );
   }
   OnDestroy(): void | Promise<void> {

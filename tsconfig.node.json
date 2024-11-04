@@ -18,6 +18,7 @@
     "skipLibCheck": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
+    "isolatedModules": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "types": [

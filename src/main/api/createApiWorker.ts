@@ -16,10 +16,7 @@ export const createApiWorker = async (
   parent?: BrowserWindow,
 ): Promise<ApiWorker> => {
   logger.debug("Worker Added", modulePathId);
-  let worker: WorkerAgent<{ name: string; data?: any }, any> | null = new WorkerAgent(
-    modulePathId,
-    true,
-  );
+  let worker: WorkerAgent<{ name: string; data?: any }, any> | null = new WorkerAgent(modulePathId);
   if (parent) parent.on("close", () => worker!.requestExit());
   const apiMap = {
     "api/routes": api.getRoutes,
@@ -35,7 +32,7 @@ export const createApiWorker = async (
     [API_ROUTES.TRACK_CURRENT]: api.getTrackInformation,
     [API_ROUTES.TRACK_CURRENT_STATE]: api.getTrackState,
     [API_ROUTES.TRACK_LIKE]: api.postTrackLike,
-    [API_ROUTES.TRACK_DISLIKE]: api.postTrackDisLike
+    [API_ROUTES.TRACK_DISLIKE]: api.postTrackDisLike,
   };
   worker.on("result", (err, out) => {
     if (err) return logger.error(err);
@@ -52,7 +49,7 @@ export const createApiWorker = async (
     async initialize(settings: SettingsProvider["instance"]) {
       return await this.invoke<number>("initialize", {
         config: { ...settings },
-        routes: Object.keys(apiMap)
+        routes: Object.keys(apiMap),
       });
     }
     async invoke<T = any>(name: string, ...args: any[]) {
