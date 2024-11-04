@@ -6,7 +6,7 @@ Object.entries(preloadRoot).forEach(([key, endpoints]) => {
   contextBridge.exposeInMainWorld(key, endpoints);
 });
 
-(async function() {
+(async function () {
   let settings = {};
   await preloadRoot.api.settingsProvider.getAll({}).then((x) => {
     settings = merge(settings, x);
@@ -21,4 +21,3 @@ Object.entries(preloadRoot).forEach(([key, endpoints]) => {
     });
   });
 })();
-

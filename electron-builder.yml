@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=https://json.schemastore.org/electron-builder.json
+
+appId: net.venipa.ytmdesktop
+productName: YouTube Music for Desktop
+extraMetadata:
+  name: YouTube Music for Desktop
+directories:
+  buildResources: build
+files:
+  - "!**/.vscode/*"
+  - "!src/*"
+  - "!electron.vite.config.{js,ts,mjs,cjs}"
+  - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
+  - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
+  - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+asarUnpack:
+  - resources/**
+win:
+  executableName: ytmdesktop
+  target:
+    - target: nsis
+      arch: x64
+  icon: src/assets/icons/win/icon.ico
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+  installerIcon: src/assets/icons/win/icon.ico
+  installerHeaderIcon: src/assets/icons/win/icon.ico
+  deleteAppDataOnUninstall: true
+
+mac:
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    - NSCameraUsageDescription: Application requests access to the device's camera.
+    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  notarize: false
+  target:
+    - target: dmg
+      arch: x64
+    - target: dmg
+      arch: arm64
+dmg:
+  artifactName: ${name}-${version}.${ext}
+  title: "Install or Update ${productName} ${version}"
+linux:
+  target:
+    - target: appImage
+      arch: x64
+    - target: appImage
+      arch: arm64
+    - snap
+    - deb
+  maintainer: youtube-music.app
+  category: Music
+  icon: src/assets/icons/mac/icon.icns
+appImage:
+  artifactName: ${name}-${version}.${ext}
+npmRebuild: false
+publish:
+  provider: github

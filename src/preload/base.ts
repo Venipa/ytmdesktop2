@@ -2,22 +2,25 @@ import { contextBridge, ipcRenderer } from "electron";
 import pkg from "../../package.json";
 import translations from "../translations";
 console.log(window);
-const appVersion = process.env.APP_VERSION || pkg.version;
+const appVersion = import.meta.env.APP_VERSION || pkg.version;
 function ensureDomLoaded(f: () => void) {
   if (["interactive", "complete"].indexOf(document.readyState) > -1) {
-    f()
-  }
-  else {
-    let triggered = false
+    f();
+  } else {
+    let triggered = false;
     document.addEventListener("DOMContentLoaded", () => {
       if (!triggered) {
-        triggered = true
-        setTimeout(f, 1)
+        triggered = true;
+        setTimeout(f, 1);
       }
-    })
+    });
   }
 }
-export const setContext = (key: string, value: any) => process.contextIsolated ? contextBridge.exposeInMainWorld(key, value) : (window[key] = Object.freeze(value))
+export const basename = (path: string) => path.split(/[\\/]/).pop()
+export const setContext = (key: string, value: any) =>
+  process.contextIsolated
+    ? contextBridge.exposeInMainWorld(key, value)
+    : (window[key] = Object.freeze(value));
 export default {
   ipcRenderer: {
     emit: (event, ...data) => ipcRenderer.send(event, ...data),
@@ -28,9 +31,9 @@ export default {
   },
   process: {
     version: appVersion,
-    environment: process.env.NODE_ENV,
+    environment: import.meta.env.NODE_ENV,
     platform: process.platform,
-    isWin11: () => ipcRenderer.invoke("app.isWin11").catch(() => false)
+    isWin11: () => ipcRenderer.invoke("app.isWin11").catch(() => false),
   },
   api: {
     version: appVersion,
@@ -44,17 +47,15 @@ export default {
     installUpdate: () => ipcRenderer.send("app.installUpdate"),
     checkUpdate: () => ipcRenderer.invoke("app.checkUpdate"),
     settingsProvider: {
-      getAll: (defaultValue: any) =>
-        ipcRenderer.invoke("settingsProvider.getAll", defaultValue),
+      getAll: (defaultValue: any) => ipcRenderer.invoke("settingsProvider.getAll", defaultValue),
       get: (key: string, defaultValue: any) =>
         ipcRenderer.invoke("settingsProvider.get", key, defaultValue),
       set: (key: string, value: any) =>
         new Promise((resolve) => {
           return resolve(ipcRenderer.send("settingsProvider.set", key, value));
         }),
-      update: (key, value) =>
-        ipcRenderer.invoke("settingsProvider.update", key, value),
-      save: () => ipcRenderer.send("settingsProvider.save")
+      update: (key, value) => ipcRenderer.invoke("settingsProvider.update", key, value),
+      save: () => ipcRenderer.send("settingsProvider.save"),
     },
     minimize: () => ipcRenderer.send("app.minimize"),
     maximize: () => ipcRenderer.send("app.maximize"),
@@ -68,7 +69,7 @@ export default {
     reloadCustomCss: () => ipcRenderer.emit("settings.customCssUpdate"),
     watchCustomCss: (enabled: boolean) => ipcRenderer.emit("settings.customCssWatch", enabled),
     mainWindowState: () => ipcRenderer.invoke("mainWindowState"),
-    windowState: () => ipcRenderer.invoke("windowState")
+    windowState: () => ipcRenderer.invoke("windowState"),
   },
   translations,
   domUtils: {
@@ -76,13 +77,20 @@ export default {
     ensureWindowLoaded(f: () => void) {
       return ensureDomLoaded(() => {
         window.addEventListener("load", f);
-      })
+      });
     },
     ensureWindow() {
-      return new Promise<Window>((resolve) => window.addEventListener("DOMContentLoaded", function () {
-        resolve(this);
-      }, { once: true }))
+      return new Promise<Window>((resolve) =>
+        window.addEventListener(
+          "DOMContentLoaded",
+          function () {
+            resolve(this);
+          },
+          { once: true },
+        ),
+      );
     },
-    playerApi: () => (document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as any)?.playerApi
-  }
+    playerApi: () =>
+      (document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as any)?.playerApi,
+  },
 };

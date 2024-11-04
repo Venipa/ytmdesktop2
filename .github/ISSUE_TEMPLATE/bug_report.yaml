@@ -5,15 +5,15 @@ body:
     attributes:
       value: |
         Before opening a bug report, please search for the behaviour in the existing issues. 
-        
+
         ---
-        
+
         Thank you for taking the time to file a bug report. To address this bug as fast as possible, we need some information.
   - type: input
     id: os
     attributes:
       label: Operating system
-      description: | 
+      description: |
         Which operating system do you use? Please provide the version as well.
         Windows: win+r and type `cmd /C "ver | clip"` and paste it here
       placeholder: "Microsoft Windows [Version 10.0.19043.1586]"
@@ -23,7 +23,7 @@ body:
     id: appVersion
     attributes:
       label: YouTube Music Desktop App Version
-      description: | 
+      description: |
         What App Version are you running on, you can find your version in the top left or in the tray menu from ytmdesktop2.
       placeholder: "v0.5.4"
     validations:
@@ -47,6 +47,6 @@ body:
       description: |
         If applicable, provide relevant log output. No need for backticks here.
         Windows: win+r and type "%appdata%\..\Local\Programs\ytmdesktop2\" and search for the latest error-<year>-<month>-<day>.log file (example: error-2022-03-26.log)
-        
+
         make sure to check contents to avoid sensitive data. (if any)
       render: shell
