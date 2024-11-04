@@ -6,14 +6,14 @@
       <div class="flex items-center flex-1 drag space-x-2 appear">
         <div class="flex-none w-16"></div>
         <div
-          class="text-xs bg-primary h-7 rounded items-center px-3 bg-opacity-50 appear flex truncate"
           v-if="title"
+          class="text-xs bg-primary h-7 rounded items-center px-3 bg-opacity-50 appear flex truncate"
         >
           <span class="truncate overflow-ellipsis">{{ title }}</span>
         </div>
       </div>
       <div class="flex items-center space-x-2">
-        <div @click="onSettings" class="control-button">
+        <div class="control-button" @click="onSettings">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
             <path
               fill-rule="evenodd"
@@ -24,7 +24,7 @@
         </div>
         <div class="w-px h-6 bg-gray-600"></div>
         <div class="flex items-center space-x-1">
-          <div @click="onClose" class="control-button control-button-danger">
+          <div class="control-button control-button-danger" @click="onClose">
             <CloseIcon />
           </div>
         </div>
@@ -43,14 +43,20 @@ export default defineComponent({
   components: {
     CloseIcon,
   },
+  beforeRouteLeave() {
+    return;
+  },
   setup() {
     return {
       title,
       appVersion,
     };
   },
-  beforeRouteLeave() {
-    return;
+  created() {
+    window.ipcRenderer.on("track:title", (ev, title) => {
+      this.title = null;
+      if (title) this.title = title;
+    });
   },
   methods: {
     onClose() {
@@ -59,12 +65,6 @@ export default defineComponent({
     onSettings() {
       window.api.settings.open();
     },
-  },
-  created() {
-    window.ipcRenderer.on("track:title", (ev, title) => {
-      this.title = null;
-      if (title) this.title = title;
-    });
   },
 });
 </script>

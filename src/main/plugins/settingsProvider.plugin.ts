@@ -55,7 +55,10 @@ let _settingsStore: SettingsStore = defaultSettings;
 export type SettingsStore = typeof defaultSettings & { [key: string]: any };
 
 @IpcContext
-export default class SettingsProvider extends BaseProvider implements OnDestroy, BeforeStart, AfterInit {
+export default class SettingsProvider
+  extends BaseProvider
+  implements OnDestroy, BeforeStart, AfterInit
+{
   readonly onChange = new Subject<SettingsStore>();
   onChangeProp(key: string) {
     const settings = this.instance;

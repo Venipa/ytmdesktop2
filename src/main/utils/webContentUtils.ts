@@ -92,10 +92,11 @@ export function getWindowState(win: BrowserWindow) {
     ...win.getBounds(),
   };
 }
-export function getWindowStateFromContext<T1 extends BrowserWindowViews<{ youtubeView: WebContentsView }> = BrowserWindowViews<{ youtubeView: WebContentsView }>>({
-  main: win,
-  views: { youtubeView },
-}: T1 = {} as T1) {
+export function getWindowStateFromContext<
+  T1 extends BrowserWindowViews<{ youtubeView: WebContentsView }> = BrowserWindowViews<{
+    youtubeView: WebContentsView;
+  }>,
+>({ main: win, views: { youtubeView } }: T1 = {} as T1) {
   if (!win || win.isDestroyed()) return null;
   const {
     maximizable,
@@ -152,7 +153,10 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
       return h;
     };
     const handleManualPush = (contentsId?: number) => {
-      handleManualPushLog.debug({contentsId},`pushing window state update for ${view.getTitle()}`);
+      handleManualPushLog.debug(
+        { contentsId },
+        `pushing window state update for ${view.getTitle()}`,
+      );
       if (!contentsId) return handleStates();
       if (!view || view.isDestroyed() || view.id !== contentsId) return;
       return handleStates();
@@ -179,16 +183,21 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
     const subs: Subscription[] = [];
     subs.push(
       fromEvent(view, "did-navigate-in-page").subscribe(handleStates),
-      manualSyncEmitter.pipe(filter(x => x === view.id), takeWhile(() => view && !view.isDestroyed())).subscribe(() => {
-        handleManualPushLog.debug("triggered: manual window state");
-        handleStates()
-      })
-    )
+      manualSyncEmitter
+        .pipe(
+          filter((x) => x === view.id),
+          takeWhile(() => view && !view.isDestroyed()),
+        )
+        .subscribe(() => {
+          handleManualPushLog.debug("triggered: manual window state");
+          handleStates();
+        }),
+    );
     win.once("close", () => {
       Object.entries(handles).forEach(([k, h]) => {
         h.forEach((handle) => win.off(k as any, handle));
       });
-      subs.forEach(s => !s.closed && s.unsubscribe())
+      subs.forEach((s) => !s.closed && s.unsubscribe());
     });
 
     return () => handleStates();
@@ -207,8 +216,8 @@ export function getWindowFromContentsId(contentId: number) {
 }
 export const loadUrlOfWindow = (win: BrowserWindow, page?: string) => {
   const hashPath = page?.replace(/^(\#?\/?)/, "#/") || "#/";
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    return win.loadURL(process.env['ELECTRON_RENDERER_URL'].replace(/\/?$/, hashPath));
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    return win.loadURL(process.env["ELECTRON_RENDERER_URL"].replace(/\/?$/, hashPath));
   } else {
     const indexPath = join(__dirname, "../renderer/index.html");
     return win.loadFile(indexPath, { hash: hashPath });
@@ -216,8 +225,8 @@ export const loadUrlOfWindow = (win: BrowserWindow, page?: string) => {
 };
 export const parseWindowUrl = (page?: string) => {
   const hashPath = page?.replace(/^(\#?\/?)/, "#/") || "#/";
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    return process.env['ELECTRON_RENDERER_URL'].replace(/\/?$/, hashPath);
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    return process.env["ELECTRON_RENDERER_URL"].replace(/\/?$/, hashPath);
   } else {
     const indexPath = join(__dirname, "../renderer/index.html");
     return indexPath + hashPath;
@@ -225,11 +234,11 @@ export const parseWindowUrl = (page?: string) => {
 };
 export const loadUrlOfWebContents = (win: WebContents, path?: string) => {
   const hashPath = path?.replace(/^(\#?\/?)/, "#/") || "#/";
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    return win.loadURL(process.env['ELECTRON_RENDERER_URL'].replace(/\/?$/, hashPath));
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    return win.loadURL(process.env["ELECTRON_RENDERER_URL"].replace(/\/?$/, hashPath));
   } else {
     const indexPath = join(__dirname, "../renderer/index.html");
     return win.loadFile(indexPath, { hash: hashPath });
   }
 };
-export { };
+export {};

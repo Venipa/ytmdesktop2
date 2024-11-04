@@ -16,7 +16,7 @@ function ensureDomLoaded(f: () => void) {
     });
   }
 }
-export const basename = (path: string) => path.split(/[\\/]/).pop()
+export const basename = (path: string) => path.split(/[\\/]/).pop();
 export const setContext = (key: string, value: any) =>
   process.contextIsolated
     ? contextBridge.exposeInMainWorld(key, value)

@@ -16,7 +16,7 @@
           <div class="w-px h-6 bg-gray-600"></div>
         </slot>
         <div class="flex items-center space-x-1">
-          <div @click="() => window.api.openWindow('settingsWindow')" class="control-button">
+          <div class="control-button" @click="() => window.api.openWindow('settingsWindow')">
             <SettingsIcon />
           </div>
         </div>
@@ -47,7 +47,6 @@ export default defineComponent({
     SettingsIcon,
     ExitIcon,
   },
-  computed: {},
   setup() {
     const showWinBorder = ref(false);
     const accentColor = ref<string | null>("#a0a0a0"); // todo
@@ -69,6 +68,7 @@ export default defineComponent({
       track,
     };
   },
+  computed: {},
 });
 </script>
 

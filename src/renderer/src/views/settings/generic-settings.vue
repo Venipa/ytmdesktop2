@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-4">
-    <div class="bg-opacity-5 bg-white shadow sm:rounded-lg mt-4" v-if="getStartedEnabled">
+    <div v-if="getStartedEnabled" class="bg-opacity-5 bg-white shadow sm:rounded-lg mt-4">
       <div class="px-4 py-5 sm:p-6">
         <h3 class="text-lg leading-6 font-medium text-gray-100">Get Started</h3>
         <div class="mt-2 max-w-xl text-sm text-gray-200">
@@ -30,18 +30,18 @@
       </div>
     </div>
     <div class="px-3 flex flex-col gap-4 mt-4">
-      <settings-checkbox configKey="app.autostart"> Enable Autostart </settings-checkbox>
-      <settings-checkbox configKey="app.autoupdate"> Enable Autoupdate </settings-checkbox>
-      <settings-checkbox configKey="app.enableStatisticsAndErrorTracing">
+      <settings-checkbox config-key="app.autostart"> Enable Autostart </settings-checkbox>
+      <settings-checkbox config-key="app.autoupdate"> Enable Autoupdate </settings-checkbox>
+      <settings-checkbox config-key="app.enableStatisticsAndErrorTracing">
         <div class="flex flex-col">
           <span>Allow reporting of anonymized errors to sentry.io.</span>
           <span class="opacity-80">(allows for faster bug fixing.)</span>
         </div>
       </settings-checkbox>
-      <settings-checkbox configKey="app.minimizeTrayOverride">
+      <settings-checkbox config-key="app.minimizeTrayOverride">
         Close window to tray instead of quitting
       </settings-checkbox>
-      <settings-checkbox configKey="app.enableDev" class="group">
+      <settings-checkbox config-key="app.enableDev" class="group">
         <div class="flex flex-col">
           <div>Enable Developer Mode</div>
           <div class="select-none opacity-80 group-hover:opacity-100 text-xs font-medium">
@@ -62,7 +62,7 @@
           </div>
         </div>
       </settings-checkbox>
-      <settings-checkbox configKey="app.disableHardwareAccel" class="group">
+      <settings-checkbox config-key="app.disableHardwareAccel" class="group">
         <div class="flex flex-col">
           <div>Disable Hardware Acceleration Mode</div>
           <div class="select-none opacity-80 group-hover:opacity-100 text-xs font-medium">
@@ -78,7 +78,7 @@
             : 'border-gray-500/0 mt-1.5',
         ]"
       >
-        <settings-checkbox configKey="api.enabled" class="group">
+        <settings-checkbox config-key="api.enabled" class="group">
           <div class="flex flex-col">
             <div>Enable API</div>
             <div class="select-none opacity-80 group-hover:opacity-100 text-xs font-medium">
@@ -94,13 +94,13 @@
 
         <template v-if="apiEnabledSetting">
           <settings-input
-            configKey="api.port"
+            config-key="api.port"
             type="number"
             :min="13000"
             :max="39999"
             placeholder="13000-39999"
           >
-            <template v-slot:label> API Port </template>
+            <template #label> API Port </template>
           </settings-input>
         </template>
       </div>
@@ -128,13 +128,6 @@ subscribers.push(
 );
 export default defineComponent({
   components: { SettingsCheckbox, SettingsInput },
-  methods: {
-    disableGetStarted() {
-      window.api.settingsProvider.update("app.getstarted", false).then((v) => {
-        this.getStartedEnabled = v;
-      });
-    },
-  },
   setup() {
     return {
       getStartedEnabled,
@@ -148,6 +141,13 @@ export default defineComponent({
       subscribers.filter((x) => typeof x === "function").forEach(window.ipcRenderer.off);
       subscribers = [];
     }
+  },
+  methods: {
+    disableGetStarted() {
+      window.api.settingsProvider.update("app.getstarted", false).then((v) => {
+        this.getStartedEnabled = v;
+      });
+    },
   },
 });
 </script>

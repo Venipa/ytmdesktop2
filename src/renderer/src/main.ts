@@ -1,4 +1,4 @@
-import 'non.geist';
+import "non.geist";
 import { createApp } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
 import App from "./App.vue";
@@ -63,7 +63,7 @@ const router = createRouter({
     },
   ],
 });
-console.log({router})
+console.log({ router });
 createApp(App)
   .use(router)
   .use((app) => {

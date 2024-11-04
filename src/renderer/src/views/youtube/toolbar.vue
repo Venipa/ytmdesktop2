@@ -12,16 +12,16 @@
         <ArrowLeftIcon />
       </button>
       <div class="flex items-center flex-1 drag space-x-2 appear">
-        <div class="flex items-center space-x-1" v-if="!isDarwin">
+        <div v-if="!isDarwin" class="flex items-center space-x-1">
           <div class="text-xs label -mt-px flex-none">YouTube Music for Desktop</div>
-          <div class="text-xs opacity-30 text-white" v-if="appVersion !== undefined">
+          <div v-if="appVersion !== undefined" class="text-xs opacity-30 text-white">
             v{{ appVersion }}
           </div>
         </div>
         <div v-else class="flex-none w-16"></div>
         <div
-          class="text-xs bg-primary h-7 rounded items-center px-3 bg-opacity-50 appear flex truncate"
           v-if="title"
+          class="text-xs bg-primary h-7 rounded items-center px-3 bg-opacity-50 appear flex truncate"
         >
           <span class="truncate overflow-ellipsis">{{ title }}</span>
         </div>
@@ -53,13 +53,13 @@
         <template v-if="!isDarwin">
           <div class="w-px h-6 bg-gray-600"></div>
           <div class="flex items-center space-x-1">
-            <div @click="onMin" class="control-button">
+            <div class="control-button" @click="onMin">
               <MinIcon />
             </div>
-            <div @click="onMax" class="control-button">
+            <div class="control-button" @click="onMax">
               <MaxIcon />
             </div>
-            <div @click="onClose" class="control-button control-button-danger">
+            <div class="control-button control-button-danger" @click="onClose">
               <CloseIcon />
             </div>
           </div>

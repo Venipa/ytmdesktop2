@@ -11,26 +11,26 @@
           <span class="font-semibold">Version</span>
           <span class="text-green-500 text-sm">{{ appVersion }}</span>
         </div>
-        <button class="btn btn-ghost" v-if="updateInfo && updateDownloaded" @click="runUpdate">
+        <button v-if="updateInfo && updateDownloaded" class="btn btn-ghost" @click="runUpdate">
           <div class="flex leading-none flex-col space-y-1 justify-center items-center">
             <div>Install Update</div>
             <div class="text-green-500">{{ updateInfo.version }}</div>
           </div>
         </button>
         <button
-          class="btn btn-ghost"
           v-else-if="updateInfo && updateInfoProgress?.percent"
+          class="btn btn-ghost"
           disabled
         >
           Downloading...{{ updateInfoProgress.percent.toFixed(0).padStart(5) }}%
         </button>
-        <button class="btn btn-ghost" v-else @click="checkUpdate">
+        <button v-else class="btn btn-ghost" @click="checkUpdate">
           {{ updateChecking ? "Checking for Updates..." : "Check for Update" }}
         </button>
       </div>
       <div class="h-px my-4 bg-gray-500 rounded"></div>
       <div class="px-5 flex flex-col gap-4">
-        <settings-checkbox configKey="app.beta"> Include Pre Releases / Beta </settings-checkbox>
+        <settings-checkbox config-key="app.beta"> Include Pre Releases / Beta </settings-checkbox>
       </div>
     </div>
   </div>
@@ -96,8 +96,8 @@ export default defineComponent({
       return (window as any).api.version;
     },
   },
-  methods: {},
   created() {},
+  methods: {},
 });
 </script>
 

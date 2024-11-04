@@ -1,5 +1,5 @@
 <template>
-  <div v-bind:class="['form-control', $attrs.class]">
+  <div :class="['form-control', $attrs.class]">
     <label class="label">
       <span class="label-text text-gray-300">
         <slot name="label"></slot>
@@ -17,21 +17,21 @@
         </button>
       </div>
       <input
-        v-bind:type="$attrs.type"
-        v-bind:placeholder="$attrs.placeholder"
-        v-bind:accept="$attrs.accept"
-        @change="(ev) => updateSetting(ev.target)"
-        class="hidden"
         ref="fileInputRef"
+        :type="$attrs.type"
+        :placeholder="$attrs.placeholder"
+        :accept="$attrs.accept"
+        class="hidden"
+        @change="(ev) => updateSetting(ev.target)"
       />
     </template>
     <input
       v-else
-      v-bind:type="$attrs.type"
-      v-bind:placeholder="$attrs.placeholder"
-      @change="(ev) => updateSetting(ev.target)"
-      v-bind:value="value"
+      :type="$attrs.type"
+      :placeholder="$attrs.placeholder"
+      :value="value"
       class="input input-ghost"
+      @change="(ev) => updateSetting(ev.target)"
     />
   </div>
 </template>
@@ -49,9 +49,6 @@ export default defineComponent({
     defaultValue: Object,
     min: Number,
     max: Number,
-  },
-  methods: {
-    updateSetting: (_ev: HTMLInputElement) => null,
   },
   setup(context) {
     const value = ref<any>(),
@@ -84,6 +81,9 @@ export default defineComponent({
           .then((v) => (this.value = v));
       }
     }, 500);
+  },
+  methods: {
+    updateSetting: (_ev: HTMLInputElement) => null,
   },
 });
 </script>

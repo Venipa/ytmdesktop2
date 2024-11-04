@@ -109,7 +109,9 @@ export class Logger {
   private log(func: Function, level: LogLevel, objects: any[]) {
     if (level <= Logger.level) {
       const now = new Date();
-      const log = this.source ? [`${format(now, "HH:mm:ss'.'SSS")} [${this.source}]`].concat(...[objects].flat()) : [objects].flat();
+      const log = this.source
+        ? [`${format(now, "HH:mm:ss'.'SSS")} [${this.source}]`].concat(...[objects].flat())
+        : [objects].flat();
 
       func.apply(console, log);
       Logger.outputs.forEach((output) =>

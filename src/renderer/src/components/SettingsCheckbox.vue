@@ -6,7 +6,7 @@
         <input
           type="checkbox"
           class="checkbox checkbox-primary"
-          v-bind:checked="value"
+          :checked="value"
           @change="(ev) => updateSetting(!!ev.target.checked)"
         />
         <span class="checkbox-mark"></span>
@@ -25,9 +25,6 @@ export default defineComponent({
       required: true,
     },
     defaultValue: Object,
-  },
-  methods: {
-    updateSetting: (_value: boolean) => null,
   },
   setup(context) {
     const value = ref<boolean>();
@@ -49,6 +46,9 @@ export default defineComponent({
         });
       }
     }, 200);
+  },
+  methods: {
+    updateSetting: (_value: boolean) => null,
   },
 });
 </script>

@@ -4,8 +4,9 @@ export const meta = {
 
 // todo
 const trackControls = {
-  toggle: () => (el => el && el.click())(document.querySelector(".ytmusic-player-bar#play-pause-button"))
-}
+  toggle: () =>
+    ((el) => el && el.click())(document.querySelector(".ytmusic-player-bar#play-pause-button")),
+};
 export const afterInit = () => {
   window.domUtils.ensureDomLoaded(() => {
     function setTimeSkip(_ev, data) {
@@ -23,10 +24,10 @@ export const afterInit = () => {
     window.ipcRenderer.on("track:seek", setTimeSkip);
     window.ipcRenderer.on("track:control", (_ev, data) => {
       if (!data || typeof data === "object") return;
-      const {type} = data;
+      const { type } = data;
       const handler = trackControls[type];
       if (!handler) return;
       handler();
-    })
+    });
   });
 };

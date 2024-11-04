@@ -1,13 +1,13 @@
 <template>
   <div class="form-control">
     <label class="flex flex-col space-y-2 label items-start">
-      <span class="label-text text-gray-300" v-if="$slots.label">
+      <span v-if="$slots.label" class="label-text text-gray-300">
         <slot name="label"></slot>
       </span>
       <select
-        class="select select-bordered w-full"
-        v-bind:value="value"
         v-if="$slots.options"
+        class="select select-bordered w-full"
+        :value="value"
         @change="(ev: any) => updateSetting(ev.target.value)"
       >
         <slot name="options"></slot>
@@ -27,9 +27,6 @@ export default defineComponent({
     },
     defaultValue: Object,
     label: String,
-  },
-  methods: {
-    updateSetting: (_value: boolean) => null,
   },
   setup(context) {
     const value = ref<string>();
@@ -51,6 +48,9 @@ export default defineComponent({
         });
       }
     }, 200);
+  },
+  methods: {
+    updateSetting: (_value: boolean) => null,
   },
 });
 </script>

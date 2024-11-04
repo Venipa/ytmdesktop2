@@ -20,8 +20,8 @@ export default defineComponent({
   beforeRouteLeave() {
     return;
   },
-  methods: {},
   created() {},
+  methods: {},
 });
 </script>
 

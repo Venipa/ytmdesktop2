@@ -1,8 +1,8 @@
 <template>
   <div class="bg-opacity-5 bg-white shadow sm:rounded-lg mt-4 relative overflow-hidden">
     <div
-      class="absolute inset-0 bg-gray-600/70 flex items-center justify-center text-gray-200 text-sm"
       v-if="loading === true"
+      class="absolute inset-0 bg-gray-600/70 flex items-center justify-center text-gray-200 text-sm"
     >
       <progress class="progress progress-primary bg-transparent w-24"></progress>
     </div>

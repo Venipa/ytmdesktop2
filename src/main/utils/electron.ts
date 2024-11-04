@@ -17,8 +17,8 @@ export function initializeCustomElectronEnvironment() {
     app.commandLine.appendSwitch("disable-site-isolation-trials");
   }
   process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
-  console.log({env: import.meta.env, isDev: is.dev})
-  
+  console.log({ env: import.meta.env, isDev: is.dev });
+
   if (import.meta.env.PROD) Logger.enableProductionMode();
   process.env.NODE_ENV = import.meta.env.MODE;
 

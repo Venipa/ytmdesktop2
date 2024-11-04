@@ -24,11 +24,11 @@
         </template>
         <template #divider>
           <button
-            @click="() => toggleStayTop()"
             class="control-button relative w-4 group-hover:w-auto group-hover:px-2 group-hover:space-x-2 h-4 hover:bg-white/5"
+            @click="() => toggleStayTop()"
           >
-            <LockIcon class="group-hover:opacity-100" v-if="isTop"></LockIcon>
-            <UnLockIcon class="opacity-60" v-else></UnLockIcon>
+            <LockIcon v-if="isTop" class="group-hover:opacity-100"></LockIcon>
+            <UnLockIcon v-else class="opacity-60"></UnLockIcon>
             <span class="hidden group-hover:flex text-sm">Stay on Top</span>
           </button>
         </template>
@@ -39,15 +39,15 @@
     </div>
     <div class="absolute inset-0">
       <div
+        v-if="thumbnail && accentColor"
         class="absolute inset-0 opacity-[.25]"
         :style="{
           backgroundColor: `${accentColor}`,
         }"
-        v-if="thumbnail && accentColor"
       ></div>
       <div
-        class="absolute inset-0 bg-no-repeat bg-cover bg-center opacity-[.25] scale-125 blur-[8px]"
         v-if="thumbnail"
+        class="absolute inset-0 bg-no-repeat bg-cover bg-center opacity-[.25] scale-125 blur-[8px]"
         :style="{ backgroundImage: `url(${thumbnail})` }"
       ></div>
     </div>
@@ -73,15 +73,15 @@
             </template>
             <template v-if="thumbnail">
               <div
-                class="absolute inset-0 rounded-[inherit] z-[1]"
                 v-if="accentColor"
+                class="absolute inset-0 rounded-[inherit] z-[1]"
                 :style="{
                   boxShadow: `10px 12px 12px -2px ${accentColor}50, 0 0 0 .1rem ${accentColor}`,
                 }"
               ></div>
               <div
-                class="absolute -inset-2 rounded-xl z-[2]"
                 v-if="accentColor"
+                class="absolute -inset-2 rounded-xl z-[2]"
                 :style="{
                   backgroundImage: `linear-gradient(${accentColor}a0, ${accentColor}00, ${accentColor}10, ${accentColor}f0)`,
                 }"
@@ -91,8 +91,8 @@
                   class="absolute inset-0 h-full w-full object-center object-cover opacity-[.5] scale-[1.12] blur-[4px] z-[5]"
                   :src="thumbnail"
                   alt=""
-                  @load="handleAccent"
                   loading="lazy"
+                  @load="handleAccent"
                 />
               </div>
               <img
@@ -112,14 +112,14 @@
             </div>
           </div>
           <div class="flex flex-col flex-1 h-full truncate">
-            <div class="min-w-0 flex-auto space-y-1 font-semibold truncate" v-if="track?.video">
+            <div v-if="track?.video" class="min-w-0 flex-auto space-y-1 font-semibold truncate">
               <h2 class="text-zinc-50 text-lg truncate">{{ track.video.title }}</h2>
               <p class="text-zinc-400 text-sm md:text-base lg:text-lg leading-6 truncate">
                 by {{ track.video.author }}
               </p>
               <div
-                class="text-zinc-400 text-sm space-x-1 flex items-center whitespace-pre"
                 v-if="time"
+                class="text-zinc-400 text-sm space-x-1 flex items-center whitespace-pre"
               >
                 <p class="track-status-time tabular-nums">{{ time[0] }}</p>
                 <span>/</span>
@@ -128,34 +128,34 @@
             </div>
             <div class="flex items-center space-x-2 mt-auto flex-shrink-0">
               <button
+                v-if="playState?.disliked !== undefined"
                 type="button"
                 class="player-btn"
                 :class="{ active: !!playState?.disliked }"
-                @click="dislikeToggle"
                 :disabled="trackBusy"
-                v-if="playState?.disliked !== undefined"
                 aria-label="Dislike"
                 :style="{
                   ...(accentColor && !!playState?.disliked
                     ? { color: accentColor, stroke: '#fff' }
                     : {}),
                 }"
+                @click="dislikeToggle"
               >
                 <LikeIcon class="rotate-180" />
               </button>
               <button
+                v-if="playState?.liked !== undefined"
                 type="button"
                 class="player-btn"
                 :class="{ active: !!playState?.liked }"
-                @click="likeToggle"
                 :disabled="trackBusy"
                 :style="{
                   ...(accentColor && !!playState?.liked
                     ? { color: accentColor, stroke: '#fff' }
                     : {}),
                 }"
-                v-if="playState?.liked !== undefined"
                 aria-label="Like"
+                @click="likeToggle"
               >
                 <LikeIcon />
               </button>
@@ -164,15 +164,15 @@
         </div>
       </div>
       <div class="flex flex-col relative z-10">
-        <div class="group pt-4 -mt-4" v-if="time">
+        <div v-if="time" class="group pt-4 -mt-4">
           <div
+            ref="progressHandle"
             class="h-1 group-hover:h-2 bg-white transition-all ease-in-out duration-150"
             :style="{
               width: `${time[2]}%`,
               maxWidth: '100%',
               ...(accentColor ? { backgroundColor: accentColor } : {}),
             }"
-            ref="progressHandle"
           ></div>
         </div>
         <div class="bg-zinc-50/5 mt-auto text-zinc-200 flex items-center h-16">
@@ -181,8 +181,8 @@
               type="button"
               class="player-btn"
               :disabled="trackBusy"
-              @click="prev"
               aria-label="Previous"
+              @click="prev"
             >
               <PrevIcon />
             </button>
@@ -190,8 +190,8 @@
               type="button"
               class="player-btn"
               :disabled="trackBusy"
-              @click="() => backward()"
               aria-label="Rewind 10 seconds"
+              @click="() => backward()"
             >
               <BackwardIcon />
             </button>
@@ -220,17 +220,17 @@
               type="button"
               class="player-btn"
               :disabled="trackBusy"
-              @click="() => forward()"
               aria-label="Skip 10 seconds"
+              @click="() => forward()"
             >
               <ForwardIcon />
             </button>
             <button
               type="button"
               class="player-btn"
-              @click="next"
               :disabled="trackBusy"
               aria-label="Next"
+              @click="next"
             >
               <NextIcon />
             </button>
@@ -279,32 +279,6 @@ export default defineComponent({
     LockIcon,
     UnLockIcon,
     Loading,
-  },
-  computed: {
-    thumbnail() {
-      return this.track?.meta?.thumbnail;
-    },
-    playing() {
-      return !!this.playState?.playing;
-    },
-    time(): [string, string, number] {
-      const { duration, uiProgress: progress } = this.playState ?? {};
-      if (typeof duration !== "number" || typeof progress !== "number") return null;
-      const [current] = (({ hours, minutes, seconds }) =>
-        createInterval([hours, minutes, seconds]))(
-        intervalToDuration({
-          start: duration * 1000 - (progress > duration ? duration : Math.floor(progress)) * 1000,
-          end: duration * 1000,
-        }),
-      );
-      const [end, endPad] = (({ hours, minutes, seconds }) =>
-        createInterval([hours, minutes, seconds]))(
-        intervalToDuration({ start: 0, end: duration * 1000 }),
-      ) as [string, number];
-      const timePad = endPad * 2;
-      const percentage = ((progress > duration ? duration : progress) / duration) * 100;
-      return [current.padEnd(timePad), end.padStart(timePad), percentage];
-    },
   },
   setup() {
     const [track, setTrack] = refIpc<TrackData>("TRACK_CHANGE", {
@@ -456,6 +430,32 @@ export default defineComponent({
         return window.api.invoke(invokeParam, ...params);
       },
     };
+  },
+  computed: {
+    thumbnail() {
+      return this.track?.meta?.thumbnail;
+    },
+    playing() {
+      return !!this.playState?.playing;
+    },
+    time(): [string, string, number] {
+      const { duration, uiProgress: progress } = this.playState ?? {};
+      if (typeof duration !== "number" || typeof progress !== "number") return null;
+      const [current] = (({ hours, minutes, seconds }) =>
+        createInterval([hours, minutes, seconds]))(
+        intervalToDuration({
+          start: duration * 1000 - (progress > duration ? duration : Math.floor(progress)) * 1000,
+          end: duration * 1000,
+        }),
+      );
+      const [end, endPad] = (({ hours, minutes, seconds }) =>
+        createInterval([hours, minutes, seconds]))(
+        intervalToDuration({ start: 0, end: duration * 1000 }),
+      ) as [string, number];
+      const timePad = endPad * 2;
+      const percentage = ((progress > duration ? duration : progress) / duration) * 100;
+      return [current.padEnd(timePad), end.padStart(timePad), percentage];
+    },
   },
 });
 </script>

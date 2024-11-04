@@ -19,8 +19,8 @@
       </div>
     </div>
     <div class="px-3 flex flex-col gap-4 mt-4">
-      <settings-checkbox configKey="discord.enabled"> Enable Discord </settings-checkbox>
-      <settings-checkbox configKey="discord.buttons"> Show Discord Buttons </settings-checkbox>
+      <settings-checkbox config-key="discord.enabled"> Enable Discord </settings-checkbox>
+      <settings-checkbox config-key="discord.buttons"> Show Discord Buttons </settings-checkbox>
     </div>
   </div>
 </template>

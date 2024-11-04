@@ -21,7 +21,7 @@ type WindowOptions = {
 };
 const log = createLogger("main");
 export function parseScriptPath(p: string) {
-  log.child("parseScriptPath").debug(__dirname, p)
+  log.child("parseScriptPath").debug(__dirname, p);
   return path.join(__dirname, "../preload", p);
 }
 export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
@@ -68,7 +68,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
       preload: join(__dirname, "../preload/api.js"),
     },
   });
-  await loadUrlOfWindow(win, path)
+  await loadUrlOfWindow(win, path);
   if (isDevelopment) win.webContents.openDevTools();
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("http")) {

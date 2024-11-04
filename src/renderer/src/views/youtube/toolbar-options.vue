@@ -1,12 +1,12 @@
 <template>
   <div class="flex flex-row items-center space-x-2">
     <button
-      @click="authorizeLastFM"
       :class="{
         'control-button relative h-4': true,
         'opacity-70 btn-disabled': lastFMLoading,
         [lastFM.name ? '!w-auto flex space-x-2.5 items-center px-1.5 ' : 'w-4']: true,
       }"
+      @click="authorizeLastFM"
     >
       <LastFMIcon
         :class="{
@@ -17,41 +17,41 @@
       <span v-if="lastFM.name" :class="{ 'text-gray-100 text-sm': true }">{{ lastFM.name }}</span>
     </button>
     <button
-      @click="() => action('nav.same-origin')"
-      class="control-button relative w-4 h-4"
       v-if="!isHome"
+      class="control-button relative w-4 h-4"
+      @click="() => action('nav.same-origin')"
     >
       <HomeIcon></HomeIcon>
     </button>
     <button
-      @click="() => checkUpdate()"
       class="control-button relative w-4 h-4"
       :class="{ disabled: updateChecking }"
       :disabled="updateChecking"
+      @click="() => checkUpdate()"
     >
       <RefreshIcon :class="{ 'animate-spin duration-500 ease-out': updateChecking }"></RefreshIcon>
     </button>
     <button
-      @click="() => action('app.devTools')"
-      class="control-button relative w-4 h-4"
       v-if="isDev"
+      class="control-button relative w-4 h-4"
+      @click="() => action('app.devTools')"
     >
       <DevIcon></DevIcon>
     </button>
     <button
-      @click="() => action('app.miniPlayer')"
       class="control-button relative w-4 h-4"
       :disabled="!playState"
       :class="
         miniPlayer ? { 'opacity-100': miniPlayer?.active, 'opacity-70': !miniPlayer?.active } : {}
       "
+      @click="() => action('app.miniPlayer')"
     >
       <MiniPlayerIcon />
     </button>
     <button
-      @click="() => toggleSetting('discord.enabled')"
       class="control-button relative"
       :class="{ 'opacity-100': discordEnabled, 'opacity-70': !discordEnabled }"
+      @click="() => toggleSetting('discord.enabled')"
     >
       <RPCIcon></RPCIcon>
       <div
@@ -72,7 +72,7 @@
         </svg>
       </div>
     </button>
-    <button @click="onSettings" class="control-button">
+    <button class="control-button" @click="onSettings">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
         <path
           fill-rule="evenodd"

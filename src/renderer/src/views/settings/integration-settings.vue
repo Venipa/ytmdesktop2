@@ -1,9 +1,9 @@
 <template>
   <div>
     <SectionCard
-      @click="toggleLastFM"
       :loading="loading || lastFM.processing"
       class="cursor-pointer"
+      @click="toggleLastFM"
     >
       <div class="grid grid-cols-[1fr_100px]">
         <div class="flex flex-col">

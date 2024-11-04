@@ -38,7 +38,8 @@ export async function createPluginCollection(app: App) {
 export async function createEventCollection(app: App, providers?: (BaseProvider & any)[]) {
   return (() => {
     const collectionContext = import.meta.glob("../events/*.event.ts", { eager: true });
-    const events = Object.values(collectionContext).map((m: any) => m.default)
+    const events = Object.values(collectionContext)
+      .map((m: any) => m.default)
       .map((event: any) => new event(app));
     events.forEach((p: BaseEvent) => {
       if (providers) p.__registerProviders(providers);

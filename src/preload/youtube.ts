@@ -13,13 +13,13 @@ try {
   if (window.trustedTypes?.defaultPolicy?.name === "default")
     window.trustedTypes.createPolicy("default", {
       createHTML: (string) => DOMPurify.sanitize(string, { RETURN_TRUSTED_TYPE: true }) as any,
-      createScriptURL: string => string, // warning: this is unsafe!
-      createScript: string => string, // warning: this is unsafe!
+      createScriptURL: (string) => string, // warning: this is unsafe!
+      createScript: (string) => string, // warning: this is unsafe!
     });
-} catch { }
+} catch {}
 const plugins = (() => {
   const plugins = import.meta.glob("../main/plugins/client/*.plugin.js", {
-    eager: true
+    eager: true,
   });
   return Object.entries(plugins).map(([filename, p]: [string, any]) => {
     const m = basename(filename);
@@ -102,4 +102,4 @@ setContext("__initYTMD", initFn);
 
 process.on("loaded", () => {
   initFn();
-})
+});
