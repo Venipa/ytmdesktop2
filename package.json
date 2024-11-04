@@ -42,7 +42,6 @@
     "electron-store": "^8.1.0",
     "electron-threads": "^1.0.2",
     "electron-updater": "^6.3.9",
-    "encryption.js": "^0.1.5",
     "events": "^3.3.0",
     "express": "^4.18.1",
     "express-ws": "^5.0.2",
