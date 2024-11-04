@@ -7,7 +7,7 @@
           type="checkbox"
           class="checkbox checkbox-primary"
           :checked="value"
-          @change="(ev) => updateSetting(!!ev.target.checked)"
+          @change="(ev: any) => updateSetting(!!ev.target.checked)"
         />
         <span class="checkbox-mark"></span>
       </div>

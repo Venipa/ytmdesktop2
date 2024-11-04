@@ -149,7 +149,7 @@ const runApp = async function () {
                     youtubeView.webContents.once("did-finish-load", () => resolve()),
                   );
                 }
-                return;
+                return Promise.resolve(null);
               })
               .finally(() => {
                 isGoogleLoginProcessing = false;

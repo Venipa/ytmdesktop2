@@ -10,7 +10,7 @@ import TrackProvider from "./trackProvider.plugin";
 
 @IpcContext
 export default class ApiProvider extends BaseProvider implements AfterInit, OnDestroy {
-  private _thread: ApiWorker;
+  private _thread?: ApiWorker;
   constructor(private _app: App) {
     super("api");
   }
@@ -57,7 +57,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit, OnDe
   async getTrackInformation() {
     return (this.getProvider("track") as TrackProvider)?.trackData;
   }
-  private _currentPallete: { id: string; color: string } = null;
+  private _currentPallete: { id: string; color: string } | null = null;
   @IpcHandle(API_ROUTES.TRACK_ACCENT)
   async getTrackAccent() {
     const track = await this.getTrackInformation();
@@ -93,6 +93,8 @@ export default class ApiProvider extends BaseProvider implements AfterInit, OnDe
           });
           return isLiked;
         });
+
+        return null;
   }
   @IpcHandle(API_ROUTES.TRACK_DISLIKE)
   async postTrackDisLike(_ev, like: boolean) {
@@ -110,6 +112,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit, OnDe
           });
           return _likeState;
         });
+    return null;
   }
   @IpcHandle(API_ROUTES.TRACK_CURRENT_STATE)
   async getTrackState() {

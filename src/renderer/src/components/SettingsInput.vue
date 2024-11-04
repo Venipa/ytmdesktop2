@@ -19,19 +19,19 @@
       <input
         ref="fileInputRef"
         :type="$attrs.type"
-        :placeholder="$attrs.placeholder"
-        :accept="$attrs.accept"
+        :placeholder="$attrs.placeholder as string"
+        :accept="$attrs.accept as string"
         class="hidden"
-        @change="(ev) => updateSetting(ev.target)"
+        @change="(ev) => updateSetting(ev.target as any)"
       />
     </template>
     <input
       v-else
-      :type="$attrs.type"
-      :placeholder="$attrs.placeholder"
+      :type="$attrs.type as string"
+      :placeholder="$attrs.placeholder as string"
       :value="value"
       class="input input-ghost"
-      @change="(ev) => updateSetting(ev.target)"
+      @change="(ev) => updateSetting(ev.target as any)"
     />
   </div>
 </template>

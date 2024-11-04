@@ -11,7 +11,7 @@ import { createAppWindow } from "../utils/windowUtils";
 const STATE_PAUSE_TIME = isDevelopment ? 30e3 : 30e4;
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit, BeforeStart {
-  private appLock: boolean;
+  private appLock: boolean = false;
   constructor(private _app: App) {
     super("app");
   }
@@ -42,7 +42,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
     this._app.on("browser-window-focus", this.windowFocus.bind(this));
     this._app.on("browser-window-blur", this.windowBlur.bind(this));
   }
-  private _blurTimestamp: Date = null;
+  private _blurTimestamp: Date | null = null;
   private _blurAfkHandle: any;
   private get isPlaying() {
     return !!this.getProvider("track")?.playing;

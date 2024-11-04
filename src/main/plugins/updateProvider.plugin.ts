@@ -102,6 +102,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
   async onAutoUpdateRun() {
     if (!this.updateDownloaded && !this.updateQueuedForInstall) {
       const [downloadPromise] = this.onDownloadUpdate();
+      if (!downloadPromise) return;
       await downloadPromise;
     }
     if (!this.isAutoUpdate) autoUpdater.quitAndInstall(false, true);
@@ -125,7 +126,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
   private _downloadToken: CancellationToken | null = null;
   @IpcOn("app.downloadUpdate")
   onDownloadUpdate(): [Promise<string[]>, () => void] {
-    if (!this.updateAvailable || this.updateDownloaded || this.updateQueuedForInstall) return;
+    if (!this.updateAvailable || this.updateDownloaded || this.updateQueuedForInstall) return [] as any;
     this._downloadToken = new CancellationToken();
     return [
       autoUpdater.downloadUpdate(this._downloadToken),

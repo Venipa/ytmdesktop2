@@ -84,7 +84,7 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
   }
   async AfterInit() {
     this._initializeSCSS().then(() => {
-      if (this.settingsInstance.instance?.customcss?.enabled) this._event_toggleCss(null, true);
+      if (this.settingsInstance.instance?.customcss?.enabled) this._event_toggleCss("", true);
     });
   }
   private async _initializeSCSS() {
@@ -105,6 +105,6 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
   }
   readonly initializeSCSS = () =>
     this._initializeSCSS().then(() =>
-      this._event_toggleCss(null, !!this.settingsInstance.instance?.customcss?.enabled),
+      this._event_toggleCss("", !!this.settingsInstance.instance?.customcss?.enabled),
     );
 }

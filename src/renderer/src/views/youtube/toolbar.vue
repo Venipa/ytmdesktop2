@@ -100,7 +100,7 @@ const [updateDownloaded] = refIpc("APP_UPDATE_DOWNLOADED", {
 });
 const isInstalling = ref(false);
 function runUpdate() {
-  if (isInstalling.value) return;
+  if (isInstalling.value) return Promise.resolve(null);
   isInstalling.value = true;
   return window.api
     .action("app.installUpdate")

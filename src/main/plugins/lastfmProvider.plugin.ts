@@ -56,7 +56,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
         this.client.setAuthorize({
           token: lastFMState.token,
           session: lastFMState.session,
-          name: string.escapeHTML(lastfm.name),
+          name: lastfm.name ? string.escapeHTML(lastfm.name!) : "",
         });
     }
   }
@@ -97,7 +97,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     win.webContents.on("did-navigate", async (ev, url, code, status) => {
       this.logger.debug(`[URL]> ${url}, ${code}, ${status}`);
       if (await hasSuccessInfo()) {
-        const userState: LastFMUserState = await win.webContents
+        const userState = await win.webContents
           .executeJavaScript(`document.getElementById("tlmdata")?.dataset?.tealiumData`)
           .then(parseJson<LastFMUserState>)
           .catch(() => null);
@@ -162,7 +162,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
   }
   @IpcHandle("action:" + IPC_EVENT_NAMES.LAST_FM_TOGGLE)
   async handleLastFMToggle(_, state: boolean) {
-    if (state === undefined) return;
+    if (state === undefined) return null;
     const settings = this.getProvider("settings");
     settings.set("lastfm.enabled", !!state);
     settings.saveToDrive();

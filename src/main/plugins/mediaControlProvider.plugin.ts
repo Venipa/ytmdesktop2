@@ -17,7 +17,7 @@ export default class MediaControlProvider
   extends BaseProvider
   implements AfterInit, BeforeStart, OnDestroy
 {
-  private _mediaProvider: MediaServiceProvider;
+  private _mediaProvider!: MediaServiceProvider;
   private xosmsLog = this.logger.child("xosms");
   constructor(private app: App) {
     super("mediaController");

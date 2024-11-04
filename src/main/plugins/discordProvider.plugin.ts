@@ -26,10 +26,10 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
   get enabled() {
     return this._enabled;
   }
-  private client: DiscordClient;
-  private _presence: Presence;
+  private client: DiscordClient | null = null;
+  private _presence: Presence | null = null;
   get presence() {
-    return this._presence;
+    return this._presence!;
   }
   set presence(val: Presence) {
     this._presence = val;
@@ -60,7 +60,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
         this.logger.error(err);
       });
     this.client = null;
-    this.presence = null;
+    this._presence = null;
   }
   async enable() {
     if (this.client) return;
@@ -69,7 +69,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     this._isConnected = true;
     this.windowContext.sendToAllViews("discord.connected");
   }
-  private async createClient(): Promise<[DiscordClient, Presence]> {
+  private async createClient(): Promise<[DiscordClient, Presence] | null> {
     if (!this._enabled || this.isConnected) return null;
     this._enabled = true;
     const client = new DiscordClient({
@@ -125,9 +125,9 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       if (this.presence.buttons.length === 0 || !this.settingsInstance.instance.discord.buttons)
         delete this.presence.buttons;
     }
-    if (YoutubeMatcher.Thumbnail.test(presence.largeImageKey)) {
+    if (presence.largeImageKey && YoutubeMatcher.Thumbnail.test(presence.largeImageKey)) {
       this.presence.largeImageKey = presence.largeImageKey;
-    }
+    } else this.presence.largeImageKey = DEFAULT_PRESENCE.largeImageKey!;
     if (this.presence.startTimestamp === null) delete this.presence.startTimestamp;
     if (this.presence.endTimestamp === null) delete this.presence.endTimestamp;
     if (!this.client || !this.isConnected) return;

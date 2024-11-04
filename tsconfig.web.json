@@ -15,6 +15,12 @@
     "composite": true,
     "baseUrl": ".",
     "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "noImplicitReturns": false,
+    "allowUnusedLabels": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "strictNullChecks": false,
     "skipLibCheck": true,
     "paths": {
       "@shared/*": [

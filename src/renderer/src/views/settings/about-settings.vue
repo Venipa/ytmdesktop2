@@ -62,20 +62,21 @@ export default defineComponent({
     onMounted(() => {
       (window as any).api.action("app.getUpdate").then((ev) => setUpdateInfo(ev));
     });
+      function action(actionParam: any) {
+        return (window as any).api.action(actionParam);
+      }
     return {
       updateChecking,
       updateInfo,
       updateInfoProgress,
       updateDownloaded,
+      action,
       checkUpdate() {
         if (updateChecking.value) return;
         setUpdateChecking(true);
-        this.action("app.checkUpdate").finally(() => {
+        action("app.checkUpdate").finally(() => {
           setUpdateChecking(false);
         });
-      },
-      action(actionParam) {
-        return (window as any).api.action(actionParam);
       },
       runUpdate() {
         if (isInstalling.value) return;
