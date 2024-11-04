@@ -76,7 +76,7 @@ export default defineComponent({
 .task-menu {
   @apply mt-2 mb-6 mx-2 flex flex-col space-y-2;
   &-item {
-    @apply min-h-[40px] px-3 cursor-pointer bg-zinc-900/60 rounded text-sm font-semibold text-left transition-transform select-none outline-none flex items-center space-x-2;
+    @apply min-h-[40px] px-3 cursor-pointer bg-zinc-900/60 rounded text-sm font-semibold text-left transition-transform select-none flex items-center space-x-2;
     &:hover,
     &:active {
       @apply bg-zinc-900/80;

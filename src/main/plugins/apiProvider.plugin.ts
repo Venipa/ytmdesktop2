@@ -1,7 +1,7 @@
 import { ApiWorker, createApiWorker } from "@main/api/createApiWorker";
 import { AfterInit, BaseProvider, OnDestroy } from "@main/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
-import { App } from "electron";
+import type { App } from "electron";
 import fetch from "node-fetch";
 import Vibrant from "node-vibrant";
 
@@ -21,7 +21,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit, OnDe
     return this._app;
   }
   sendMessage(...args: any[]) {
-    return this._thread?.send("socket", ...args);
+    return this._thread?.invoke("socket", ...args);
   }
   private get settingsProvider() {
     return this.getProvider("settings");
@@ -33,10 +33,8 @@ export default class ApiProvider extends BaseProvider implements AfterInit, OnDe
     if (this._thread) await this._thread.destroy();
     const config = this.settingsProvider;
     if (!config.instance?.api?.enabled) return;
-    this._thread = await createApiWorker(this.windowContext.main);
-    const tpid = await this._thread.invoke<number>("initialize", {
-      config: { ...config!.instance },
-    });
+    this._thread = await createApiWorker(this.getProvider("api"), this.windowContext.main);
+    const tpid = await this._thread.initialize(this.settingsProvider.instance)
     this.logger.debug("running thread pid: " + tpid);
   }
 
@@ -52,7 +50,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit, OnDe
     }
   }
   @IpcHandle("api/routes")
-  private async __getRoutes() {
+  async getRoutes() {
     return Object.values(API_ROUTES).map((x) => x.replace(/^\/?api\//, ""));
   }
   @IpcHandle(API_ROUTES.TRACK_CURRENT)

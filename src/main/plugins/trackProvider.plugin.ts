@@ -1,6 +1,6 @@
 import { AfterInit, BaseProvider } from "@main/utils/baseProvider";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
-import { TrackData } from "@main/utils/trackData";
+import type { TrackData } from "@main/utils/trackData";
 import { App } from "electron";
 import { clamp, clone } from "lodash-es";
 import { firstBy } from "thenby";
@@ -95,7 +95,6 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 
   @IpcOn("track:info-req")
   private async __onTrackInfo(ev, ytTrack: TrackData) {
-    this.log("info-req", ytTrack);
     if (!ytTrack.video) return;
     const track = {
       ...ytTrack,

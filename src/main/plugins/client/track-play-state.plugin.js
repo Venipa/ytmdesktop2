@@ -8,7 +8,7 @@ export const afterInit = () => {
     const isPlaying = () => playerApi.getPlayerState() === 1;
     playerApi.addEventListener("onVideoProgress", (progress) => {
       window.api.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, isPlaying(), progress);
-    });
+    }, { passive: true });
     // const videoDataChangeLoadedType = ["dataupdated", "dataloaded"]
     // playerApi.addEventListener("onVideoDataChange", ev => {
     //   if (ev.playertype !== 1 || !videoDataChangeLoadedType.includes(ev.type)) return;

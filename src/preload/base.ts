@@ -31,7 +31,7 @@ export default {
   },
   process: {
     version: appVersion,
-    environment: import.meta.env.NODE_ENV,
+    environment: import.meta.env.MODE,
     platform: process.platform,
     isWin11: () => ipcRenderer.invoke("app.isWin11").catch(() => false),
   },

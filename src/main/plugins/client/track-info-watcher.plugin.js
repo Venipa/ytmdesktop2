@@ -16,6 +16,6 @@ export const afterInit = () => {
         context: (videoData.microformat && videoData.microformat.microformatDataRenderer) || null,
       };
       window.ipcRenderer.emit("track:info-req", requestData);
-    });
+    }, { passive: true });
   });
 };

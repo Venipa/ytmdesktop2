@@ -43,6 +43,6 @@ export const afterInit = () => {
       };
 
       onAd();
-    });
+    }, { passive: true });
   });
 };
