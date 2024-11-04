@@ -55,13 +55,13 @@ linux:
       arch: arm64
     - target: deb
       arch: x64
-    - target: snap
-      arch: x64
   maintainer: youtube-music.app
   category: Music
   icon: build/icon.icns
 appImage:
   artifactName: ${name}-${version}.${ext}
+snap: 
+  
 npmRebuild: false
 publish:
-  provider: github
+  - provider: github
