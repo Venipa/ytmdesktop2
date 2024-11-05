@@ -559,19 +559,6 @@
   resolved "https://registry.yarnpkg.com/@eslint/js/-/js-8.57.1.tgz#de633db3ec2ef6a3c89e2f19038063e8a122e2c2"
   integrity sha512-d9zaMRSTIKDLhctzH12MtXvJKSSUhaHcjV+2Z+GK+EEY7XKpP5yR4x+N3TAcHTcu963nIr+TMcCb4DBCYX1z6Q==
 
-"@giancosta86/format-error@^2.0.0":
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/@giancosta86/format-error/-/format-error-2.1.0.tgz#7aa1eeeb16e123d7669b16eff0190d9da2d047b9"
-  integrity sha512-JINnfFtNlqhKne65KpNXLz17AMTQV2rKEhul/PYQeZK2buBRP3m4h2xO2ZhRcchJjADQHrEAbYPC2X4QYrnD9w==
-
-"@giancosta86/worker-agent@^1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@giancosta86/worker-agent/-/worker-agent-1.1.1.tgz#bbfc15be0d632767c96ed033645ee4cf15852d6c"
-  integrity sha512-4GduFpjIkZjD33VkDwyyr823Dq9mQY8fFCBssO7UaUS5lFqHDqoirDnG7YirboY+DPkD0aNeXDziNguEaUut5Q==
-  dependencies:
-    "@giancosta86/format-error" "^2.0.0"
-    uuid "^8.3.2"
-
 "@headlessui/vue@^1.6.7":
   version "1.6.7"
   resolved "https://registry.yarnpkg.com/@headlessui/vue/-/vue-1.6.7.tgz#433b86e5f86203606e7ac4851777173a327dd8c4"
@@ -7672,11 +7659,6 @@ utils-merge@1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/utils-merge/-/utils-merge-1.0.1.tgz#9f95710f50a267947b2ccc124741c1028427e713"
   integrity sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==
-
-uuid@^8.3.2:
-  version "8.3.2"
-  resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
-  integrity sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==
 
 varint@^6.0.0:
   version "6.0.0"

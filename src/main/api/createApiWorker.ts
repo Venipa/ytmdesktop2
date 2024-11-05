@@ -1,7 +1,7 @@
-import { WorkerAgent } from "@giancosta86/worker-agent";
 import ApiProvider from "@main/plugins/apiProvider.plugin";
 import SettingsProvider from "@main/plugins/settingsProvider.plugin";
 import { API_ROUTES } from "@main/utils/eventNames";
+import { WorkerAgent } from "@main/utils/worker";
 import logger from "@shared/utils/Logger";
 import { BrowserWindow } from "electron";
 import modulePathId from "./main?modulePath";
@@ -38,7 +38,9 @@ export const createApiWorker = async (
     if (err) return logger.error(err);
     if (!out || typeof out !== "object" || !out.name) return;
     Promise.resolve((apiMap[out.name] as any)?.bind(api, ...[out.data].flat())()).then((result) => {
-      return Promise.resolve(worker?.runOperation({ name: "event", data: [out.id, result] }) ?? null);
+      return Promise.resolve(
+        worker?.runOperation({ name: "event", data: [out.id, result] }) ?? null,
+      );
     });
   });
   return new (class {
