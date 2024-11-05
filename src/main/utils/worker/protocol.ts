@@ -1,6 +1,5 @@
-import { join } from "node:path";
+export { default as workerModuleId } from "./worker-context?modulePath";
 
-export const workerModuleId = join(__dirname, "worker");
 
 export type WorkerData = {
   operationModuleId: string;

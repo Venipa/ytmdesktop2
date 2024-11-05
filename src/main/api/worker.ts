@@ -4,7 +4,6 @@ import { createId as cuid } from "@paralleldrive/cuid2";
 import createApp, { json, Router } from "express";
 import expressWs from "express-ws";
 
-import { apiChannelName } from "./apiWorkerHelper";
 
 import type { SettingsStore } from "@main/plugins/settingsProvider.plugin";
 import { createLogger } from "@shared/utils/console";
@@ -132,7 +131,6 @@ const sendMessage = async (name: string, ...args: any[]) => {
   });
   clients.forEach((x) => x.send(data, { binary: false }));
 };
-const evName = apiChannelName;
 const functionCollection = {
   close,
   destroy: close,

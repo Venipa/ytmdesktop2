@@ -2,21 +2,21 @@ import ApiProvider from "@main/plugins/apiProvider.plugin";
 import SettingsProvider from "@main/plugins/settingsProvider.plugin";
 import { API_ROUTES } from "@main/utils/eventNames";
 import { WorkerAgent } from "@main/utils/worker";
+import { apiWorkerModuleId } from "@main/workerPaths";
 import logger from "@shared/utils/Logger";
 import { BrowserWindow } from "electron";
-import modulePathId from "./main?modulePath";
 export interface ApiWorker {
   send(name: string, ...args: any[]): void;
   invoke<T = any>(name: string, ...args: any[]): Promise<T>;
   initialize(settings: SettingsProvider["instance"]): Promise<number>;
   destroy(): Promise<void>;
 }
+const agent = () => new WorkerAgent(apiWorkerModuleId);
 export const createApiWorker = async (
   api: ApiProvider,
   parent?: BrowserWindow,
 ): Promise<ApiWorker> => {
-  logger.debug("Worker Added", modulePathId);
-  let worker: WorkerAgent<{ name: string; data?: any }, any> | null = new WorkerAgent(modulePathId);
+  let worker: WorkerAgent<{ name: string; data?: any }, any> | null = agent();
   if (parent) parent.on("close", () => worker!.requestExit());
   const apiMap = {
     "api/routes": api.getRoutes,
@@ -65,8 +65,8 @@ export const createApiWorker = async (
     }
     async destroy() {
       if (!worker) return;
-      await worker.runOperation({ name: "destroy" });
-      await worker.requestExit();
+      worker.runOperation({ name: "destroy" });
+      worker.requestExit();
       worker = null;
     }
   })();

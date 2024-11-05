@@ -33,7 +33,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit, OnDe
     if (this._thread) await this._thread.destroy();
     const config = this.settingsProvider;
     if (!config.instance?.api?.enabled) return;
-    this._thread = await createApiWorker(this.getProvider("api"), this.windowContext.main);
+    this._thread = await createApiWorker(this, this.windowContext.main);
     const tpid = await this._thread.initialize(this.settingsProvider.instance);
     this.logger.debug("running thread pid: " + tpid);
   }

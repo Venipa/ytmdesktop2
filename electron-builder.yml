@@ -22,6 +22,8 @@ win:
   target:
     - target: nsis
       arch: x64
+    - target: nsis
+      arch: arm64
   icon: build/icon.ico
 nsis:
   artifactName: ${name}-${version}_${arch}-setup.${ext}

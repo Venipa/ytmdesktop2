@@ -15,10 +15,13 @@ type WorkerEventSubscriptionMethod = (
 
 export class WorkerAgent<TInput, TOutput> {
   private readonly worker: Worker;
-
-  constructor(operationModuleId: string, logToConsole = false) {
+  constructor(operationModuleIdOrWorker: string | Worker, logToConsole = false) {
+    if (operationModuleIdOrWorker instanceof Worker) {
+      this.worker = operationModuleIdOrWorker;
+      return;
+    }
     const workerData: WorkerData = {
-      operationModuleId,
+      operationModuleId: operationModuleIdOrWorker,
       logToConsole
     };
 
