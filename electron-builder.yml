@@ -32,7 +32,6 @@ nsis:
   installerIcon: build/icon.ico
   installerHeaderIcon: build/icon.ico
   deleteAppDataOnUninstall: true
-  buildUniversalInstaller: false
 
 mac:
   entitlementsInherit: build/entitlements.mac.plist
