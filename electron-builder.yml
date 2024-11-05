@@ -25,7 +25,7 @@ win:
       arch: x64
   icon: build/icon.ico
 nsis:
-  artifactName: ${name}-${version}_${arch}-setup.${ext}
+  artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -53,7 +53,7 @@ dmg:
 appImage: 
   artifactName: ${name}-${version}.${ext}
 deb: 
-  artifactName: ${name}-${version}_${arch}.${ext}
+  artifactName: ${name}-${version}.${ext}
 linux:
   target:
     - target: appImage
