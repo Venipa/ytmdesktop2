@@ -53,6 +53,8 @@ dmg:
   title: "Install or Update ${productName} ${version}"
 appImage: 
   artifactName: ${name}-${version}.${ext}
+deb: 
+  artifactName: ${name}-${version}_${arch}.${ext}
 linux:
   target:
     - target: appImage
