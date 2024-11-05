@@ -20,12 +20,13 @@ asarUnpack:
   - resources/**
 win:
   executableName: ytmdesktop
+  artifactName: ${name}-${version}-setup.${ext}
+  compression: maximum
   target:
     - target: nsis
       arch: x64
   icon: build/icon.ico
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -48,12 +49,7 @@ mac:
       arch: arm64
   icon: build/icon.icns
 dmg:
-  artifactName: ${name}-${version}_${arch}.${ext}
   title: "Install or Update ${productName} ${version}"
-appImage: 
-  artifactName: ${name}-${version}.${ext}
-deb: 
-  artifactName: ${name}-${version}.${ext}
 linux:
   target:
     - target: appImage
