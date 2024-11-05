@@ -9,6 +9,7 @@ directories:
 files:
   - "!**/.vscode/*"
   - "!**/{dist_electron,.github,screenshots}/*"
+  - "!{dist_electron,.github,screenshots}/*"
   - "!.*/*"
   - "!src/*"
   - "!electron.vite.config.{js,ts,mjs,cjs}"
