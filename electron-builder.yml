@@ -24,7 +24,7 @@ win:
       arch: x64
   icon: build/icon.ico
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: ${name}-${version}_${arch}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -47,7 +47,7 @@ mac:
       arch: arm64
   icon: build/icon.icns
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${name}-${version}_${arch}.${ext}
   title: "Install or Update ${productName} ${version}"
 linux:
   target:
@@ -60,8 +60,6 @@ linux:
   maintainer: youtube-music.app
   category: Music
   icon: build/icon.icns
-appImage:
-  artifactName: ${name}-${version}.${ext}
 snap: 
   
 npmRebuild: false
