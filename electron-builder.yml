@@ -23,8 +23,6 @@ win:
   target:
     - target: nsis
       arch: x64
-    - target: nsis
-      arch: arm64
   icon: build/icon.ico
 nsis:
   artifactName: ${name}-${version}_${arch}-setup.${ext}
@@ -34,6 +32,7 @@ nsis:
   installerIcon: build/icon.ico
   installerHeaderIcon: build/icon.ico
   deleteAppDataOnUninstall: true
+  buildUniversalInstaller: false
 
 mac:
   entitlementsInherit: build/entitlements.mac.plist
@@ -52,6 +51,8 @@ mac:
 dmg:
   artifactName: ${name}-${version}_${arch}.${ext}
   title: "Install or Update ${productName} ${version}"
+appImage: 
+  artifactName: ${name}-${version}.${ext}
 linux:
   target:
     - target: appImage
@@ -63,8 +64,10 @@ linux:
   maintainer: youtube-music.app
   category: Music
   icon: build/icon.icns
-snap: 
-  
+# appx:
+#   electronUpdaterAware: true
+#   addAutoLaunchExtension: true
+
 npmRebuild: false
 publish:
   - provider: github
