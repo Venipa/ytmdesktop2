@@ -4,12 +4,11 @@ import { defaultUri, defaultUrl, isDevelopment } from "@main/utils/devUtils";
 import eventNames from "@main/utils/eventNames";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { serverMain } from "@main/utils/serverEvents";
-import { logger } from "@shared/utils/console";
 import { VideoResSetting } from "@shared/utils/ISettings";
 import { app, App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { readFileSync, rmSync, statSync } from "fs";
 import { get as _get, debounce } from "lodash-es";
-import path, { basename } from "path";
+import path from "path";
 import { distinctUntilChanged, filter, map, startWith, Subject, takeUntil } from "rxjs";
 import { LastFMSettings } from "ytmd";
 import { stringifyJson } from "../lib/json";
@@ -54,26 +53,26 @@ const defaultSettings = {
 export type SettingsStore = typeof defaultSettings & { [key: string]: any };
 const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
   defaults: defaultSettings as SettingsStore,
-	beforeEachMigration: (store, context) => {
-		logger.debug(`[${basename(store.path)}] migrate from ${context.fromVersion} → ${context.toVersion}`);
-	},
-  migrations: {
-    ">=0.14.0-rc0": (store) => {
-      const {migratedFromJson} = store.store?.__meta ?? {};
-      if (migratedFromJson) return;
-      const oldConfigPath = path.resolve(app.getPath("userData"), "app-settings.json");
-      if (!statSync(oldConfigPath, {throwIfNoEntry: false})) {
+  migrations: [
+    {
+      version: 0,
+      hook(store) {
+        const {migratedFromJson} = store.store?.__meta ?? {};
+        if (migratedFromJson) return;
+        const oldConfigPath = path.resolve(app.getPath("userData"), "app-settings.json");
+        if (!statSync(oldConfigPath, {throwIfNoEntry: false})) {
+          store.set("__meta.migratedFromJson", true)
+          return;
+        }
+        const oldConfigBody = readFileSync(oldConfigPath, "utf8");
+        if (!oldConfigBody) return;
+        rmSync(oldConfigPath);
+        const oldConfig = JSON.parse(oldConfigBody);
+        store.set(oldConfig);
         store.set("__meta.migratedFromJson", true)
-        return;
-      }
-      const oldConfigBody = readFileSync(oldConfigPath, "utf8");
-      if (!oldConfigBody) return;
-      rmSync(oldConfigPath);
-      const oldConfig = JSON.parse(oldConfigBody);
-      store.set(oldConfig);
-      store.set("__meta.migratedFromJson", true)
-    },
-  },
+      },
+    }
+  ]
 });
 
 @IpcContext
@@ -104,7 +103,7 @@ export default class SettingsProvider
     return _settingsStore.store;
   }
   get<T = any>(key: string, defaultValue?: any): T {
-    return _settingsStore.get(key, defaultValue);
+    return _get(_settingsStore.store, key, defaultValue);
   }
   set(key: string, value: any) {
     _settingsStore.set(key, value);

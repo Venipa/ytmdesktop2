@@ -8,11 +8,11 @@ directories:
   buildResources: build
 files:
   - "!**/.vscode/*"
-  - "!{dist_electron,.github}/*"
+  - "!**/{dist_electron,.github,screenshots}/*"
   - "!.*/*"
   - "!src/*"
   - "!electron.vite.config.{js,ts,mjs,cjs}"
-  - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
+  - "!{.*rc,*.config.js,*.config.ts,*config.json,.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
   - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig*.json}"
 asarUnpack:

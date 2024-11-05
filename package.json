@@ -39,7 +39,7 @@
     "daisyui": "^2.20.0",
     "date-fns": "^2.29.1",
     "dompurify": "^3.1.7",
-    "electron-store": "^8.1.0",
+    "electron-conf": "^1.2.1",
     "electron-threads": "^1.0.2",
     "electron-updater": "^6.3.9",
     "events": "^3.3.0",
@@ -85,11 +85,6 @@
     "@typescript-eslint/eslint-plugin": "^5.31.0",
     "@typescript-eslint/parser": "^5.31.0",
     "@vitejs/plugin-vue": "^5.1.4",
-    "@volar-plugins/vetur": "^0.1.0",
-    "@vue/cli-plugin-babel": "^5.0.8",
-    "@vue/cli-plugin-eslint": "^5.0.8",
-    "@vue/cli-plugin-typescript": "^5.0.8",
-    "@vue/cli-service": "^5.0.8",
     "@vue/compiler-sfc": "^3.2.37",
     "@vue/eslint-config-prettier": "^9.0.0",
     "@vue/eslint-config-typescript": "^13.0.0",
@@ -117,8 +112,7 @@
     "vite-svg-loader": "^5.1.0",
     "vue-svg-loader": "^0.17.0-beta.2",
     "vue-tsc": "^2.1.10",
-    "webpack-node-externals": "^3.0.0",
-    "worker-plugin": "^5.0.1"
+    "webpack-node-externals": "^3.0.0"
   },
   "license": "MIT",
   "optionalDependencies": {

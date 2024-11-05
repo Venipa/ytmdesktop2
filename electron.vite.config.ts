@@ -1,10 +1,12 @@
 import vue from "@vitejs/plugin-vue";
-import { defineConfig, externalizeDepsPlugin } from "electron-vite";
+import { BytecodeOptions, bytecodePlugin, defineConfig, externalizeDepsPlugin } from "electron-vite";
 import { merge } from "lodash-es";
 import { resolve } from "path";
 import { UserConfigExport } from "vite";
 import svgLoader from 'vite-svg-loader';
-
+const bytecodeOptions: BytecodeOptions = {
+  transformArrowFunctions: false,
+}
 const resolveOptions: UserConfigExport = {
   resolve: {
     alias: {
@@ -22,7 +24,7 @@ const externalizedEsmDeps = ["lodash-es", "@faker-js/faker", "@trpc-limiter/memo
 export default defineConfig({
   main: {
     ...resolveOptions,
-    plugins: [externalizeDepsPlugin({ exclude: [...externalizedEsmDeps] })],
+    plugins: [externalizeDepsPlugin({ exclude: [...externalizedEsmDeps] }), bytecodePlugin(bytecodeOptions)],
     build: {
       rollupOptions: {
         input: {
@@ -38,7 +40,7 @@ export default defineConfig({
   },
   preload: {
     ...resolveOptions,
-    plugins: [externalizeDepsPlugin({ exclude: [...externalizedEsmDeps] })],
+    plugins: [externalizeDepsPlugin({ exclude: [...externalizedEsmDeps] }), bytecodePlugin(bytecodeOptions)],
     build: {
       rollupOptions: {
         input: {

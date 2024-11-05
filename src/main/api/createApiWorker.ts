@@ -38,7 +38,7 @@ export const createApiWorker = async (
     if (err) return logger.error(err);
     if (!out || typeof out !== "object" || !out.name) return;
     Promise.resolve((apiMap[out.name] as any)?.bind(api, ...[out.data].flat())()).then((result) => {
-      return worker?.runOperation({ name: "event", data: [out.id, result] });
+      return Promise.resolve(worker?.runOperation({ name: "event", data: [out.id, result] }) ?? null);
     });
   });
   return new (class {
