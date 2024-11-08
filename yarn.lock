@@ -354,7 +354,16 @@
   resolved "https://registry.yarnpkg.com/@electron-toolkit/utils/-/utils-3.0.0.tgz#74626893d93025eacba086d497b615cf927d42c4"
   integrity sha512-GaXHDhiT7KCvMJjXdp/QqpYinq69T/Pdl49Z1XLf8mKGf63dnsODMWyrmIjEQ0z/vG7dO8qF3fvmI6Eb2lUNZA==
 
-"@electron/asar@^3.2.13", "@electron/asar@^3.2.7":
+"@electron/asar@3.2.17":
+  version "3.2.17"
+  resolved "https://registry.yarnpkg.com/@electron/asar/-/asar-3.2.17.tgz#91d28087aad80d1a1c8cc4e667c6476edf50f949"
+  integrity sha512-OcWImUI686w8LkghQj9R2ynZ2ME693Ek6L1SiaAgqGKzBaTIZw3fHDqN82Rcl+EU1Gm9EgkJ5KLIY/q5DCRbbA==
+  dependencies:
+    commander "^5.0.0"
+    glob "^7.1.6"
+    minimatch "^3.0.4"
+
+"@electron/asar@^3.2.7":
   version "3.2.15"
   resolved "https://registry.yarnpkg.com/@electron/asar/-/asar-3.2.15.tgz#b75ee015db4de446d498f83e05c22640ac62ea18"
   integrity sha512-AerUbRZpkDVRs58WP32t4U2bx85sfwRkQI8RMIEi6s2NBE++sgjsgAAMtXvnfTISKUkXo386pxFW7sa7WtMCrw==
@@ -2506,13 +2515,13 @@ app-builder-bin@5.0.0-alpha.11:
   resolved "https://registry.yarnpkg.com/app-builder-bin/-/app-builder-bin-5.0.0-alpha.11.tgz#2aa630fc8bbcb68a309e42ac0234818341c6ac2f"
   integrity sha512-8qqHYEvddA9jvpO90XMNwgOYZPWBDI/5w9QHyMD68IhGY8RDO2apGfXcF6xmfZb1jXJLilvwGwsDyITQraQz8A==
 
-app-builder-lib@26.0.0-alpha.3:
-  version "26.0.0-alpha.3"
-  resolved "https://registry.yarnpkg.com/app-builder-lib/-/app-builder-lib-26.0.0-alpha.3.tgz#07a49fe191830a123a1261bba34305c99cee94f4"
-  integrity sha512-KiaQyRNAxKgjpOt/shirzTHp3VlvR2enpTBx5brg3CmljIw1S0leQVtjksdUxpYs/9Dm2jcXam09gql0wRufUg==
+app-builder-lib@26.0.0-alpha.6:
+  version "26.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/app-builder-lib/-/app-builder-lib-26.0.0-alpha.6.tgz#93fed112b79f03282c154e594d9bf609c323a20e"
+  integrity sha512-aIDVXdStmWPbG9Hi+H4JrDp7Lua4+ZjFRE9HxXWTNl17Ke/mRn1y3DvqVuwNd/CDlkINTlBez/zsGQJ1XnrXxA==
   dependencies:
     "@develar/schema-utils" "~2.6.5"
-    "@electron/asar" "^3.2.13"
+    "@electron/asar" "3.2.17"
     "@electron/fuses" "^1.8.0"
     "@electron/notarize" "2.5.0"
     "@electron/osx-sign" "1.3.1"
@@ -2530,7 +2539,7 @@ app-builder-lib@26.0.0-alpha.3:
     dotenv "^16.4.5"
     dotenv-expand "^11.0.6"
     ejs "^3.1.8"
-    electron-publish "26.0.0-alpha.3"
+    electron-publish "26.0.0-alpha.4"
     fs-extra "^10.1.0"
     hosted-git-info "^4.1.0"
     is-ci "^3.0.0"
@@ -3567,12 +3576,12 @@ dlv@^1.1.3:
   resolved "https://registry.yarnpkg.com/dlv/-/dlv-1.1.3.tgz#5c198a8a11453596e751494d49874bc7732f2e79"
   integrity sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==
 
-dmg-builder@26.0.0-alpha.3:
-  version "26.0.0-alpha.3"
-  resolved "https://registry.yarnpkg.com/dmg-builder/-/dmg-builder-26.0.0-alpha.3.tgz#4bab0430417e0c97b9df1f07248dc1c11a820746"
-  integrity sha512-bBHJOp4ha/FKtJMNbj/+WEt/BVeKXH+5HaoJs6nKLWpQ3IM/aOVSzGffnw7NAohvuJuSd5MBtDNX8P/Q8YH9cQ==
+dmg-builder@26.0.0-alpha.6:
+  version "26.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/dmg-builder/-/dmg-builder-26.0.0-alpha.6.tgz#8a32ef4a431921eabbea1e96bca63f814ef0aae9"
+  integrity sha512-kT3XXIf9zkG/n0MRqW6n0BIl7R9ftEQzyFdCxWUuLFPyoFi5vKYX1uShbIjPFX/E0+s2nMqoNtEM3KDRt7aQNg==
   dependencies:
-    app-builder-lib "26.0.0-alpha.3"
+    app-builder-lib "26.0.0-alpha.6"
     builder-util "26.0.0-alpha.3"
     builder-util-runtime "9.2.10"
     fs-extra "^10.1.0"
@@ -3700,16 +3709,16 @@ ejs@^3.1.8:
   dependencies:
     jake "^10.8.5"
 
-electron-builder@26.0.0-alpha.3:
-  version "26.0.0-alpha.3"
-  resolved "https://registry.yarnpkg.com/electron-builder/-/electron-builder-26.0.0-alpha.3.tgz#dc45836c36f9e266af3e3aa092ef79e3edef294e"
-  integrity sha512-an2zFLo2mbdQ7xieVaQxyjy94KTX9EH5SWEmHjsZaqlqFJ7SfHuutFEVyFkVcyOthCxTnUNnF+FFeRJgZFya8A==
+electron-builder@^26.0.0-alpha.6:
+  version "26.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/electron-builder/-/electron-builder-26.0.0-alpha.6.tgz#42fafe2efaa82d520f110691357e7e306367ad3f"
+  integrity sha512-Uf4UlZpc+q2e7lYq44/NRY0IH2QsnbjnSpsZcuaKMeiqJrZe0U7Uwa5leHK2tZ3eqwHLCJSvDYKuQGbeFDY9pg==
   dependencies:
-    app-builder-lib "26.0.0-alpha.3"
+    app-builder-lib "26.0.0-alpha.6"
     builder-util "26.0.0-alpha.3"
     builder-util-runtime "9.2.10"
     chalk "^4.1.2"
-    dmg-builder "26.0.0-alpha.3"
+    dmg-builder "26.0.0-alpha.6"
     fs-extra "^10.1.0"
     is-ci "^3.0.0"
     lazy-val "^1.0.5"
@@ -3733,10 +3742,10 @@ electron-devtools-installer@^3.2.0:
     tslib "^2.1.0"
     unzip-crx-3 "^0.2.0"
 
-electron-publish@26.0.0-alpha.3:
-  version "26.0.0-alpha.3"
-  resolved "https://registry.yarnpkg.com/electron-publish/-/electron-publish-26.0.0-alpha.3.tgz#f1db824a0cc408c7a3be9bd151fbb09fefb43901"
-  integrity sha512-hxxNbYcbXLfn1kKeHsYWyU8juvub1l38kbNStJeWx4/ziPa3Hqn3qwXCIb9Nau5UZjLG8lj3kPLCZ/9ZDAevEw==
+electron-publish@26.0.0-alpha.4:
+  version "26.0.0-alpha.4"
+  resolved "https://registry.yarnpkg.com/electron-publish/-/electron-publish-26.0.0-alpha.4.tgz#7c7bf8ab6134b74a616adde7024337baf79fc37a"
+  integrity sha512-bl2QOjC4Sp/qaDmxSY8PD3tiO8XSLzXgYvfX9L5tFaQ5LnX3NEA/6PMw4zssw/cY60STqIPle0rZ4dpTz8YJXA==
   dependencies:
     "@types/fs-extra" "^9.0.11"
     builder-util "26.0.0-alpha.3"
@@ -3788,10 +3797,10 @@ electron-vite@^2.3.0:
     magic-string "^0.30.10"
     picocolors "^1.0.1"
 
-electron@^33.0.2:
-  version "33.0.2"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-33.0.2.tgz#db31b105bf0edd7c8600dfb70c2dfc214e3789f1"
-  integrity sha512-C2WksfP0COsMHbYXSJG68j6S3TjuGDrw/YT42B526yXalIlNQZ2GeAYKryg6AEMkIp3p8TUfDRD0+HyiyCt/nw==
+electron@^33.2.0:
+  version "33.2.0"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-33.2.0.tgz#2a7098653eaf1a53c7311a01d5636783019f2354"
+  integrity sha512-PVw1ICAQDPsnnsmpNFX/b1i/49h67pbSPxuIENd9K9WpGO1tsRaQt+K2bmXqTuoMJsbzIc75Ce8zqtuwBPqawA==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^20.9.0"

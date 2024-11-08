@@ -10,6 +10,7 @@ import {
 } from "electron";
 import { debounce } from "lodash-es";
 
+import { waitMs } from "@shared/utils/promises";
 import { join } from "path";
 import appIconPath from "~/build/favicon.ico?asset";
 import { defaultUrl, isDevelopment, isProduction } from "./utils/devUtils";
@@ -59,7 +60,7 @@ const runApp = async function () {
       minHeight: 480,
       autoHideMenuBar: true,
       icon: appIconPath,
-      backgroundColor: "#000000",
+      backgroundColor: "#030404",
       center: true,
       closable: true,
       skipTaskbar: false,
@@ -69,6 +70,7 @@ const runApp = async function () {
       darkTheme: true,
       titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
       maximizable: true,
+      show: false,
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: true,
@@ -294,7 +296,10 @@ const runApp = async function () {
   });
   app.on("ready", async () => {
     await serviceCollection.exec("OnInit");
+    await waitMs(); // next tick
     mainWindow = await createRootWindow();
+    await waitMs(); // next tick
+    mainWindow.main.show();
     serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
     serviceCollection.exec("AfterInit");
   });
