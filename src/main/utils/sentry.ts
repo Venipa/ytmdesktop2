@@ -9,6 +9,7 @@ export const setSentryEnabled = (enable: boolean) => {
 
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry &&
+    !Sentry.isInitialized &&
     Sentry.init({
       dsn: import.meta.env.VITE_SENTRY_DSN,
       enabled: true,
@@ -19,3 +20,4 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     });
   logger.child("Sentry").info("Sentry has been initialized");
 } else logger.child("Sentry").warn("Sentry is not enabled");
+export { Sentry };

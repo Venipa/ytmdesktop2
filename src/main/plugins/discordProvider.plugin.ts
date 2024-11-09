@@ -50,7 +50,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     if (!this.client) return;
     clearTimeout(this._updateHandle);
     this._isConnected = false;
-    await this.client.user?.clearActivity();
+    await this.client.user.clearActivity().catch(() => {}); // todo: clear throws error if pipe is not writable
     await this.client
       .destroy()
       .finally(() => {
