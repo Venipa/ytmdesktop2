@@ -1,11 +1,11 @@
+import secureStore from "@main/lib/secureStore";
 import { AfterInit, BaseProvider, OnInit } from "@main/utils/baseProvider";
 import { IpcContext, IpcHandle } from "@main/utils/onIpcEvent";
 import { string } from "@poppinss/utils/build/helpers";
 import { App, BrowserWindow, shell } from "electron";
-import keytar from "keytar";
 import { LastFMSettings } from "ytmd";
 import { parseJson, stringifyJson } from "../lib/json";
-import { APP_KEYTAR, LASTFM_KEYTAR_SESSION, LASTFM_KEYTAR_TOKEN } from "../lib/keytar";
+import { LASTFM_KEYTAR_SESSION, LASTFM_KEYTAR_TOKEN } from "../lib/keytar";
 import { LastFMClient } from "../lib/lastfm";
 import IPC_EVENT_NAMES from "../utils/eventNames";
 import { TrackData } from "../utils/trackData";
@@ -43,7 +43,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     }
     const lastfm = this.getProvider("settings").get("lastfm") as LastFMSettings;
     if (lastfm.enabled) {
-      const creds = await keytar.findCredentials(APP_KEYTAR);
+      const creds = await secureStore.getAll();
       const lastFMState = creds.reduce(
         (acc, r) => {
           if (r.account === LASTFM_KEYTAR_TOKEN) acc.token = r.password;
@@ -97,17 +97,17 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     win.webContents.on("did-navigate", async (ev, url, code, status) => {
       this.logger.debug(`[URL]> ${url}, ${code}, ${status}`);
       if (await hasSuccessInfo()) {
-        const userState = await win.webContents
+        const {userState}: LastFMUserState = await win.webContents
           .executeJavaScript(`document.getElementById("tlmdata")?.dataset?.tealiumData`)
           .then(parseJson<LastFMUserState>)
-          .catch(() => null);
+          .catch(() => ({} as any));
         this.logger.debug(`[Auth]> User: ${stringifyJson(userState)}`);
-        if (userState) {
-          await keytar.setPassword(APP_KEYTAR, LASTFM_KEYTAR_TOKEN, token);
-          const sessionToken = await this.client.getSession().catch(() => null);
+        if (userState === "authenticated") {
+          await secureStore.set(LASTFM_KEYTAR_TOKEN, token);
+          const sessionToken = await this.client.getSession()
           if (sessionToken) {
-            await keytar.setPassword(APP_KEYTAR, LASTFM_KEYTAR_SESSION, sessionToken);
-            if (win.isEnabled()) win.close();
+            await secureStore.set(LASTFM_KEYTAR_SESSION, sessionToken);
+            if (!win.isDestroyed()) win.close();
           }
 
           this.logger.debug(`[Auth]> Authenticated: ${sessionToken}`);
@@ -173,8 +173,8 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
       this.client.setAuthorize({ token: null, session: null });
       settings.set("lastfm.name", null);
       await Promise.all([
-        keytar.deletePassword(APP_KEYTAR, LASTFM_KEYTAR_SESSION).catch(() => null),
-        keytar.deletePassword(APP_KEYTAR, LASTFM_KEYTAR_TOKEN).catch(() => null),
+        secureStore.delete(LASTFM_KEYTAR_SESSION),
+        secureStore.delete(LASTFM_KEYTAR_TOKEN)
       ]);
     }
     this.sendState();

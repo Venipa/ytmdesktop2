@@ -17,7 +17,7 @@ const resolveOptions: UserConfigExport = {
     },
   },
 };
-const externalizedEsmDeps = ["lodash-es", "@faker-js/faker", "@trpc-limiter/memory", "got"];
+const externalizedEsmDeps = ["lodash-es", "@faker-js/faker", "@trpc-limiter/memory", "got", "encryption.js"];
 export default defineConfig({
   main: {
     ...resolveOptions,
