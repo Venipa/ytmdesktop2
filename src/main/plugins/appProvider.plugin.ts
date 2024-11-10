@@ -1,7 +1,7 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { setSentryEnabled } from "@main/utils/sentry";
-import { App, BrowserWindow, IpcMainEvent, powerSaveBlocker } from "electron";
+import { App, BrowserWindow, IpcMainEvent } from "electron";
 
 import { version as releaseVersion } from "node:os";
 import { isDevelopment } from "../utils/devUtils";
@@ -19,7 +19,6 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
     return this._app;
   }
   async BeforeStart() {
-    powerSaveBlocker.start("prevent-app-suspension");
     if (process.platform !== "darwin") {
       this.appLock = this._app.requestSingleInstanceLock();
       if (!this.appLock) {

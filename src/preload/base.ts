@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import { webUtils } from "electron/renderer";
 import pkg from "../../package.json";
 import translations from "../translations";
 console.log(window);
@@ -70,6 +71,7 @@ export default {
     watchCustomCss: (enabled: boolean) => ipcRenderer.emit("settings.customCssWatch", enabled),
     mainWindowState: () => ipcRenderer.invoke("mainWindowState"),
     windowState: () => ipcRenderer.invoke("windowState"),
+    getPathFromFile: (file: File) => webUtils.getPathForFile(file)
   },
   translations,
   domUtils: {

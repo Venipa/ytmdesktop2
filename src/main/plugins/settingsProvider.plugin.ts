@@ -106,7 +106,7 @@ export default class SettingsProvider
     return _get(_settingsStore.store, key, defaultValue);
   }
   set(key: string, value: any) {
-    _settingsStore.set(key, value);
+    _settingsStore.set(key, value ?? null);
     this.onChange.next(_settingsStore.store);
     try {
       serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value),

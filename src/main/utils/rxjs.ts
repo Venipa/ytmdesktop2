@@ -1,6 +1,5 @@
-import { logger } from "@shared/utils/console";
 import { BrowserWindow, WebContents } from "electron";
-import { fromEventPattern, tap } from "rxjs";
+import { fromEventPattern } from "rxjs";
 
 export function fromMainEvent(win: BrowserWindow | WebContents, eventName: string) {
   function addHandler(handler: any) {
@@ -9,7 +8,5 @@ export function fromMainEvent(win: BrowserWindow | WebContents, eventName: strin
   function removeHandler(handler: any) {
     win.off(eventName as any, handler);
   }
-  return fromEventPattern(addHandler, removeHandler).pipe(tap(() => {
-    logger.child(eventName).debug("event triggered")
-  }));
+  return fromEventPattern(addHandler, removeHandler);
 }

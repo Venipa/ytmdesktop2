@@ -1,5 +1,5 @@
 import { is, platform } from "@electron-toolkit/utils";
-import { createLogger, logger } from "@shared/utils/console";
+import { createLogger } from "@shared/utils/console";
 import { BrowserWindow, WebContents, WebContentsView } from "electron";
 import { join } from "path";
 import {
@@ -144,7 +144,6 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
     const handleStates = () => {
       if (hidden) return;
       const state = getWindowState(win);
-      logger.debug("handleStates trigger", state);
       if (!state) view.send("windowState", state);
       else
         view.send(

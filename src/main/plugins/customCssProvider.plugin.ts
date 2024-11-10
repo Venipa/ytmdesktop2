@@ -31,7 +31,7 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
       scssFile: string;
       enabled: boolean;
     } = this.settingsInstance.get("customcss");
-    if (!fs.existsSync(config.scssFile) || !config) {
+    if (!config?.scssFile || !fs.existsSync(config.scssFile)) {
       return;
     }
     if (
@@ -45,7 +45,7 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
       fs.watchFile(
         config.scssFile,
         { interval: 1000 },
-        (curr) => curr.size > 0 && serverMain.emit("settings.customCssUpdate"),
+        (curr, prev) => curr.size !== prev.size && curr.mtimeMs !== prev.mtimeMs && serverMain.emit("settings.customCssUpdate"),
       );
       this.scssUpdateHandler = config.scssFile;
     }

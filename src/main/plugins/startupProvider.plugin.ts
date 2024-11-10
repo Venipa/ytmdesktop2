@@ -1,8 +1,10 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
-import { App } from "electron";
+import { App, powerSaveBlocker } from "electron";
 import { basename } from "path";
 
+import { platform } from "@electron-toolkit/utils";
+import { isProduction } from "@main/utils/devUtils";
 import SettingsProvider from "./settingsProvider.plugin";
 
 @IpcContext
@@ -22,23 +24,28 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
   async BeforeStart() {
     if (this.settingsInstance.instance.app.disableHardwareAccel)
       this.app.disableHardwareAcceleration();
+    if (!platform.isMacOS) {
+      powerSaveBlocker.start("prevent-app-suspension"); // app suspension on mac prevents sleep
+    }
   }
   private get startArgs() {
     return ["--processStart", `"${basename(process.execPath)}"`];
   }
   async AfterInit() {
     const app = this.settingsInstance.instance.app;
-    if (app.autostart) {
-      this.app.setLoginItemSettings({
-        openAtLogin: true,
-        path: process.execPath,
-        args: this.startArgs,
-      });
-    } else {
-      this.app.setLoginItemSettings({
-        openAtLogin: false,
-        args: this.startArgs,
-      });
+    if (isProduction) {
+      if (app.autostart) {
+        this.app.setLoginItemSettings({
+          openAtLogin: true,
+          path: process.execPath,
+          args: this.startArgs,
+        });
+      } else {
+        this.app.setLoginItemSettings({
+          openAtLogin: false,
+          args: this.startArgs,
+        });
+      }
     }
     this.getProvider("tray")
       .initializeTray()
