@@ -2,6 +2,7 @@
   <div class="h-full overflow-hidden">
     <div
       class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2 space-x-2"
+      :class="{ 'pl-16': isDarwin }"
     >
       <button
         class="control-button self-center cursor-pointer"
