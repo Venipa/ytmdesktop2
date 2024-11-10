@@ -2,7 +2,7 @@
   <div class="h-full overflow-hidden">
     <div
       class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2 space-x-2"
-      :class="{ 'pl-16': isDarwin }"
+      :class="{ 'pl-20': state && state.platform.isMacOS && !state.fullScreen }"
     >
       <button
         class="control-button self-center cursor-pointer"
@@ -19,7 +19,6 @@
             v{{ appVersion }}
           </div>
         </div>
-        <div v-else class="flex-none w-16"></div>
         <div
           v-if="title"
           class="text-xs bg-primary h-7 rounded items-center px-3 bg-opacity-50 appear flex truncate"

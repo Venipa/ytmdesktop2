@@ -97,14 +97,14 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     win.webContents.on("did-navigate", async (ev, url, code, status) => {
       this.logger.debug(`[URL]> ${url}, ${code}, ${status}`);
       if (await hasSuccessInfo()) {
-        const {userState}: LastFMUserState = await win.webContents
+        const { userState }: LastFMUserState = await win.webContents
           .executeJavaScript(`document.getElementById("tlmdata")?.dataset?.tealiumData`)
           .then(parseJson<LastFMUserState>)
-          .catch(() => ({} as any));
+          .catch(() => ({}) as any);
         this.logger.debug(`[Auth]> User: ${stringifyJson(userState)}`);
         if (userState === "authenticated") {
           await secureStore.set(LASTFM_KEYTAR_TOKEN, token);
-          const sessionToken = await this.client.getSession()
+          const sessionToken = await this.client.getSession();
           if (sessionToken) {
             await secureStore.set(LASTFM_KEYTAR_SESSION, sessionToken);
             if (!win.isDestroyed()) win.close();
@@ -130,6 +130,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
     });
   }
   getState() {
+    if (!this.client) return { connected: false, name: null, processing: false, error: true };
     const lastfm = this.getProvider("settings")?.get<LastFMSettings>("lastfm");
     return {
       connected: this.client.isConnected(),
@@ -174,7 +175,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
       settings.set("lastfm.name", null);
       await Promise.all([
         secureStore.delete(LASTFM_KEYTAR_SESSION),
-        secureStore.delete(LASTFM_KEYTAR_TOKEN)
+        secureStore.delete(LASTFM_KEYTAR_TOKEN),
       ]);
     }
     this.sendState();

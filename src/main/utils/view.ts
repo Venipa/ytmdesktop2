@@ -84,7 +84,7 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
     sandbox: false,
     contextIsolation: true,
     allowRunningInsecureContent: false,
-    preload: join(__dirname, "../../preload/login.js"),
+    preload: join(__dirname, "../preload/login.js"),
   };
   const { lockSize, popup } = await createPopup({
     icon: appIconPath,

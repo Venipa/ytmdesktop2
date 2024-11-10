@@ -19,7 +19,11 @@ import { BrowserWindowViews, createWindowContext } from "./utils/mappedWindow";
 import { serverMain } from "./utils/serverEvents";
 import { createEventCollection, createPluginCollection } from "./utils/serviceCollection";
 import { createApiView, createView, googleLoginPopup } from "./utils/view";
-import { callWindowListeners, pushWindowStates, syncMainWindowStates } from "./utils/webContentUtils";
+import {
+  callWindowListeners,
+  pushWindowStates,
+  syncMainWindowStates,
+} from "./utils/webContentUtils";
 import { wrapWindowHandler } from "./utils/windowUtils";
 initializeCustomElectronEnvironment();
 const log = logger.child("main");
@@ -217,7 +221,7 @@ const runApp = async function () {
 
     try {
       if (serviceCollection) {
-        const preContext = createWindowContext({main: win, views: {youtubeView}});
+        const preContext = createWindowContext({ main: win, views: { youtubeView } });
         serviceCollection.providers.forEach((p) => p.__registerWindows(preContext));
       }
     } catch {}
@@ -270,7 +274,20 @@ const runApp = async function () {
     syncMainWindowStates(_context);
     return _context;
   }
+  const reactivate = async () => {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (BrowserWindow.getAllWindows().length === 0) {
+      mainWindow = await createRootWindow();
+      await waitMs(); // next tick
+      mainWindow.main.show();
 
+      if (serviceCollection) {
+        serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
+        serviceCollection.exec("AfterInit");
+      }
+    }
+  }
   // Quit when all windows are closed.
   app.on("window-all-closed", () => {
     // On macOS it is common for applications and their menu bar
@@ -284,16 +301,7 @@ const runApp = async function () {
     youtubeView: WebContentsView;
     toolbarView: WebContentsView;
   }>;
-  app.on("activate", async () => {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = await createRootWindow();
-
-      if (serviceCollection)
-        serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
-    }
-  });
+  app.on("activate", reactivate);
   app.on("ready", async () => {
     await serviceCollection.exec("OnInit");
     await waitMs(); // next tick

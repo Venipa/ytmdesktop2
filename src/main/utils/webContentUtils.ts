@@ -1,12 +1,20 @@
-import { is } from "@electron-toolkit/utils";
+import { is, platform } from "@electron-toolkit/utils";
 import { createLogger, logger } from "@shared/utils/console";
 import { BrowserWindow, WebContents, WebContentsView } from "electron";
-import { debounce } from "lodash-es";
 import { join } from "path";
-import { filter, fromEvent, Subject, Subscription, takeWhile } from "rxjs";
+import {
+  debounceTime,
+  delay,
+  filter,
+  Subject,
+  Subscription,
+  takeWhile,
+  tap
+} from "rxjs";
 import { compileAsync } from "sass";
 import { defaultUri } from "./devUtils";
 import { BrowserWindowViews } from "./mappedWindow";
+import { fromMainEvent } from "./rxjs";
 const cssWindowIdMap: Record<string, string> = {};
 export async function rootWindowInjectCustomCss(
   { webContents }: WebContentsView,
@@ -74,6 +82,7 @@ export function getWindowState(win: BrowserWindow) {
     resizable,
     title,
     closable,
+    autoHideMenuBar,
   } = win;
   return {
     id,
@@ -86,9 +95,12 @@ export function getWindowState(win: BrowserWindow) {
     movable,
     resizable,
     menuBarVisible,
+    simpleFullscreen: platform.isMacOS && win.isSimpleFullScreen(),
+    autoHideMenuBar,
     fullScreen,
     fullScreenable,
     title,
+    platform: platform,
     ...win.getBounds(),
   };
 }
@@ -98,37 +110,13 @@ export function getWindowStateFromContext<
   }>,
 >({ main: win, views: { youtubeView } }: T1 = {} as T1) {
   if (!win || win.isDestroyed()) return null;
-  const {
-    maximizable,
-    minimizable,
-    movable,
-    fullScreen,
-    fullScreenable,
-    menuBarVisible,
-    id,
-    resizable,
-    title,
-    closable,
-  } = win;
   const historyEntry =
     youtubeView &&
     youtubeView.webContents.navigationHistory.getEntryAtIndex(
       youtubeView.webContents.navigationHistory.getActiveIndex(),
     );
   return {
-    id,
-    maximized: win.isMaximized(),
-    minimized: win.isMinimized(),
-    alwaysOnTop: win.isAlwaysOnTop(),
-    closable,
-    maximizable,
-    minimizable,
-    movable,
-    resizable,
-    menuBarVisible,
-    fullScreen,
-    fullScreenable,
-    title,
+    ...getWindowState(win),
     ...win.getBounds(),
     navigation: historyEntry &&
       new URL(historyEntry.url).hostname === defaultUri.hostname && {
@@ -144,14 +132,6 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
   let hidden = false;
   return (view: WebContents) => {
     const handles: Record<string, any[]> = {};
-    const addHandle = (key: string | string[], h: any) => {
-      [key].flat().forEach((k) => {
-        if (!handles[k]) handles[k] = [];
-        handles[k].push(h);
-        win.on(k as any, h);
-      });
-      return h;
-    };
     const handleManualPush = (contentsId?: number) => {
       handleManualPushLog.debug(
         { contentsId },
@@ -164,7 +144,7 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
     const handleStates = () => {
       if (hidden) return;
       const state = getWindowState(win);
-      logger.debug("handleStates trigger", state)
+      logger.debug("handleStates trigger", state);
       if (!state) view.send("windowState", state);
       else
         view.send(
@@ -177,23 +157,29 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
           }),
         );
     };
-    addHandle(["unmaximize", "maximize", "blur", "focus", "minimize", "show"], handleStates);
-    addHandle(["will-resize"], debounce(handleStates, 50));
-    addHandle("hide", () => (hidden = true));
-    addHandle("restore", () => (hidden = false));
+
     const subs: Subscription[] = [];
     subs.push(
-      fromEvent(view, "did-navigate-in-page").subscribe(handleStates),
-      manualSyncEmitter
-        .pipe(
-          filter((x) => x === view.id),
-          takeWhile(() => view && !view.isDestroyed()),
-        )
-        .subscribe(() => {
-          handleManualPushLog.debug("triggered: manual window state");
-          handleStates();
-        }),
+      ...["unmaximize", "maximize", "blur", "focus", "minimize", "show", "restore"].map((d) =>
+        fromMainEvent(win, d)
+          .pipe(tap(() => (hidden = false)))
+          .subscribe(handleStates),
+      ),
+      ...["will-resize", "will-move"].map((d) =>
+        fromMainEvent(win, d).pipe(debounceTime(50)).subscribe(handleStates),
+      ),
+      fromMainEvent(win, "hide").subscribe(() => (hidden = true)),
+      fromMainEvent(win.webContents, "did-navigate-in-page").subscribe(handleStates),
+      fromMainEvent(win.webContents, "will-navigate").subscribe(handleStates),
+      manualSyncEmitter.subscribe(handleManualPush),
     );
+    if (platform.isMacOS) {
+      subs.push(
+        ...["enter-full-screen", "leave-full-screen"].map((d) =>
+          fromMainEvent(win, d).pipe(delay(50)).subscribe(handleStates),
+        ),
+      );
+    }
     win.once("close", () => {
       Object.entries(handles).forEach(([k, h]) => {
         h.forEach((handle) => win.off(k as any, handle));
@@ -205,59 +191,70 @@ export function syncWindowStateToWebContents(win: BrowserWindow) {
   };
 }
 export function syncMainWindowStates<
-T1 extends BrowserWindowViews<{ youtubeView: WebContentsView }> = BrowserWindowViews<{
-  youtubeView: WebContentsView;
-  toolbarView: WebContentsView;
-}>,
+  T1 extends BrowserWindowViews<{ youtubeView: WebContentsView }> = BrowserWindowViews<{
+    youtubeView: WebContentsView;
+    toolbarView: WebContentsView;
+  }>,
 >(ctx: T1) {
   let hidden = false;
-    const handles: Record<string, any[]> = {};
-    const addHandle = (key: string | string[], h: any) => {
-      [key].flat().forEach((k) => {
-        if (!handles[k]) handles[k] = [];
-        handles[k].push(h);
-        ctx.main.on(k as any, h);
-      });
-      return h;
-    };
-    const handleStates = () => {
-      if (hidden) return;
-      const state = getWindowState(ctx.main);
-      ctx.sendToAllViews(
-          "mainWindowState",
-          Object.assign({}, state || {}, {
-            navigation: {
-              canGoBack: ctx.views.youtubeView.webContents.navigationHistory.canGoBack(),
-              index: ctx.views.youtubeView.webContents.navigationHistory.getActiveIndex(),
-            },
-          }),
-        );
-    };
-    addHandle(["unmaximize", "maximize", "blur", "focus", "minimize", "show"], handleStates);
-    addHandle(["will-resize"], debounce(handleStates, 50));
-    addHandle("hide", () => (hidden = true));
-    addHandle("restore", () => (hidden = false));
-    const subs: Subscription[] = [];
-    subs.push(
-      fromEvent(ctx.views.youtubeView.webContents, "did-navigate-in-page").subscribe(handleStates),
-      manualSyncEmitter
-        .pipe(
-          filter((x) => x === ctx.views.youtubeView.webContents.id),
-          takeWhile(() => ctx.views.youtubeView.webContents && !ctx.views.youtubeView.webContents.isDestroyed()),
-        )
-        .subscribe(() => {
-          handleManualPushLog.debug("triggered: manual window state");
-          handleStates();
-        }),
+  const handles: Record<string, any[]> = {};
+  const handleStates = () => {
+    if (hidden) return;
+    const state = getWindowState(ctx.main);
+    ctx.sendToAllViews(
+      "mainWindowState",
+      Object.assign({}, state || {}, {
+        navigation: {
+          canGoBack: ctx.views.youtubeView.webContents.navigationHistory.canGoBack(),
+          index: ctx.views.youtubeView.webContents.navigationHistory.getActiveIndex(),
+        },
+      }),
     );
-    ctx.main.once("close", () => {
-      Object.entries(handles).forEach(([k, h]) => {
-        h.forEach((handle) => ctx.main.off(k as any, handle));
-      });
-      subs.forEach((s) => !s.closed && s.unsubscribe());
-    });
+  };
 
-    return () => handleStates();
+  const subs: Subscription[] = [];
+  subs.push(
+    ...["unmaximize", "maximize", "blur", "focus", "minimize", "show", "restore"].map((d) =>
+      fromMainEvent(ctx.main, d)
+        .pipe(tap(() => (hidden = false)))
+        .subscribe(handleStates),
+    ),
+    ...["will-resize", "will-move"].map((d) =>
+      fromMainEvent(ctx.main, d).pipe(debounceTime(50)).subscribe(handleStates),
+    ),
+    fromMainEvent(ctx.main, "hide").subscribe(() => (hidden = true)),
+    fromMainEvent(ctx.views.youtubeView.webContents, "did-navigate-in-page").subscribe(
+      handleStates,
+    ),
+    fromMainEvent(ctx.views.youtubeView.webContents, "will-navigate").subscribe(handleStates),
+    manualSyncEmitter
+      .pipe(
+        filter((x) => x === ctx.views.youtubeView.webContents.id),
+        takeWhile(
+          () =>
+            ctx.views.youtubeView.webContents && !ctx.views.youtubeView.webContents.isDestroyed(),
+        ),
+      )
+      .subscribe(() => {
+        handleManualPushLog.debug("triggered: manual window state");
+        handleStates();
+      }),
+  );
+  if (platform.isMacOS) {
+    subs.push(
+      ...["enter-full-screen", "leave-full-screen"].map((d) =>
+        fromMainEvent(ctx.main, d).pipe(delay(50)).subscribe(handleStates),
+      ),
+    );
+  }
+  ctx.main.once("close", () => {
+    Object.entries(handles).forEach(([k, h]) => {
+      h.forEach((handle) => ctx.main.off(k as any, handle));
+    });
+    subs.forEach((s) => !s.closed && s.unsubscribe());
+  });
+
+  return () => handleStates();
 }
 export function callWindowListeners(win: BrowserWindow, eventName: string, ...args: any[]) {
   return win.listeners(eventName).forEach((caller) => caller(null, ...args));
