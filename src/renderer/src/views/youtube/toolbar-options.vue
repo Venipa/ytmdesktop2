@@ -152,7 +152,7 @@ async function toggleSetting(key) {
 function checkUpdate() {
   if (updateChecking.value) return;
   setUpdateChecking(true);
-  this.action("app.checkUpdate").finally(() => {
+  action("app.checkUpdate").finally(() => {
     setUpdateChecking(false);
   });
 }
@@ -165,12 +165,12 @@ function invoke(invokeParam, ...params) {
 function authorizeLastFM() {
   lastFMLoading.value = true;
   if (lastFM.value.connected) {
-    this.action("lastfm.profile").finally(() => {
+    action("lastfm.profile").finally(() => {
       lastFMLoading.value = false;
     });
     return;
   }
-  this.invoke("lastfm.authorize").finally(() => {
+  invoke("lastfm.authorize").finally(() => {
     lastFMLoading.value = false;
   });
 }
