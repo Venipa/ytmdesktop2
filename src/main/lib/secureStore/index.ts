@@ -26,11 +26,7 @@ class SecureStore {
   }
   set(key: string, value: string) {
     return new Promise<string | null>(async (resolve, reject) => {
-      store.set({
-        credentials: {
-          [key]: value,
-        },
-      });
+      store.set(`credentials.${key}`, value);
       return resolve(value);
     });
   }

@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { enc, MD5 } from "crypto-js";
 import got, { Got, Method } from "got";
 import fetch from "node-fetch";
 export class LastFMClient {
@@ -73,7 +74,7 @@ export class LastFMClient {
       requestSourceData += this.key.secret;
       searchParams.set(
         "api_sig",
-        createHash("md5").update(requestSourceData, "utf8").digest("hex"),
+        MD5(requestSourceData).toString(enc.Hex)
       );
     }
     searchParams.set("format", "json");
@@ -84,7 +85,7 @@ export class LastFMClient {
         "user-agent": "ytmd (github.com/Venipa/ytmdesktop2)",
       },
     })
-      .then((r) => r.json() as Promise<T>)
+      .then((r) => r.ok ? r.json() as Promise<T> : Promise.reject(r))
       .catch((err) => {
         this.lastError = err;
         return Promise.reject(err);
