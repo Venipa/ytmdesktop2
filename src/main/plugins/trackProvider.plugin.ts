@@ -113,8 +113,9 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
       track.video.videoId === this._activeTrackId ||
       (await this.getActiveTrackByDOM()) === track.video.videoId
     ) {
+      const lastTrackId = this._activeTrackId;
       this._activeTrackId = track.video.videoId;
-      this.pushTrackToViews(track as TrackData);
+      this.pushTrackToViews(track as TrackData, lastTrackId !== track.video.videoId);
     }
   }
   @IpcOn("track:title-change", {
@@ -169,7 +170,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     }
   }
   private trackChangeTimeout: any;
-  public async pushTrackToViews(trackRef: TrackData) {
+  public async pushTrackToViews(trackRef: TrackData, updateLastFm: boolean = true) {
     trackRef.meta.startedAt = new Date().getTime() / 1000;
     const track = clone(trackRef);
     this.views.toolbarView.webContents.send("track:title", track?.video?.title);
@@ -181,7 +182,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     api.sendMessage("track:change", track);
     const lastfm = this.getProvider("lastfm");
     const lastfmState = lastfm.getState();
-    if (lastfm && lastfmState.connected && !lastfmState.processing) {
+    if (updateLastFm && lastfm && lastfmState.connected && !lastfmState.processing && track.video.videoId) {
       await lastfm.handleTrackStart(track);
       if (this.trackChangeTimeout) clearTimeout(this.trackChangeTimeout);
       this.trackChangeTimeout = setTimeout(

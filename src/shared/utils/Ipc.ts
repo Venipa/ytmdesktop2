@@ -5,11 +5,13 @@ import { onBeforeMount, onMounted, onUnmounted, Ref, ref } from "vue";
 type Map<T, R> =
   | ((item: T, name: string, prev: any) => T)
   | ((item: T, name: string, prev: any) => R);
+  type Trigger<T> = ((item: T, prev: T) => void)
 type IpcHandler = (ev: IpcRendererEvent, ...args: any[]) => void;
 type RefReturn<R> = [Ref<R>, (val: R) => void];
 type RefIpcOptions<T, R> = {
   defaultValue?: R;
   mapper?: Map<T, R>;
+  onTrigger?: Trigger<T>;
   ignoreUndefined?: boolean;
   rawArgs?: boolean;
   debug?: boolean;
@@ -30,7 +32,7 @@ export function refIpc<T, R = T>(
   eventName: string | string[],
   options?: Partial<RefIpcOptions<T, R>>,
 ): RefReturn<R> {
-  const { defaultValue, mapper, ignoreUndefined, rawArgs } = options ?? {};
+  const { defaultValue, mapper, onTrigger, ignoreUndefined, rawArgs } = options ?? {};
   const defaultMapper = (item: T) => item;
   const objMap = (mapper || defaultMapper) as (item: T, name: string, prev: any) => R;
   const state = ref<R>(defaultValue as R) as Ref<R>;
@@ -40,6 +42,7 @@ export function refIpc<T, R = T>(
       const vArgs = rawArgs !== true ? data.flat()?.[0] : data;
       const newVal = objMap(vArgs as any as T, handlerName, state.value);
       if (ignoreUndefined && typeof newVal === "undefined") return;
+      onTrigger?.(newVal as any, state.value as any);
       state.value = newVal;
       if (options?.debug) console.log(`[IPC:Receiving@${handlerName}] `, ev, ...data);
     }) as IpcHandler;

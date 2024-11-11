@@ -22,6 +22,7 @@ export const setContext = (key: string, value: any) =>
   process.contextIsolated
     ? contextBridge.exposeInMainWorld(key, value)
     : (window[key] = Object.freeze(value));
+ipcRenderer.setMaxListeners(100);
 export default {
   ipcRenderer: {
     emit: (event, ...data) => ipcRenderer.send(event, ...data),

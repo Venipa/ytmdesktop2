@@ -8,11 +8,18 @@
       }"
       @click="authorizeLastFM"
     >
+      <template v-if="lastFM.connected && !lastFM.error && lastFMState !== null">
+        <Spinner size="sm" v-if="typeof lastFMState === 'string'" />
+        <CheckIcon v-else-if="lastFMState === true" class="text-green-500" />
+        <AlertCircleIcon v-else-if="lastFMState === false" class="text-red-500" />
+      </template>
+
       <LastFMIcon
         :class="{
           'text-green-500': lastFM.connected && !lastFM.error,
           'text-red-500': lastFM.error,
         }"
+        v-else
       ></LastFMIcon>
       <span v-if="lastFM.name" :class="{ 'text-gray-100 text-sm': true }">{{ lastFM.name }}</span>
     </button>
@@ -86,6 +93,7 @@
 </template>
 
 <script lang="ts" setup>
+import IPC_EVENT_NAMES from "@main/utils/eventNames";
 import DevIcon from "@renderer/assets/icons/chip.svg";
 import RPCIcon from "@renderer/assets/icons/discord-rpc.svg";
 import HomeIcon from "@renderer/assets/icons/home.svg";
@@ -93,7 +101,9 @@ import LastFMIcon from "@renderer/assets/icons/lastfm.svg";
 import MiniPlayerIcon from "@renderer/assets/icons/mini-player.svg";
 import RefreshIcon from "@renderer/assets/icons/refresh.svg";
 import Spinner from "@renderer/components/Spinner.vue";
+import { logger } from "@shared/utils/console";
 import { refIpc } from "@shared/utils/Ipc";
+import { AlertCircleIcon, CheckIcon } from "lucide-vue-next";
 import { onMounted, ref } from "vue";
 
 const [discordConnected, setDiscordConnected] = refIpc(
@@ -120,6 +130,23 @@ const [lastFM] = refIpc("LAST_FM_STATUS", {
   defaultValue: { connected: false, name: null, error: null },
   ignoreUndefined: true,
 });
+const stateHandle = ref<NodeJS.Timeout>();
+const [lastFMState, setFmState] = refIpc<"start" | "change" | boolean | null>(
+  IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE,
+  {
+    defaultValue: null,
+    ignoreUndefined: true,
+    onTrigger: (_fmstate, _prevfmstate) => {
+      if (typeof _prevfmstate === "string" && typeof _fmstate === "boolean") {
+        if (stateHandle.value) clearTimeout(stateHandle.value);
+        stateHandle.value = setTimeout(() => {
+          setFmState(null);
+          logger.debug("clear fm submit state");
+        }, 2000);
+      }
+    },
+  },
+);
 const lastFMLoading = ref(false);
 const [discordEnabled, setDiscordEnabled] = refIpc("settingsProvider.change", {
   defaultValue: window.settings.get("discord.enabled"),
