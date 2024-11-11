@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full overflow-hidden">
+  <div class="h-full overflow-hidden" ref="root">
     <div
       class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2 space-x-2"
       :class="{ 'pl-20': state && state.platform?.isMacOS && !state.fullScreen }"
@@ -40,10 +40,13 @@
             }"
             @click="() => runUpdate()"
           >
-            <template v-if="updateInfoProgress?.percent"
-              >Downloading Update v{{ updateInfo.version }}...
-              {{ updateInfoProgress.percent.toFixed(0).padStart(5) }}%</template
-            >
+            <template v-if="updateInfoProgress?.percent">
+              <Spinner size="sm" />
+              <span
+                >Downloading Update v{{ updateInfo.version }}...
+                {{ updateInfoProgress.percent.toFixed(0).padStart(5) }}%</span
+              >
+            </template>
             <template v-else>
               <span class="truncate overflow-ellipsis">New Update v{{ updateInfo.version }}</span>
             </template>
@@ -69,6 +72,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import Spinner from "@renderer/components/Spinner.vue";
 import { refIpc, refMainWindowState } from "@shared/utils/Ipc";
 import {
   ArrowLeftIcon,
@@ -123,11 +127,14 @@ function onMin() {
 function onGoBack() {
   window.api.goback();
 }
-console.log({ state });
+const root = ref<HTMLElement>();
+// onMounted(() => {
+//   if (root) window.domUtils.setInteractiveElements([root.value]);
+// })
 </script>
 <style lang="scss">
 html,
 body {
-  @apply overflow-hidden;
+  @apply overflow-hidden !bg-transparent;
 }
 </style>

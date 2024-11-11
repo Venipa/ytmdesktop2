@@ -178,17 +178,16 @@ const runApp = async function () {
       (view) => {
         win.contentView.addChildView(view);
         win.contentView.addChildView(loadingView);
-        const [width] = win.getSize();
+        const [width, height] = win.getSize();
         view.setBounds({
           height: 40,
           width,
           x: 0,
           y: 0,
         });
-        view.setBackgroundColor("transparent");
         if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
       },
-      { lockSize: { resize: "width" } },
+      { lockSize: { resize: "width" }, transparent: true },
     );
     serverMain.on("app.loadEnd", () => {
       win.contentView.removeChildView(loadingView);

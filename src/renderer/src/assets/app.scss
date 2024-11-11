@@ -2,9 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+
+  html,
+  body {
+
+    @apply text-gray-100 bg-gray-900 h-full;
+  }
+
+  html.translucent {
+
+    &,
+    body {
+      @apply bg-transparent;
+    }
+  }
+}
+
 .drag,
 [draggable] {
   -webkit-app-region: drag;
+}
+
+button,
+a,
+div,
+span,
+*[tab-index] {
+  outline: none;
 }
 
 .control-button {
@@ -13,19 +38,24 @@
       @apply bg-red-600;
     }
   }
+
   @apply h-7 w-7 rounded-lg flex items-center justify-center text-gray-50 transition duration-100;
+
   &:hover,
   &:active,
   &:focus {
-    @apply bg-gray-100/20;
+    @apply bg-gray-100/10;
   }
+
   &:active {
-    @apply transform-gpu scale-95;
+    @apply transform-gpu scale-95 bg-gray-100/15;
   }
+
   &:disabled,
   &.disabled {
     @apply scale-100 opacity-60 hover:bg-transparent cursor-not-allowed;
   }
+
   svg {
     @apply w-4 h-4;
   }

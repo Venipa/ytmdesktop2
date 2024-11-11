@@ -1,6 +1,7 @@
 import type pd from "./base";
 interface PreloadContext {
   api: typeof pd.api;
+  domUtils: typeof pd.domUtils;
   ipcRenderer: typeof pd.ipcRenderer;
   process: typeof pd.process;
   __ytd_plugins: any;

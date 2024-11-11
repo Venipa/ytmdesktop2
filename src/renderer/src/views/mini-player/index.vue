@@ -11,7 +11,7 @@
             : {})) ||
         {}),
       ...((accentColor &&
-        (state.maximized || state.fullScreen
+        (state.maximized || state.fullScreen || state.y === 0
           ? { borderRadius: '0px', borderWidth: '0px' }
           : showWinBorder === 'win11'
             ? { borderRadius: '8px' }
@@ -73,7 +73,7 @@
                     ...(accentColor ? { backgroundColor: `${accentColor}20` } : {}),
                   }"
                 ></div>
-                <Loading class="z-[5]" />
+                <Spinner size="lg" class="z-[5]" />
               </div>
             </template>
             <template v-if="thumbnail">
@@ -258,10 +258,11 @@ import PlayIcon from "@renderer/assets/icons/play.svg";
 import PrevIcon from "@renderer/assets/icons/prev.svg";
 import UnLockIcon from "@renderer/assets/icons/unlock.svg";
 import ControlBar from "@renderer/components/ControlBar.vue";
-import Loading from "@renderer/components/Loading.vue";
+import Spinner from "@renderer/components/Spinner.vue";
+import { logger } from "@shared/utils/console";
 import { refIpc, refWindowState } from "@shared/utils/Ipc";
 import { intervalToDuration } from "date-fns";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 const zeroPad = (num) => String(num).padStart(2, "0");
 const createInterval = (dts: number[]): [string, number] => [
   dts
@@ -437,6 +438,7 @@ const time = computed((): [string, string, number] => {
   const percentage = ((progress > duration ? duration : progress) / duration) * 100;
   return [current.padEnd(timePad), end.padStart(timePad), percentage];
 });
+watch(state, windowState => logger.debug(windowState && {...windowState}))
 </script>
 <style lang="scss">
 .track-status-time {

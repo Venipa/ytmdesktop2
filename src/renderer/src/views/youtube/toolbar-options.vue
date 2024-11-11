@@ -29,7 +29,8 @@
       :disabled="updateChecking"
       @click="() => checkUpdate()"
     >
-      <RefreshIcon :class="{ 'animate-spin duration-500 ease-out': updateChecking }"></RefreshIcon>
+      <Spinner v-if="updateChecking" size="sm" />
+      <RefreshIcon v-else></RefreshIcon>
     </button>
     <button
       v-if="isDev"
@@ -84,111 +85,98 @@
   </div>
 </template>
 
-<script>
+<script lang="ts" setup>
 import DevIcon from "@renderer/assets/icons/chip.svg";
 import RPCIcon from "@renderer/assets/icons/discord-rpc.svg";
 import HomeIcon from "@renderer/assets/icons/home.svg";
 import LastFMIcon from "@renderer/assets/icons/lastfm.svg";
 import MiniPlayerIcon from "@renderer/assets/icons/mini-player.svg";
 import RefreshIcon from "@renderer/assets/icons/refresh.svg";
+import Spinner from "@renderer/components/Spinner.vue";
 import { refIpc } from "@shared/utils/Ipc";
-import { defineComponent, onMounted, ref } from "vue";
-export default defineComponent({
-  components: { RPCIcon, HomeIcon, DevIcon, RefreshIcon, MiniPlayerIcon, LastFMIcon },
-  setup() {
-    const [discordConnected, setDiscordConnected] = refIpc(
-      ["discord.connected", "discord.disconnected"],
-      {
-        defaultValue: false,
-        mapper: (data, name) => {
-          return { ["discord.connected"]: true, ["discord.disconnected"]: false }[name];
-        },
-        ignoreUndefined: true,
-      },
-    );
-    const [miniPlayer] = refIpc("miniplayer.state", {
-      defaultValue: null,
-      ignoreUndefined: true,
-    });
-    const [playState] = refIpc("TRACK_PLAYSTATE");
-    const [isHome] = refIpc("nav.same-origin", {
-      defaultValue: true,
-      mapper: ([sameOrigin]) => !!sameOrigin,
-      rawArgs: true,
-    });
-    const [lastFM] = refIpc("LAST_FM_STATUS", {
-      defaultValue: { connected: false, name: null, error: null },
-      ignoreUndefined: true,
-    });
-    const lastFMLoading = ref(false);
-    const [discordEnabled, setDiscordEnabled] = refIpc("settingsProvider.change", {
-      defaultValue: window.settings.get("discord.enabled"),
-      mapper: ([key, value]) => {
-        if (key === "discord.enabled") return value;
-      },
-      ignoreUndefined: true,
-      rawArgs: true,
-    });
-    const [isDev] = refIpc("settingsProvider.change", {
-      defaultValue: window.settings.get("app.enableDev"),
-      mapper: ([key, value]) => {
-        if (key === "app.enableDev") return value;
-      },
-      ignoreUndefined: true,
-      rawArgs: true,
-    });
-    onMounted(() => {
-      window.ipcRenderer.invoke("req:discord.connected").then((x) => setDiscordConnected(!!x));
-      window.api.action("lastfm.status").then((status) => {
-        lastFM.value = status;
-      });
-    });
-    const [updateChecking, setUpdateChecking] = refIpc("APP_UPDATE_CHECKING");
-    return {
-      discordEnabled,
-      discordConnected,
-      lastFM,
-      updateChecking,
-      isHome,
-      isDev,
-      playState,
-      miniPlayer,
-      async toggleSetting(key) {
-        const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
-        if (key === "discord.enabled") setDiscordEnabled(setting);
-      },
-      checkUpdate() {
-        if (updateChecking.value) return;
-        setUpdateChecking(true);
-        this.action("app.checkUpdate").finally(() => {
-          setUpdateChecking(false);
-        });
-      },
-      action(actionParam, ...params) {
-        return window.api.action(actionParam, ...params);
-      },
-      invoke(invokeParam, ...params) {
-        return window.api.invoke(invokeParam, ...params);
-      },
-      lastFMLoading,
-      authorizeLastFM() {
-        lastFMLoading.value = true;
-        if (lastFM.value.connected) {
-          this.action("lastfm.profile").finally(() => {
-            lastFMLoading.value = false;
-          });
-          return;
-        }
-        this.invoke("lastfm.authorize").finally(() => {
-          lastFMLoading.value = false;
-        });
-      },
-      onSettings() {
-        window.api.openWindow("settingsWindow");
-      },
-    };
+import { onMounted, ref } from "vue";
+
+const [discordConnected, setDiscordConnected] = refIpc(
+  ["discord.connected", "discord.disconnected"],
+  {
+    defaultValue: false,
+    mapper: (data, name) => {
+      return { ["discord.connected"]: true, ["discord.disconnected"]: false }[name];
+    },
+    ignoreUndefined: true,
   },
+);
+const [miniPlayer] = refIpc("miniplayer.state", {
+  defaultValue: null,
+  ignoreUndefined: true,
 });
+const [playState] = refIpc("TRACK_PLAYSTATE");
+const [isHome] = refIpc("nav.same-origin", {
+  defaultValue: true,
+  mapper: ([sameOrigin]) => !!sameOrigin,
+  rawArgs: true,
+});
+const [lastFM] = refIpc("LAST_FM_STATUS", {
+  defaultValue: { connected: false, name: null, error: null },
+  ignoreUndefined: true,
+});
+const lastFMLoading = ref(false);
+const [discordEnabled, setDiscordEnabled] = refIpc("settingsProvider.change", {
+  defaultValue: window.settings.get("discord.enabled"),
+  mapper: ([key, value]) => {
+    if (key === "discord.enabled") return value;
+  },
+  ignoreUndefined: true,
+  rawArgs: true,
+});
+const [isDev] = refIpc("settingsProvider.change", {
+  defaultValue: window.settings.get("app.enableDev"),
+  mapper: ([key, value]) => {
+    if (key === "app.enableDev") return value;
+  },
+  ignoreUndefined: true,
+  rawArgs: true,
+});
+onMounted(() => {
+  window.ipcRenderer.invoke("req:discord.connected").then((x) => setDiscordConnected(!!x));
+  window.api.action("lastfm.status").then((status) => {
+    lastFM.value = status;
+  });
+});
+const [updateChecking, setUpdateChecking] = refIpc<boolean>("APP_UPDATE_CHECKING");
+
+async function toggleSetting(key) {
+  const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
+  if (key === "discord.enabled") setDiscordEnabled(setting);
+}
+function checkUpdate() {
+  if (updateChecking.value) return;
+  setUpdateChecking(true);
+  this.action("app.checkUpdate").finally(() => {
+    setUpdateChecking(false);
+  });
+}
+function action(actionParam, ...params) {
+  return window.api.action(actionParam, ...params);
+}
+function invoke(invokeParam, ...params) {
+  return window.api.invoke(invokeParam, ...params);
+}
+function authorizeLastFM() {
+  lastFMLoading.value = true;
+  if (lastFM.value.connected) {
+    this.action("lastfm.profile").finally(() => {
+      lastFMLoading.value = false;
+    });
+    return;
+  }
+  this.invoke("lastfm.authorize").finally(() => {
+    lastFMLoading.value = false;
+  });
+}
+function onSettings() {
+  window.api.openWindow("settingsWindow");
+}
 </script>
 
 <style></style>

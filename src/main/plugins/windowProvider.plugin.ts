@@ -1,7 +1,7 @@
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy, OnInit } from "@main/utils/baseProvider";
-import { BrowserWindow, Event, IpcMainInvokeEvent, session } from "electron";
+import { BrowserWindow, Event, IgnoreMouseEventsOptions, IpcMainEvent, IpcMainInvokeEvent, session } from "electron";
 import { isDevelopment } from "../utils/devUtils";
-import { IpcContext, IpcHandle } from "../utils/onIpcEvent";
+import { IpcContext, IpcHandle, IpcOn } from "../utils/onIpcEvent";
 import {
   getWindowState,
   getWindowStateFromContext,
@@ -49,6 +49,11 @@ export default class WindowUtilsProvider
       this.logger.error(ex);
       return null;
     }
+  }
+  @IpcOn("set-ignore-mouse-events")
+  private _ignoreMouseEventsFromWebContents(event: IpcMainEvent, ignore: boolean, options: IgnoreMouseEventsOptions) {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    win.setIgnoreMouseEvents(ignore, options)
   }
   @IpcHandle("mainWindowState")
   async _getMainWindowState(_ev: IpcMainInvokeEvent) {

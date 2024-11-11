@@ -71,7 +71,7 @@ export default {
     watchCustomCss: (enabled: boolean) => ipcRenderer.emit("settings.customCssWatch", enabled),
     mainWindowState: () => ipcRenderer.invoke("mainWindowState"),
     windowState: () => ipcRenderer.invoke("windowState"),
-    getPathFromFile: (file: File) => webUtils.getPathForFile(file)
+    getPathFromFile: (file: File) => webUtils.getPathForFile(file),
   },
   translations,
   domUtils: {
@@ -94,5 +94,20 @@ export default {
     },
     playerApi: () =>
       (document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as any)?.playerApi,
+    setInteractiveElements: <T extends HTMLElement>(interactiveElements: T[]) => {
+      let isMouseOverInteractiveElement = false;
+      ipcRenderer.send("set-ignore-mouse-events", true, { forward: true });
+      interactiveElements.forEach((element) => {
+        element.addEventListener("mouseenter", () => {
+          isMouseOverInteractiveElement = true;
+          ipcRenderer.send("set-ignore-mouse-events", false);
+        });
+
+        element.addEventListener("mouseleave", () => {
+          isMouseOverInteractiveElement = false;
+          ipcRenderer.send("set-ignore-mouse-events", true, { forward: true });
+        });
+      });
+    },
   },
 };
