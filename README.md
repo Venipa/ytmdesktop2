@@ -27,6 +27,8 @@ Built-in, without any additional setup required.
 
 ### Last.FM (Scrobble)
 
+![ytmdesktop_2024-11-12_01-15-16](https://github.com/user-attachments/assets/54464921-6891-476b-935f-61fdefb7679d)
+
 ![feature-lastfm2](https://user-images.githubusercontent.com/17952364/212539540-c1efc587-1047-4748-9583-64b609a1ec97.jpg)
 
 ### Mini Player (Beta)
