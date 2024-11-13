@@ -1,6 +1,9 @@
 <p align="center">
-  <img src="./screenshots/banner.jpg" alt="banner" />
+  
+  ![2024-11-13_23-20-27](https://github.com/user-attachments/assets/7fbe2984-1c63-45d3-ae26-3fb70464a714)
+  
 </p>
+
 
 <h2 align="center">
     Youtube Music for Desktop (ytmdesktop2)
@@ -33,7 +36,7 @@ Built-in, without any additional setup required.
 
 ### Mini Player (Beta)
 
-![image](https://user-images.githubusercontent.com/17952364/183205288-abf687ed-7564-4158-859b-c7dad035db8d.png)
+![2024-11-13_23-22-18](https://github.com/user-attachments/assets/b1ab5920-58d3-49b6-8cca-693106b7763d)
 
 ### Discord Rich Presence
 
