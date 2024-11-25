@@ -19,6 +19,6 @@ declare global {
       invoke<T = any>(channelName: string, data: any): IpcPromiseResult<T>;
     }
   }
+  type StringLiteral<KnownValues extends string> = (string & {}) | KnownValues;
 }
 
-type StringLiteral<KnownValues extends string> = (string & {}) | KnownValues;
