@@ -34,7 +34,7 @@ export const afterInit = () => {
       const handler = trackControls[type];
       if (!handler) return;
       const playerApi = window.domUtils.playerApi();
-      window.api.sendToHost("track:control/response", type, handler(playerApi))
+      window.api.emit("track:control/response", type, handler(playerApi))
     });
   });
 };
