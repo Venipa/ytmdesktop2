@@ -120,9 +120,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit, OnDe
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_NEXT)
   async nextTrack() {
-    await this.views.youtubeView.webContents.executeJavaScript(
-      `(el => el && el.click())(document.querySelector(".ytmusic-player-bar.next-button"))`,
-    );
+    return await this.windowContext.sendTrackControl("next")
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_FORWARD)
   async forwardTrack(_ev, data) {
@@ -152,28 +150,18 @@ export default class ApiProvider extends BaseProvider implements AfterInit, OnDe
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_PREV)
   async prevTrack() {
-    await this.views.youtubeView.webContents.executeJavaScript(
-      `(el => el && el.click())(document.querySelector(".ytmusic-player-bar.previous-button"))`,
-    );
+    return await this.windowContext.sendTrackControl("prev")
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_PLAY)
   async playTrack() {
-    if (this.trackProvider.playState === "paused")
-      await this.views.youtubeView.webContents.executeJavaScript(
-        `(el => el && el.click())(document.querySelector(".ytmusic-player-bar#play-pause-button"))`,
-      );
+    return await this.windowContext.sendTrackControl("play")
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_PAUSE)
   async pauseTrack() {
-    if (this.trackProvider.playState === "playing")
-      await this.views.youtubeView.webContents.executeJavaScript(
-        `(el => el && el.click())(document.querySelector(".ytmusic-player-bar#play-pause-button"))`,
-      );
+    return await this.windowContext.sendTrackControl("pause")
   }
   @IpcHandle(API_ROUTES.TRACK_CONTROL_TOGGLE_PLAY)
   async toggleTrackPlayback() {
-    if (this.trackProvider.playState === "playing") return this.pauseTrack();
-    else if (this.trackProvider.playState === "paused") return this.playTrack();
-    return Promise.resolve(null);
+    return await this.windowContext.sendTrackControl("toggle")
   }
 }

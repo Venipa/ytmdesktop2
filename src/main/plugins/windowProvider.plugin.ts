@@ -50,8 +50,8 @@ export default class WindowUtilsProvider
       return null;
     }
   }
-  @IpcOn("set-ignore-mouse-events")
-  private _ignoreMouseEventsFromWebContents(event: IpcMainEvent, ignore: boolean, options: IgnoreMouseEventsOptions) {
+  @IpcOn("toolbar/set-ignore-mouse-events")
+  private _toolbarMouseEvent(event: IpcMainEvent, ignore: boolean, options: IgnoreMouseEventsOptions) {
     const win = BrowserWindow.fromWebContents(event.sender)
     win.setIgnoreMouseEvents(ignore, options)
   }

@@ -9,3 +9,5 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+type StringLiteral<KnownValues extends string> = (string & {}) | KnownValues;

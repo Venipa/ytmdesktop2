@@ -1,11 +1,17 @@
 export const meta = {
   name: "Api Control Handler",
 };
-
 // todo
 const trackControls = {
-  toggle: () =>
-    ((el) => el && el.click())(document.querySelector(".ytmusic-player-bar#play-pause-button")),
+  toggle: player => {
+    const state = player.getPlayerStateObject();
+    if (!state) return;
+    return (state.isPlaying || state.isOrWillBePlaying) ? player.stopVideo() : player.playVideo()
+  },
+  play: playerApi => playerApi.playVideo(),
+  pause: playerApi => playerApi.stopVideo(),
+  next: playerApi => playerApi.nextVideo(),
+  prev: playerApi => playerApi.previousVideo()
 };
 export const afterInit = () => {
   window.domUtils.ensureDomLoaded(() => {
@@ -27,7 +33,8 @@ export const afterInit = () => {
       const { type } = data;
       const handler = trackControls[type];
       if (!handler) return;
-      handler();
+      const playerApi = window.domUtils.playerApi();
+      window.api.sendToHost("track:control/response", type, handler(playerApi))
     });
   });
 };

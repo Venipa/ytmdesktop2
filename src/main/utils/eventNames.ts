@@ -19,6 +19,7 @@ const IPC_EVENT_NAMES = {
   TRACK_TITLE_CHANGE: "track:title",
   TRACK_CHANGE: "track:change",
   TRACK_PLAYSTATE: "track:play-state",
+  TRACK_CONTROL: "track:control",
   APP_UPDATE: "app.update",
   APP_UPDATE_CHECKING: "app.updateChecking",
   APP_UPDATE_PROGRESS: "app.updateProgress",
