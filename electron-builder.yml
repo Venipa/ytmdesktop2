@@ -50,7 +50,7 @@ mac:
   icon: build/icon.icns
 dmg:
   title: "Install or Update ${productName} ${version}"
-linux:
+linux:  
   target:
     - target: appImage
       arch: x64

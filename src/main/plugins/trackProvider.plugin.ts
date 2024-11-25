@@ -110,6 +110,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     trackCollection.addOrUpdate(ytTrack.video.videoId, track as TrackData);
 
     if (
+      !this._activeTrackId ||
       track.video.videoId === this._activeTrackId ||
       (await this.getActiveTrackByDOM()) === track.video.videoId
     ) {
