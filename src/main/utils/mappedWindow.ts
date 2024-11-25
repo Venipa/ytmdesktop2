@@ -1,14 +1,13 @@
-import { ipcPromise } from "@shared/utils/promises";
 import { BrowserWindow, WebContentsView } from "electron";
 import IPC_EVENT_NAMES from "./eventNames";
 
-type TrackControlTypes = StringLiteral<("play" | "pause" | "next" | "prev" | "toggle")>
+type TrackControlTypes = StringLiteral<"play" | "pause" | "next" | "prev" | "toggle">;
 type TrackControlFn = <T = any>(type: TrackControlTypes) => Promise<T>;
 export interface BrowserWindowViews<T, TView extends WebContentsView = WebContentsView> {
   main: BrowserWindow;
   views: { [key: string]: TView } & T;
   sendToAllViews(ev: string, ...args: any[]): void;
-  sendTrackControl: TrackControlFn
+  sendTrackControl: TrackControlFn;
 }
 
 export function getViewObject(bwv: { [key: string]: WebContentsView }) {
@@ -27,9 +26,9 @@ export function createWindowContext<T, TView extends WebContentsView = WebConten
     views: { [key: string]: TView } & T = _data.views || ({} as any);
     async sendTrackControl<T = any>(type: TrackControlTypes) {
       const view = this.views.youtubeView;
-      if (!view) return Promise.reject(new Error("View not found"))
-      return await ipcPromise<T>(view, IPC_EVENT_NAMES.TRACK_CONTROL, {type})
-    };
+      if (!view) return Promise.reject(new Error("View not found"));
+      return await view.invoke<T>(IPC_EVENT_NAMES.TRACK_CONTROL, { type });
+    }
     sendToAllViews(ev: string, ...args: any[]): void {
       return (Object.values(this.views) as TView[])
         .filter(

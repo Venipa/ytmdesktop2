@@ -27,3 +27,4 @@ export async function ipcPromise<T = any, R = T>(view: WebContentsView, channel:
     }, 10000);
   })
 }
+export type IpcPromiseResult<T> = ReturnType<typeof ipcPromise<T>>;

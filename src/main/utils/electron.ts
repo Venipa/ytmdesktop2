@@ -1,7 +1,8 @@
 import { is } from "@electron-toolkit/utils";
 import { Logger } from "@shared/utils/console";
 import logger from "@shared/utils/Logger";
-import { app } from "electron";
+import { ipcPromise } from "@shared/utils/promises";
+import { app, WebContentsView } from "electron";
 import { isProduction } from "./devUtils";
 
 let isInitialized = false;
@@ -21,6 +22,8 @@ export function initializeCustomElectronEnvironment() {
 
   if (import.meta.env.PROD && !process.env.DEBUG) Logger.enableProductionMode();
   process.env.NODE_ENV = import.meta.env.MODE;
-
+  WebContentsView.prototype.invoke = function<T>(channel: string, data: any) {
+    return ipcPromise<T>(this, channel, data);
+  }
   isInitialized = true;
 }
