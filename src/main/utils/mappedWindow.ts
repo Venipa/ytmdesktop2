@@ -2,7 +2,9 @@ import { BrowserWindow, WebContentsView } from "electron";
 import IPC_EVENT_NAMES from "./eventNames";
 
 type TrackControlTypes = StringLiteral<"play" | "pause" | "next" | "prev" | "toggle">;
-type TrackControlFn = <T = any>(type: TrackControlTypes) => Promise<T>;
+type TrackControlFn = <T extends { type: TrackControlTypes } = any>(
+  type: TrackControlTypes,
+) => Promise<T>;
 export interface BrowserWindowViews<T, TView extends WebContentsView = WebContentsView> {
   main: BrowserWindow;
   views: { [key: string]: TView } & T;
@@ -24,10 +26,12 @@ export function createWindowContext<T, TView extends WebContentsView = WebConten
   return new (class implements BrowserWindowViews<T, TView> {
     main: BrowserWindow = _data.main;
     views: { [key: string]: TView } & T = _data.views || ({} as any);
-    async sendTrackControl<T = any>(type: TrackControlTypes) {
+    async sendTrackControl<T extends { type: TrackControlTypes } = any>(type: TrackControlTypes) {
       const view = this.views.youtubeView;
       if (!view) return Promise.reject(new Error("View not found"));
-      return await view.invoke<T>(IPC_EVENT_NAMES.TRACK_CONTROL, { type });
+      const data = ((await view.invoke<T>(IPC_EVENT_NAMES.TRACK_CONTROL, { type })) ?? {}) as T;
+      if (data.type !== type) throw new Error("Invalid response");
+      return data as T;
     }
     sendToAllViews(ev: string, ...args: any[]): void {
       return (Object.values(this.views) as TView[])

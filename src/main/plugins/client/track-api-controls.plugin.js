@@ -1,3 +1,4 @@
+
 export const meta = {
   name: "Api Control Handler",
 };
@@ -6,12 +7,33 @@ const trackControls = {
   toggle: player => {
     const state = player.getPlayerStateObject();
     if (!state) return;
-    return (state.isPlaying || state.isOrWillBePlaying) ? player.stopVideo() : player.playVideo()
+    state.isPlaying ? player.pauseVideo() : player.playVideo()
+    return {
+      isPlaying: state.isPlaying,
+      time: player.getCurrentTime()
+    };
   },
-  play: playerApi => playerApi.playVideo(),
-  pause: playerApi => playerApi.stopVideo(),
+  play: playerApi => {
+    playerApi.playVideo()
+    return {
+      isPlaying: true,
+      time: playerApi.getCurrentTime()
+    }
+  },
+  pause: playerApi => {
+    playerApi.pauseVideo()
+    return {
+      isPlaying: false,
+      time: playerApi.getCurrentTime()
+    }
+  },
   next: playerApi => playerApi.nextVideo(),
-  prev: playerApi => playerApi.previousVideo()
+  prev: playerApi => playerApi.previousVideo(),
+  isPlaying: player => {
+    const state = player.getPlayerStateObject();
+    if (!state) return;
+    return state.isPlaying;
+  }
 };
 export const afterInit = () => {
   window.domUtils.ensureDomLoaded(() => {
@@ -28,13 +50,21 @@ export const afterInit = () => {
       }
     }
     window.ipcRenderer.on("track:seek", setTimeSkip);
-    window.ipcRenderer.on("track:control", (_ev, data) => {
-      if (!data || typeof data === "object") return;
+    window.ipcRenderer.on("track:control", async (_ev, data) => {
+      if (!data || typeof data !== "object") return;
       const { type } = data;
       const handler = trackControls[type];
       if (!handler) return;
       const playerApi = window.domUtils.playerApi();
-      window.api.emit("track:control/response", type, handler(playerApi))
+      // not ready yet
+      if (!playerApi) return;
+
+      const handleResult = await Promise.resolve(handler(playerApi));
+      window.api.emit("track:control/response", {
+        type,
+        data: handleResult
+      })
+
     });
   });
 };

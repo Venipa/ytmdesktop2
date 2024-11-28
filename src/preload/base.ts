@@ -93,8 +93,13 @@ export default {
         ),
       );
     },
-    playerApi: () =>
-      (document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as any)?.playerApi,
+    playerApi: (() => {
+      let playerApiCache: any;
+      return () =>
+        playerApiCache ||
+        (playerApiCache = (document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as any)
+          ?.playerApi);
+    })(),
     setInteractiveElements: <T extends HTMLElement>(interactiveElements: T[]) => {
       let isMouseOverInteractiveElement = false;
       ipcRenderer.send("set-ignore-mouse-events", true, { forward: true });
