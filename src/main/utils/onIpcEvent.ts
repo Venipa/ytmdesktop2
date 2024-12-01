@@ -1,3 +1,5 @@
+import { stringifyJson } from "@main/lib/json";
+import { createLogger } from "@shared/utils/console";
 import { Event, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { debounce } from "lodash-es";
 import { serverMain } from "./serverEvents";
@@ -10,6 +12,7 @@ interface IpcContextEvent {
     debounce?: number;
     filter?: IpcFilterOption<IpcMainEvent | IpcMainInvokeEvent> | ((...args: any[]) => boolean);
     passive?: boolean;
+    debug?: boolean
   };
 }
 export function IpcContextWithOptions() {
@@ -25,7 +28,9 @@ export function IpcContext<T extends { new (...args: any[]): {} }>(IpcContextBas
       const symbols: any = IpcContextBase.prototype[classIpcStoreSymbol];
       if (symbols) {
         symbols.forEach(({ name, type, options }: IpcContextEvent, method: string) => {
+          const log = createLogger("IPC").child(`${name}:ipc.${type ?? 'on'}`);
           const func = (...args: any[]) => {
+            if (options?.debug) log.debug(`hit, payload size: ${new Blob([stringifyJson(args ?? null)]).size} bytes`);
             if (
               typeof (this as any)[method] === "function" &&
               (options && options.filter && typeof options.filter === "function"

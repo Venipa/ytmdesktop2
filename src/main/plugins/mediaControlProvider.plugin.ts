@@ -80,7 +80,6 @@ export default class MediaControlProvider
   @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE)
   private __handleTrackMediaOSControl(_ev, isPlaying: boolean, progressSeconds: number = 0) {
     if (!this.mediaProviderEnabled()) return;
-
     const { trackData } = this.getProvider("track");
     if (!trackData) {
       this._mediaProvider.playbackStatus = MediaPlayerPlaybackStatus.Stopped;
