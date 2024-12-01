@@ -252,6 +252,7 @@ const runApp = async function () {
         });
         youtubeView.setBounds({
           ...youtubeBounds,
+          width: winWidth,
           height: winHeight - toolbarBounds.height,
         });
       }, 100),
