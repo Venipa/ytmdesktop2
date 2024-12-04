@@ -1,4 +1,4 @@
-import { Presence } from "discord-rpc";
+import { SetActivity as Presence } from "@xhayper/discord-rpc";
 import { YoutubeMatcher } from "./youtubeMatcher";
 
 export interface Thumbnails {
@@ -114,6 +114,7 @@ export const discordEmbedFromTrack = (
     smallImageText: `${
       Number.parseInt(track.video.viewCount)?.toLocaleString("de") || track.video.viewCount
     } views`,
+    type: 2,
     buttons: [
       ...(track.video.videoId
         ? [
