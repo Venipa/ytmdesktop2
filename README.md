@@ -36,7 +36,8 @@ Built-in, without any additional setup required.
 
 ### Mini Player (Beta)
 
-![2024-11-13_23-22-18](https://github.com/user-attachments/assets/b1ab5920-58d3-49b6-8cca-693106b7763d)
+![image](https://github.com/user-attachments/assets/1bd51f13-9cc4-4795-9bb3-4c6d680ed56d)
+
 
 ### Discord Rich Presence
 
