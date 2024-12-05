@@ -40,7 +40,8 @@ Built-in, without any additional setup required.
 
 ### Discord Rich Presence
 
-![image](https://user-images.githubusercontent.com/17952364/212539572-0fe93d02-fb6e-48fe-a301-a09c7ff42703.png)
+![image](https://github.com/user-attachments/assets/f548b072-48c8-412f-8d6d-a960f223bacd)
+
 
 ### Custom CSS
 
