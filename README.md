@@ -1,6 +1,6 @@
 <p align="center">
   
-  ![2024-11-13_23-20-27](https://github.com/user-attachments/assets/7fbe2984-1c63-45d3-ae26-3fb70464a714)
+  ![2024-11-13_23-20-27](https://youtube-music.app/api/og)
   
 </p>
 
