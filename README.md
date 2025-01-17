@@ -1,6 +1,6 @@
 <p align="center">
   
-  ![2024-11-13_23-20-27](https://github.com/user-attachments/assets/7fbe2984-1c63-45d3-ae26-3fb70464a714)
+  ![2024-11-13_23-20-27](https://youtube-music.app/api/og)
   
 </p>
 
@@ -36,11 +36,13 @@ Built-in, without any additional setup required.
 
 ### Mini Player (Beta)
 
-![2024-11-13_23-22-18](https://github.com/user-attachments/assets/b1ab5920-58d3-49b6-8cca-693106b7763d)
+![image](https://github.com/user-attachments/assets/1bd51f13-9cc4-4795-9bb3-4c6d680ed56d)
+
 
 ### Discord Rich Presence
 
-![image](https://user-images.githubusercontent.com/17952364/212539572-0fe93d02-fb6e-48fe-a301-a09c7ff42703.png)
+![image](https://github.com/user-attachments/assets/f548b072-48c8-412f-8d6d-a960f223bacd)
+
 
 ### Custom CSS
 
