@@ -1,5 +1,6 @@
 export const meta = {
   name: "Ad Skipper",
+  enabled: false
 };
 
 export const afterInit = () => {

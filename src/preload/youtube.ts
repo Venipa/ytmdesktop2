@@ -55,12 +55,16 @@ const initFn = async (force?: boolean) => {
       const currentUrl = new URL(location.href);
       if (currentUrl.host === "music.youtube.com") {
         const pluginContext = { settings: new Proxy(window.__ytd_settings, {}) };
-        const destroyFns = plugins.map((m) => {
-          if (m.meta) console.log("Client Plugin ::", m.meta.name);
-          else console.log("Client Plugin ::", m.name, m.meta);
-          const destroyFn = m.exec?.(pluginContext);
-          return destroyFn;
-        });
+        const destroyFns = plugins
+          .map((m) => {
+            if (m.meta)
+              console.log("Client Plugin ::", m.meta.name, "enabled:", m.meta.enabled !== false);
+            else console.log("Client Plugin ::", m.name, m.meta);
+            if (m.meta.enabled === false) return null;
+            const destroyFn = m.exec?.(pluginContext);
+            return destroyFn;
+          })
+          .filter(Boolean);
         window.addEventListener("beforeunload", function () {
           if (destroyFns && currentUrl.hostname !== this.location.hostname && destroyFns.length > 0)
             destroyFns.filter((fn) => fn && typeof fn === "function").forEach((fn) => fn());
