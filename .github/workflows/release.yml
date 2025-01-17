@@ -31,7 +31,7 @@ jobs:
 
       - if: matrix.os == 'windows-latest'
         name: install windows deps
-        uses: GuillaumeFalourd/setup-windows10-sdk-action@v1.8
+        uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
         with:
           sdk-version: 19041
 
