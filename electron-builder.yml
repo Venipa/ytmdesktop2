@@ -58,13 +58,14 @@ linux:
       arch: arm64
     - target: deb
       arch: x64
-    - target: flatpak
-      arch: x64
+    # - target: flatpak
+    #   arch: x64
   maintainer: youtube-music.app
   category: Music
   icon: build/icon.icns
 flatpak:
   useWaylandFlags: true
+  category: AudioVideo
 # appx:
 #   electronUpdaterAware: true
 #   addAutoLaunchExtension: true
