@@ -1,3 +1,7 @@
+export const meta = {
+  name: "Track watch title change",
+};
+
 export default () => {
   new MutationObserver(() => {
     const el = document.querySelector("a.ytp-title-link.yt-uix-sessionlink");

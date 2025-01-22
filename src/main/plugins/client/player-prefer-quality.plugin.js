@@ -1,4 +1,7 @@
 const qKey = "yt-player-quality";
+export const meta = {
+  name: "Youtube Prefer Quality"
+};
 export default () => {
   const res = window.__ytd_settings?.player?.res;
   let isEnabled = !!res?.enabled;

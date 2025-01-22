@@ -5,7 +5,8 @@
 @layer base {
 
   html,
-  body {
+  body,
+  #app {
 
     @apply text-gray-100 bg-gray-900 h-full;
   }

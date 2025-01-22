@@ -1,3 +1,7 @@
+export const meta = {
+  name: "Track skip disliked",
+};
+
 export default ({ settings }) => {
   let lastVideoId = null,
     waitForTick = false;

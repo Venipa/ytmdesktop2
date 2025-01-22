@@ -1,9 +1,12 @@
+import { createLogger } from "@shared/utils/console";
 import DOMPurify from "dompurify";
 import { merge, set } from "lodash-es";
 import { basename } from "path";
 import pkg from "../../package.json";
 import exposeData, { setContext } from "./base";
 const appVersion = pkg.version;
+
+const log = createLogger("YTD");
 setContext("appVersion", appVersion);
 Object.entries(exposeData).forEach(([key, endpoints]) => {
   setContext(key, endpoints);
@@ -47,7 +50,7 @@ const initFn = async (force?: boolean) => {
   };
 
   window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
-    console.log("settings.change", key, value);
+    log.debug("settings.change", key, value);
     window.__ytd_settings = set(window.__ytd_settings, key, value);
   });
   await new Promise<void>((resolve) =>
@@ -55,16 +58,14 @@ const initFn = async (force?: boolean) => {
       const currentUrl = new URL(location.href);
       if (currentUrl.host === "music.youtube.com") {
         const pluginContext = { settings: new Proxy(window.__ytd_settings, {}) };
-        const destroyFns = plugins
-          .map((m) => {
-            if (m.meta)
-              console.log("Client Plugin ::", m.meta.name, "enabled:", m.meta.enabled !== false);
-            else console.log("Client Plugin ::", m.name, m.meta);
-            if (m.meta.enabled === false) return null;
-            const destroyFn = m.exec?.(pluginContext);
-            return destroyFn;
-          })
-          .filter(Boolean);
+        const destroyFns = plugins.map((m) => {
+          if (m.meta)
+            log.child(`Client Plugin, ${m.meta.name}`).debug("enabled:", m.meta.enabled !== false);
+          else log.child(`Client Plugin, ${m.name}`).debug(m.name, m.meta);
+          if (m.meta.enabled === false) return undefined;
+          const destroyFn = m.exec?.(pluginContext);
+          return destroyFn;
+        });
         window.addEventListener("beforeunload", function () {
           if (destroyFns && currentUrl.hostname !== this.location.hostname && destroyFns.length > 0)
             destroyFns.filter((fn) => fn && typeof fn === "function").forEach((fn) => fn());
@@ -88,16 +89,18 @@ const initFn = async (force?: boolean) => {
             }
           };
           checkYTRoot();
-        });
-        console.log("ytplayer loaded");
+        })
+
+        log.debug("ytplayer loaded");
         plugins.forEach((p) => {
           if (!p.afterInit) return;
           p.afterInit(pluginContext);
-          console.log(`[CP][${p.name}] :: afterInit execute`);
+          log.child(`Client Plugin, ${p.name}`).debug(`afterInit execute`);
         });
       }
       window.api.emit("app.loadEnd");
       _loadedYTM = true; // todo
+
       resolve();
     }),
   );

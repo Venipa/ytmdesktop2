@@ -12,7 +12,7 @@ if (import.meta.env.VITE_SENTRY_DSN && Sentry && !Sentry.isInitialized) {
   try {
     Sentry.init({
       dsn: import.meta.env.VITE_SENTRY_DSN,
-      enabled: true,
+      enabled: import.meta.env.PROD,
       onFatalError(error) {
         if (enabledReporting) sentryLog.error(error);
       },
