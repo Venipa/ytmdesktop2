@@ -1,8 +1,12 @@
-<p align="center">
-  
-  ![2024-11-13_23-20-27](https://youtube-music.app/api/og)
-  
-</p>
+## Star History
+
+<div align="center">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=venipa/ytmdesktop2&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=venipa/ytmdesktop2&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=venipa/ytmdesktop2&type=Date" />
+ </picture>
+</div>
 
 
 <h2 align="center">
