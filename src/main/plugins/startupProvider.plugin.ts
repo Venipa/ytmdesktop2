@@ -12,6 +12,12 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
   get settingsInstance(): SettingsProvider {
     return this.getProvider("settings");
   }
+  get isEnabled() {
+    return !!this.settingsInstance.instance?.app?.autostart
+  }
+  get isInitialMinimized() {
+    return !!this.settingsInstance.instance?.app?.autostartMinimized
+  }
   constructor(private app: App) {
     super("startup");
     app.commandLine.appendSwitch("disable-http-cache");

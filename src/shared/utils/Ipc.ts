@@ -5,7 +5,7 @@ import { onBeforeMount, onMounted, onUnmounted, Ref, ref } from "vue";
 type Map<T, R> =
   | ((item: T, name: string, prev: any) => T)
   | ((item: T, name: string, prev: any) => R);
-  type Trigger<T> = ((item: T, prev: T) => void)
+type Trigger<T> = (item: T, prev: T) => void;
 type IpcHandler = (ev: IpcRendererEvent, ...args: any[]) => void;
 type RefReturn<R> = [Ref<R>, (val: R) => void];
 type RefIpcOptions<T, R> = {
@@ -56,7 +56,7 @@ export function refIpc<T, R = T>(
   });
   return [state, (val: R) => (state.value = val)];
 }
-export function refIpcSetting<T = any>(key: string) {
+export function refIpcSetting<T = any>(key: string, defaultValue?: T) {
   const refVal = refIpc("SERVER_SETTINGS_CHANGE", {
     mapper: ([skey, value]) => {
       if (skey === key) return value as T;
@@ -66,7 +66,9 @@ export function refIpcSetting<T = any>(key: string) {
     ignoreUndefined: true,
   });
   onMounted(() => {
-    window.api.settingsProvider.get(key, null).then(refVal[1]);
+    window.api.settingsProvider
+      .get(key, null)
+      .then((initialValue) => refVal[1](initialValue ?? defaultValue ?? null));
   });
   return refVal;
 }

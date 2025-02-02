@@ -22,6 +22,7 @@ const defaultSettings = {
     beta: false,
     autoupdate: true,
     autostart: true,
+    autostartMinimized: true,
     getstarted: true,
     enableDev: false,
     minimizeTrayOverride: false,

@@ -306,7 +306,8 @@ const runApp = async function () {
     await waitMs(); // next tick
     mainWindow = await createRootWindow();
     await waitMs(); // next tick
-    mainWindow.main.show();
+    const startupService = serviceCollection.getProvider("startup")
+    if (!startupService.isEnabled || !startupService.isInitialMinimized) mainWindow.main.show();
     serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
     serviceCollection.exec("AfterInit");
   });

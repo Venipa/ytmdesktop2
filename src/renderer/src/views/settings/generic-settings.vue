@@ -30,7 +30,21 @@
       </div>
     </div>
     <div class="px-3 flex flex-col gap-4 mt-4">
-      <settings-checkbox config-key="app.autostart"> Enable Autostart </settings-checkbox>
+      <div
+        :class="[
+          'flex flex-col gap-y-1 border -mx-3 px-3',
+          appAutostartEnabled
+            ? 'border-gray-500 bg-gray-800 transition-all duration-150 ease-in-out pt-1.5 pb-2.5 rounded-lg'
+            : 'border-gray-500/0 bg-gray-800/0 mt-1.5',
+        ]"
+      >
+        <settings-checkbox config-key="app.autostart"> Enable Autostart </settings-checkbox>
+        <template v-if="appAutostartEnabled">
+              <settings-checkbox config-key="app.autostartMinimized">
+                Start minimized
+              </settings-checkbox>
+        </template>
+      </div>
       <settings-checkbox config-key="app.autoupdate"> Enable Autoupdate </settings-checkbox>
       <settings-checkbox config-key="app.enableStatisticsAndErrorTracing">
         <div class="flex flex-col">
@@ -108,48 +122,20 @@
   </div>
 </template>
 
-<script>
+<script lang="ts" setup>
 import SettingsCheckbox from "@renderer/components/SettingsCheckbox.vue";
 import SettingsInput from "@renderer/components/SettingsInput.vue";
-import { defineComponent, ref } from "vue";
+import { refIpcSetting } from "@shared/utils/Ipc";
 
-const getStartedEnabled = ref(!!window.settings.get("app.getstarted"));
-const apiEnabledSetting = ref(!!window.settings.get("api.enabled"));
-const apiPortSetting = ref(window.settings.get("api.port") ?? 13091);
-const errorReportingEnabled = ref(window.settings.get("app.enableStatisticsAndErrorTracing"));
-let subscribers = [];
-subscribers.push(
-  ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
-    if (key === "api.enabled" && value !== apiEnabledSetting.value)
-      apiEnabledSetting.value = !!value;
-    if (key === "api.port" && value !== apiPortSetting.value) apiPortSetting.value = value;
-    if (key === "app.enableStatisticsAndErrorTracing") errorReportingEnabled.value = !!value;
-  }),
-);
-export default defineComponent({
-  components: { SettingsCheckbox, SettingsInput },
-  setup() {
-    return {
-      getStartedEnabled,
-      apiPortSetting,
-      apiEnabledSetting,
-      errorReportingEnabled,
-    };
-  },
-  unmounted() {
-    if (subscribers) {
-      subscribers.filter((x) => typeof x === "function").forEach(window.ipcRenderer.off);
-      subscribers = [];
-    }
-  },
-  methods: {
-    disableGetStarted() {
-      window.api.settingsProvider.update("app.getstarted", false).then((v) => {
-        this.getStartedEnabled = v;
-      });
-    },
-  },
-});
+const [getStartedEnabled] = refIpcSetting("app.getstarted");
+const [apiEnabledSetting] = refIpcSetting("api.enabled");
+const [appAutostartEnabled] = refIpcSetting("app.autostart");
+
+const disableGetStarted = () => {
+  window.api.settingsProvider.update("app.getstarted", false).then((v) => {
+    getStartedEnabled.value = v;
+  });
+};
 </script>
 
 <style></style>
