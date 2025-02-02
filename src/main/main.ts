@@ -286,7 +286,7 @@ const runApp = async function () {
         serviceCollection.exec("AfterInit");
       }
     }
-  }
+  };
   // Quit when all windows are closed.
   app.on("window-all-closed", () => {
     // On macOS it is common for applications and their menu bar
@@ -306,8 +306,14 @@ const runApp = async function () {
     await waitMs(); // next tick
     mainWindow = await createRootWindow();
     await waitMs(); // next tick
-    const startupService = serviceCollection.getProvider("startup")
-    if (!startupService.isEnabled || !startupService.isInitialMinimized) mainWindow.main.show();
+    const startupService = serviceCollection.getProvider("startup");
+    log.debug({ isStartupContext: startupService.isStartupContext });
+    if (
+      startupService.isStartupContext
+        ? !startupService.isEnabled || !startupService.isInitialMinimized
+        : !startupService.isMinimizedArg
+    )
+      mainWindow.main.show();
     serviceCollection.providers.forEach((p) => p.__registerWindows(mainWindow));
     serviceCollection.exec("AfterInit");
   });

@@ -35,7 +35,13 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
     }
   }
   private get startArgs() {
-    return ["--processStart", `"${basename(process.execPath)}"`];
+    return ["--processStart", `"${basename(process.execPath)}"`, "--startup"];
+  }
+  get isStartupContext() {
+    return !!process.argv.find(arg => arg === "--startup");
+  }
+  get isMinimizedArg() {
+    return !!process.argv.find(arg => arg === "--minimized");
   }
   async AfterInit() {
     const app = this.settingsInstance.instance.app;
