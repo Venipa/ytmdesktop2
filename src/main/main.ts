@@ -243,20 +243,18 @@ const runApp = async function () {
     win.on(
       "resize",
       debounce(() => {
-        if (fromMaximized && !win.isMaximized()) {
-          const [winWidth, winHeight] = win.getSize(),
-            youtubeBounds = youtubeView.getBounds(),
-            toolbarBounds = toolbarView.getBounds();
-          toolbarView.setBounds({
-            ...toolbarBounds,
-            width: winWidth,
-          });
-          youtubeView.setBounds({
-            ...youtubeBounds,
-            height: winHeight - toolbarBounds.height,
-          });
-          fromMaximized = false;
-        }
+        const [winWidth, winHeight] = win.getSize(),
+          youtubeBounds = youtubeView.getBounds(),
+          toolbarBounds = toolbarView.getBounds();
+        toolbarView.setBounds({
+          ...toolbarBounds,
+          width: winWidth,
+        });
+        youtubeView.setBounds({
+          ...youtubeBounds,
+          width: winWidth,
+          height: winHeight - toolbarBounds.height,
+        });
       }, 100),
     );
     youtubeView.webContents.on("page-title-updated", (ev, title) =>
