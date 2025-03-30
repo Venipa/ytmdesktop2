@@ -136,7 +136,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     ).then(() =>
       this.views.youtubeView.webContents
         .executeJavaScript(
-          `[document.querySelector("#like-button-renderer tp-yt-paper-icon-button.like").ariaPressed, document.querySelector("#like-button-renderer tp-yt-paper-icon-button.dislike").ariaPressed]`,
+          `[document.querySelector("#like-button-renderer .like")?.ariaPressed, document.querySelector("#like-button-renderer .dislike")?.ariaPressed]`,
         )
         .then((values: string[]) => values.map((x) => x === "true") as any)
         .catch(() => [false, false]),
