@@ -124,7 +124,7 @@ export default class MediaControlProvider
     }
     this.logger.debug(
       this._mediaProvider.title,
-      this._mediaProvider.mediaType,
+      this._mediaProvider.mediaType === 1 ? "music" : "other",
       this._mediaProvider.trackId,
     );
   }

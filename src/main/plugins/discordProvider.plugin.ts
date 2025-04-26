@@ -63,10 +63,12 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     this._presence = null;
   }
   async enable() {
-    if (this.client) return;
+    if (this.client) {
+      if (!this.client.isConnected) await this.disable();
+      else return;
+    }
     clearTimeout(this._updateHandle);
     await this.createClient();
-    this._isConnected = true;
     this.windowContext.sendToAllViews("discord.connected");
   }
   private async createClient(): Promise<[DiscordClient, Presence] | null> {
@@ -79,18 +81,25 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       largeImageKey: "logo",
       largeImageText: translations.appName,
     };
-    client.on("connected", () => (this.logger.debug("connected"), (this._isConnected = true)));
-    client.on("ready", () => this.onClientReady());
-    this.presence = presence;
-    this.client = client;
-    await client.login().catch((err) => {
-      this.logger.debug(err);
-      return new Promise((resolve, reject) =>
-        setTimeout(() => {
-          this.createClient().then(resolve).catch(reject);
-        }, 5000),
-      );
-    });
+    await client
+      .login()
+      .then(() => {
+        this.logger.debug("connected");
+        this._isConnected = true;
+        this.presence = presence;
+        this.client = client;
+        return this.onClientReady();
+      })
+      .catch((err) => {
+        this._isConnected = false;
+        this.windowContext.sendToAllViews("discord.disconnected");
+        this.logger.debug(err);
+        return new Promise((resolve, reject) =>
+          setTimeout(() => {
+            this.createClient().then(resolve).catch(reject);
+          }, 1000),
+        );
+      });
     return [client, presence];
   }
   private _refreshActivity(initial?: boolean) {
@@ -109,9 +118,11 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     if (!settings.discord.enabled || !this._enabled) return;
     await this.createClient();
   }
-  async updatePlayState(val: boolean, progress: number = 0) {
+  async updateTrackProgress(isPlaying: boolean, mediaProgress: number = 0) {
     if (this.trackService.trackData && this.isConnected)
-      await this.setActivity(discordEmbedFromTrack(this.trackService.trackData, val, progress));
+      await this.setActivity(
+        discordEmbedFromTrack(this.trackService.trackData, isPlaying, mediaProgress),
+      );
   }
   async setActivity(presence: Partial<Presence>) {
     this.presence = { ...presence, ...DEFAULT_PRESENCE };
@@ -158,10 +169,12 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     this._refreshActivity(true);
     this.windowContext.sendToAllViews("discord.connected");
   }
+
   @IpcHandle("req:discord.connected")
-  private async __onDiscordStatus() {
+  private async handleDiscordState() {
     return DISCORD_SERVICE_ENABLED && this.client && this.enabled && this._isConnected;
   }
+
   @IpcOn("track:change", {
     debounce: 100,
   })

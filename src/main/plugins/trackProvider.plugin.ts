@@ -274,7 +274,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     }
 
     const duration = Number(this.trackData.meta.duration);
-    await discordProvider.updatePlayState(isPlaying, progressSeconds);
+    await discordProvider.updateTrackProgress(isPlaying, progressSeconds);
 
     this.getProvider("mediaController")?.instance?.setTimeline(duration, progressSeconds);
 
