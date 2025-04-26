@@ -115,8 +115,10 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     if (!isVoid) {
       this._trackState = ret as TrackState;
     }
-    if (prevId !== this.trackState.id)
+    if (prevId !== this.trackState.id) {
       this.logger.debug("title id change", prevId, "=>", this.trackState.id);
+      this.getProvider("discord").updateTrackProgress(true, 0); // update discord presence instantly on change
+    }
     this.windowContext.sendToAllViews("track:play-state", {
       ...this._trackState,
     });

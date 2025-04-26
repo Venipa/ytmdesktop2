@@ -31,13 +31,13 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
   get presence() {
     return this._presence!;
   }
-  set presence(val: Presence) {
+  private set presence(val: Presence) {
     this._presence = val;
   }
-  get settingsInstance() {
+  private get settingsInstance() {
     return this.getProvider("settings");
   }
-  get trackService() {
+  private get trackService() {
     return this.getProvider("track");
   }
   constructor(private app: App) {
