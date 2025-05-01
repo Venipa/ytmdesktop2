@@ -8,7 +8,7 @@ import { isDevelopment } from "../utils/devUtils";
 import { serverMain } from "../utils/serverEvents";
 import { createAppWindow } from "../utils/windowUtils";
 
-const STATE_PAUSE_TIME = isDevelopment ? 30e3 : 30e4;
+const STATE_PAUSE_TIME = isDevelopment ? 5000 : 30e4; // dev: 5s, production: 5 minutes 
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit, BeforeStart {
   private appLock: boolean = false;

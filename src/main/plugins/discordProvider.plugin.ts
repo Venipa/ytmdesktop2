@@ -68,19 +68,19 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       else return;
     }
     clearTimeout(this._updateHandle);
-    await this.createClient();
+    const {trackData: track, playing, trackState} = this.trackService
+    await this.createClient(track ? discordEmbedFromTrack(track, playing, trackState.progress) : undefined);
     this.windowContext.sendToAllViews("discord.connected");
   }
-  private async createClient(): Promise<[DiscordClient, Presence] | null> {
+  private async createClient(presence: Presence = {
+    largeImageKey: "logo",
+    largeImageText: translations.appName,
+  }): Promise<[DiscordClient, Presence] | null> {
     if (!this._enabled || this.isConnected) return null;
     this._enabled = true;
     const client = new DiscordClient({
       clientId: CLIENT_ID,
     });
-    const presence: Presence = {
-      largeImageKey: "logo",
-      largeImageText: translations.appName,
-    };
     await client
       .login()
       .then(() => {
@@ -97,7 +97,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
         return new Promise((resolve, reject) =>
           setTimeout(() => {
             this.createClient().then(resolve).catch(reject);
-          }, 1000),
+          }, 2500),
         );
       });
     return [client, presence];
@@ -116,7 +116,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
   async AfterInit() {
     const settings = this.settingsInstance.instance;
     if (!settings.discord.enabled || !this._enabled) return;
-    await this.createClient();
+    if (this.trackService.trackData) await this.createClient();
   }
   async updateTrackProgress(isPlaying: boolean, mediaProgress: number = 0) {
     if (this.trackService.trackData && this.isConnected)
