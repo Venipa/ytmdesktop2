@@ -30,7 +30,7 @@
     "@sentry/electron": "^5.6.0",
     "@tailwindcss/line-clamp": "^0.4.2",
     "@types/dompurify": "^3.0.5",
-    "@xhayper/discord-rpc": "^1.2.1",
+    "@xhayper/discord-rpc": "^1.2.2",
     "autoprefixer": "^10.4.8",
     "chalk": "^5.0.1",
     "core-js": "^3.24.1",

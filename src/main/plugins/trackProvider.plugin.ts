@@ -220,8 +220,8 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
     const track = clone(trackRef);
     track.meta.startedAt = Date.now() / 1000;
 
-    this.views.toolbarView.webContents.send("track:title", track?.video?.title);
-    this.views.youtubeView.webContents.send("track.change", track.video.videoId);
+    this.views.toolbarView?.webContents.send("track:title", track?.video?.title);
+    this.views.youtubeView?.webContents.send("track.change", track.video.videoId);
     this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
 
     const media = this.getProvider("mediaController");
@@ -265,15 +265,6 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 
     this._playState = isPlaying ? "playing" : "paused";
     const discordProvider = this.getProvider("discord") as DiscordProvider;
-
-    if (
-      isPlaying &&
-      !discordProvider.isConnected &&
-      discordProvider.enabled &&
-      discordProvider.settingsEnabled
-    ) {
-      await discordProvider.enable();
-    }
 
     const duration = Number(this.trackData.meta.duration);
     await discordProvider.updateTrackProgress(isPlaying, progressSeconds);

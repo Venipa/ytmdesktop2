@@ -88,8 +88,9 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
     if (this._update) {
       this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, this._update);
     }
-    if (this.settingsInstance.instance.app.autoupdate && !isDevelopment) this.onCheckUpdate();
-    else if (isDevelopment) this._checkUpdate();
+    if (this.settingsInstance.instance.app.autoupdate && !isDevelopment)
+      this.onCheckUpdate().catch((err) => this.logger.error("Error checking for update", err));
+    else if (isDevelopment) this._checkUpdate().catch((err) => this.logger.error("Error checking for update", err));
   }
   @IpcHandle("action:app.getUpdate")
   async getUpdate() {
@@ -126,7 +127,8 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
   private _downloadToken: CancellationToken | null = null;
   @IpcOn("app.downloadUpdate")
   onDownloadUpdate(): [Promise<string[]>, () => void] {
-    if (!this.updateAvailable || this.updateDownloaded || this.updateQueuedForInstall) return [] as any;
+    if (!this.updateAvailable || this.updateDownloaded || this.updateQueuedForInstall)
+      return [] as any;
     this._downloadToken = new CancellationToken();
     return [
       autoUpdater.downloadUpdate(this._downloadToken),

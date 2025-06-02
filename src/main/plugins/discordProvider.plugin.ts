@@ -27,6 +27,7 @@ class DiscordRPCManager {
     private clientId: string,
     private onConnected: () => void,
     private onDisconnected: () => void,
+    private onError: (err: Error | unknown) => void,
     private logger: Logger = new Logger("DiscordRPCManager"),
   ) {}
 
@@ -51,74 +52,130 @@ class DiscordRPCManager {
   }
 
   async enable() {
-    if (this.client) {
-      if (!this.client.isConnected) await this.disable();
-      else return;
+    if (this.client?.isConnected) return;
+
+    if (!this.enabled) {
+      if (this.isConnected) await this.disable();
     }
     clearTimeout(this._updateHandle);
-    await this.createClient();
+    const [client, presence] = await this.createClient()
+      .then((instance) => {
+        this.logger.debug("connected to discord");
+        return instance || [null, null];
+      })
+      .catch((err) => {
+        this.logger.error("error while connecting to discord", err);
+        return [null, null] as [DiscordClient, Presence];
+      });
+    this.client = client;
+    this.presence = presence;
+    this._enabled = !!client?.isConnected;
   }
 
   async disable() {
+    if (this._createClientAbortController) {
+      this._createClientAbortController.abort("discord has been disabled by user");
+      this.logger.debug(
+        "aborting client creation",
+        this._createClientAbortController.signal.aborted,
+      );
+    }
     if (!this.client) return;
     clearTimeout(this._updateHandle);
     this._isConnected = false;
     await this.client.user.clearActivity().catch(() => {});
     await this.client
       .destroy()
-      .finally(() => {
+      .then(() => {
         this.onDisconnected();
+        this.logger.debug("disconnected from discord");
       })
       .catch((err) => {
-        this.logger.error(err);
+        this.logger.error("error while disconnecting from discord", err);
       });
     this.client = null;
     this._presence = null;
+    this._enabled = false;
   }
-
+  private _createClientAbortController: AbortController | null = null;
   private async createClient(
     presence: Presence = DEFAULT_PRESENCE,
+    isAborted: boolean = false,
   ): Promise<[DiscordClient, Presence] | null> {
-    if (!this._enabled || this.isConnected) return null;
-    this._enabled = true;
+    if (isAborted) {
+      this.logger.debug("creating client aborted", isAborted);
+      this.onError(null);
+      this._createClientAbortController = null;
+      throw new Error("Creating client aborted");
+    }
+    const { signal } =
+      this._createClientAbortController ||
+      (this._createClientAbortController = new AbortController());
+
+    this.logger.debug("creating client", this.clientId, { signal: signal.aborted });
     const client = new DiscordClient({
       clientId: this.clientId,
+      transport: {
+        type: "ipc",
+      },
+    });
+    signal.addEventListener("abort", () => {
+      isAborted = true;
     });
 
     try {
-      await client.login();
+      await client.login().catch((err) => {
+        this.logger.error("error while connecting to discord", err);
+        throw err;
+      });
       this.logger.debug("connected");
       this._isConnected = true;
       this.presence = presence;
       this.client = client;
       this.onConnected();
-      this._refreshActivity(true);
+      await this._refreshActivity(true);
       return [client, presence];
     } catch (err) {
       this._isConnected = false;
       this.onDisconnected();
-      this.logger.debug(err);
-      return new Promise((resolve, reject) =>
+      this.logger.error("error while connecting to discord", err);
+      if (isAborted) {
+        this._createClientAbortController = null;
+        this.onError(null);
+        throw err;
+      }
+      this.onError(err as Error);
+      return await new Promise((resolve, reject) => {
         setTimeout(() => {
-          this.createClient().then(resolve).catch(reject);
-        }, 2500),
-      );
+          if (signal.aborted) {
+            this._createClientAbortController = null;
+            this.onError(null);
+            reject(err);
+          }
+          this.createClient(undefined, isAborted).then(resolve).catch(reject);
+        }, 2500);
+      });
     }
   }
 
-  private _refreshActivity(initial?: boolean) {
+  private _refreshActivity(initial: boolean = false) {
     if (this._updateHandle) clearTimeout(this._updateHandle);
-    if (this.client && this._isConnected)
-      (initial ? Promise.resolve() : this.setActivity(this.presence)).then(
-        () =>
-          (this._updateHandle = setTimeout(() => this._refreshActivity(), DISCORD_UPDATE_INTERVAL)),
-      );
+    return new Promise<void>((resolve, reject) => {
+      if (this.client && this._isConnected)
+        (initial ? Promise.resolve() : this.setActivity(this.presence, false)).then(() => {
+          resolve();
+          return (this._updateHandle = setTimeout(
+            () => this._refreshActivity(),
+            DISCORD_UPDATE_INTERVAL,
+          ));
+        });
+      else reject(new Error("Discord client not connected"));
+    });
   }
 
-  async setActivity(presence: Partial<Presence>) {
+  async setActivity(presence: Partial<Presence>, resetUpdateHandle = true) {
     if (!this.client || !this.isConnected) return;
     this.presence = { ...presence, ...DEFAULT_PRESENCE };
-    this.logger.debug("setActivity", this.presence);
     if (this.presence.buttons) {
       if (this.presence.buttons.findIndex((x) => !x.url.match(/^http/)) !== -1) {
         this.presence.buttons = this.presence.buttons.filter((x) => !x.url.match(/^http/));
@@ -135,7 +192,7 @@ class DiscordRPCManager {
 
     if (this.presence.startTimestamp === null) delete this.presence.startTimestamp;
     if (this.presence.endTimestamp === null) delete this.presence.endTimestamp;
-
+    if (resetUpdateHandle) await this._refreshActivity(false);
     return await this.client.user?.setActivity(this.presence).catch((err) => {
       this.logger.error(err);
     });
@@ -153,6 +210,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       CLIENT_ID,
       () => this.windowContext.sendToAllViews("discord.connected"),
       () => this.windowContext.sendToAllViews("discord.disconnected"),
+      (err) => this.windowContext.sendToAllViews("discord.error", err),
       this.logger,
     );
   }
@@ -195,7 +253,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
       const { trackData: track, playing, trackState } = this.trackService;
       if (track) {
         await this.rpcManager.setActivity(
-          discordEmbedFromTrack(track, playing, trackState.progress),
+          discordEmbedFromTrack(track, playing, trackState?.progress ?? 0),
         );
       }
     }
@@ -204,7 +262,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
   async AfterInit() {
     const settings = this.settingsInstance.instance;
     if (!settings.discord.enabled || !this._enabled) return;
-    if (this.trackService.trackData) await this.enable();
+    await this.enable();
   }
 
   async updateTrackProgress(isPlaying: boolean, mediaProgress: number = 0) {
@@ -222,7 +280,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
     if (enabled) {
       await this.enable();
     } else {
-      await this.rpcManager.disable();
+      await this.disable();
     }
   }
 
