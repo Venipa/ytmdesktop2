@@ -1,6 +1,6 @@
 export interface VideoResSetting {
-  prefer: "tiny" | "small" | "medium" | "large" | "hd720" | "hd1080" | "hd1440" | "hd2160" | "auto";
-  enabled: boolean;
+	prefer: "tiny" | "small" | "medium" | "large" | "hd720" | "hd1080" | "hd1440" | "hd2160" | "auto";
+	enabled: boolean;
 }
 // Choices for targetRes are currently:
 //   "highres" >= ( 8K / 4320p / QUHD  )

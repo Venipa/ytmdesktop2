@@ -10,276 +10,258 @@ import ApiProvider from "./apiProvider.plugin";
 import DiscordProvider from "./discordProvider.plugin";
 
 type TrackState = {
-  id: string;
-  playing: boolean;
-  progress: number;
-  uiProgress?: number;
-  duration: number;
-  liked: boolean;
-  disliked: boolean;
-  startedAt: number;
+	id: string;
+	playing: boolean;
+	progress: number;
+	uiProgress?: number;
+	duration: number;
+	liked: boolean;
+	disliked: boolean;
+	startedAt: number;
 };
 
 type TrackEntry = { id: string } & TrackData;
 
 class TrackCollection {
-  private tracks: Map<string, TrackEntry> = new Map();
-  private readonly maxSize = 10;
+	private tracks: Map<string, TrackEntry> = new Map();
+	private readonly maxSize = 10;
 
-  addOrUpdate(id: string, value: Omit<TrackEntry, "id">): TrackEntry {
-    const track = { ...value, id } as TrackEntry;
-    const shouldUpdateTrack = this.tracks.has(id);
-    this.tracks.set(id, track);
+	addOrUpdate(id: string, value: Omit<TrackEntry, "id">): TrackEntry {
+		const track = { ...value, id } as TrackEntry;
+		const shouldUpdateTrack = this.tracks.has(id);
+		this.tracks.set(id, track);
 
-    // Maintain size limit on add
-    if (!shouldUpdateTrack && this.tracks.size > this.maxSize) {
-      const firstKey = this.tracks.keys().next().value;
-      this.tracks.delete(firstKey);
-    }
+		// Maintain size limit on add
+		if (!shouldUpdateTrack && this.tracks.size > this.maxSize) {
+			const firstKey = this.tracks.keys().next().value;
+			this.tracks.delete(firstKey);
+		}
 
-    return track;
-  }
+		return track;
+	}
 
-  remove(id: string): boolean {
-    return this.tracks.delete(id);
-  }
+	remove(id: string): boolean {
+		return this.tracks.delete(id);
+	}
 
-  findById(id: string): TrackEntry | undefined {
-    return this.tracks.get(id);
-  }
+	findById(id: string): TrackEntry | undefined {
+		return this.tracks.get(id);
+	}
 
-  clear(): void {
-    this.tracks.clear();
-  }
+	clear(): void {
+		this.tracks.clear();
+	}
 }
 
 const trackCollection = new TrackCollection();
 
 const parseTrackDuration = (td: TrackData): number | null => {
-  return ((dur) => (dur ? Number.parseInt(dur) : null))(
-    td.context?.videoDetails?.durationSeconds ?? td.video?.lengthSeconds,
-  );
+	return ((dur) => (dur ? Number.parseInt(dur) : null))(td.context?.videoDetails?.durationSeconds ?? td.video?.lengthSeconds);
 };
 
 @IpcContext
 export default class TrackProvider extends BaseProvider implements AfterInit {
-  private _activeTrackId: string | null = null;
-  private _playState: "playing" | "paused" | undefined;
-  private _trackState: TrackState | null = null;
-  private _trackDataCache: TrackEntry | null = null;
+	private _activeTrackId: string | null = null;
+	private _playState: "playing" | "paused" | undefined;
+	private _trackState: TrackState | null = null;
+	private _trackDataCache: TrackEntry | null = null;
 
-  get playState() {
-    return this._playState;
-  }
+	get playState() {
+		return this._playState;
+	}
 
-  get trackState() {
-    return this._trackState;
-  }
+	get trackState() {
+		return this._trackState;
+	}
 
-  get playing() {
-    return this.playState === "playing";
-  }
+	get playing() {
+		return this.playState === "playing";
+	}
 
-  constructor(private app: App) {
-    super("track");
-  }
+	constructor(private app: App) {
+		super("track");
+	}
 
-  async AfterInit() {}
+	async AfterInit() {}
 
-  get trackData(): TrackEntry | null {
-    if (this._trackDataCache?.id === this._activeTrackId) {
-      return this._trackDataCache;
-    }
-    return (this._trackDataCache = this._activeTrackId
-      ? (trackCollection.findById(this._activeTrackId) ?? null)
-      : null);
-  }
+	get trackData(): TrackEntry | null {
+		if (this._trackDataCache?.id === this._activeTrackId) {
+			return this._trackDataCache;
+		}
+		return (this._trackDataCache = this._activeTrackId ? (trackCollection.findById(this._activeTrackId) ?? null) : null);
+	}
 
-  setTrackState(fn: TrackState | ((d: TrackState) => void | TrackState)) {
-    if (!this._trackState) {
-      this._trackState = {
-        id: this._activeTrackId,
-        playing: false,
-        progress: 0,
-        duration: 0,
-        liked: false,
-        disliked: false,
-        startedAt: Date.now() / 1000,
-      };
-    }
-    const prevId = this._trackState.id;
-    const isFunc = typeof fn === "function";
-    const ret = isFunc ? fn(this._trackState) : fn;
-    const isVoid = ret === void 0 || ret === undefined;
+	setTrackState(fn: TrackState | ((d: TrackState) => void | TrackState)) {
+		if (!this._trackState) {
+			this._trackState = {
+				id: this._activeTrackId,
+				playing: false,
+				progress: 0,
+				duration: 0,
+				liked: false,
+				disliked: false,
+				startedAt: Date.now() / 1000,
+			};
+		}
+		const prevId = this._trackState.id;
+		const isFunc = typeof fn === "function";
+		const ret = isFunc ? fn(this._trackState) : fn;
+		const isVoid = ret === void 0 || ret === undefined;
 
-    if (!isVoid) {
-      this._trackState = ret as TrackState;
-    }
-    if (prevId !== this.trackState.id) {
-      this.logger.debug("title id change", prevId, "=>", this.trackState.id);
-      this.getProvider("discord").updateTrackProgress(true, 0); // update discord presence instantly on change
-    }
-    this.windowContext.sendToAllViews("track:play-state", {
-      ...this._trackState,
-    });
-  }
+		if (!isVoid) {
+			this._trackState = ret as TrackState;
+		}
+		if (prevId !== this.trackState.id) {
+			this.logger.debug("title id change", prevId, "=>", this.trackState.id);
+			this.getProvider("discord").updateTrackProgress(true, 0); // update discord presence instantly on change
+		}
+		this.windowContext.sendToAllViews("track:play-state", {
+			...this._trackState,
+		});
+	}
 
-  async getActiveTrackByDOM(): Promise<string | null> {
-    try {
-      const href = await this.views.youtubeView.webContents.executeJavaScript(
-        `document.querySelector("a.ytp-title-link.yt-uix-sessionlink")?.href`,
-      );
-      return href ? (new URLSearchParams(href.split("?")[1])?.get("v") ?? null) : null;
-    } catch {
-      return null;
-    }
-  }
+	async getActiveTrackByDOM(): Promise<string | null> {
+		try {
+			const href = await this.views.youtubeView.webContents.executeJavaScript(`document.querySelector("a.ytp-title-link.yt-uix-sessionlink")?.href`);
+			return href ? (new URLSearchParams(href.split("?")[1])?.get("v") ?? null) : null;
+		} catch {
+			return null;
+		}
+	}
 
-  async currentSongLikeState(): Promise<[boolean, boolean]> {
-    try {
-      const values = await this.views.youtubeView.webContents.executeJavaScript(
-        `[
+	async currentSongLikeState(): Promise<[boolean, boolean]> {
+		try {
+			const values = await this.views.youtubeView.webContents.executeJavaScript(
+				`[
           document.querySelector("#like-button-renderer .like")?.ariaPressed,
           document.querySelector("#like-button-renderer .dislike")?.ariaPressed
         ]`,
-      );
-      return values.map((x: string) => x === "true") as [boolean, boolean];
-    } catch {
-      return [false, false];
-    }
-  }
+			);
+			return values.map((x: string) => x === "true") as [boolean, boolean];
+		} catch {
+			return [false, false];
+		}
+	}
 
-  getTrackDuration(): number | null {
-    const td = this.trackData;
-    return td ? parseTrackDuration(td) : null;
-  }
+	getTrackDuration(): number | null {
+		const td = this.trackData;
+		return td ? parseTrackDuration(td) : null;
+	}
 
-  @IpcOn("track:info-req")
-  private async __onTrackInfo(ev: any, ytTrack: TrackData) {
-    if (!ytTrack.video) return;
+	@IpcOn("track:info-req")
+	private async __onTrackInfo(ev: any, ytTrack: TrackData) {
+		if (!ytTrack.video) return;
 
-    const track = {
-      ...ytTrack,
-      meta: {
-        thumbnail: (
-          ytTrack?.video?.thumbnail?.thumbnails ?? ytTrack?.context?.thumbnail?.thumbnails
-        )?.sort(firstBy((d) => d.height, "desc"))[0]?.url,
-        isAudioExclusive: ytTrack?.video?.musicVideoType === "MUSIC_VIDEO_TYPE_ATV",
-        startedAt: Date.now() / 1000,
-        duration: parseTrackDuration(ytTrack),
-      },
-    };
+		const track = {
+			...ytTrack,
+			meta: {
+				thumbnail: (ytTrack?.video?.thumbnail?.thumbnails ?? ytTrack?.context?.thumbnail?.thumbnails)?.sort(firstBy((d) => d.height, "desc"))[0]?.url,
+				isAudioExclusive: ytTrack?.video?.musicVideoType === "MUSIC_VIDEO_TYPE_ATV",
+				startedAt: Date.now() / 1000,
+				duration: parseTrackDuration(ytTrack),
+			},
+		};
 
-    trackCollection.addOrUpdate(ytTrack.video.videoId, track as TrackData);
+		trackCollection.addOrUpdate(ytTrack.video.videoId, track as TrackData);
 
-    const currentTrackId = await this.getActiveTrackByDOM();
-    if (
-      !this._activeTrackId ||
-      track.video.videoId === this._activeTrackId ||
-      currentTrackId === track.video.videoId
-    ) {
-      const lastTrackId = this._activeTrackId;
-      this._activeTrackId = track.video.videoId;
-      await this.pushTrackToViews(track as TrackData, lastTrackId !== track.video.videoId);
-    }
-  }
+		const currentTrackId = await this.getActiveTrackByDOM();
+		if (!this._activeTrackId || track.video.videoId === this._activeTrackId || currentTrackId === track.video.videoId) {
+			const lastTrackId = this._activeTrackId;
+			this._activeTrackId = track.video.videoId;
+			await this.pushTrackToViews(track as TrackData, lastTrackId !== track.video.videoId);
+		}
+	}
 
-  @IpcOn("track:title-change", { debounce: 100 })
-  private __onTitleChange(ev: any, trackId: string) {
-    if (trackId) this.__onActiveTrack(trackId);
-  }
+	@IpcOn("track:title-change", { debounce: 100 })
+	private __onTitleChange(ev: any, trackId: string) {
+		if (trackId) this.__onActiveTrack(trackId);
+	}
 
-  @IpcOn("track:set-active", { debounce: 1000 })
-  private async __onActiveTrack(trackId: string) {
-    if (this._activeTrackId === trackId) return;
+	@IpcOn("track:set-active", { debounce: 1000 })
+	private async __onActiveTrack(trackId: string) {
+		if (this._activeTrackId === trackId) return;
 
-    this.log(`active track:`, trackId);
-    this._activeTrackId = trackId;
+		this.log(`active track:`, trackId);
+		this._activeTrackId = trackId;
 
-    if (this.trackData) {
-      const td = this.trackData;
-      const [isLiked, isDLiked] = await this.currentSongLikeState();
-      await this.pushTrackToViews(td);
+		if (this.trackData) {
+			const td = this.trackData;
+			const [isLiked, isDLiked] = await this.currentSongLikeState();
+			await this.pushTrackToViews(td);
 
-      this.setTrackState({
-        id: trackId,
-        playing: this.playing,
-        duration: this.getTrackDuration() ?? 0,
-        liked: isLiked,
-        disliked: isDLiked,
-        progress: 0,
-        uiProgress: 0,
-        startedAt: Date.now() / 1000,
-      });
-    }
-  }
+			this.setTrackState({
+				id: trackId,
+				playing: this.playing,
+				duration: this.getTrackDuration() ?? 0,
+				liked: isLiked,
+				disliked: isDLiked,
+				progress: 0,
+				uiProgress: 0,
+				startedAt: Date.now() / 1000,
+			});
+		}
+	}
 
-  private trackChangeTimeout: NodeJS.Timeout | null = null;
+	private trackChangeTimeout: NodeJS.Timeout | null = null;
 
-  public async pushTrackToViews(trackRef: TrackData, updateLastFm: boolean = true) {
-    const track = clone(trackRef);
-    track.meta.startedAt = Date.now() / 1000;
+	public async pushTrackToViews(trackRef: TrackData, updateLastFm: boolean = true) {
+		const track = clone(trackRef);
+		track.meta.startedAt = Date.now() / 1000;
 
-    this.views.toolbarView?.webContents.send("track:title", track?.video?.title);
-    this.views.youtubeView?.webContents.send("track.change", track.video.videoId);
-    this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
+		this.views.toolbarView?.webContents.send("track:title", track?.video?.title);
+		this.views.youtubeView?.webContents.send("track.change", track.video.videoId);
+		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
 
-    const media = this.getProvider("mediaController");
-    if (media) await media.handleTrackMediaOSControlChange(track);
+		const media = this.getProvider("mediaController");
+		if (media) await media.handleTrackMediaOSControlChange(track);
 
-    const api = this.getProvider("api") as ApiProvider;
-    api.sendMessage("track:change", track);
+		const api = this.getProvider("api") as ApiProvider;
+		api.sendMessage("track:change", track);
 
-    const lastfm = this.getProvider("lastfm");
-    const lastfmState = lastfm.getState();
+		const lastfm = this.getProvider("lastfm");
+		const lastfmState = lastfm.getState();
 
-    if (
-      updateLastFm &&
-      lastfm &&
-      lastfmState.connected &&
-      !lastfmState.processing &&
-      track.video.videoId
-    ) {
-      await lastfm.handleTrackStart(track);
+		if (updateLastFm && lastfm && lastfmState.connected && !lastfmState.processing && track.video.videoId) {
+			await lastfm.handleTrackStart(track);
 
-      if (this.trackChangeTimeout) {
-        clearTimeout(this.trackChangeTimeout);
-      }
+			if (this.trackChangeTimeout) {
+				clearTimeout(this.trackChangeTimeout);
+			}
 
-      this.trackChangeTimeout = setTimeout(
-        () => {
-          lastfm.handleTrackChange(track);
-          if (this.trackChangeTimeout) {
-            clearTimeout(this.trackChangeTimeout);
-            this.trackChangeTimeout = null;
-          }
-        },
-        clamp(track.meta.duration * 0.65, 30, 90) * 1000,
-      );
-    }
-  }
+			this.trackChangeTimeout = setTimeout(
+				() => {
+					lastfm.handleTrackChange(track);
+					if (this.trackChangeTimeout) {
+						clearTimeout(this.trackChangeTimeout);
+						this.trackChangeTimeout = null;
+					}
+				},
+				clamp(track.meta.duration * 0.65, 30, 90) * 1000,
+			);
+		}
+	}
 
-  @IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, { debounce: 100 })
-  private async __onPlayStateChange(_ev: any, isPlaying: boolean, progressSeconds: number = 0) {
-    if (!this.trackData?.meta) return;
+	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, { debounce: 100 })
+	private async __onPlayStateChange(_ev: any, isPlaying: boolean, progressSeconds: number = 0) {
+		if (!this.trackData?.meta) return;
 
-    this._playState = isPlaying ? "playing" : "paused";
-    const discordProvider = this.getProvider("discord") as DiscordProvider;
+		this._playState = isPlaying ? "playing" : "paused";
+		const discordProvider = this.getProvider("discord") as DiscordProvider;
 
-    const duration = Number(this.trackData.meta.duration);
-    await discordProvider.updateTrackProgress(isPlaying, progressSeconds);
+		const duration = Number(this.trackData.meta.duration);
+		await discordProvider.updateTrackProgress(isPlaying, progressSeconds);
 
-    this.getProvider("mediaController")?.instance?.setTimeline(duration, progressSeconds);
+		this.getProvider("mediaController")?.instance?.setTimeline(duration, progressSeconds);
 
-    const [isLiked, isDLiked] = await this.currentSongLikeState();
+		const [isLiked, isDLiked] = await this.currentSongLikeState();
 
-    this.setTrackState((state) => {
-      state.playing = isPlaying;
-      state.progress = progressSeconds;
-      state.uiProgress = progressSeconds;
-      state.liked = isLiked;
-      state.disliked = isDLiked;
-      state.duration = duration;
-    });
-  }
+		this.setTrackState((state) => {
+			state.playing = isPlaying;
+			state.progress = progressSeconds;
+			state.uiProgress = progressSeconds;
+			state.liked = isLiked;
+			state.disliked = isDLiked;
+			state.duration = duration;
+		});
+	}
 }

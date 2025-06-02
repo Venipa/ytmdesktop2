@@ -6,13 +6,13 @@
 import { defineComponent } from "vue";
 
 export default defineComponent({
-  data() {
-    return {
-      error: null,
-      message: null,
-    };
-  },
-  mounted() {},
+	data() {
+		return {
+			error: null,
+			message: null,
+		};
+	},
+	mounted() {},
 });
 </script>
 

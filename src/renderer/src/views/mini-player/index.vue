@@ -265,180 +265,172 @@ import { intervalToDuration } from "date-fns";
 import { computed, onMounted, ref, watch } from "vue";
 const zeroPad = (num) => String(num).padStart(2, "0");
 const createInterval = (dts: number[]): [string, number] => [
-  dts
-    .filter((p, i) => (i === 0 ? Boolean(p) : true))
-    .map(zeroPad)
-    .join(":"),
-  dts.length,
+	dts
+		.filter((p, i) => (i === 0 ? Boolean(p) : true))
+		.map(zeroPad)
+		.join(":"),
+	dts.length,
 ];
 
 const [track, setTrack] = refIpc<TrackData>("TRACK_CHANGE", {
-  ignoreUndefined: true,
-  defaultValue: null,
+	ignoreUndefined: true,
+	defaultValue: null,
 });
 const accentColor = ref<string | null>(null);
 const [state] = refWindowState();
 const [playState, setPlayState] = refIpc<{
-  playing: boolean;
-  progress: number;
-  duration: number;
-  liked: boolean;
-  disliked: boolean;
+	playing: boolean;
+	progress: number;
+	duration: number;
+	liked: boolean;
+	disliked: boolean;
 }>("TRACK_PLAYSTATE");
 const showWinBorder = ref<boolean | "win11">(false);
 const trackBusy = ref(false);
 const isTop = ref(false);
 onMounted(() => {
-  document.title = `YouTube Music - Mini Player`;
-  Promise.all([
-    window.ipcRenderer.invoke("api/track"),
-    window.ipcRenderer.invoke("api/track/state"),
-    window.process.isWin11(),
-    window.ipcRenderer.invoke("miniplayer.stayOnTop"),
-    window.api.windowState(),
-  ]).then(([trackData, playStateData, isWin11, stayTop, windowState]) => {
-    setTrack(trackData);
-    setPlayState(playStateData);
-    showWinBorder.value =
-      window.process.platform === "win32"
-        ? isWin11
-          ? "win11"
-          : true
-        : windowState.platform.isMacOS;
-    isTop.value = stayTop;
-    console.log({
-      showWinBorder: showWinBorder.value,
-      platform: window.process.platform,
-      isWin11,
-    });
-  });
+	document.title = `YouTube Music - Mini Player`;
+	Promise.all([
+		window.ipcRenderer.invoke("api/track"),
+		window.ipcRenderer.invoke("api/track/state"),
+		window.process.isWin11(),
+		window.ipcRenderer.invoke("miniplayer.stayOnTop"),
+		window.api.windowState(),
+	]).then(([trackData, playStateData, isWin11, stayTop, windowState]) => {
+		setTrack(trackData);
+		setPlayState(playStateData);
+		showWinBorder.value = window.process.platform === "win32" ? (isWin11 ? "win11" : true) : windowState.platform.isMacOS;
+		isTop.value = stayTop;
+		console.log({
+			showWinBorder: showWinBorder.value,
+			platform: window.process.platform,
+			isWin11,
+		});
+	});
 });
 const progressHandle = ref<HTMLElement>(null);
 let accentHandle: any;
 const getCurrentAccent = (retry: number = 0) => {
-  if (accentHandle) clearTimeout(accentHandle);
-  window.ipcRenderer.invoke("api/track/accent").then((clr) => {
-    if (!clr || retry > 2) accentColor.value = clr || null;
-    else accentColor.value = clr;
-    console.log("Accent", clr);
-    if (!clr) accentHandle = setTimeout(getCurrentAccent.bind(this, retry + 1), 500);
-  });
+	if (accentHandle) clearTimeout(accentHandle);
+	window.ipcRenderer.invoke("api/track/accent").then((clr) => {
+		if (!clr || retry > 2) accentColor.value = clr || null;
+		else accentColor.value = clr;
+		console.log("Accent", clr);
+		if (!clr) accentHandle = setTimeout(getCurrentAccent.bind(this, retry + 1), 500);
+	});
 };
 function next() {
-  trackBusy.value = true;
-  return window.ipcRenderer
-    .invoke("api/track/next")
-    .finally(() => {
-      trackBusy.value = false;
-    })
-    .then(() => {
-      playState.value.progress = 0;
-    });
+	trackBusy.value = true;
+	return window.ipcRenderer
+		.invoke("api/track/next")
+		.finally(() => {
+			trackBusy.value = false;
+		})
+		.then(() => {
+			playState.value.progress = 0;
+		});
 }
 function prev() {
-  trackBusy.value = true;
-  return window.ipcRenderer.invoke("api/track/prev").finally(() => {
-    trackBusy.value = false;
-    playState.value.progress = 0;
-  });
+	trackBusy.value = true;
+	return window.ipcRenderer.invoke("api/track/prev").finally(() => {
+		trackBusy.value = false;
+		playState.value.progress = 0;
+	});
 }
 function forward(time = 10000) {
-  trackBusy.value = true;
-  return window.ipcRenderer.invoke("api/track/forward", { time }).finally(() => {
-    trackBusy.value = false;
-  });
+	trackBusy.value = true;
+	return window.ipcRenderer.invoke("api/track/forward", { time }).finally(() => {
+		trackBusy.value = false;
+	});
 }
 function backward(time = 10000) {
-  trackBusy.value = true;
-  return window.ipcRenderer.invoke("api/track/backward", { time }).finally(() => {
-    trackBusy.value = false;
-  });
+	trackBusy.value = true;
+	return window.ipcRenderer.invoke("api/track/backward", { time }).finally(() => {
+		trackBusy.value = false;
+	});
 }
 function pause() {
-  // trackBusy.value = true;
-  return window.ipcRenderer.invoke("api/track/pause").finally(() => {
-    // trackBusy.value = false;
-  });
+	// trackBusy.value = true;
+	return window.ipcRenderer.invoke("api/track/pause").finally(() => {
+		// trackBusy.value = false;
+	});
 }
 function play() {
-  // trackBusy.value = true;
-  return window.ipcRenderer.invoke("api/track/play").finally(() => {
-    // trackBusy.value = false;
-  });
+	// trackBusy.value = true;
+	return window.ipcRenderer.invoke("api/track/play").finally(() => {
+		// trackBusy.value = false;
+	});
 }
 function dislikeToggle() {
-  if (typeof playState.value?.disliked !== "boolean") return;
-  trackBusy.value = true;
-  return window.ipcRenderer.invoke("api/track/dislike", !playState.value.disliked).finally(() => {
-    trackBusy.value = false;
-  });
+	if (typeof playState.value?.disliked !== "boolean") return;
+	trackBusy.value = true;
+	return window.ipcRenderer.invoke("api/track/dislike", !playState.value.disliked).finally(() => {
+		trackBusy.value = false;
+	});
 }
 function likeToggle() {
-  if (typeof playState.value?.liked !== "boolean") return;
-  trackBusy.value = true;
-  return window.ipcRenderer.invoke("api/track/like", !playState.value.liked).finally(() => {
-    trackBusy.value = false;
-  });
+	if (typeof playState.value?.liked !== "boolean") return;
+	trackBusy.value = true;
+	return window.ipcRenderer.invoke("api/track/like", !playState.value.liked).finally(() => {
+		trackBusy.value = false;
+	});
 }
 function handleAccent(ev: Parameters<HTMLImageElement["onload"]>[0]) {
-  const src = (ev.target as HTMLImageElement).src;
-  if (src) {
-    getCurrentAccent();
-  }
+	const src = (ev.target as HTMLImageElement).src;
+	if (src) {
+		getCurrentAccent();
+	}
 }
 function setCurrentTime(ev: PointerEvent) {
-  if (!this.playState) return null;
-  const [el, progress] = [ev.currentTarget as HTMLDivElement, progressHandle.value];
-  const percSelected = ev.x / el.clientWidth;
-  const percCurrent = progress.clientWidth / el.clientWidth;
-  const { duration } = this.playState;
-  const seekTime = Math.floor(duration * (percSelected - percCurrent)) * 1000;
-  console.log({
-    progressMax: el.clientWidth,
-    progressValue: progress.clientWidth,
-    value: ev.x,
-    duration,
-  });
-  trackBusy.value = true;
-  return window.ipcRenderer.invoke("api/track/seek", seekTime).finally(() => {
-    trackBusy.value = false;
-  });
+	if (!this.playState) return null;
+	const [el, progress] = [ev.currentTarget as HTMLDivElement, progressHandle.value];
+	const percSelected = ev.x / el.clientWidth;
+	const percCurrent = progress.clientWidth / el.clientWidth;
+	const { duration } = this.playState;
+	const seekTime = Math.floor(duration * (percSelected - percCurrent)) * 1000;
+	console.log({
+		progressMax: el.clientWidth,
+		progressValue: progress.clientWidth,
+		value: ev.x,
+		duration,
+	});
+	trackBusy.value = true;
+	return window.ipcRenderer.invoke("api/track/seek", seekTime).finally(() => {
+		trackBusy.value = false;
+	});
 }
 async function toggleStayTop() {
-  const result = await window.api.action("miniplayer.stayOnTop");
-  isTop.value = result;
+	const result = await window.api.action("miniplayer.stayOnTop");
+	isTop.value = result;
 }
 function action(actionParam, ...params) {
-  return window.api.action(actionParam, ...params);
+	return window.api.action(actionParam, ...params);
 }
 function invoke(invokeParam, ...params) {
-  return window.api.invoke(invokeParam, ...params);
+	return window.api.invoke(invokeParam, ...params);
 }
 const thumbnail = computed(() => {
-  return track.value?.meta?.thumbnail;
+	return track.value?.meta?.thumbnail;
 });
 const playing = computed(() => {
-  return !!playState.value?.playing;
+	return !!playState.value?.playing;
 });
 
 const time = computed((): [string, string, number] => {
-  const { duration, progress } = playState.value ?? {};
-  if (typeof duration !== "number" || typeof progress !== "number") return null;
-  const [current] = (({ hours, minutes, seconds }) => createInterval([hours, minutes, seconds]))(
-    intervalToDuration({
-      start: duration * 1000 - (progress > duration ? duration : Math.floor(progress)) * 1000,
-      end: duration * 1000,
-    }),
-  );
-  const [end, endPad] = (({ hours, minutes, seconds }) =>
-    createInterval([hours, minutes, seconds]))(
-    intervalToDuration({ start: 0, end: duration * 1000 }),
-  ) as [string, number];
-  const timePad = endPad * 2;
-  const percentage = ((progress > duration ? duration : progress) / duration) * 100;
-  return [current.padEnd(timePad), end.padStart(timePad), percentage];
+	const { duration, progress } = playState.value ?? {};
+	if (typeof duration !== "number" || typeof progress !== "number") return null;
+	const [current] = (({ hours, minutes, seconds }) => createInterval([hours, minutes, seconds]))(
+		intervalToDuration({
+			start: duration * 1000 - (progress > duration ? duration : Math.floor(progress)) * 1000,
+			end: duration * 1000,
+		}),
+	);
+	const [end, endPad] = (({ hours, minutes, seconds }) => createInterval([hours, minutes, seconds]))(intervalToDuration({ start: 0, end: duration * 1000 })) as [string, number];
+	const timePad = endPad * 2;
+	const percentage = ((progress > duration ? duration : progress) / duration) * 100;
+	return [current.padEnd(timePad), end.padStart(timePad), percentage];
 });
-watch(state, windowState => logger.debug(windowState && {...windowState}))
+watch(state, (windowState) => logger.debug(windowState && { ...windowState }));
 </script>
 <style lang="scss">
 .track-status-time {

@@ -16,12 +16,12 @@
 import { defineComponent } from "vue";
 
 export default defineComponent({
-  components: {},
-  beforeRouteLeave() {
-    return;
-  },
-  created() {},
-  methods: {},
+	components: {},
+	beforeRouteLeave() {
+		return;
+	},
+	created() {},
+	methods: {},
 });
 </script>
 

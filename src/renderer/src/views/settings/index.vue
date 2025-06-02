@@ -69,20 +69,20 @@ import LogoIcon from "@renderer/assets/logo.svg";
 import ControlBar from "@renderer/components/ControlBar.vue";
 import { onMounted } from "vue";
 export default {
-  components: {
-    ControlBar,
-    LogoIcon,
-  },
-  setup() {
-    onMounted(() => {
-      document.title = `YouTube Music - Settings`;
-    });
-    return {
-      appVersion: window.api.version,
-      appOS: window.process.platform,
-      appEnv: window.process.environment,
-    };
-  },
+	components: {
+		ControlBar,
+		LogoIcon,
+	},
+	setup() {
+		onMounted(() => {
+			document.title = `YouTube Music - Settings`;
+		});
+		return {
+			appVersion: window.api.version,
+			appOS: window.process.platform,
+			appEnv: window.process.environment,
+		};
+	},
 };
 </script>
 

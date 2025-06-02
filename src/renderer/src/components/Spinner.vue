@@ -11,21 +11,21 @@ import { cva, type VariantProps } from "class-variance-authority";
 const pillCount = 12;
 
 const spinner = cva("spinner relative block box-border p-0 m-0", {
-  variants: {
-    size: {
-      default: "size-5",
-      sm: "size-4",
-      lg: "size-6",
-      xl: "size-10",
-    },
-  },
-  compoundVariants: [{ size: "default" }],
+	variants: {
+		size: {
+			default: "size-5",
+			sm: "size-4",
+			lg: "size-6",
+			xl: "size-10",
+		},
+	},
+	compoundVariants: [{ size: "default" }],
 });
 
 type SpinnerProps = VariantProps<typeof spinner>;
 
 withDefaults(defineProps<{ size?: SpinnerProps["size"] }>(), {
-  size: "default",
+	size: "default",
 });
 </script>
 <style scoped>

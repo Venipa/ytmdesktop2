@@ -44,16 +44,14 @@ const showWinBorder = ref(false);
 const accentColor = ref<string | null>("#a0a0a0"); // todo
 
 const [, setTrack] = refIpc<TrackData>("TRACK_CHANGE", {
-  ignoreUndefined: true,
-  defaultValue: null,
+	ignoreUndefined: true,
+	defaultValue: null,
 });
 document.title = `YouTube Music - Task View`;
-Promise.all([window.process.isWin11(), window.ipcRenderer.invoke("api/track")]).then(
-  ([isWin11, currentTrack]) => {
-    showWinBorder.value = window.process.platform === "win32" ? !isWin11 : false;
-    setTrack(currentTrack);
-  },
-);
+Promise.all([window.process.isWin11(), window.ipcRenderer.invoke("api/track")]).then(([isWin11, currentTrack]) => {
+	showWinBorder.value = window.process.platform === "win32" ? !isWin11 : false;
+	setTrack(currentTrack);
+});
 </script>
 <style lang="scss">
 .task-menu {

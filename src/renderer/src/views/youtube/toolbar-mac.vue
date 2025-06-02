@@ -38,34 +38,34 @@ import CloseIcon from "@renderer/assets/icons/close.svg";
 import { defineComponent, ref } from "vue";
 
 const title = ref(),
-  appVersion = ref(window.api.version);
+	appVersion = ref(window.api.version);
 export default defineComponent({
-  components: {
-    CloseIcon,
-  },
-  beforeRouteLeave() {
-    return;
-  },
-  setup() {
-    return {
-      title,
-      appVersion,
-    };
-  },
-  created() {
-    window.ipcRenderer.on("track:title", (ev, title) => {
-      this.title = null;
-      if (title) this.title = title;
-    });
-  },
-  methods: {
-    onClose() {
-      window.api.quit();
-    },
-    onSettings() {
-      window.api.settings.open();
-    },
-  },
+	components: {
+		CloseIcon,
+	},
+	beforeRouteLeave() {
+		return;
+	},
+	setup() {
+		return {
+			title,
+			appVersion,
+		};
+	},
+	created() {
+		window.ipcRenderer.on("track:title", (ev, title) => {
+			this.title = null;
+			if (title) this.title = title;
+		});
+	},
+	methods: {
+		onClose() {
+			window.api.quit();
+		},
+		onSettings() {
+			window.api.settings.open();
+		},
+	},
 });
 </script>
 

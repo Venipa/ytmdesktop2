@@ -16,22 +16,22 @@ import type WindowUtilsProvider from "@main/plugins/windowProvider.plugin";
 import type YoutubeControlProvider from "@main/plugins/youtubeProvider.plugin";
 
 declare module "ytmd" {
-  interface BaseProviderNames {
-    api: ApiProvider;
-    app: AppProvider;
-    settings: SettingsProvider;
-    track: TrackProvider;
-    discord: DiscordProvider;
-    events: EventProvider;
-    customcss: CustomCSSProvider;
-    mediaController: MediaControlProvider;
-    mp: MiniPlayerProvider;
-    navigation: NavigationProvider;
-    startup: StartupProvider;
-    tray: TrayProvider;
-    update: UpdateProvider;
-    lastfm: LastFMProvider;
-    youtube: YoutubeControlProvider;
-    window: WindowUtilsProvider;
-  }
+	interface BaseProviderNames {
+		api: ApiProvider;
+		app: AppProvider;
+		settings: SettingsProvider;
+		track: TrackProvider;
+		discord: DiscordProvider;
+		events: EventProvider;
+		customcss: CustomCSSProvider;
+		mediaController: MediaControlProvider;
+		mp: MiniPlayerProvider;
+		navigation: NavigationProvider;
+		startup: StartupProvider;
+		tray: TrayProvider;
+		update: UpdateProvider;
+		lastfm: LastFMProvider;
+		youtube: YoutubeControlProvider;
+		window: WindowUtilsProvider;
+	}
 }

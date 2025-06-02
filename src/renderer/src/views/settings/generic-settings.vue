@@ -132,9 +132,9 @@ const [apiEnabledSetting] = refIpcSetting("api.enabled");
 const [appAutostartEnabled] = refIpcSetting("app.autostart");
 
 const disableGetStarted = () => {
-  window.api.settingsProvider.update("app.getstarted", false).then((v) => {
-    getStartedEnabled.value = v;
-  });
+	window.api.settingsProvider.update("app.getstarted", false).then((v) => {
+		getStartedEnabled.value = v;
+	});
 };
 </script>
 

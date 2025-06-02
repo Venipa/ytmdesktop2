@@ -30,7 +30,7 @@ import SettingsCheckbox from "@renderer/components/SettingsCheckbox.vue";
 import { defineComponent } from "vue";
 
 export default defineComponent({
-  components: { SettingsCheckbox },
+	components: { SettingsCheckbox },
 });
 </script>
 

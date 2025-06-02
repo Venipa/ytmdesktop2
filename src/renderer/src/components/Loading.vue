@@ -15,15 +15,15 @@
 import { ref } from "vue";
 
 export default {
-  setup(p: any) {
-    const size = ref((p.size || 32) + "px");
-    const color = ref(p.color || "#fff");
-    return {
-      enabled: p.enabled,
-      size,
-      color,
-    };
-  },
+	setup(p: any) {
+		const size = ref((p.size || 32) + "px");
+		const color = ref(p.color || "#fff");
+		return {
+			enabled: p.enabled,
+			size,
+			color,
+		};
+	},
 };
 </script>
 

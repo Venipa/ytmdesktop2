@@ -45,33 +45,33 @@ import { refWindowState } from "@shared/utils/Ipc";
 import { computed } from "vue";
 type ControlType = "close" | "maximize" | "minimize";
 const props = defineProps({
-  title: String,
-  controls: {
-    type: Object,
-    default: null,
-    required: false,
-  },
+	title: String,
+	controls: {
+		type: Object,
+		default: null,
+		required: false,
+	},
 });
 const isMac = computed(() => window.process.platform === "darwin");
 const showMin = computed(() => {
-  const { controls } = props || {};
-  if (!controls) return true;
-  return !!controls.find((x) => x === "minimize");
+	const { controls } = props || {};
+	if (!controls) return true;
+	return !!controls.find((x) => x === "minimize");
 });
 const showClose = computed(() => {
-  const { controls } = props || {};
-  if (!controls) return true;
-  return !!controls.find((x) => x === "close");
+	const { controls } = props || {};
+	if (!controls) return true;
+	return !!controls.find((x) => x === "close");
 });
 const [state] = refWindowState();
 function onClose() {
-  window.api.closeWindow();
+	window.api.closeWindow();
 }
 function onMax() {
-  window.api.maximize();
+	window.api.maximize();
 }
 function onMin() {
-  window.api.minimize();
+	window.api.minimize();
 }
 </script>
 <style lang="scss"></style>

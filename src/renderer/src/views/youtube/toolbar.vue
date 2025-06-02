@@ -74,58 +74,53 @@
 <script setup lang="ts">
 import Spinner from "@renderer/components/Spinner.vue";
 import { refIpc, refMainWindowState } from "@shared/utils/Ipc";
-import {
-  ArrowLeftIcon,
-  XIcon as CloseIcon,
-  MaximizeIcon as MaxIcon,
-  Minimize2 as MinIcon,
-} from "lucide-vue-next";
+import { ArrowLeftIcon, XIcon as CloseIcon, MaximizeIcon as MaxIcon, Minimize2 as MinIcon } from "lucide-vue-next";
 import { ref } from "vue";
 import ToolbarOptions from "./toolbar-options.vue";
 const appVersion = ref(window.api.version);
 const isDarwin = ref(window.process.platform === "darwin");
 const [state] = refMainWindowState();
 const [title] = refIpc("TRACK_TITLE_CHANGE", {
-  ignoreUndefined: true,
-  defaultValue: null,
+	ignoreUndefined: true,
+	defaultValue: null,
 });
 const [updateInfo, setUpdateInfo] = refIpc("APP_UPDATE", {
-  ignoreUndefined: true,
-  defaultValue: null,
+	ignoreUndefined: true,
+	defaultValue: null,
 });
 const [updateInfoProgress] = refIpc("APP_UPDATE_PROGRESS", {
-  ignoreUndefined: true,
-  defaultValue: null,
+	ignoreUndefined: true,
+	defaultValue: null,
 });
 const [updateDownloaded] = refIpc("APP_UPDATE_DOWNLOADED", {
-  ignoreUndefined: true,
-  defaultValue: null,
-  mapper: (x) => !!x,
+	ignoreUndefined: true,
+	defaultValue: null,
+	mapper: (x) => !!x,
 });
 const isInstalling = ref(false);
 function runUpdate() {
-  if (isInstalling.value) return Promise.resolve(null);
-  isInstalling.value = true;
-  return window.api
-    .action("app.installUpdate")
-    .then(() => {
-      setUpdateInfo(null);
-    })
-    .finally(() => {
-      isInstalling.value = false;
-    });
+	if (isInstalling.value) return Promise.resolve(null);
+	isInstalling.value = true;
+	return window.api
+		.action("app.installUpdate")
+		.then(() => {
+			setUpdateInfo(null);
+		})
+		.finally(() => {
+			isInstalling.value = false;
+		});
 }
 function onClose() {
-  window.api.quit();
+	window.api.quit();
 }
 function onMax() {
-  window.api.maximize();
+	window.api.maximize();
 }
 function onMin() {
-  window.api.minimize();
+	window.api.minimize();
 }
 function onGoBack() {
-  window.api.goback();
+	window.api.goback();
 }
 const root = ref<HTMLElement>();
 // onMounted(() => {

@@ -44,47 +44,47 @@ import Spinner from "@renderer/components/Spinner.vue";
 import { refIpc } from "@shared/utils/Ipc";
 import { computed, onMounted, ref } from "vue";
 const appVersion = computed((): string => {
-  return (window as any).api.version;
+	return (window as any).api.version;
 });
 const [updateInfo, setUpdateInfo] = refIpc("APP_UPDATE", {
-  ignoreUndefined: true,
-  defaultValue: null,
+	ignoreUndefined: true,
+	defaultValue: null,
 });
 const [updateInfoProgress] = refIpc("APP_UPDATE_PROGRESS", {
-  ignoreUndefined: true,
-  defaultValue: null,
+	ignoreUndefined: true,
+	defaultValue: null,
 });
 const [updateDownloaded] = refIpc("APP_UPDATE_DOWNLOADED", {
-  ignoreUndefined: true,
-  defaultValue: null,
-  mapper: (x) => !!x,
+	ignoreUndefined: true,
+	defaultValue: null,
+	mapper: (x) => !!x,
 });
 const isInstalling = ref(false);
 const [updateChecking, setUpdateChecking] = refIpc("APP_UPDATE_CHECKING");
 onMounted(() => {
-  (window as any).api.action("app.getUpdate").then((ev) => setUpdateInfo(ev));
+	(window as any).api.action("app.getUpdate").then((ev) => setUpdateInfo(ev));
 });
 function action(actionParam: any) {
-  return (window as any).api.action(actionParam);
+	return (window as any).api.action(actionParam);
 }
 function checkUpdate() {
-  if (updateChecking.value) return;
-  setUpdateChecking(true);
-  action("app.checkUpdate").finally(() => {
-    setUpdateChecking(false);
-  });
+	if (updateChecking.value) return;
+	setUpdateChecking(true);
+	action("app.checkUpdate").finally(() => {
+		setUpdateChecking(false);
+	});
 }
 function runUpdate() {
-  if (isInstalling.value) return;
-  isInstalling.value = true;
-  return (window as any).api
-    .action("app.installUpdate")
-    .then(() => {
-      setUpdateInfo(null);
-    })
-    .finally(() => {
-      isInstalling.value = false;
-    });
+	if (isInstalling.value) return;
+	isInstalling.value = true;
+	return (window as any).api
+		.action("app.installUpdate")
+		.then(() => {
+			setUpdateInfo(null);
+		})
+		.finally(() => {
+			isInstalling.value = false;
+		});
 }
 </script>
 

@@ -31,48 +31,45 @@ import { clamp, debounce } from "lodash-es";
 import { defineComponent, onBeforeMount, ref } from "vue";
 
 export default defineComponent({
-  props: {
-    configKey: {
-      type: String,
-      required: true,
-    },
-    defaultValue: Object,
-    min: Number,
-    max: Number,
-  },
-  setup(context) {
-    const value = ref<any>(),
-      fileInputRef = ref<any>();
-    onBeforeMount(async () => {
-      const res = await (window as any).api.settingsProvider.get(
-        context.configKey,
-        context.defaultValue ?? null,
-      );
-      value.value = res;
-      console.log({ value: value.value })
-    });
-    const updateSetting = ref<(_ev: HTMLInputElement) => null>(debounce((ev: HTMLInputElement) => {
-      if (context.configKey) {
-        if (ev.type === "file" && ev.files.length === 0) return;
-        let inputValue: any;
-        if ((ev.type === "number" && context.min !== undefined) || context.max !== undefined) {
-          const minValue = context.min ?? ev.valueAsNumber;
-          const maxValue = context.max ?? ev.valueAsNumber;
-          inputValue = clamp(Number(ev.value), minValue, maxValue);
-        } else {
-          inputValue = ev.type === "file" ? window.api.getPathFromFile(ev.files[0]) : ev.value;
-        }
-        (window as any).api.settingsProvider
-          .update(context.configKey, inputValue)
-          .then((v) => (value.value = inputValue = v));
-      }
-    }, 500) as any)
-    return {
-      value,
-      fileInputRef,
-      updateSetting
-    };
-  }
+	props: {
+		configKey: {
+			type: String,
+			required: true,
+		},
+		defaultValue: Object,
+		min: Number,
+		max: Number,
+	},
+	setup(context) {
+		const value = ref<any>(),
+			fileInputRef = ref<any>();
+		onBeforeMount(async () => {
+			const res = await (window as any).api.settingsProvider.get(context.configKey, context.defaultValue ?? null);
+			value.value = res;
+			console.log({ value: value.value });
+		});
+		const updateSetting = ref<(_ev: HTMLInputElement) => null>(
+			debounce((ev: HTMLInputElement) => {
+				if (context.configKey) {
+					if (ev.type === "file" && ev.files.length === 0) return;
+					let inputValue: any;
+					if ((ev.type === "number" && context.min !== undefined) || context.max !== undefined) {
+						const minValue = context.min ?? ev.valueAsNumber;
+						const maxValue = context.max ?? ev.valueAsNumber;
+						inputValue = clamp(Number(ev.value), minValue, maxValue);
+					} else {
+						inputValue = ev.type === "file" ? window.api.getPathFromFile(ev.files[0]) : ev.value;
+					}
+					(window as any).api.settingsProvider.update(context.configKey, inputValue).then((v) => (value.value = inputValue = v));
+				}
+			}, 500) as any,
+		);
+		return {
+			value,
+			fileInputRef,
+			updateSetting,
+		};
+	},
 });
 </script>
 <style></style>
