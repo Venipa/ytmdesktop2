@@ -94,6 +94,7 @@ class DiscordRPCManager {
 		this._presence = null;
 		this._enabled = false;
 	}
+
 	private _createClientAbortController: AbortController | null = null;
 	private async createClient(presence: Presence = DEFAULT_PRESENCE, isAborted: boolean = false): Promise<[DiscordClient, Presence] | null> {
 		if (isAborted) {
@@ -248,12 +249,14 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
 
 	async AfterInit() {
 		const settings = this.settingsInstance.instance;
-		if (!settings.discord.enabled || !this._enabled) return;
+		if (!settings.discord.enabled || this._enabled) return;
 		await this.enable();
 	}
 
 	async updateTrackProgress(isPlaying: boolean, mediaProgress: number = 0) {
-		if (this.trackService.trackData && this.isConnected) await this.rpcManager.setActivity(discordEmbedFromTrack(this.trackService.trackData, isPlaying, mediaProgress));
+		if (this.trackService.trackData && this.isConnected) {
+			await this.rpcManager.setActivity(discordEmbedFromTrack(this.trackService.trackData, isPlaying, mediaProgress));
+		}
 	}
 
 	@IpcOn("settingsProvider.change", {
@@ -273,10 +276,10 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
 		debounce: 1000,
 	})
 	private async __onToggleButtons() {
-		if (this.isConnected) {
-			const track = this.trackService.trackData;
+		if (this.trackService.trackData) {
+			const { trackData: track, playing, trackState } = this.trackService;
 			if (track) {
-				await this.rpcManager.setActivity(discordEmbedFromTrack(track));
+				await this.rpcManager.setActivity(discordEmbedFromTrack(track, playing, trackState?.progress ?? 0));
 			}
 		}
 	}

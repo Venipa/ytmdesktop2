@@ -12,8 +12,7 @@
                           accept=".scss,.sass">
             <template #label> SCSS File </template>
           </settings-input>
-          <settings-checkbox config-key="customcss.scssFileWatch"
-                             @change="scssWatch"> Update on Changes </settings-checkbox>
+          <settings-checkbox config-key="customcss.watching"> Update on Changes </settings-checkbox>
           <button class="btn btn-primary"
                   @click="reloadCSS">Reload</button>
         </div>
@@ -28,12 +27,9 @@ import SettingsInput from "@renderer/components/SettingsInput.vue";
 import { ref } from "vue";
 
 const customCssToggle = ref(null),
-	customCssPathInput = ref(null);
+  customCssPathInput = ref(null);
 function reloadCSS() {
-	(window as any).api.reloadCustomCss();
-}
-function scssWatch(enabled: boolean) {
-	(window as any).api.watchCustomCss(!!enabled);
+  (window as any).api.reloadCustomCss();
 }
 </script>
 <style></style>

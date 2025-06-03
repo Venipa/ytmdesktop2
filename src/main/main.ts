@@ -38,7 +38,7 @@ const runApp = async function () {
 			mainWindow.main.show();
 
 			if (serviceCollection) {
-				serviceCollection.getItems().forEach((p) => p.__registerWindows(mainWindow));
+				serviceCollection.registerWindows(mainWindow);
 				serviceCollection.exec("AfterInit");
 			}
 		}
@@ -64,7 +64,7 @@ const runApp = async function () {
 			mainWindow.main.show();
 		}
 
-		serviceCollection.getItems().forEach((p) => p.__registerWindows(mainWindow));
+		serviceCollection.registerWindows(mainWindow);
 		serviceCollection.exec("AfterInit");
 	});
 

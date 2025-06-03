@@ -212,8 +212,14 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		this.views.youtubeView?.webContents.send("track.change", track.video.videoId);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
 
-		const media = this.getProvider("mediaController");
-		if (media) await media.handleTrackMediaOSControlChange(track);
+		try {
+			const media = this.getProvider("mediaController");
+			if (media?.instance) {
+				await media.handleTrackMediaOSControlChange(track);
+			}
+		} catch (error) {
+			this.logger.error("Failed to update media controls:", error);
+		}
 
 		const api = this.getProvider("api") as ApiProvider;
 		api.sendMessage("track:change", track);
@@ -251,7 +257,14 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		const duration = Number(this.trackData.meta.duration);
 		await discordProvider.updateTrackProgress(isPlaying, progressSeconds);
 
-		this.getProvider("mediaController")?.instance?.setTimeline(duration, progressSeconds);
+		try {
+			const mediaController = this.getProvider("mediaController");
+			if (mediaController?.instance) {
+				mediaController.instance.setTimeline(duration, progressSeconds);
+			}
+		} catch (error) {
+			this.logger.error("Failed to update media timeline:", error);
+		}
 
 		const [isLiked, isDLiked] = await this.currentSongLikeState();
 

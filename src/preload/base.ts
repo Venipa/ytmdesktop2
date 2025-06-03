@@ -65,7 +65,6 @@ export default {
 		on: (channel: string, func) => ipcRenderer.on(channel, func),
 		off: (channel: string, func) => ipcRenderer.off(channel, func),
 		reloadCustomCss: () => ipcRenderer.emit("settings.customCssUpdate"),
-		watchCustomCss: (enabled: boolean) => ipcRenderer.emit("settings.customCssWatch", enabled),
 		mainWindowState: () => ipcRenderer.invoke("mainWindowState"),
 		windowState: () => ipcRenderer.invoke("windowState"),
 		getPathFromFile: (file: File) => webUtils.getPathForFile(file),

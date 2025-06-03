@@ -12,6 +12,7 @@ import { get as _get, debounce } from "lodash-es";
 import { Subject, distinctUntilChanged, filter, map, startWith, takeUntil } from "rxjs";
 import { LastFMSettings } from "ytmd";
 import { stringifyJson } from "../lib/json";
+import { CustomCssConfig } from "./customCssProvider.plugin";
 
 const defaultSettings = {
 	api: {
@@ -43,7 +44,8 @@ const defaultSettings = {
 	customcss: {
 		enabled: true,
 		scssFile: null,
-	},
+		watching: false,
+	} as CustomCssConfig,
 	state: {
 		currentUrl: null,
 	},
@@ -51,7 +53,9 @@ const defaultSettings = {
 		enabled: false,
 	} as LastFMSettings,
 };
+
 export type SettingsStore = typeof defaultSettings & { [key: string]: any };
+
 const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
 	defaults: defaultSettings as SettingsStore,
 	migrations: [
@@ -79,6 +83,7 @@ const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
 @IpcContext
 export default class SettingsProvider extends BaseProvider implements OnDestroy, BeforeStart, AfterInit {
 	readonly onChange = new Subject<SettingsStore>();
+
 	onChangeProp(key: string) {
 		const settings = this.instance;
 		return this.onChange.pipe(takeUntil(this.onChange), startWith(settings)).pipe(
@@ -87,46 +92,57 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 			distinctUntilChanged((l, r) => stringifyJson(l) === stringifyJson(r)),
 		);
 	}
+
 	constructor(private app: App) {
 		super("settings");
 	}
+
 	private getConfigPath() {
 		return path.resolve(this.app.getPath("userData"), "app-settings.json");
 	}
+
 	async BeforeStart() {
 		const configFile = this.getConfigPath();
 		this.logger.debug(configFile);
 	}
+
 	get instance() {
 		return _settingsStore.store;
 	}
+
 	get<T = any>(key: string, defaultValue?: any): T {
 		return _get(_settingsStore.store, key, defaultValue);
 	}
+
 	set(key: string, value: any) {
 		_settingsStore.set(key, value ?? null);
 		this.onChange.next(_settingsStore.store);
 		try {
-			serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value), this.windowContext.sendToAllViews(eventNames.SERVER_SETTINGS_CHANGE, key, value);
+			serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value);
+			this.windowContext.sendToAllViews(eventNames.SERVER_SETTINGS_CHANGE, key, value);
 		} catch (ex) {
 			this.logger.error(ex);
 		}
 		return this;
 	}
+
 	@IpcOn("settingsProvider.save", {
 		debounce: 5000,
 	})
 	saveToDrive() {}
+
 	async OnDestroy() {
 		this.onChange.complete();
 		this.saveToDrive();
 	}
+
 	AfterInit() {
 		this.views.youtubeView.webContents.on("did-navigate-in-page", (ev, location) => {
 			this.logger.debug(`navigate-in-page :: ${location}`);
 			const url = new URLSearchParams(location.split("?")[1]);
 			if (url?.has("v")) serverMain.emit("track:set-active", url.get("v"));
 		});
+
 		let previousHostname: string = defaultUrl;
 		this.views.youtubeView.webContents.on(
 			"did-navigate",
@@ -135,9 +151,7 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 				const url = new URL(location);
 				if (url) {
 					if (url.hostname === defaultUri.hostname && previousHostname !== url.hostname) {
-						serverMain.emit("settings.customCssUpdate");
-						serverMain.emit("settings.customCssWatch");
-						this.getProvider("customcss").initializeSCSS();
+						serverMain.emit("customcss.update");
 					}
 					previousHostname = url.hostname;
 					if (url.hostname !== defaultUri.hostname) {
@@ -147,18 +161,21 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 			}, 500),
 		);
 	}
+
 	@IpcHandle("settingsProvider.get")
 	private _onEventGet(ev: IpcMainInvokeEvent, ...args: any[]) {
 		const [key, value] = args;
 		const returnValue = this.get(key);
 		return returnValue === undefined || returnValue === null ? value : returnValue;
 	}
+
 	@IpcHandle("settingsProvider.getAll")
 	private _onEventGetAll(ev: IpcMainInvokeEvent, ...args: any[]) {
 		const [value] = args;
 		const returnValue = _settingsStore.store;
 		return returnValue === undefined || returnValue === null ? value : returnValue;
 	}
+
 	@IpcOn("settingsProvider.set")
 	private _onEventSet(ev: IpcMainEvent, ...args: any[]) {
 		const [key, value] = args;
@@ -166,6 +183,7 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 		this.logger.debug(key, value);
 		this.saveToDrive();
 	}
+
 	@IpcHandle("settingsProvider.update")
 	private async _onEventUpdate(ev: IpcMainInvokeEvent, ...args: any[]) {
 		const [key, value] = args;

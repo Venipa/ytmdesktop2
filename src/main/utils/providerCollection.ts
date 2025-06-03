@@ -1,7 +1,7 @@
 import logger from "@shared/utils/Logger";
 import { App } from "electron";
 import { BaseProviderNames } from "ytmd";
-import { BaseCollection } from "./baseCollection";
+import { BaseCollection, LifecycleEvent } from "./baseCollection";
 import { BaseProvider } from "./baseProvider";
 
 export class ProviderCollection extends BaseCollection<BaseProvider> {
@@ -10,14 +10,14 @@ export class ProviderCollection extends BaseCollection<BaseProvider> {
 	}
 
 	async initialize() {
-		await this.initializeItems("../plugins/*.plugin.ts");
-		this.items.forEach((p) => p.__registerProviders(this.items));
+		await this.initializeItems("plugins");
+		this.registerProviders(this.items);
 		return this;
 	}
 
-	async exec(event: "OnInit" | "OnDestroy" | "AfterInit" | "BeforeStart") {
+	async exec(event: LifecycleEvent) {
 		logger.debug(`executing provider event: "${event}" for ${this.getProviderNames().join(", ")}`);
-		return await this.executeMethod(event, this.app);
+		return await this.executeLifecycleEvent(event, this.app);
 	}
 
 	getTypedProvider<T extends BaseProviderNames[K], K extends keyof BaseProviderNames & string>(name: K): T {

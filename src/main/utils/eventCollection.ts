@@ -9,7 +9,7 @@ export class EventCollection extends BaseCollection<BaseEvent> {
 	}
 
 	async initialize(providers?: BaseProvider[]) {
-		await this.initializeItems("../events/*.event.ts");
+		await this.initializeItems("events");
 		this.items.forEach((p) => {
 			if (providers) p.__registerProviders(providers);
 			p.__registerApp(this.app);

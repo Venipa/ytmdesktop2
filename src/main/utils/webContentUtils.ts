@@ -3,26 +3,36 @@ import { is, platform } from "@electron-toolkit/utils";
 import { createLogger } from "@shared/utils/console";
 import { BrowserWindow, WebContents, WebContentsView } from "electron";
 import { Subject, Subscription, debounceTime, delay, filter, takeWhile, tap } from "rxjs";
-import { compileAsync } from "sass";
 import { defaultUri } from "./devUtils";
 import { BrowserWindowViews } from "./mappedWindow";
 import { fromMainEvent } from "./rxjs";
+const cssLogger = createLogger("webContentUtils");
 const cssWindowIdMap: Record<string, string> = {};
-export async function rootWindowInjectCustomCss({ webContents }: WebContentsView, scssFile: string) {
+export async function rootWindowInjectCustomCss({ webContents }: WebContentsView, css: string) {
 	const wid = String(webContents.id);
 	if (cssWindowIdMap[wid]) await rootWindowClearCustomCss({ webContents } as WebContentsView);
-	const css = await compileAsync(scssFile)
-		.then((r) => r.css)
-		.catch(() => null);
-	if (css) cssWindowIdMap[wid] = await webContents.insertCSS(css);
 
-	return true;
+	try {
+		cssWindowIdMap[wid] = await webContents.insertCSS(css);
+		return true;
+	} catch (error: any) {
+		cssLogger.error(`Failed to inject CSS: ${error?.message || "Unknown error"}`);
+		return false;
+	}
 }
 export async function rootWindowClearCustomCss({ webContents }: WebContentsView) {
 	const wid = String(webContents.id);
-	if (!cssWindowIdMap[wid]) return;
-	await webContents.removeInsertedCSS(wid);
-	delete cssWindowIdMap[wid];
+	if (!cssWindowIdMap[wid]) return false;
+
+	try {
+		await webContents.removeInsertedCSS(cssWindowIdMap[wid]);
+		delete cssWindowIdMap[wid];
+		cssLogger.debug(`CSS cleared for ${wid}`);
+		return true;
+	} catch (error: any) {
+		cssLogger.error(`Failed to clear CSS: ${error?.message || "Unknown error"}`);
+		return false;
+	}
 }
 export type LockSizeOptions = { resize: "both" | "width" | "height" };
 export function lockSizeToParent(win: BrowserWindow, options: LockSizeOptions = { resize: "both" }) {
