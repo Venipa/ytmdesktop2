@@ -1,6 +1,7 @@
 import type ApiProvider from "@main/plugins/apiProvider.plugin";
 import type AppProvider from "@main/plugins/appProvider.plugin";
 import type CustomCSSProvider from "@main/plugins/customCssProvider.plugin";
+import type DeeplinkProvider from "@main/plugins/deeplinkProvider.plugin";
 import type DiscordProvider from "@main/plugins/discordProvider.plugin";
 import type EventProvider from "@main/plugins/eventProvider.plugin";
 import type LastFMProvider from "@main/plugins/lastfmProvider.plugin";
@@ -33,5 +34,6 @@ declare module "ytmd" {
 		lastfm: LastFMProvider;
 		youtube: YoutubeControlProvider;
 		window: WindowUtilsProvider;
+		deeplink: DeeplinkProvider;
 	}
 }
