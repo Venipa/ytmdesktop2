@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-13]
-        node-version: [20.18.0]
+        node-version: [22.16.0]
 
     steps:
       - name: Check out Git repository
@@ -56,11 +56,10 @@ jobs:
           value: ${{ steps.getVersion.outputs.value }}
       - name: Install dependencies
         run: |
-          yarn config set ignore-engines true
-          yarn --frozen-lockfile
+          pnpm install --frozen-lockfile
 
       - name: Build Electron release
-        run: yarn release
+        run: pnpm release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}

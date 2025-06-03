@@ -128,7 +128,6 @@
     "bufferutil": "^4.0.6",
     "utf-8-validate": "^5.0.8"
   },
-  "packageManager": "yarn@1.22.22",
   "repository": "https://github.com/Venipa/ytmdesktop2",
   "findUnusedExports": {
     "include": [
