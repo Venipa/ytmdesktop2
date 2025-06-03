@@ -1,5 +1,9 @@
 export const meta = {
 	name: "Track watch title change",
+	description: "Watch for track title changes",
+	author: "Venipa <https://github.com/Venipa>",
+	version: "1.0.0",
+	enabled: true,
 };
 
 export default () => {

@@ -1,8 +1,8 @@
-import { contextBridge, ipcRenderer } from "electron";
-import { webUtils } from "electron/renderer";
+import { contextBridge } from "electron";
+import { ipcRenderer, webUtils } from "electron/renderer";
 import pkg from "../../package.json";
+import type { ClientPluginSerialized } from "../main/utils/pluginManager";
 import translations from "../translations";
-console.log(window);
 const appVersion = import.meta.env.APP_VERSION || pkg.version;
 function ensureDomLoaded(f: () => void) {
 	if (["interactive", "complete"].indexOf(document.readyState) > -1) {
@@ -19,7 +19,7 @@ function ensureDomLoaded(f: () => void) {
 }
 export const basename = (path: string) => path.split(/[\\/]/).pop();
 export const setContext = (key: string, value: any) => (process.contextIsolated ? contextBridge.exposeInMainWorld(key, value) : (window[key] = Object.freeze(value)));
-ipcRenderer.setMaxListeners(100);
+
 export default {
 	ipcRenderer: {
 		emit: (event, ...data) => ipcRenderer.send(event, ...data),
@@ -28,6 +28,12 @@ export default {
 		invoke: (channel, ...data) => ipcRenderer.invoke(channel, ...data),
 		appVersion: appVersion,
 	},
+	pluginManager: {
+		loadPlugins: () => ipcRenderer.invoke("pluginManager.loadPlugins") as Promise<void>,
+		getPlugins: () => ipcRenderer.invoke("pluginManager.getPlugins") as Promise<ClientPluginSerialized[]>,
+		getPlugin: (name: string) => ipcRenderer.invoke("pluginManager.getPlugin", name) as Promise<ClientPluginSerialized | undefined>,
+		getEnabledPlugins: () => ipcRenderer.invoke("pluginManager.getEnabledPlugins") as Promise<ClientPluginSerialized[]>,
+	},
 	process: {
 		version: appVersion,
 		environment: import.meta.env.MODE,
@@ -35,6 +41,13 @@ export default {
 		isWin11: () => ipcRenderer.invoke("app.isWin11").catch(() => false),
 	},
 	api: {
+		ipcRenderer: {
+			emit: (event, ...data) => ipcRenderer.send(event, ...data),
+			on: (channel, func) => ipcRenderer.on(channel, func),
+			off: (channel, func) => ipcRenderer.off(channel, func),
+			invoke: (channel, ...data) => ipcRenderer.invoke(channel, ...data),
+			appVersion: appVersion,
+		},
 		version: appVersion,
 		plugins: [],
 		settings: {
@@ -64,10 +77,14 @@ export default {
 		emit: (event: string, ...data: any[]) => ipcRenderer.send(event, ...data),
 		on: (channel: string, func) => ipcRenderer.on(channel, func),
 		off: (channel: string, func) => ipcRenderer.off(channel, func),
-		reloadCustomCss: () => ipcRenderer.emit("settings.customCssUpdate"),
+		reloadCustomCss: () => ipcRenderer.send("settings.customCssUpdate"),
 		mainWindowState: () => ipcRenderer.invoke("mainWindowState"),
 		windowState: () => ipcRenderer.invoke("windowState"),
 		getPathFromFile: (file: File) => webUtils.getPathForFile(file),
+		customcss: {
+			inject: () => ipcRenderer.invoke("action:customcss.inject"),
+			clear: () => ipcRenderer.invoke("action:customcss.clear"),
+		},
 	},
 	translations,
 	domUtils: {

@@ -1,9 +1,10 @@
 import { contextBridge } from "electron";
 import { get, merge, set } from "lodash-es";
-import preloadRoot from "./base";
-
+import preloadRoot, { setContext } from "./base";
+if (!window.api) window.api = {} as any;
+// Expose other APIs
 Object.entries(preloadRoot).forEach(([key, endpoints]) => {
-	contextBridge.exposeInMainWorld(key, endpoints);
+	setContext(key, endpoints);
 });
 
 (async function () {

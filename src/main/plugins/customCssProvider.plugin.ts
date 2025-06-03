@@ -211,4 +211,17 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 		}
 	}
 	readonly initializeSCSS = () => this._initializeSCSS();
+	@IpcHandle("action:customcss.clear")
+	async __clearCSS() {
+		await rootWindowClearCustomCss(this.views.youtubeView);
+	}
+	@IpcHandle("action:customcss.inject")
+	async __injectCSS() {
+		const scssFile = this.getScssPath();
+		if (scssFile) {
+			await this._initializeSCSS();
+			return await this.injectCompiledCSS(scssFile);
+		}
+		return false;
+	}
 }

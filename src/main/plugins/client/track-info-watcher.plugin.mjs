@@ -1,5 +1,9 @@
 export const meta = {
 	name: "Track info watcher",
+	description: "Watch for track info changes",
+	author: "Venipa <https://github.com/Venipa>",
+	version: "1.0.0",
+	enabled: true,
 };
 
 export const afterInit = () => {
@@ -23,3 +27,4 @@ export const afterInit = () => {
 		);
 	});
 };
+

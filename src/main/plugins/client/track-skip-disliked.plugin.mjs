@@ -1,5 +1,9 @@
 export const meta = {
 	name: "Track skip disliked",
+	description: "Skip disliked tracks",
+	author: "Venipa <https://github.com/Venipa>",
+	version: "1.0.0",
+	enabled: true,
 };
 
 export default ({ settings }) => {
@@ -22,3 +26,4 @@ export default ({ settings }) => {
 		}
 	});
 };
+
