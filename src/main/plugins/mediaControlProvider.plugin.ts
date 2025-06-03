@@ -53,10 +53,10 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 		}
 	}
 
-	private onPosChange(ev: any, pos: number) {
+	private async onPosChange(ev: any, pos: number) {
 		try {
 			this.logger.debug("onPosChange", pos);
-			return this.api.seekTrack(null, {
+			return await this.api.seekTrack(null, {
 				type: "seek",
 				time: pos * 1000,
 			});
@@ -65,10 +65,10 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 		}
 	}
 
-	private onPosSeek(ev: any, seek: number) {
+	private async onPosSeek(ev: any, seek: number) {
 		try {
 			this.logger.debug("onPosSeek", seek);
-			return this.api.seekTrack(null, {
+			return await this.api.seekTrack(null, {
 				time: seek * 1000,
 			});
 		} catch (error) {
