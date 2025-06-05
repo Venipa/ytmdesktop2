@@ -203,6 +203,11 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 				}
 
 				return true;
+			} else {
+				this.logger.debug(`SCSS file already exists: ${scssPath}`);
+				if (!this.settingsInstance.get("customcss.scssFile")) {
+					this.settingsInstance.set("customcss.scssFile", scssPath);
+				}
 			}
 			return false;
 		} catch (error: any) {

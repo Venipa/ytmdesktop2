@@ -4,7 +4,7 @@
       class="flex items-stretch justify-between border-b bg-black border-gray-600 select-none h-10 px-2 space-x-2"
     >
       <div class="flex items-center flex-1 drag space-x-2 appear">
-        <div class="flex-none w-16"></div>
+        <div class="flex-[0_0_86px]"></div>
         <div
           v-if="title"
           class="text-xs bg-primary h-7 rounded items-center px-3 bg-opacity-50 appear flex truncate"
