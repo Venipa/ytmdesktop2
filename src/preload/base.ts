@@ -36,6 +36,11 @@ export default {
 	},
 	api: {
 		version: appVersion,
+		platform: {
+			isMacOS: process.platform === "darwin",
+			isWindows: process.platform === "win32",
+			isLinux: process.platform === "linux",
+		},
 		plugins: [],
 		settings: {
 			open: (windowName: string) => ipcRenderer.send("subwindow.show", windowName),
