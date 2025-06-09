@@ -1,4 +1,19 @@
 {
-  "files": [],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
+	"files": [],
+	"references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }],
+	"compilerOptions": {
+		"composite": true,
+		"baseUrl": ".",
+		"allowSyntheticDefaultImports": true,
+		"strict": false,
+
+		"paths": {
+			"@shared/*": ["src/shared/*"],
+			"@translations/*": ["src/translations/*"],
+			"@main/*": ["src/main/*"],
+			"@renderer/*": ["src/renderer/src/*"],
+			"@/*": ["src/renderer/src/*"],
+			"~/*": ["*"]
+		}
+	}
 }
