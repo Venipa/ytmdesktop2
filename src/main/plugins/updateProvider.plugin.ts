@@ -49,6 +49,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		if (isDevelopment) return true;
 		return semver.gtr(ver, this.app.getVersion(), {
 			includePrerelease: true,
+			loose: true,
 		});
 	}
 
@@ -154,7 +155,8 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			if (!downloadPromise) return;
 			await downloadPromise;
 		}
-		if (!this.isAutoUpdate) autoUpdater.quitAndInstall(false, true);
+		if (!this.isAutoUpdate || this.updateQueuedForInstall) autoUpdater.quitAndInstall(false, true);
+		else if (this.updateDownloaded) autoUpdater.quitAndInstall(false, true);
 	}
 
 	private async _checkUpdate() {
