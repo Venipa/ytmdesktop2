@@ -231,7 +231,10 @@ export class WindowManager {
 			fromMaximized = true;
 			this.updateViewBounds();
 		});
-
+		this.mainWindow.on("unmaximize", () => {
+			fromMaximized = false;
+			this.updateViewBounds();
+		});
 		this.mainWindow.on(
 			"resize",
 			debounce(() => {

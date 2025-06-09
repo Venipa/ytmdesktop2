@@ -24,18 +24,24 @@ const plugins = (() => {
 	const plugins = import.meta.glob("../main/plugins/client/*.plugin.js", {
 		eager: true,
 	});
-	return Object.entries(plugins).map(([filename, p]: [string, any]) => {
-		const m = basename(filename);
-		const meta = p.meta;
-		const func = p.default;
-		return {
-			file: m,
-			exec: func,
-			meta,
-			afterInit: p.afterInit,
-			name: m.split(".").slice(0, -1).join("."),
-		};
-	});
+	return Object.entries(plugins)
+		.map(([filename, p]: [string, any]) => {
+			const m = basename(filename);
+			const meta = p.meta;
+			const func = p.default;
+			const pluginLog = log.child(`Client Plugin, ${meta.name}`);
+			if (meta.enabled === false) return undefined;
+			if (meta) pluginLog.debug("enabled:", meta.enabled !== false);
+			return {
+				file: m,
+				exec: func,
+				meta,
+				afterInit: p.afterInit,
+				log: pluginLog,
+				name: m.split(".").slice(0, -1).join("."),
+			};
+		})
+		.filter((p) => p.meta.enabled !== false);
 })();
 const settingsPromise = window.api.settingsProvider.getAll({}).then((x) => (window.__ytd_settings = merge({}, x)));
 window.__ytd_plugins = Object.freeze(plugins);
@@ -57,10 +63,8 @@ const initFn = async (force?: boolean) => {
 			if (currentUrl.host === "music.youtube.com") {
 				const pluginContext = { settings: new Proxy(window.__ytd_settings, {}) };
 				const destroyFns = plugins.map((m) => {
-					if (m.meta) log.child(`Client Plugin, ${m.meta.name}`).debug("enabled:", m.meta.enabled !== false);
-					else log.child(`Client Plugin, ${m.name}`).debug(m.name, m.meta);
-					if (m.meta.enabled === false) return undefined;
-					const destroyFn = m.exec?.(pluginContext);
+					m.log.debug(m.name, m.meta);
+					const destroyFn = m.exec?.({ ...pluginContext, log: m.log });
 					return destroyFn;
 				});
 				window.addEventListener("beforeunload", function () {
