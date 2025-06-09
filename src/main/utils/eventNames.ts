@@ -13,7 +13,7 @@ export const API_ROUTES = {
 	TRACK_CONTROL_PAUSE: "api/track/pause",
 	TRACK_CONTROL_TOGGLE_PLAY: "api/track/toggle-play-state",
 	TRACK_SOCKET: "api/socket",
-};
+} as const;
 const IPC_EVENT_NAMES = {
 	SERVER_SETTINGS_CHANGE: "settingsProvider.change",
 	TRACK_TITLE_CHANGE: "track:title",
@@ -30,5 +30,5 @@ const IPC_EVENT_NAMES = {
 	LAST_FM_TOGGLE: "lastfm.toggle",
 	LAST_FM_SUBMIT_STATE: "lastfm.stateObserver",
 	...API_ROUTES,
-};
+} as const;
 export default IPC_EVENT_NAMES;
