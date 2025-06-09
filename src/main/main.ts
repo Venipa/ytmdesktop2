@@ -52,10 +52,12 @@ const runApp = async function () {
 
 	app.on("activate", reactivate);
 	app.on("ready", async () => {
-		await serviceCollection.exec("OnInit");
 		await waitMs(); // next tick
 		mainWindow = await windowManager.createRootWindow();
+		serviceCollection.registerWindows(mainWindow);
+
 		await waitMs(); // next tick
+		await serviceCollection.exec("OnInit");
 
 		const startupService = serviceCollection.getTypedProvider("startup");
 		log.debug({ isStartupContext: startupService.isStartupContext });
@@ -64,7 +66,6 @@ const runApp = async function () {
 			mainWindow.main.show();
 		}
 
-		serviceCollection.registerWindows(mainWindow);
 		serviceCollection.exec("AfterInit");
 	});
 

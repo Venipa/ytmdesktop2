@@ -86,8 +86,8 @@ import LastFMIcon from "@renderer/assets/icons/lastfm.svg";
 import MiniPlayerIcon from "@renderer/assets/icons/mini-player.svg";
 import RefreshIcon from "@renderer/assets/icons/refresh.svg";
 import Spinner from "@renderer/components/Spinner.vue";
-import { logger } from "@shared/utils/console";
 import { refIpc } from "@shared/utils/Ipc";
+import { logger } from "@shared/utils/console";
 import { AlertCircleIcon, CheckIcon } from "lucide-vue-next";
 import { onMounted, ref } from "vue";
 
