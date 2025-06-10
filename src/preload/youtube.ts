@@ -27,11 +27,12 @@ const plugins = (() => {
 	return Object.entries(plugins)
 		.map(([filename, p]: [string, any]) => {
 			const m = basename(filename);
-			const meta = p.meta;
+			let meta = p.meta;
 			const func = p.default;
 			const pluginLog = log.child(`Client Plugin, ${meta.name}`);
-			if (meta.enabled === false) return undefined;
 			if (meta) pluginLog.debug("enabled:", meta.enabled !== false);
+			else return undefined;
+			if (meta && meta.enabled === false) return undefined;
 			return {
 				file: m,
 				exec: func,
@@ -41,7 +42,7 @@ const plugins = (() => {
 				name: m.split(".").slice(0, -1).join("."),
 			};
 		})
-		.filter((p) => p.meta.enabled !== false);
+		.filter((p) => p && p.meta && p.meta.enabled !== false);
 })();
 const settingsPromise = window.api.settingsProvider.getAll({}).then((x) => (window.__ytd_settings = merge({}, x)));
 window.__ytd_plugins = Object.freeze(plugins);
