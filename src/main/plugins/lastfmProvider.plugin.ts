@@ -61,9 +61,8 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		}
 	}
 	async AfterInit() {
-		this.views.toolbarView.webContents.on("did-finish-load", () => {
-			this.sendState();
-		});
+		if (!this.views.toolbarView?.webContents.isLoading()) this.sendState();
+		else this.views.toolbarView.webContents.on("did-finish-load", () => this.sendState());
 	}
 	private authProgress = false;
 	private async authorizeSession() {

@@ -66,7 +66,7 @@ const runApp = async function () {
 			mainWindow.main.show();
 		}
 
-		serviceCollection.exec("AfterInit");
+		await serviceCollection.exec("AfterInit");
 	});
 
 	// Window control events
