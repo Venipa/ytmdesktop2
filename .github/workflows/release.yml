@@ -26,11 +26,22 @@ jobs:
           node-version: ${{ matrix.node-version }}
         # install dbus-1 dep for xosms
       - if: matrix.os == 'ubuntu-latest'
-        name: install ubuntu deps
+        name: update apt and install utils
         run: |
           sudo apt update
-          sudo apt install libdbus-1-dev snapd flatpak flatpak-builder elfutils
+          sudo apt install libdbus-1-dev elfutils
+      - if: matrix.os == 'ubuntu-latest'
+        name: install ubuntu snap
+        continue-on-error: true
+        run: |
+          sudo apt install snapd
           sudo snap install snapcraft --classic
+
+      - if: matrix.os == 'ubuntu-latest'
+        name: install ubuntu flatpak
+        continue-on-error: true
+        run: |
+          sudo apt install flatpak flatpak-builder
           sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
       - if: matrix.os == 'windows-latest'
