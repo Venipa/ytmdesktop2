@@ -10,6 +10,8 @@ type RefIpcOptions<T, R> = {
 	defaultValue?: R;
 	mapper?: Map<T, R>;
 	onTrigger?: Trigger<T>;
+	onMounted?: () => void;
+	getInitialValue?: () => Promise<R> | R;
 	ignoreUndefined?: boolean;
 	rawArgs?: boolean;
 	debug?: boolean;
@@ -36,6 +38,12 @@ export function refIpc<T, R = T>(eventName: string | string[], options?: Partial
 	}, {});
 	onMounted(() => {
 		handlerNames.forEach((handlerName) => window.api.on(handlerName, handlers[handlerName]));
+		options?.onMounted?.();
+		if (options?.getInitialValue) {
+			Promise.resolve(options.getInitialValue()).then((initialValue) => {
+				state.value = initialValue;
+			});
+		}
 	});
 	onUnmounted(() => {
 		handlerNames.forEach((handlerName) => window.api.off(handlerName, handlers[handlerName]));

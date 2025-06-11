@@ -92,100 +92,103 @@ import { AlertCircleIcon, CheckIcon } from "lucide-vue-next";
 import { onMounted, ref } from "vue";
 
 const [discordConnected, setDiscordConnected] = refIpc(["discord.connected", "discord.disconnected"], {
-	defaultValue: false,
-	mapper: (data, name) => {
-		return { ["discord.connected"]: true, ["discord.disconnected"]: false }[name];
-	},
-	ignoreUndefined: true,
+  defaultValue: false,
+  mapper: (data, name) => {
+    return { ["discord.connected"]: true, ["discord.disconnected"]: false }[name];
+  },
+  ignoreUndefined: true,
 });
 const [discordConnectionError] = refIpc(["discord.error"], {
-	defaultValue: null,
-	debug: true,
+  defaultValue: null,
+  debug: true,
 });
 const [miniPlayer] = refIpc("miniplayer.state", {
-	defaultValue: null,
-	ignoreUndefined: true,
+  defaultValue: null,
+  ignoreUndefined: true,
 });
 const [playState] = refIpc("TRACK_PLAYSTATE");
 const [isHome] = refIpc("nav.same-origin", {
-	defaultValue: true,
-	mapper: ([sameOrigin]) => !!sameOrigin,
-	rawArgs: true,
+  defaultValue: true,
+  mapper: ([sameOrigin]) => !!sameOrigin,
+  rawArgs: true,
 });
 const [lastFM] = refIpc("LAST_FM_STATUS", {
-	defaultValue: { connected: false, name: null, error: null },
-	ignoreUndefined: true,
+  defaultValue: { connected: false, name: null, error: null },
+  ignoreUndefined: true,
+  getInitialValue: async () => {
+    return await window.api.action(IPC_EVENT_NAMES.LAST_FM_STATUS);
+  },
 });
 const stateHandle = ref<NodeJS.Timeout>();
 const [lastFMState, setFmState] = refIpc<"start" | "change" | boolean | null>(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, {
-	defaultValue: null,
-	ignoreUndefined: true,
-	onTrigger: (_fmstate, _prevfmstate) => {
-		if (typeof _prevfmstate === "string" && typeof _fmstate === "boolean") {
-			if (stateHandle.value) clearTimeout(stateHandle.value);
-			stateHandle.value = setTimeout(() => {
-				setFmState(null);
-				logger.debug("clear fm submit state");
-			}, 2000);
-		}
-	},
+  defaultValue: null,
+  ignoreUndefined: true,
+  onTrigger: (_fmstate, _prevfmstate) => {
+    if (typeof _prevfmstate === "string" && typeof _fmstate === "boolean") {
+      if (stateHandle.value) clearTimeout(stateHandle.value);
+      stateHandle.value = setTimeout(() => {
+        setFmState(null);
+        logger.debug("clear fm submit state");
+      }, 2000);
+    }
+  },
 });
 const lastFMLoading = ref(false);
 const [discordEnabled, setDiscordEnabled] = refIpc("settingsProvider.change", {
-	defaultValue: window.settings.get("discord.enabled"),
-	mapper: ([key, value]) => {
-		if (key === "discord.enabled") return value;
-	},
-	ignoreUndefined: true,
-	rawArgs: true,
+  defaultValue: window.settings.get("discord.enabled"),
+  mapper: ([key, value]) => {
+    if (key === "discord.enabled") return value;
+  },
+  ignoreUndefined: true,
+  rawArgs: true,
 });
 const [isDev] = refIpc("settingsProvider.change", {
-	defaultValue: window.settings.get("app.enableDev"),
-	mapper: ([key, value]) => {
-		if (key === "app.enableDev") return value;
-	},
-	ignoreUndefined: true,
-	rawArgs: true,
+  defaultValue: window.settings.get("app.enableDev"),
+  mapper: ([key, value]) => {
+    if (key === "app.enableDev") return value;
+  },
+  ignoreUndefined: true,
+  rawArgs: true,
 });
 onMounted(() => {
-	window.ipcRenderer.invoke("req:discord.connected").then((x) => setDiscordConnected(!!x));
-	window.api.action("lastfm.status").then((status) => {
-		lastFM.value = status;
-	});
+  window.ipcRenderer.invoke("req:discord.connected").then((x) => setDiscordConnected(!!x));
+  window.api.action("lastfm.status").then((status) => {
+    lastFM.value = status;
+  });
 });
 const [updateChecking, setUpdateChecking] = refIpc<boolean>("APP_UPDATE_CHECKING");
 
 async function toggleSetting(key) {
-	const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
-	if (key === "discord.enabled") setDiscordEnabled(setting);
+  const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
+  if (key === "discord.enabled") setDiscordEnabled(setting);
 }
 function checkUpdate() {
-	if (updateChecking.value) return;
-	setUpdateChecking(true);
-	action("app.checkUpdate").finally(() => {
-		setUpdateChecking(false);
-	});
+  if (updateChecking.value) return;
+  setUpdateChecking(true);
+  action("app.checkUpdate").finally(() => {
+    setUpdateChecking(false);
+  });
 }
 function action(actionParam, ...params) {
-	return window.api.action(actionParam, ...params);
+  return window.api.action(actionParam, ...params);
 }
 function invoke(invokeParam, ...params) {
-	return window.api.invoke(invokeParam, ...params);
+  return window.api.invoke(invokeParam, ...params);
 }
 function authorizeLastFM() {
-	lastFMLoading.value = true;
-	if (lastFM.value.connected) {
-		action("lastfm.profile").finally(() => {
-			lastFMLoading.value = false;
-		});
-		return;
-	}
-	invoke("lastfm.authorize").finally(() => {
-		lastFMLoading.value = false;
-	});
+  lastFMLoading.value = true;
+  if (lastFM.value.connected) {
+    action("lastfm.profile").finally(() => {
+      lastFMLoading.value = false;
+    });
+    return;
+  }
+  invoke("lastfm.authorize").finally(() => {
+    lastFMLoading.value = false;
+  });
 }
 function onSettings() {
-	window.api.openWindow("settingsWindow");
+  window.api.openWindow("settingsWindow");
 }
 </script>
 <style></style>
