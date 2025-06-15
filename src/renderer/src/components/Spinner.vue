@@ -7,7 +7,7 @@
 </template>
 
 <script lang="ts" setup>
-import { cva, type VariantProps } from "class-variance-authority";
+import { type VariantProps, cva } from "class-variance-authority";
 const pillCount = 12;
 
 const spinner = cva("spinner relative block box-border p-0 m-0", {

@@ -53,8 +53,8 @@
 <script lang="ts" setup>
 import SettingsCheckbox from "@renderer/components/SettingsCheckbox.vue";
 import SettingsSelect from "@renderer/components/SettingsSelect.vue";
-import { refIpcSetting } from "@shared/utils/Ipc";
 import { VideoResSetting } from "@shared/utils/ISettings";
+import { refIpcSetting } from "@shared/utils/Ipc";
 
 const [resEnabled] = refIpcSetting<VideoResSetting>("player.res.enabled");
 </script>

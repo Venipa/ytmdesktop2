@@ -27,9 +27,9 @@ import SettingsInput from "@renderer/components/SettingsInput.vue";
 import { ref } from "vue";
 
 const customCssToggle = ref(null),
-  customCssPathInput = ref(null);
+	customCssPathInput = ref(null);
 function reloadCSS() {
-  (window as any).api.reloadCustomCss();
+	(window as any).api.reloadCustomCss();
 }
 </script>
 <style></style>

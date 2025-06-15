@@ -6,7 +6,7 @@
   "formatter": {
     "indentStyle": "tab",
     "formatWithErrors": true,
-    "indentWidth": 4,
+    "indentWidth": 2,
     "lineWidth": 180,
     "attributePosition": "auto"
   },
