@@ -23,6 +23,7 @@ ipcRenderer.setMaxListeners(100);
 export default {
 	ipcRenderer: {
 		emit: (event, ...data) => ipcRenderer.send(event, ...data),
+		send: (event, ...data) => ipcRenderer.send(event, ...data),
 		on: (channel, func) => ipcRenderer.on(channel, func),
 		off: (channel, func) => ipcRenderer.off(channel, func),
 		invoke: (channel, ...data) => ipcRenderer.invoke(channel, ...data),

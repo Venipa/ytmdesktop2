@@ -8,7 +8,7 @@
 		"src/preload/**/*",
 		"src/shared/**/*.ts",
 		"src/translations/**/*.ts",
-		"src/renderer-plugins/youtube/**/*.ts"
+		"src/renderer-plugins/**/*.ts"
 	],
 	"compilerOptions": {
 		"allowSyntheticDefaultImports": true,

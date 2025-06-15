@@ -1,8 +1,5 @@
-import { logger } from "@shared/utils/console";
+import definePlugin from "@plugins/utils";
 
-export const meta = {
-	name: "Api Control Handler",
-};
 // todo
 const trackControls = {
 	toggle: (player) => {
@@ -36,40 +33,47 @@ const trackControls = {
 		return state.isPlaying;
 	},
 };
-const log = logger.child("track-api-controls");
-export const afterInit = () => {
-	window.domUtils.ensureDomLoaded(() => {
-		function setTimeSkip(_ev, data) {
-			/**
-			 * @type {HTMLMediaElement}
-			 */
-			if (data && typeof data.time === "number") {
-				const playerApi = window.domUtils.playerApi();
-				if (playerApi?.seekTo) {
-					if (data.type === "seek") playerApi.seekTo(data.time / 1000);
-					else playerApi.seekBy(data.time / 1000);
+export default definePlugin(
+	"Api Control Handler",
+	{
+		enabled: true,
+	},
+	{
+		afterInit({ log }) {
+			window.domUtils.ensureDomLoaded(() => {
+				function setTimeSkip(_ev, data) {
+					/**
+					 * @type {HTMLMediaElement}
+					 */
+					if (data && typeof data.time === "number") {
+						const playerApi = window.domUtils.playerApi();
+						if (playerApi?.seekTo) {
+							if (data.type === "seek") playerApi.seekTo(data.time / 1000);
+							else playerApi.seekBy(data.time / 1000);
+						}
+					}
 				}
-			}
-		}
-		window.ipcRenderer.on("track:seek", setTimeSkip);
-		window.ipcRenderer.on("track:control", async (_ev, data) => {
-			if (!data || typeof data !== "object") return;
-			const { type } = data;
-			try {
-				const handler = trackControls[type as keyof typeof trackControls];
-				if (!handler) return;
-				const playerApi = window.domUtils.playerApi();
-				// not ready yet
-				if (!playerApi) return;
+				window.ipcRenderer.on("track:seek", setTimeSkip);
+				window.ipcRenderer.on("track:control", async (_ev, data) => {
+					if (!data || typeof data !== "object") return;
+					const { type } = data;
+					try {
+						const handler = trackControls[type as keyof typeof trackControls];
+						if (!handler) return;
+						const playerApi = window.domUtils.playerApi();
+						// not ready yet
+						if (!playerApi) return;
 
-				const handleResult = await Promise.resolve(handler(playerApi));
-				window.api.emit("track:control/response", {
-					type,
-					data: handleResult,
+						const handleResult = await Promise.resolve(handler(playerApi));
+						window.api.emit("track:control/response", {
+							type,
+							data: handleResult,
+						});
+					} catch (e) {
+						log.error(e);
+					}
 				});
-			} catch (e) {
-				log.error(e);
-			}
-		});
-	});
-};
+			});
+		},
+	},
+);

@@ -1,4 +1,5 @@
 import { basename } from "path";
+import { ClientPlugin, initializePluginCommandsWithIPC } from "@plugins/utils";
 import { createLogger } from "@shared/utils/console";
 import DOMPurify from "dompurify";
 import { merge, set } from "lodash-es";
@@ -27,17 +28,16 @@ const plugins = (() => {
 	return Object.entries(plugins)
 		.map(([filename, p]: [string, any]) => {
 			const m = basename(filename);
-			let meta = p.meta;
-			const func = p.default;
+			let { meta, exec, afterInit } = p.default as ClientPlugin;
 			const pluginLog = log.child(`Client Plugin, ${meta.name}`);
 			if (meta) pluginLog.debug("enabled:", meta.enabled !== false);
 			else return undefined;
 			if (meta && meta.enabled === false) return undefined;
 			return {
 				file: m,
-				exec: func,
+				exec,
 				meta,
-				afterInit: p.afterInit,
+				afterInit,
 				log: pluginLog,
 				name: m.split(".").slice(0, -1).join("."),
 			};
@@ -46,6 +46,7 @@ const plugins = (() => {
 })();
 const settingsPromise = window.api.settingsProvider.getAll({}).then((x) => (window.__ytd_settings = merge({}, x)));
 window.__ytd_plugins = Object.freeze(plugins);
+const getPlayerApi = () => exposeData.domUtils.playerApi();
 const initFn = async (force?: boolean) => {
 	await settingsPromise;
 	if (window.isYTMLoaded?.() && !force) throw new Error("YTMD is already loaded, " + appVersion);
@@ -62,15 +63,17 @@ const initFn = async (force?: boolean) => {
 		exposeData.domUtils.ensureDomLoaded(async () => {
 			const currentUrl = new URL(location.href);
 			if (currentUrl.host === "music.youtube.com") {
-				const pluginContext = { settings: new Proxy(window.__ytd_settings, {}) };
-				const destroyFns = plugins.map((m) => {
-					m.log.debug(m.name, m.meta);
-					const destroyFn = m.exec?.({ ...pluginContext, log: m.log });
-					return destroyFn;
-				});
-				window.addEventListener("beforeunload", function () {
+				const pluginContext = { settings: new Proxy(window.__ytd_settings, {}), playerApi: getPlayerApi() };
+				const destroyFns = await Promise.all(
+					plugins.map(async (m) => {
+						m.log.debug(m.name, m.meta);
+						const destroyFn = await Promise.resolve(m.exec?.({ ...pluginContext, log: m.log, playerApi: getPlayerApi() }));
+						return destroyFn;
+					}),
+				);
+				window.addEventListener("beforeunload", async function () {
 					if (destroyFns && currentUrl.hostname !== this.location.hostname && destroyFns.length > 0)
-						destroyFns.filter((fn) => fn && typeof fn === "function").forEach((fn) => fn());
+						await Promise.all(destroyFns.filter((fn) => fn && typeof fn === "function").map((fn) => Promise.resolve((fn as () => void)())));
 				});
 				let timeoutHandle: any;
 				await new Promise<void>((wr, reject) => {
@@ -94,11 +97,14 @@ const initFn = async (force?: boolean) => {
 				});
 
 				log.debug("ytplayer loaded");
-				plugins.forEach((p) => {
-					if (!p.afterInit) return;
-					p.afterInit(pluginContext);
-					log.child(`Client Plugin, ${p.name}`).debug(`afterInit execute`);
-				});
+				await Promise.all(
+					plugins.map(async (p) => {
+						if (!p.afterInit) return;
+						await Promise.resolve(p.afterInit({ ...pluginContext, log: p.log, playerApi: getPlayerApi() }));
+						log.child(`Client Plugin, ${p.name}`).debug(`afterInit execute`);
+					}),
+				);
+				await Promise.all(plugins.map((p) => Promise.resolve(initializePluginCommandsWithIPC(p, { ...pluginContext, log: p.log, playerApi: getPlayerApi() }))));
 			}
 			window.api.emit("app.loadEnd");
 			_loadedYTM = true; // todo

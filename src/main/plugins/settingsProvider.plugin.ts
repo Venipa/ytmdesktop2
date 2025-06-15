@@ -30,6 +30,9 @@ const defaultSettings = {
 		enableStatisticsAndErrorTracing: true,
 		disableHardwareAccel: false,
 	},
+	volumeRatio: {
+		enabled: true,
+	},
 	player: {
 		skipDisliked: false,
 		res: {

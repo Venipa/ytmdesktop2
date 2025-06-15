@@ -1,8 +1,7 @@
 import IPC_EVENT_NAMES from "@main/utils/eventNames";
-export const meta = {
-	name: "Track play state",
-};
-export const afterInit = () => {
+import definePlugin from "@plugins/utils";
+
+const afterInit = () => {
 	window.domUtils.ensureDomLoaded(() => {
 		const playerApi = window.domUtils.playerApi();
 		const isPlaying = () => playerApi.getPlayerState() === 1;
@@ -21,3 +20,11 @@ export const afterInit = () => {
 		// })
 	});
 };
+
+export default definePlugin(
+	"Track Play State",
+	{
+		enabled: true,
+	},
+	{ afterInit },
+);

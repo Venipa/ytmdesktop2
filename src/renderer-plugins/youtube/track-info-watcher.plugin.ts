@@ -1,8 +1,6 @@
-export const meta = {
-	name: "Track info watcher",
-};
+import definePlugin from "@plugins/utils";
 
-export const afterInit = () => {
+const afterInit = () => {
 	const videoDataChangeLoadedType = ["dataupdated", "dataloaded", "newdata"];
 	window.domUtils.ensureDomLoaded(() => {
 		const playerApi = window.domUtils.playerApi();
@@ -23,3 +21,11 @@ export const afterInit = () => {
 		);
 	});
 };
+
+export default definePlugin(
+	"Track Info Watcher",
+	{
+		enabled: true,
+	},
+	{ afterInit },
+);

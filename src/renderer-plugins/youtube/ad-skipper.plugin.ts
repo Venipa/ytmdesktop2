@@ -1,9 +1,6 @@
-export const meta = {
-	name: "Ad Skipper",
-	enabled: false,
-};
+import definePlugin from "@plugins/utils";
 
-export const afterInit = () => {
+const afterInit = () => {
 	const PLAYER_TYPE_AD = 2;
 	const SKIP_AD_POOLING_RATE_MS = 10;
 
@@ -49,3 +46,11 @@ export const afterInit = () => {
 		);
 	});
 };
+
+export default definePlugin(
+	"Ad Skipper",
+	{
+		enabled: false,
+	},
+	{ afterInit },
+);

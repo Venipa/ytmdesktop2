@@ -1,8 +1,6 @@
-export const meta = {
-	name: "Track watch title change",
-};
+import definePlugin from "@plugins/utils";
 
-export default () => {
+const afterInit = () => {
 	new MutationObserver(() => {
 		const el = document.querySelector("a.ytp-title-link.yt-uix-sessionlink") as HTMLAnchorElement;
 		if (!el || !el.href) return;
@@ -18,3 +16,11 @@ export default () => {
 		childList: true,
 	});
 };
+
+export default definePlugin(
+	"Track Title Change",
+	{
+		enabled: true,
+	},
+	{ afterInit },
+);

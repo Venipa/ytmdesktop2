@@ -12,6 +12,7 @@ import type StartupProvider from "@main/plugins/startupProvider.plugin";
 import type TrackProvider from "@main/plugins/trackProvider.plugin";
 import type TrayProvider from "@main/plugins/trayProvider.plugin";
 import type UpdateProvider from "@main/plugins/updateProvider.plugin";
+import type VolumeRatioProvider from "@main/plugins/volumeRatio.plugin";
 import type WindowUtilsProvider from "@main/plugins/windowProvider.plugin";
 import type YoutubeControlProvider from "@main/plugins/youtubeProvider.plugin";
 
@@ -33,5 +34,6 @@ declare module "ytmd" {
 		lastfm: LastFMProvider;
 		youtube: YoutubeControlProvider;
 		window: WindowUtilsProvider;
+		volumeRatio: VolumeRatioProvider;
 	}
 }

@@ -1,8 +1,6 @@
-export const meta = {
-	name: "Track skip disliked",
-};
+import definePlugin from "@plugins/utils";
 
-export default ({ settings }) => {
+const afterInit = ({ settings }) => {
 	let lastVideoId = null,
 		waitForTick = false;
 	window.ipcRenderer.on("track.change", (ev, id) => {
@@ -22,3 +20,11 @@ export default ({ settings }) => {
 		}
 	});
 };
+
+export default definePlugin(
+	"Track Skip Disliked",
+	{
+		enabled: true,
+	},
+	{ afterInit },
+);
