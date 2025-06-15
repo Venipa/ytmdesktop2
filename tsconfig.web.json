@@ -35,6 +35,9 @@
       "@renderer/*": [
         "src/renderer/src/*"
       ],
+      "@plugins/*": [
+        "src/renderer-plugins/*"
+      ],
       "@/*": [
         "src/renderer/src/*"
       ],

@@ -17,20 +17,20 @@ export const afterInit = () => {
 				let keepProbing = true;
 
 				const onAd = async () => {
-					await new Promise((resolve, _reject) => {
+					await new Promise<void>((resolve, _reject) => {
 						const videoContainer = document.getElementById("movie_player");
 
 						const skipAdHandler = () => {
 							const isAd = videoContainer?.classList.contains("ad-interrupting") || videoContainer?.classList.contains("ad-showing");
-							const skipLock = document.querySelector(".ytp-ad-preview-text-modern")?.innerText;
+							const skipLock = document.querySelector<HTMLDivElement>(".ytp-ad-preview-text-modern")?.innerText;
 
 							if (isAd && skipLock) {
-								const videoPlayer = document.getElementsByClassName("video-stream")[0];
+								const videoPlayer = document.getElementsByClassName("video-stream")[0] as HTMLMediaElement;
 								videoPlayer.muted = true;
 								videoPlayer.currentTime = videoPlayer.duration - 0.01;
 								videoPlayer.paused && videoPlayer.play();
-								document.querySelector(".ytp-ad-skip-button")?.click();
-								document.querySelector(".ytp-ad-skip-button-modern")?.click();
+								document.querySelector<HTMLButtonElement>(".ytp-ad-skip-button")?.click();
+								document.querySelector<HTMLButtonElement>(".ytp-ad-skip-button-modern")?.click();
 								keepProbing = false;
 							}
 

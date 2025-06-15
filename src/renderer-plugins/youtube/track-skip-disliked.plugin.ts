@@ -14,7 +14,7 @@ export default ({ settings }) => {
 				waitForTick = true;
 				setTimeout(() => {
 					if (playerBar.querySelector('#like-button-renderer[like-status="DISLIKE"]')) {
-						playerBar.querySelector('tp-yt-paper-icon-button[icon="yt-icons:skip_next"]').click();
+						playerBar.querySelector<HTMLButtonElement>('tp-yt-paper-icon-button[icon="yt-icons:skip_next"]')?.click();
 					}
 					waitForTick = false;
 				}, 1000);

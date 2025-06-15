@@ -4,7 +4,7 @@ export const meta = {
 
 export default () => {
 	new MutationObserver(() => {
-		const el = document.querySelector("a.ytp-title-link.yt-uix-sessionlink");
+		const el = document.querySelector("a.ytp-title-link.yt-uix-sessionlink") as HTMLAnchorElement;
 		if (!el || !el.href) return;
 		try {
 			const videoUri = new URLSearchParams(el.href.split("?")[1]);

@@ -6,7 +6,7 @@ import pkg from "../../package.json";
 import exposeData, { setContext } from "./base";
 const appVersion = pkg.version;
 
-const log = createLogger("YTD");
+const log = createLogger("YTMD");
 setContext("appVersion", appVersion);
 Object.entries(exposeData).forEach(([key, endpoints]) => {
 	setContext(key, endpoints);
@@ -21,7 +21,7 @@ try {
 		});
 } catch {}
 const plugins = (() => {
-	const plugins = import.meta.glob("../main/plugins/client/*.plugin.js", {
+	const plugins = import.meta.glob("@plugins/youtube/*.plugin.ts", {
 		eager: true,
 	});
 	return Object.entries(plugins)
