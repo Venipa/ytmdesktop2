@@ -81,6 +81,15 @@ const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
 				store.set("__meta.migratedFromJson", true);
 			},
 		},
+		{
+			version: 1,
+			hook(store) {
+				store.set("volumeRatio", {
+					enabled: true,
+					volume: 0.1,
+				});
+			},
+		},
 	],
 });
 
