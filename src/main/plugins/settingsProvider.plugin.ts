@@ -143,7 +143,7 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 		this.views.youtubeView.webContents.on("did-navigate-in-page", (ev, location) => {
 			this.logger.debug(`navigate-in-page :: ${location}`);
 			const url = new URLSearchParams(location.split("?")[1]);
-			if (url?.has("v")) serverMain.emit("track:set-active", url.get("v"));
+			if (url?.has("v")) this.getProvider("track").setActiveTrack(url.get("v"));
 		});
 
 		let previousHostname: string = defaultUrl;

@@ -171,13 +171,14 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			await this.pushTrackToViews(track as TrackData, lastTrackId !== track.video.videoId);
 		}
 	}
-
+	async setActiveTrack(trackId: string) {
+		return await this.__onActiveTrack(trackId);
+	}
 	@IpcOn("track:title-change", { debounce: 100 })
 	private __onTitleChange(ev: any, trackId: string) {
 		if (trackId) this.__onActiveTrack(trackId);
 	}
 
-	@IpcOn("track:set-active", { debounce: 1000 })
 	private async __onActiveTrack(trackId: string) {
 		if (this._activeTrackId === trackId) return;
 
