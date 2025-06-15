@@ -23,9 +23,10 @@ const afterInit = () => {
 };
 
 export default definePlugin(
-	"Track Info Watcher",
+	"track-info-watcher",
 	{
 		enabled: true,
+		displayName: "Track Info Watcher",
 	},
 	{ afterInit },
 );

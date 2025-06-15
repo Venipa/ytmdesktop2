@@ -1,7 +1,7 @@
 import path, { join } from "path";
 import { createYmlStore } from "@main/lib/store/createYmlStore";
 import { createLogger } from "@shared/utils/console";
-import { BrowserWindow, screen, shell } from "electron";
+import { BrowserWindow, WebContentsView, screen, shell } from "electron";
 import appIconPath from "~/build/favicon.ico?asset";
 import { isDevelopment } from "./devUtils";
 import { loadUrlOfWindow, syncWindowStateToWebContents } from "./webContentUtils";
@@ -128,4 +128,10 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 	win.on("close", saveState);
 	return { state, saveState };
 }
+export async function onWindowLoad(win: WebContentsView, callback: () => void, options: { once?: boolean } = { once: false }) {
+	if (!win.webContents.isLoading()) return await Promise.resolve(callback());
+	if (options.once) return win.webContents.once("did-finish-load", () => callback());
+	else return win.webContents.on("did-finish-load", () => callback());
+}
+
 export { appIconPath };

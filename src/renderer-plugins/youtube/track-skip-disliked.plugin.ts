@@ -22,9 +22,10 @@ const afterInit = ({ settings }) => {
 };
 
 export default definePlugin(
-	"Track Skip Disliked",
+	"track-skip-disliked",
 	{
 		enabled: true,
+		displayName: "Track Skip Disliked",
 	},
 	{ afterInit },
 );

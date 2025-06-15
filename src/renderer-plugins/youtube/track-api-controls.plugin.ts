@@ -34,9 +34,10 @@ const trackControls = {
 	},
 };
 export default definePlugin(
-	"Api Control Handler",
+	"track-api-controls",
 	{
 		enabled: true,
+		displayName: "Track API Controls",
 	},
 	{
 		afterInit({ log }) {

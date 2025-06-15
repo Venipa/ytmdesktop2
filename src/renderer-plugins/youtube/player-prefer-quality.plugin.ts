@@ -2,9 +2,10 @@ import definePlugin from "@plugins/utils";
 
 const qKey = "yt-player-quality";
 export default definePlugin(
-	"Youtube Prefer Quality",
+	"player-prefer-quality",
 	{
 		enabled: true,
+		displayName: "Youtube Prefer Quality",
 	},
 	() => {
 		const res = window.__ytd_settings?.player?.res;

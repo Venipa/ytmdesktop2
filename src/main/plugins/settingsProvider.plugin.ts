@@ -32,6 +32,7 @@ const defaultSettings = {
 	},
 	volumeRatio: {
 		enabled: true,
+		volume: 0.05,
 	},
 	player: {
 		skipDisliked: false,

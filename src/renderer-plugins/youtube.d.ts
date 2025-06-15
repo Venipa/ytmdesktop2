@@ -1,7 +1,7 @@
 declare module "ytm-client-api" {
 	export interface PlayerApi {
 		// Player API Types
-		addEventListener: () => any;
+		addEventListener: (...args: any[]) => any;
 		removeEventListener: () => any;
 		destroy: () => any;
 		getLastError: () => any;
@@ -44,7 +44,7 @@ declare module "ytm-client-api" {
 		getOption: () => any;
 		getOptions: () => any;
 		setOption: (...args: any[]) => void;
-		addCueRange: () => any;
+		addCueRange: (...args: any[]) => any;
 		getDebugText: () => any;
 		getStoryboardFormat: () => any;
 		toggleFullscreen: () => any;
@@ -133,7 +133,7 @@ declare module "ytm-client-api" {
 		getNumberOfStoryboardLevels: () => any;
 		getCaptionWindowContainerId: () => any;
 		getAvailableQualityLabels: () => any;
-		addUtcCueRange: () => any;
+		addUtcCueRange: (...args: any[]) => any;
 		showAirplayPicker: () => any;
 		dispatchReduxAction: () => any;
 		getPlayerResponse: () => any;
@@ -195,7 +195,7 @@ declare module "ytm-client-api" {
 		getStatsForNerds: () => any;
 		updateFullerscreenEduButtonSubtleModeState: () => any;
 		updateFullerscreenEduButtonVisibility: () => any;
-		addEmbedsConversionTrackingParams: () => any;
+		addEmbedsConversionTrackingParams: (...args: any[]) => any;
 		queueOfflineAction: () => any;
 		updateDownloadState: () => any;
 		pauseVideoDownload: () => any;

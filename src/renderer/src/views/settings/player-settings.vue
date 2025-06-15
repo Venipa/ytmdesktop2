@@ -9,32 +9,34 @@
       </div>
     </div>
     <div class="px-3 flex flex-col gap-4 mt-4">
-      <settings-checkbox config-key="player.skipDisliked" class="group">
+      <settings-checkbox config-key="player.skipDisliked"
+                         class="group">
         <div class="flex flex-col">
           <div>Skip disliked Songs</div>
-          <div
-            class="select-none text-red-500 opacity-80 group-hover:opacity-100 uppercase text-xs font-medium"
-          >
-            Experimental
+          <div class="select-none text-red-500 opacity-80 group-hover:opacity-100 uppercase text-xs font-medium"> Experimental </div>
+        </div>
+      </settings-checkbox>
+      <settings-checkbox config-key="volumeRatio.enabled"
+                         class="group">
+        <div class="flex flex-col">
+          <div>Implement new Volume Ratio Handler</div>
+          <div class="mt-2 max-w-xl text-sm text-gray-200">
+            <p>Use an exponential volume slider for YouTube Music to enhance control and avoid the ineffectiveness of the default linear slider.</p>
           </div>
         </div>
       </settings-checkbox>
-      <div
-        class="flex flex-col gap-4 -mx-3 px-3 py-3 rounded-lg border"
-        :class="{ 'border-gray-500': !!resEnabled, 'border-gray-500/0': !resEnabled }"
-      >
-        <settings-checkbox config-key="player.res.enabled" class="group">
+      <div class="flex flex-col gap-4 -mx-3 px-3 py-3 rounded-lg border"
+           :class="{ 'border-gray-500': !!resEnabled, 'border-gray-500/0': !resEnabled }">
+        <settings-checkbox config-key="player.res.enabled"
+                           class="group">
           <div class="flex flex-col">
             <div>Player Video Settings</div>
-            <div
-              class="select-none opacity-80 group-hover:opacity-100 uppercase text-xs font-medium"
-            >
-              Customize player video settings
-            </div>
+            <div class="select-none opacity-80 group-hover:opacity-100 uppercase text-xs font-medium"> Customize player video settings </div>
           </div>
         </settings-checkbox>
         <template v-if="resEnabled">
-          <settings-select config-key="player.res.prefer" class="bg-transparent border-0">
+          <settings-select config-key="player.res.prefer"
+                           class="bg-transparent border-0">
             <template #label> Preferred Video Resolution (if available) </template>
             <template #options>
               <option value="hd2160">2160P UHD / 4K</option>
@@ -49,7 +51,6 @@
     </div>
   </div>
 </template>
-
 <script lang="ts" setup>
 import SettingsCheckbox from "@renderer/components/SettingsCheckbox.vue";
 import SettingsSelect from "@renderer/components/SettingsSelect.vue";
@@ -58,5 +59,4 @@ import { refIpcSetting } from "@shared/utils/Ipc";
 
 const [resEnabled] = refIpcSetting<VideoResSetting>("player.res.enabled");
 </script>
-
 <style></style>

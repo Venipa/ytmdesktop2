@@ -28,7 +28,7 @@ const plugins = (() => {
 	return Object.entries(plugins)
 		.map(([filename, p]: [string, any]) => {
 			const m = basename(filename);
-			let { meta, exec, afterInit } = p.default as ClientPlugin;
+			let { meta, exec, afterInit, cmds } = p.default as ClientPlugin;
 			const pluginLog = log.child(`Client Plugin, ${meta.name}`);
 			if (meta) pluginLog.debug("enabled:", meta.enabled !== false);
 			else return undefined;
@@ -37,9 +37,15 @@ const plugins = (() => {
 				file: m,
 				exec,
 				meta,
+				cmds,
 				afterInit,
 				log: pluginLog,
-				name: m.split(".").slice(0, -1).join("."),
+				name: m
+					.split(".")
+					.slice(0, -1)
+					.join(".")
+					.replace(/.plugin$/, ""),
+				displayName: meta.displayName,
 			};
 		})
 		.filter((p) => p && p.meta && p.meta.enabled !== false);
@@ -63,7 +69,7 @@ const initFn = async (force?: boolean) => {
 		exposeData.domUtils.ensureDomLoaded(async () => {
 			const currentUrl = new URL(location.href);
 			if (currentUrl.host === "music.youtube.com") {
-				const pluginContext = { settings: new Proxy(window.__ytd_settings, {}), playerApi: getPlayerApi() };
+				const pluginContext = { settings: new Proxy(window.__ytd_settings, {}), playerApi: getPlayerApi(), api: window.api, domUtils: exposeData.domUtils };
 				const destroyFns = await Promise.all(
 					plugins.map(async (m) => {
 						m.log.debug(m.name, m.meta);

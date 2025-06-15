@@ -1,3 +1,4 @@
+import { onWindowLoad } from "@main/utils/windowUtils";
 import logger from "@shared/utils/Logger";
 import { waitMs } from "@shared/utils/promises";
 import { BrowserWindow, IpcMainEvent, app, protocol } from "electron";
@@ -39,7 +40,7 @@ const runApp = async function () {
 
 			if (serviceCollection) {
 				serviceCollection.registerWindows(mainWindow);
-				serviceCollection.exec("AfterInit");
+				await serviceCollection.exec("AfterInit");
 			}
 		}
 	};
@@ -65,8 +66,9 @@ const runApp = async function () {
 		if (startupService.isStartupContext ? !startupService.isEnabled || !startupService.isInitialMinimized : !startupService.isMinimizedArg) {
 			mainWindow.main.show();
 		}
+		if (!mainWindow.main.webContents.isLoading()) await serviceCollection.exec("AfterInit");
 
-		await serviceCollection.exec("AfterInit");
+		onWindowLoad(mainWindow.views.youtubeView, () => serviceCollection.exec("AfterInit"));
 	});
 
 	// Window control events

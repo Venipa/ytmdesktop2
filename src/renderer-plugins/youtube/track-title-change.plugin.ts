@@ -18,9 +18,10 @@ const afterInit = () => {
 };
 
 export default definePlugin(
-	"Track Title Change",
+	"track-title-change",
 	{
 		enabled: true,
+		displayName: "Track Title Change",
 	},
 	{ afterInit },
 );
