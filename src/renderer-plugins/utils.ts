@@ -29,6 +29,14 @@ export interface ClientPlugin {
 	cmds?: Record<string, PluginCmdFn>;
 	meta: PluginOptions;
 }
+/**
+ * definePlugin is a helper function to define a plugin.
+ * It is used to define a plugin and its commands.
+ * @param name - The name of the plugin
+ * @param options - The options for the plugin
+ * @param fn - The plugin function or an object with exec, afterInit, and cmds properties
+ * @returns The internal plugin object instance
+ */
 export default function definePlugin(name: string, options: Omit<PluginOptions, "name"> = { enabled: true }, fn: PluginExec): ClientPlugin {
 	const isObject = typeof fn === "object";
 	return {
