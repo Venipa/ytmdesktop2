@@ -27,11 +27,6 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 
 ## Features
 
-### Ad Skipping
-
-A smooth and uninterrupted listening experience!\
-Built-in, without any additional setup required.
-
 ### Last.FM (Scrobble)
 
 ![ytmdesktop_2024-11-12_01-15-16](https://github.com/user-attachments/assets/54464921-6891-476b-935f-61fdefb7679d)
