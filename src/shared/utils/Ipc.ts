@@ -43,9 +43,11 @@ export function refIpc<T, R = T>(eventName: string | string[], options?: Partial
 		handlerNames.forEach((handlerName) => window.api.on(handlerName, handlers[handlerName]));
 		options?.onMounted?.();
 
-		const initialValue = await Promise.resolve(getInitialValue?.());
-		log.debug(`initialValue`, { initialValue });
-		state.value = initialValue;
+		if (getInitialValue) {
+			const initialValue = await Promise.resolve(getInitialValue?.());
+			log.debug(`initialValue`, { initialValue });
+			state.value = initialValue;
+		}
 	});
 	onUnmounted(() => {
 		log.debug(`unmounted`);

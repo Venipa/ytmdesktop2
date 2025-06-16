@@ -142,6 +142,7 @@ const [discordEnabled, setDiscordEnabled] = refIpc("settingsProvider.change", {
 		if (key === "discord.enabled") return value;
 	},
 	ignoreUndefined: true,
+	getInitialValue: () => window.api.settingsProvider.get("discord.enabled", false),
 	rawArgs: true,
 });
 const [isDev] = refIpc("settingsProvider.change", {

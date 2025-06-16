@@ -130,7 +130,7 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 	win.on("close", saveState);
 	return { state, saveState };
 }
-export async function onWindowLoad(win: WebContentsView, callback: () => void, options: { once?: boolean } = { once: false }) {
+export async function onWindowLoad(win: WebContentsView | BrowserWindow, callback: () => void, options: { once?: boolean } = { once: false }) {
 	if (!win.webContents.isLoading()) return await Promise.resolve(callback());
 	if (options.once) return win.webContents.once("did-finish-load", () => callback());
 	else return win.webContents.on("did-finish-load", () => callback());

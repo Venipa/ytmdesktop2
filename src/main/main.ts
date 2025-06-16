@@ -66,9 +66,8 @@ const runApp = async function () {
 		if (startupService.isStartupContext ? !startupService.isEnabled || !startupService.isInitialMinimized : !startupService.isMinimizedArg) {
 			mainWindow.main.show();
 		}
-		if (!mainWindow.main.webContents.isLoading()) await serviceCollection.exec("AfterInit");
-
-		onWindowLoad(mainWindow.views.youtubeView, () => serviceCollection.exec("AfterInit"));
+		await onWindowLoad(mainWindow.main, () => serviceCollection.exec("AfterInit"), { once: true });
+		mainWindow.main.webContents.on("did-finish-load", () => serviceCollection.exec("AfterInit")); // if reloaded run afterInit again
 	});
 
 	// Window control events
