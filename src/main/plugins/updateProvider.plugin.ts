@@ -1,7 +1,6 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { isDevelopment, isProduction } from "@main/utils/devUtils";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
-import DOMPurify from "dompurify";
 import { App, BrowserWindow } from "electron";
 import { CancellationToken, UpdateInfo, autoUpdater } from "electron-updater";
 import semver from "semver";
@@ -86,9 +85,10 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 
 	// Private helper methods
 	private isUpdateInRange(ver: string): boolean {
+		this.logger.debug("isUpdateInRange", { newVersion: ver, currentVersion: this.app.getVersion() });
 		if (devShowUpdateDialog) return true;
 		return semver.gtr(ver, this.app.getVersion(), {
-			includePrerelease: true,
+			includePrerelease: !!this.settingsInstance.instance?.app?.beta,
 			loose: true,
 		});
 	}
@@ -108,15 +108,17 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		// 		.then((res) => res.body)
 		// 		.then(getContent);
 		// }, `version-${ev.version}`);
+
 		return {
 			...ev,
-			releaseNotes: ev.releaseNotes ? DOMPurify.sanitize(ev.releaseNotes as string, { FORBID_TAGS: ["script", "style", "html", "body", "head", "iframe"] }) : "",
+			releaseNotes: ev.releaseNotes,
 		};
 	}
 	private async handleUpdateAvailable(ev: UpdateInfo) {
+		this.logger.debug("handleUpdateAvailable", { ev });
 		this._updateAvailable = ev && this.isUpdateInRange(ev.version);
 		this._update = this._updateAvailable ? await this.parseUpdateInfo(ev) : (null as any);
-
+		this.logger.debug("handleUpdateAvailable", { updateAvailable: this._updateAvailable, update: this._update });
 		if (this._updateAvailable) {
 			this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, this._update);
 		}
@@ -196,7 +198,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		autoUpdater.on("update-cancelled", () => this.sendUpdateStatus(false));
 		autoUpdater.on("error", () => this.sendUpdateStatus(false));
 		autoUpdater.on("checking-for-update", () => this.sendUpdateStatus(true));
-
 		autoUpdater.on("download-progress", (ev) => {
 			if (!this.updateDownloaded) {
 				this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, ev);
@@ -232,7 +233,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	@IpcHandle("action:app.getUpdate")
 	async getUpdate() {
 		await this._readyPromise;
-		this.logger.debug("getUpdate", this._update?.version);
+		this.logger.debug("getUpdate", this._update);
 		return this._update;
 	}
 
@@ -256,6 +257,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		autoUpdater.allowPrerelease = beta;
 
 		const result = await autoUpdater.checkForUpdates();
+		this.logger.debug("checkUpdate", { result });
 		if (!result?.updateInfo || !this.isUpdateInRange(result.updateInfo.version)) {
 			throw new Error("No Update available");
 		}
@@ -303,7 +305,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		await this._downloadCachedPromise;
 		return this.updateDownloaded;
 	}
-	private _c = 0;
 	@IpcHandle("action:app.checkUpdate")
 	@IpcHandle("app.checkUpdate", { debounce: 1000 })
 	async onCheckUpdate() {
