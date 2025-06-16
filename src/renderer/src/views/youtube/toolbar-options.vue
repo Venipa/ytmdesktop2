@@ -31,8 +31,9 @@
             :class="{ disabled: updateChecking }"
             :disabled="updateChecking"
             @click="() => checkUpdate()">
-      <Spinner v-if="updateChecking"
+      <Spinner v-if="updateChecking && !updateInfo"
                size="sm" />
+      <DownloadIcon v-else-if="updateInfo" :class="{ 'animate-pulse': !updateDownloaded, 'text-green-500': updateDownloaded }"></DownloadIcon>
       <RefreshIcon v-else></RefreshIcon>
     </button>
     <button v-if="isDev"
@@ -88,7 +89,8 @@ import RefreshIcon from "@renderer/assets/icons/refresh.svg";
 import Spinner from "@renderer/components/Spinner.vue";
 import { refIpc } from "@shared/utils/Ipc";
 import { logger } from "@shared/utils/console";
-import { AlertCircleIcon, CheckIcon } from "lucide-vue-next";
+import type { UpdateInfo } from "@shared/utils/updater";
+import { AlertCircleIcon, CheckIcon, DownloadIcon } from "lucide-vue-next";
 import { onMounted, ref } from "vue";
 
 const [discordConnected, setDiscordConnected] = refIpc(["discord.connected", "discord.disconnected"], {
@@ -156,9 +158,9 @@ onMounted(() => {
 		lastFM.value = status;
 	});
 });
-const [updateChecking, setUpdateChecking] = refIpc<boolean>("APP_UPDATE_CHECKING", {
-  debug: true,
-});
+const [updateChecking, setUpdateChecking] = refIpc<boolean>("APP_UPDATE_CHECKING");
+const [updateInfo] = refIpc<UpdateInfo>("APP_UPDATE");
+const [updateDownloaded] = refIpc<boolean>("APP_UPDATE_DOWNLOADED");
 
 async function toggleSetting(key) {
 	const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));

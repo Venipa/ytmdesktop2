@@ -145,7 +145,7 @@ export default async function runCommand({
 	if (!functionCollection[eventName]) throw new Error("Method not found in api worker");
 	return await new Promise<any>((resolve, reject) => {
 		try {
-			return Promise.resolve(functionCollection[eventName]?.(...args)).then(resolve);
+			return Promise.resolve(functionCollection[eventName]?.(...(args ?? []))).then(resolve);
 		} catch (ex) {
 			log.error(ex);
 			reject(ex);

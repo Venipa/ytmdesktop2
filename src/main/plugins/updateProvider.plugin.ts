@@ -1,13 +1,13 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { isDevelopment, isProduction } from "@main/utils/devUtils";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
+import DOMPurify from "dompurify";
 import { App, BrowserWindow } from "electron";
 import { CancellationToken, UpdateInfo, autoUpdater } from "electron-updater";
 import semver from "semver";
 
 import { createAppWindow } from "@main/utils/windowUtils";
-import { cacheWithFile } from "@shared/utils/filecache";
-import { apiRepoUrl, authorName, compareUrlParse } from "@shared/utils/github";
+import { authorName, compareUrlParse } from "@shared/utils/github";
 import { clamp } from "lodash-es";
 import IPC_EVENT_NAMES from "../utils/eventNames";
 import SettingsProvider from "./settingsProvider.plugin";
@@ -101,15 +101,16 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_CHECKING, checking);
 	}
 	private async parseUpdateInfo(ev: UpdateInfo) {
-		const releaseNotes = await cacheWithFile(async () => {
-			return await fetch(apiRepoUrl + `/releases/tags/v${ev.version}`)
-				.then((res) => res.json())
-				.then((res) => res.body)
-				.then(getContent);
-		}, `version-${ev.version}`);
+		// todo: add release notes
+		// const releaseNotes = await cacheWithFile(async () => {
+		// 	return await fetch(apiRepoUrl + `/releases/tags/v${ev.version}`)
+		// 		.then((res) => res.json())
+		// 		.then((res) => res.body)
+		// 		.then(getContent);
+		// }, `version-${ev.version}`);
 		return {
 			...ev,
-			releaseNotes,
+			releaseNotes: ev.releaseNotes ? DOMPurify.sanitize(ev.releaseNotes as string, { FORBID_TAGS: ["script", "style", "html", "body", "head", "iframe"] }) : "",
 		};
 	}
 	private async handleUpdateAvailable(ev: UpdateInfo) {
