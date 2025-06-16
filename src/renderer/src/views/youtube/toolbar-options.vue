@@ -156,7 +156,9 @@ onMounted(() => {
 		lastFM.value = status;
 	});
 });
-const [updateChecking, setUpdateChecking] = refIpc<boolean>("APP_UPDATE_CHECKING");
+const [updateChecking, setUpdateChecking] = refIpc<boolean>("APP_UPDATE_CHECKING", {
+  debug: true,
+});
 
 async function toggleSetting(key) {
 	const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
@@ -165,7 +167,7 @@ async function toggleSetting(key) {
 function checkUpdate() {
 	if (updateChecking.value) return;
 	setUpdateChecking(true);
-	action("app.checkUpdate").finally(() => {
+	window.api.action("app.checkUpdate").finally(() => {
 		setUpdateChecking(false);
 	});
 }

@@ -46,6 +46,10 @@ const router = createRouter({
 			component: () => import("./views/task-view/index.vue"),
 		},
 		{
+			path: "/update",
+			component: () => import("./views/update/index.vue"),
+		},
+		{
 			path: "/youtube/toolbar",
 			component: () => import("./views/youtube/toolbar.vue"),
 		},

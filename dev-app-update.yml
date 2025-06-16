@@ -1,0 +1,3 @@
+provider: github
+url: https://github.com/Venipa/ytmdesktop2
+updaterCacheDirName: dev-ytmd-updater

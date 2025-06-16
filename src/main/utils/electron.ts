@@ -3,7 +3,7 @@ import path from "path";
 import { is } from "@electron-toolkit/utils";
 import logger from "@shared/utils/Logger";
 import { LogLevel, Logger } from "@shared/utils/console";
-import { ipcPromise } from "@shared/utils/promises";
+import { ipcPromise } from "@shared/utils/ipcPromise";
 import { format } from "date-fns";
 import { WebContentsView, app } from "electron";
 import { isProduction } from "./devUtils";

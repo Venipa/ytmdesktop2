@@ -1,16 +1,44 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
-import { isDevelopment } from "@main/utils/devUtils";
+import { isDevelopment, isProduction } from "@main/utils/devUtils";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
-import { App, dialog } from "electron";
+import { App, BrowserWindow } from "electron";
 import { CancellationToken, UpdateInfo, autoUpdater } from "electron-updater";
 import semver from "semver";
 
+import { createAppWindow } from "@main/utils/windowUtils";
+import { cacheWithFile } from "@shared/utils/filecache";
+import { apiRepoUrl, authorName, compareUrlParse } from "@shared/utils/github";
 import IPC_EVENT_NAMES from "../utils/eventNames";
 import SettingsProvider from "./settingsProvider.plugin";
-
+const devShowUpdateDialog = isDevelopment && process.env.DEV_SHOW_UPDATE_DIALOG === "1";
 if (isDevelopment) import.meta.env.__SKIP_BUILD == null;
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = import.meta.env.VITE_GITHUB_REPOSITORY.split("/", 2);
-
+function getContent(content: string) {
+	const lines = content.split("\n");
+	const newContext = lines.map((line) => {
+		if (line.startsWith("- ")) {
+			const mainContent = line.split(";")[0];
+			const context = line.split(";")[2] ?? "@" + authorName;
+			const mentions = context
+				?.split(" ")
+				.filter((word) => word.startsWith("@"))
+				.map((mention) => {
+					const username = mention.replace("@", "");
+					const avatarUrl = `https://github.com/${username}.png`;
+					return `[![${mention}](${avatarUrl})](https://github.com/${username})`;
+				});
+			if (!mentions) {
+				return line;
+			}
+			// Remove &nbsp
+			return mainContent.replace(/&nbsp/g, "") + " – " + mentions.join(" ");
+		} else if (compareUrlParse.test(line)) {
+			return line.replace(compareUrlParse, `[View on Github]($1)`);
+		}
+		return line;
+	});
+	return newContext.join("\n");
+}
 @IpcContext
 export default class UpdateProvider extends BaseProvider implements BeforeStart, AfterInit {
 	private _update: UpdateInfo | null = null;
@@ -19,6 +47,9 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	private _updateDownloaded: boolean = false;
 	private _downloadToken: CancellationToken | null = null;
 	private _autoUpdateCheckHandle: NodeJS.Timeout | null = null;
+	private _readyPromise: Promise<void> | null = null;
+	private _downloadCachedPromise: Promise<void> | null = null;
+	private _window: BrowserWindow;
 
 	constructor(private app: App) {
 		super("update");
@@ -40,38 +71,59 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		return this._updateDownloaded;
 	}
 
+	get window() {
+		return this._window;
+	}
+
 	get isAutoUpdate() {
 		return this.settingsInstance.instance.app.autoupdate && !isDevelopment;
 	}
 
 	// Private helper methods
 	private isUpdateInRange(ver: string): boolean {
-		if (isDevelopment) return true;
+		if (devShowUpdateDialog) return true;
 		return semver.gtr(ver, this.app.getVersion(), {
 			includePrerelease: true,
 			loose: true,
 		});
 	}
-
-	private sendUpdateStatus(checking: boolean) {
-		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_CHECKING, checking);
+	private sendToAllViews(ev: string, ...args: any[]) {
+		this.windowContext.sendToAllViews(ev, ...args);
+		this.window?.webContents.send(ev, ...args);
 	}
 
-	private handleUpdateAvailable(ev: UpdateInfo) {
+	private sendUpdateStatus(checking: boolean) {
+		this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_CHECKING, checking);
+	}
+	private async parseUpdateInfo(ev: UpdateInfo) {
+		const releaseNotes = await cacheWithFile(async () => {
+			return await fetch(apiRepoUrl + `/releases/tags/v${ev.version}`)
+				.then((res) => res.json())
+				.then((res) => res.body)
+				.then(getContent);
+		}, `version-${ev.version}`);
+		return {
+			...ev,
+			releaseNotes,
+		};
+	}
+	private async handleUpdateAvailable(ev: UpdateInfo) {
 		this._updateAvailable = ev && this.isUpdateInRange(ev.version);
-		this._update = this._updateAvailable ? ev : null;
+		this.logger.debug(apiRepoUrl + `/releases/tags/v${ev.version}`);
+		this._update = this._updateAvailable ? await this.parseUpdateInfo(ev) : (null as any);
+		this.logger.debug("update available", "version: " + ev.version + "\n", "releaseNotes: \n" + this._update?.releaseNotes);
 
 		if (this._updateAvailable) {
-			this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, ev);
+			this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, this._update);
 		}
 		this.sendUpdateStatus(false);
 	}
 
-	private handleUpdateDownloaded(ev: UpdateInfo) {
+	private async handleUpdateDownloaded(ev: UpdateInfo) {
 		this._updateAvailable = true;
 		this._updateDownloaded = true;
-		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, null);
-		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_DOWNLOADED, ev);
+		this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, null);
+		this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_DOWNLOADED, await this.parseUpdateInfo(ev));
 
 		if (this.isAutoUpdate) {
 			autoUpdater.quitAndInstall(false, true);
@@ -79,21 +131,31 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	}
 
 	private async showUpdateDialog(updateInfo: UpdateInfo) {
-		const releaseNotes = (typeof updateInfo.releaseNotes === "string" ? updateInfo.releaseNotes : updateInfo.releaseNotes?.map((x) => x.note).join("\n"))
-			?.replace(/<[^>]+>/g, "")
-			.trimStart();
-
-		const { response } = await dialog.showMessageBox(this.windowContext.main, {
-			title: `Update available (${updateInfo.version})`,
-			message: `Hey there, there is a new version which you can update to.\n\n${process.platform === "win32" ? releaseNotes : updateInfo.releaseName}`,
-			type: "question",
-			buttons: ["Update now", "Cancel"],
-			cancelId: -1,
-		});
-
-		if (response === 0) {
-			await this.onAutoUpdateRun();
+		if (this.window?.isDestroyed()) this._window = null;
+		if (this.window && this.window.isVisible()) {
+			this.window.focus();
+			return;
 		}
+		this._window = await createAppWindow({
+			path: "/update",
+			height: 600,
+			width: 460,
+			maxHeight: 380,
+			maximizeable: false,
+			minimizeable: false,
+			showTaskBar: true,
+			top: true,
+			parent: this.windowContext.main,
+			show: false,
+		});
+		this.logger.debug(apiRepoUrl + `/releases/${updateInfo.version}`, updateInfo);
+		this.window.webContents.on("did-finish-load", () => {
+			this.window.webContents.send("app.update", { ...updateInfo });
+		});
+		this.window.on("closed", () => {
+			this._window = null;
+		});
+		this.window.show();
 	}
 
 	// Lifecycle methods
@@ -104,8 +166,9 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			owner: GITHUB_AUTHOR,
 			repo: GITHUB_REPOSITORY,
 		});
+		if (devShowUpdateDialog) autoUpdater.forceDevUpdateConfig = true;
 		autoUpdater.autoDownload = false;
-		autoUpdater.autoInstallOnAppQuit = !isDevelopment;
+		autoUpdater.autoInstallOnAppQuit = isProduction;
 
 		this.logger.debug(autoUpdater.updateConfigPath);
 		this.logger.debug("Updater Cache: " + autoUpdater["app"].baseCachePath);
@@ -119,7 +182,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 
 		autoUpdater.on("download-progress", (ev) => {
 			if (!this.updateDownloaded) {
-				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, ev);
+				this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, ev);
 			}
 		});
 
@@ -127,36 +190,47 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		autoUpdater.on("before-quit-for-update" as any, () => {
 			this._updateQueuedForInstall = true;
 		});
+		this._readyPromise = new Promise(async (resolve) => {
+			await Promise.allSettled([new Promise((r1) => autoUpdater.once("update-available", r1)), new Promise((r1) => autoUpdater.once("update-not-available", r1))]).finally(resolve);
+		});
+		this._downloadCachedPromise = new Promise(async (resolve) => {
+			await Promise.allSettled([new Promise((r1) => autoUpdater.once("update-downloaded", r1))]).finally(resolve);
+		});
 	}
 
-	AfterInit() {
+	async AfterInit() {
 		if (this._update) {
-			this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, this._update);
+			this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, this._update);
 		}
 
 		if (this.isAutoUpdate) {
 			this.onCheckUpdate().catch((err) => this.logger.error("Error checking for update", err));
-		} else if (isDevelopment) {
-			this._checkUpdate().catch((err) => this.logger.error("Error checking for update", err));
+		} else if (devShowUpdateDialog) {
+			this.onCheckUpdate().catch((err) => this.logger.error("Error checking for update", err));
 		}
 	}
 
 	// Public methods
 	@IpcHandle("action:app.getUpdate")
 	async getUpdate() {
+		await this._readyPromise;
 		return this._update;
 	}
 
 	@IpcHandle("action:app.installUpdate")
 	@IpcOn("app.installUpdate", { debounce: 1000 })
-	async onAutoUpdateRun() {
+	async onAutoUpdateRun(quitAndInstall: boolean = true) {
+		if (this._downloadToken) throw new Error("Download already in progress [E002]");
 		if (!this.updateDownloaded && !this.updateQueuedForInstall) {
 			const [downloadPromise] = this.onDownloadUpdate();
-			if (!downloadPromise) return;
+			if (!downloadPromise) return false;
+			await this.showUpdateDialog(this._update);
 			await downloadPromise;
 		}
+		if (devShowUpdateDialog || !quitAndInstall) return this._updateDownloaded;
 		if (!this.isAutoUpdate || this.updateQueuedForInstall) autoUpdater.quitAndInstall(false, true);
 		else if (this.updateDownloaded) autoUpdater.quitAndInstall(false, true);
+		return this._updateDownloaded;
 	}
 
 	private async _checkUpdate() {
@@ -178,14 +252,23 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 
 		this._downloadToken = new CancellationToken();
 		return [
-			autoUpdater.downloadUpdate(this._downloadToken),
+			autoUpdater
+				.downloadUpdate(this._downloadToken)
+				.then((files) => {
+					this._updateDownloaded = !!files.length;
+					return files;
+				})
+				.finally(() => {
+					this._downloadToken?.dispose();
+					this._downloadToken = null;
+				}),
 			() => {
 				if (this._downloadToken) {
 					this._downloadToken.cancel();
 					this._downloadToken.dispose();
 					this._downloadToken = null;
 				}
-				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, null);
+				this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, null);
 			},
 		];
 	}
@@ -195,6 +278,12 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		if (this._downloadToken) {
 			this._downloadToken.cancel();
 		}
+	}
+	@IpcHandle("action:app.updateDownloaded")
+	async isUpdateDownloaded() {
+		await this._readyPromise;
+		await this._downloadCachedPromise;
+		return this.updateDownloaded;
 	}
 
 	@IpcHandle("action:app.checkUpdate")

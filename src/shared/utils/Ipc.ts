@@ -20,7 +20,7 @@ export function refIpc<T, R = T>(eventName: keyof typeof eventNames, options?: P
 export function refIpc<T, R = T>(eventName: string, options?: Partial<RefIpcOptions<T, R>>): RefReturn<R>;
 export function refIpc<T, R = T>(eventName: string[], options?: Partial<RefIpcOptions<T, R>>): RefReturn<R>;
 export function refIpc<T, R = T>(eventName: string | string[], options?: Partial<RefIpcOptions<T, R>>): RefReturn<R> {
-	const { defaultValue, mapper, onTrigger, ignoreUndefined, rawArgs } = options ?? {};
+	const { defaultValue, mapper, onTrigger, ignoreUndefined, rawArgs, getInitialValue } = options ?? {};
 	const defaultMapper = (item: T) => item;
 	const objMap = (mapper || defaultMapper) as (item: T, name: string, prev: any) => R;
 	const state = ref<R>(defaultValue as R) as Ref<R>;
@@ -39,10 +39,15 @@ export function refIpc<T, R = T>(eventName: string | string[], options?: Partial
 	onMounted(() => {
 		handlerNames.forEach((handlerName) => window.api.on(handlerName, handlers[handlerName]));
 		options?.onMounted?.();
-		if (options?.getInitialValue) {
-			Promise.resolve(options.getInitialValue()).then((initialValue) => {
-				state.value = initialValue;
-			});
+		if (getInitialValue) {
+			Promise.resolve(getInitialValue())
+				.then((initialValue) => {
+					state.value = initialValue;
+					if (options?.debug) console.log(`[IPC:InitialValue@${handlerNames.join(",")}] `, initialValue);
+				})
+				.catch((err) => {
+					console.error("Error getting initial value", err);
+				});
 		}
 	});
 	onUnmounted(() => {

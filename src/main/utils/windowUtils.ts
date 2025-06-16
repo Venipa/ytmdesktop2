@@ -18,6 +18,7 @@ type WindowOptions = {
 	showTaskBar?: boolean;
 	maximizeable?: boolean;
 	minimizeable?: boolean;
+	show?: boolean;
 };
 const log = createLogger("main");
 export function parseScriptPath(p: string) {
@@ -26,7 +27,7 @@ export function parseScriptPath(p: string) {
 }
 export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	// eslint-disable-next-line prefer-const
-	let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top, showTaskBar, minimizeable, maximizeable } = appOptions ?? {};
+	let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top, showTaskBar, minimizeable, maximizeable, show } = appOptions ?? {};
 	if (!path) path = "/";
 	// Create the browser window.
 	const win = new BrowserWindow({
@@ -36,6 +37,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 		minHeight: minHeight ?? 480,
 		maxWidth,
 		maxHeight,
+		show: show ?? true,
 		minimizable: minimizeable === true,
 		maximizable: maximizeable === true,
 		backgroundColor: "#000000",

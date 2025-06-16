@@ -33,7 +33,7 @@
         </template>
         <template v-if="updateInfo">
           <button
-            class="text-xs h-7 rounded items-center px-3 transition duration-100 ease-out appear flex truncate cursor-pointer"
+            class="text-xs h-7 rounded items-center px-3 gap-2 transition duration-100 ease-out appear flex truncate cursor-pointer"
             :class="{
               'bg-green-500 text-white': updateInfo && !updateInfoProgress && !updateDownloaded,
               'text-green-500': updateDownloaded,
@@ -102,10 +102,7 @@ function runUpdate() {
 	if (isInstalling.value) return Promise.resolve(null);
 	isInstalling.value = true;
 	return window.api
-		.action("app.installUpdate")
-		.then(() => {
-			setUpdateInfo(null);
-		})
+		.action("app.checkUpdate")
 		.finally(() => {
 			isInstalling.value = false;
 		});
