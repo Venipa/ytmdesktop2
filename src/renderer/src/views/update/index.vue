@@ -13,7 +13,7 @@
     <!-- Update Available View -->
     <div v-else-if="updateInfo">
       <!-- Header -->
-      <div class="text-center pb-4 pt-6 px-6">
+      <div class="text-center pb-4 pt-6 px-6 drag">
         <div class="mx-auto mb-4 p-3 rounded-full bg-gray-900 w-fit">
           <DownloadIcon :size="32"
                         class="text-blue-400" />
@@ -134,14 +134,11 @@ const prettyBytes = (bytes: number) => {
   })
 }
 
-const progress = ref(0)
 const isComplete = ref(false)
 const currentVersion = ref("v" + window.api.version)
 const [updateChecking, setUpdateChecking] = refIpc<boolean>("APP_UPDATE_CHECKING");
 
 const [updateInfo, setUpdateInfo] = refIpc<UpdateInfo | null>("APP_UPDATE", {
-  ignoreUndefined: true,
-  debug: true,
   getInitialValue: async () => {
     return await window.api.action("app.getUpdate")
   }
@@ -204,6 +201,7 @@ html,
 body {
   height: 100%;
   overflow: hidden;
+  background-color: #000;
 }
 </style>
 <style scoped>

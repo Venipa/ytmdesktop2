@@ -8,6 +8,7 @@ import semver from "semver";
 import { createAppWindow } from "@main/utils/windowUtils";
 import { cacheWithFile } from "@shared/utils/filecache";
 import { apiRepoUrl, authorName, compareUrlParse } from "@shared/utils/github";
+import { clamp } from "lodash-es";
 import IPC_EVENT_NAMES from "../utils/eventNames";
 import SettingsProvider from "./settingsProvider.plugin";
 const devShowUpdateDialog = isDevelopment && process.env.DEV_SHOW_UPDATE_DIALOG === "1";
@@ -129,33 +130,46 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			autoUpdater.quitAndInstall(false, true);
 		}
 	}
-
+	private _showUpdateDialogPromise: Promise<void> | null = null;
 	private async showUpdateDialog(updateInfo: UpdateInfo) {
-		await this._readyPromise;
+		if (this._showUpdateDialogPromise) {
+			await this._showUpdateDialogPromise;
+			return;
+		}
 		if (this.window?.isDestroyed()) this._window = null;
 		if (this.window && this.window.isVisible()) {
 			this.window.focus();
 			return;
 		}
-		this._window = await createAppWindow({
-			path: "/update",
-			height: 600,
-			width: 460,
-			maxHeight: 380,
-			maximizeable: false,
-			minimizeable: false,
-			showTaskBar: true,
-			top: true,
-			parent: this.windowContext.main,
-			show: false,
+		await (this._showUpdateDialogPromise = new Promise(async (resolve) => {
+			const parent = this.windowContext.main;
+			const height = clamp(parent.getBounds().height, 600, clamp(parent.getBounds().height - 48, 600, 800));
+			this._window = await createAppWindow({
+				path: "/update",
+				height,
+				width: 460,
+				minWidth: 460,
+				maxWidth: 460,
+				minHeight: height,
+				maxHeight: height,
+				maximizeable: false,
+				minimizeable: false,
+				showTaskBar: true,
+				parent,
+				top: true,
+				show: false,
+			});
+			resolve();
+			this.window.webContents.on("did-finish-load", () => {
+				this.window.webContents.send("app.update", { ...updateInfo });
+			});
+			this.window.on("closed", () => {
+				this._window = null;
+			});
+			this.window.show();
+		})).finally(() => {
+			this._showUpdateDialogPromise = null;
 		});
-		this.window.webContents.on("did-finish-load", () => {
-			this.window.webContents.send("app.update", { ...updateInfo });
-		});
-		this.window.on("closed", () => {
-			this._window = null;
-		});
-		this.window.show();
 	}
 
 	// Lifecycle methods
@@ -191,7 +205,8 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			this._updateQueuedForInstall = true;
 		});
 		this._readyPromise = new Promise(async (resolve) => {
-			await Promise.allSettled([new Promise((r1) => autoUpdater.once("update-available", r1)), new Promise((r1) => autoUpdater.once("update-not-available", r1))]).finally(resolve);
+			await Promise.race([new Promise((r1) => autoUpdater.once("update-available", r1)), new Promise((r1) => autoUpdater.once("update-not-available", r1))]);
+			resolve();
 		});
 		this._downloadCachedPromise = new Promise(async (resolve) => {
 			await Promise.allSettled([new Promise((r1) => autoUpdater.once("update-downloaded", r1))]).finally(resolve);
@@ -214,6 +229,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	@IpcHandle("action:app.getUpdate")
 	async getUpdate() {
 		await this._readyPromise;
+		this.logger.debug("getUpdate", this._update?.version);
 		return this._update;
 	}
 
@@ -224,7 +240,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		if (!this.updateDownloaded && !this.updateQueuedForInstall) {
 			const [downloadPromise] = this.onDownloadUpdate();
 			if (!downloadPromise) return false;
-			await this.showUpdateDialog(this._update);
 			await downloadPromise;
 		}
 		if (devShowUpdateDialog || !quitAndInstall) return this._updateDownloaded;
@@ -285,7 +300,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		await this._downloadCachedPromise;
 		return this.updateDownloaded;
 	}
-
+	private _c = 0;
 	@IpcHandle("action:app.checkUpdate")
 	@IpcHandle("app.checkUpdate", { debounce: 1000 })
 	async onCheckUpdate() {
@@ -294,6 +309,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			await this.showUpdateDialog(result.updateInfo);
 		} catch (err: any) {
 			this.logger.error(err.message);
+		} finally {
 		}
 	}
 

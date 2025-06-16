@@ -1,9 +1,10 @@
+import { Logger } from "@shared/utils/console";
 import "non.geist";
 import { createApp } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
 import App from "./App.vue";
 import "./assets/app.scss";
-
+if (import.meta.env.PROD) Logger.enableProductionMode();
 const router = createRouter({
 	history: createWebHashHistory(),
 	routes: [

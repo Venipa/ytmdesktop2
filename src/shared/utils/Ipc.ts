@@ -1,7 +1,8 @@
 import eventNames from "@main/utils/eventNames";
 import { IpcRendererEvent } from "electron";
 import { Ref, onBeforeMount, onMounted, onUnmounted, ref } from "vue";
-
+import { createLogger } from "./console";
+const logger = createLogger("refIpc");
 type Map<T, R> = ((item: T, name: string, prev: any) => T) | ((item: T, name: string, prev: any) => R);
 type Trigger<T> = (item: T, prev: T) => void;
 type IpcHandler = (ev: IpcRendererEvent, ...args: any[]) => void;
@@ -25,6 +26,7 @@ export function refIpc<T, R = T>(eventName: string | string[], options?: Partial
 	const objMap = (mapper || defaultMapper) as (item: T, name: string, prev: any) => R;
 	const state = ref<R>(defaultValue as R) as Ref<R>;
 	const handlerNames = [eventName].flat().map((x) => eventNames[x] ?? x);
+	const log = logger.child(handlerNames.join(","));
 	const handlers: { [key: string]: IpcHandler } = handlerNames.reduce((acc, handlerName) => {
 		acc[handlerName] = ((ev, ...data) => {
 			const vArgs = rawArgs !== true ? data.flat()?.[0] : data;
@@ -32,25 +34,21 @@ export function refIpc<T, R = T>(eventName: string | string[], options?: Partial
 			if (ignoreUndefined && typeof newVal === "undefined") return;
 			onTrigger?.(newVal as any, state.value as any);
 			state.value = newVal;
-			if (options?.debug) console.log(`[IPC:Receiving@${handlerName}] `, ev, ...data);
+			if (options?.debug) log.debug(`received`, ev, ...data);
 		}) as IpcHandler;
 		return acc;
 	}, {});
-	onMounted(() => {
+	onMounted(async () => {
+		log.debug(`mounted`, { getInitialValue, options });
 		handlerNames.forEach((handlerName) => window.api.on(handlerName, handlers[handlerName]));
 		options?.onMounted?.();
-		if (getInitialValue) {
-			Promise.resolve(getInitialValue())
-				.then((initialValue) => {
-					state.value = initialValue;
-					if (options?.debug) console.log(`[IPC:InitialValue@${handlerNames.join(",")}] `, initialValue);
-				})
-				.catch((err) => {
-					console.error("Error getting initial value", err);
-				});
-		}
+
+		const initialValue = await Promise.resolve(getInitialValue?.());
+		log.debug(`initialValue`, { initialValue });
+		state.value = initialValue;
 	});
 	onUnmounted(() => {
+		log.debug(`unmounted`);
 		handlerNames.forEach((handlerName) => window.api.off(handlerName, handlers[handlerName]));
 	});
 	return [state, (val: R) => (state.value = val)];
