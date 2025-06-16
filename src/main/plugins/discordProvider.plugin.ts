@@ -260,7 +260,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
 
 	async AfterInit() {
 		const settings = this.settingsInstance.instance;
-		if (!settings.discord.enabled || this._enabled) return;
+		if (!settings.discord.enabled || !this._enabled) return;
 		await this.enable();
 	}
 
