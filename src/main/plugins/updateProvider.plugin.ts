@@ -253,15 +253,20 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	}
 
 	private async _checkUpdate() {
-		const beta = !!this.settingsInstance.instance?.app?.beta;
-		autoUpdater.allowPrerelease = beta;
+		try {
+			this.sendUpdateStatus(true);
+			const beta = !!this.settingsInstance.instance?.app?.beta;
+			autoUpdater.allowPrerelease = beta;
 
-		const result = await autoUpdater.checkForUpdates();
-		this.logger.debug("checkUpdate", { result });
-		if (!result?.updateInfo || !this.isUpdateInRange(result.updateInfo.version)) {
-			throw new Error("No Update available");
+			const result = await autoUpdater.checkForUpdates();
+			if (!result?.updateInfo || !this.isUpdateInRange(result.updateInfo.version)) {
+				throw new Error("No Update available");
+			}
+
+			return result;
+		} finally {
+			this.sendUpdateStatus(false);
 		}
-		return result;
 	}
 
 	@IpcOn("app.downloadUpdate")
