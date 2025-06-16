@@ -2,14 +2,13 @@ import translations from "@translations/index";
 import { Menu, shell } from "electron";
 import AppProvider from "../plugins/appProvider.plugin";
 import SettingsProvider from "../plugins/settingsProvider.plugin";
-import UpdateProvider from "../plugins/updateProvider.plugin";
 import { BaseProvider } from "./baseProvider";
 import { serverMain } from "./serverEvents";
 
 export const createTrayMenu = (provider: BaseProvider) => {
 	const { set, instance: settings } = provider.getProvider("settings") as SettingsProvider;
 	const { app } = provider.getProvider("app") as AppProvider;
-	const { updateAvailable, onCheckUpdate: checkUpdate, onAutoUpdateRun: applyUpdate } = provider.getProvider("update") as UpdateProvider;
+	const { updateAvailable, onCheckUpdate: checkUpdate, onAutoUpdateRun: applyUpdate, updateInfo } = provider.getProvider("update");
 	const menu = Menu.buildFromTemplate([
 		{
 			label: translations.appName,
@@ -17,8 +16,8 @@ export const createTrayMenu = (provider: BaseProvider) => {
 			click: () => serverMain.emit("app.trayState", null, "visible"),
 		},
 		{
-			label: updateAvailable ? "Update Available - Apply/Download" : "Check for Updates",
-			click: () => (updateAvailable ? applyUpdate() : checkUpdate()),
+			label: updateAvailable ? `Update Available - ${updateInfo?.version ? `Download v${updateInfo.version}` : "Download"}` : "Check for Updates",
+			click: () => (updateAvailable ? applyUpdate(null, false) : checkUpdate()),
 		},
 		{
 			type: "separator",

@@ -76,6 +76,10 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		return this._window;
 	}
 
+	get updateInfo() {
+		return this._update;
+	}
+
 	get isAutoUpdate() {
 		return this.settingsInstance.instance.app.autoupdate && !isDevelopment;
 	}
@@ -110,9 +114,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	}
 	private async handleUpdateAvailable(ev: UpdateInfo) {
 		this._updateAvailable = ev && this.isUpdateInRange(ev.version);
-		this.logger.debug(apiRepoUrl + `/releases/tags/v${ev.version}`);
 		this._update = this._updateAvailable ? await this.parseUpdateInfo(ev) : (null as any);
-		this.logger.debug("update available", "version: " + ev.version + "\n", "releaseNotes: \n" + this._update?.releaseNotes);
 
 		if (this._updateAvailable) {
 			this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, this._update);
@@ -235,7 +237,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 
 	@IpcHandle("action:app.installUpdate")
 	@IpcOn("app.installUpdate", { debounce: 1000 })
-	async onAutoUpdateRun(quitAndInstall: boolean = true) {
+	async onAutoUpdateRun(__ev: any, quitAndInstall: boolean = true) {
 		if (this._downloadToken) throw new Error("Download already in progress [E002]");
 		if (!this.updateDownloaded && !this.updateQueuedForInstall) {
 			const [downloadPromise] = this.onDownloadUpdate();

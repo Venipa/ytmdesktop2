@@ -34,7 +34,7 @@ const fsLogger = (() => {
 	const allowedLevels = [LogLevel.Error, LogLevel.Warning];
 	return (source: string, level: LogLevel, objects: any[] = []) => {
 		if (!allowedLevels.includes(level)) return;
-		writeStream.write(`[${source}][${level}]: ${objects.join(" ") ?? ""}\n`, () => {
+		writeStream.write(`[${source}][${level}]: ${[objects].flat().join(" ") ?? ""}\n`, () => {
 			if (writeStream.writableEnded) {
 				writeStream.end();
 			}

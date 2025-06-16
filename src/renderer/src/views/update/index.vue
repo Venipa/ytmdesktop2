@@ -59,7 +59,7 @@
             </div>
             <div class="w-full bg-gray-800 rounded-full h-2">
               <div class="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-                   :style="{ width: `${progress}%` }"></div>
+                   :style="{ width: `${updateInfoProgress.percent}%` }"></div>
             </div>
             <div class="flex items-center justify-between text-xs text-gray-300">
               <span>Size: {{ prettyBytes(updateInfoProgress.total) }}</span>
@@ -179,6 +179,7 @@ function installUpdate(quitAndInstall: boolean = true) {
       setUpdateDownloaded(downloaded)
       setUpdateInfoProgress(null)
     }).catch(err => {
+      setUpdateInfoProgress(null)
       if (err instanceof Error && err.message.endsWith("[E002]")) {
         isInstalling.value = true;
       } else throw err;
