@@ -131,6 +131,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	}
 
 	private async showUpdateDialog(updateInfo: UpdateInfo) {
+		await this._readyPromise;
 		if (this.window?.isDestroyed()) this._window = null;
 		if (this.window && this.window.isVisible()) {
 			this.window.focus();
@@ -148,7 +149,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			parent: this.windowContext.main,
 			show: false,
 		});
-		this.logger.debug(apiRepoUrl + `/releases/${updateInfo.version}`, updateInfo);
 		this.window.webContents.on("did-finish-load", () => {
 			this.window.webContents.send("app.update", { ...updateInfo });
 		});

@@ -130,7 +130,7 @@ import { ref } from 'vue'
 const prettyBytes = (bytes: number) => {
   return _prettyBytes(bytes, {
     binary: true,
-    unitSeparator: " "
+    space: true
   })
 }
 
