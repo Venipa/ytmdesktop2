@@ -1,4 +1,5 @@
 import { join } from "path";
+import { logger } from "@shared/utils/console";
 import translations from "@translations/index";
 import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView } from "electron";
 import { debounce } from "lodash-es";
@@ -10,6 +11,21 @@ import { createApiView, createView, googleLoginPopup } from "./view";
 import { callWindowListeners, pushWindowStates } from "./webContentUtils";
 import { wrapWindowHandler } from "./windowUtils";
 
+function isPreventedNavOrRedirect(url: URL): boolean {
+	return (
+		/^(?!consent\.youtube\.com|accounts\.youtube\.com|music\.youtube\.com|accounts\.google\.\w+)$/.test(url.hostname) &&
+		!/^(www\.youtube\.com|youtube\.com)\/(premium|musicpremium)$/i.test(url.hostname + url.pathname) &&
+		!url.hostname.match(/^accounts\.google\.(\w+)$/)
+	);
+}
+
+const GOOGLE_LOGIN_URL =
+	"https://accounts.google.com/ServiceLogin?" +
+	new URLSearchParams({
+		ltmpl: "music",
+		service: "youtube",
+		continue: "https://www.youtube.com/signin?action_handle_signin=true&app=desktop&next=https://music.youtube.com/",
+	}).toString();
 export interface WindowViews extends Record<string, WebContentsView> {
 	youtubeView: WebContentsView;
 	toolbarView: WebContentsView;
@@ -167,19 +183,20 @@ export class WindowManager {
 		view.webContents.on("did-navigate", (ev, location) => {
 			lastLocation = location;
 		});
-
+		// Prevent navigation if google is processing login
 		view.webContents.on("will-navigate", (ev, location) => {
 			if (this.isGoogleLoginProcessing) {
 				ev.preventDefault();
 				return;
 			}
 
-			if (location?.match(/^http?s\:\/\/(accounts)?.google.(\w+)/)) {
+			if (location?.match(/^https?\:\/\/(accounts)?.google.(\w+)/)) {
 				ev.preventDefault();
 				this.handleGoogleLogin(location, view);
 			}
 		});
 
+		// Handle YouTube Music View navigation, restart internal app service cycle if needed
 		view.webContents.on("will-navigate", (ev, location) => {
 			if (!lastLocation?.match(defaultUrl) && !!location?.match(defaultUrl)) {
 				serverMain.emit("app.loadStart");
@@ -187,7 +204,19 @@ export class WindowManager {
 				pushWindowStates(view.webContents.id);
 			}
 		});
+		// Handle YouTube Music View redirects that may require premium subscription
+		view.webContents.on("will-redirect", (event) => {
+			const url = new URL(event.url);
+			if (isPreventedNavOrRedirect(url)) {
+				event.preventDefault();
+				logger.info(`Handling YouTube Music View navigation: ${event.url}`);
+			}
 
+			if (/^(?:www\.)?youtube\.com\/(?:premium|musicpremium)$/i.test(url.hostname + url.pathname)) {
+				// Redirecting to Google sign-in page for YouTube Music access, maybe require premium subscription
+				this.handleGoogleLogin(GOOGLE_LOGIN_URL, view);
+			}
+		});
 		view.webContents.on("page-title-updated", (ev, title) => view.webContents.emit("window-title-updated", title));
 	}
 
