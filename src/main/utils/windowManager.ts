@@ -226,6 +226,7 @@ export class WindowManager {
 			const isAuthenticated = await googleLoginPopup(location, this.mainWindow!);
 			if (isAuthenticated) {
 				view.webContents.reload();
+				serverMain.emit("app.loadStart");
 				await new Promise<void>((resolve) => view.webContents.once("did-finish-load", () => resolve()));
 			}
 		} finally {
