@@ -127,7 +127,6 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
 		(details, callback) => {
 			secureBrowserHeaders.split("\n").forEach((header) => {
 				const [key, value] = [header.slice(0, header.indexOf(":"))?.trimStart?.(), header.slice(header.indexOf(":") + 1)?.trimStart?.()];
-				console.log("GOOGLE HEADERS: ", key, value);
 				if (key) details.requestHeaders[key.trimStart()] = value.trimStart();
 			});
 			callback(details);

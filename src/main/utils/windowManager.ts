@@ -229,6 +229,8 @@ export class WindowManager {
 				serverMain.emit("app.loadStart");
 				await new Promise<void>((resolve) => view.webContents.once("did-finish-load", () => resolve()));
 			}
+		} catch (error) {
+			logger.error("Error handling Google login", error);
 		} finally {
 			this.isGoogleLoginProcessing = false;
 		}
