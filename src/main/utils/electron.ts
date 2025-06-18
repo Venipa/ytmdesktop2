@@ -12,6 +12,7 @@ let isInitialized = false;
 
 const fsLogger = (() => {
 	const logDir = path.join(app.getPath("userData"), "logs");
+	if (!isProduction) console.log("logDir", logDir);
 	if (!fs.existsSync(logDir)) {
 		fs.mkdirSync(logDir, { recursive: true });
 	}

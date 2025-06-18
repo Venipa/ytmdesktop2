@@ -41,7 +41,10 @@ mac:
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+  category: public.app-category.music
+  notarize: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
   target:
     - target: dmg
       arch: x64

@@ -246,7 +246,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			if (!downloadPromise) return false;
 			await downloadPromise;
 		}
-		if (devShowUpdateDialog || !quitAndInstall) return this._updateDownloaded;
+		if (!quitAndInstall) return this._updateDownloaded;
 		if (!this.isAutoUpdate || this.updateQueuedForInstall) autoUpdater.quitAndInstall(false, true);
 		else if (this.updateDownloaded) autoUpdater.quitAndInstall(false, true);
 		return this._updateDownloaded;
