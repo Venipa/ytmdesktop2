@@ -96,7 +96,7 @@ class DiscordRPCManager {
 	}
 
 	private _createClientAbortController: AbortController | null = null;
-	private async createClient(presence: Presence = DEFAULT_PRESENCE, isAborted: boolean = false): Promise<[DiscordClient, Presence] | null> {
+	private async createClient(presence: Presence = DEFAULT_PRESENCE, isAborted: boolean = false, tries: number = 0): Promise<[DiscordClient, Presence] | null> {
 		if (isAborted) {
 			this.logger.debug("creating client aborted", isAborted);
 			this.onError(null);
@@ -133,10 +133,14 @@ class DiscordRPCManager {
 					this.onDisconnected();
 					this.enable();
 				})
-				.once("disconnect", () => {
+				.once("disconnected", () => {
 					this.logger.error("discord disconnected, trying to reconnect");
 					this.onDisconnected();
-					this.enable();
+					if (tries < 3) {
+						this.createClient(presence, isAborted, tries + 1);
+					} else {
+						this.onError(new Error("Discord disconnected"));
+					}
 				});
 			return [client, presence];
 		} catch (err) {
