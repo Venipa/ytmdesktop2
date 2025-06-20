@@ -70,7 +70,9 @@ export const GoogleUA = {
 	linux: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.152 Safari/537.36",
 	unknown: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0",
 };
+// todo: proper google login fix
 export const getCurrentPlatformUserAgent = () => {
+	return GoogleUA.unknown;
 	const platform = process.platform;
 	const userAgent = GoogleUA[platform as keyof typeof GoogleUA];
 	return userAgent ?? GoogleUA.unknown;
