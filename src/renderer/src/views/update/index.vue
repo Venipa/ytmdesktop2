@@ -31,9 +31,8 @@
           </div>
           <div class="text-right">
             <p class="text-sm font-medium text-white">New Version</p>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 justify-end">
               <p class="text-xs text-gray-400">{{ updateInfo.version }}</p>
-              <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full"> Latest </span>
             </div>
           </div>
         </div>
@@ -81,6 +80,12 @@
               <CheckCircleIcon :size="16" /> Install Now
             </button>
           </template>
+          <template v-else-if="isInstalling && updateDownloaded">
+            <div class="flex items-center gap-2 h-20 justify-center">
+              <Spinner size="sm" />
+              <span class="text-xs text-gray-400">Installing...</span>
+            </div>
+          </template>
           <template v-else-if="!updateDownloaded">
             <button @click="window.close()"
                     class="flex-1 px-4 py-2 border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"> Later </button>
@@ -91,7 +96,7 @@
           </template>
         </div>
         <!-- Footer Info -->
-        <div class="text-center pt-2">
+        <div class="text-center pt-2" v-if="!window.api.platform.isMacOS">
           <p class="text-xs text-gray-400">Update will be installed automatically after download</p>
         </div>
       </div>
@@ -121,8 +126,8 @@ import { MDXComponents } from '@renderer/views/update/mdx-components'
 import { refIpc } from '@shared/utils/Ipc'
 import type { ProgressInfo, UpdateInfo } from '@shared/utils/updater'
 import {
-  CheckCircleIcon,
-  DownloadIcon
+CheckCircleIcon,
+DownloadIcon
 } from 'lucide-vue-next'
 import _prettyBytes from "pretty-bytes"
 import { ref } from 'vue'
@@ -171,12 +176,21 @@ function installUpdate(quitAndInstall: boolean = true) {
       percent: 0,
       bytesPerSecond: 0
     })
+  } else {
+    isInstalling.value = true
   }
   return window.api
     .action("app.installUpdate", quitAndInstall)
     .then((downloaded) => {
-      isComplete.value = downloaded
-      setUpdateDownloaded(downloaded)
+      if (!updateDownloaded.value) {
+        isComplete.value = downloaded
+        setUpdateDownloaded(downloaded)
+      } else {
+        setTimeout(() => {
+          isInstalling.value = false
+          installUpdate(true)
+        }, 20000)
+      }
       setUpdateInfoProgress(null)
     }).catch(err => {
       setUpdateInfoProgress(null)
