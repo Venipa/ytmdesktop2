@@ -36,11 +36,13 @@ export default class VolumeRatioProvider extends BaseProvider implements AfterIn
 	}
 	private async enable() {
 		this.logger.debug("Enabling volume ratio");
+		await this.isYtmReady();
 		await this.views.youtubeView.webContents.executeJavaScript(enableScriptContent);
 		await this.forceUpdateVolume();
 	}
 	private async disable() {
 		this.logger.debug("Disabling volume ratio");
+		await this.isYtmReady();
 		await this.views.youtubeView.webContents.executeJavaScript(disableScriptContent);
 		await this.forceUpdateVolume();
 	}

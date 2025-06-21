@@ -110,7 +110,6 @@ export class WindowManager {
 			youtubeView: await this.createYoutubeView(),
 			toolbarView: await this.createToolbarView(),
 		};
-
 		this.setupViewEvents();
 	}
 
@@ -235,23 +234,38 @@ export class WindowManager {
 			this.isGoogleLoginProcessing = false;
 		}
 	}
-
+	private _youtubeReadyPromise: Promise<void> | null = null;
+	private _youtubeReady: boolean = false;
+	get youtubeReady() {
+		return this._youtubeReady;
+	}
+	get youtubeReadyPromise() {
+		return this._youtubeReadyPromise;
+	}
 	private setupViewEvents() {
-		serverMain.on("app.loadEnd", () => {
-			if (!this.mainWindow || !this.loadingView || !this.views) return;
-			this.mainWindow.contentView.removeChildView(this.loadingView);
-			this.mainWindow.contentView.addChildView(this.views.toolbarView);
-		});
+		const createNewReadyPromise = () => {
+			this._youtubeReady = false;
+			return new Promise<void>((resolve) => {
+				const handleLoadEnd = () => {
+					if (!this.mainWindow || !this.loadingView || !this.views) return;
+					this.mainWindow.contentView.removeChildView(this.loadingView);
+					this.mainWindow.contentView.addChildView(this.views.toolbarView);
+					this._youtubeReady = true;
+					resolve();
+				};
+				const handleLoadStart = debounce(() => {
+					if (!this.mainWindow || !this.loadingView || !this.views) return;
+					if (!this.mainWindow.contentView.children?.find((x) => this.loadingView?.webContents && x === this.loadingView)) {
+						this.mainWindow.contentView.addChildView(this.loadingView);
+					}
+					this._youtubeReady = false;
+				}, 100);
 
-		serverMain.on(
-			"app.loadStart",
-			debounce(() => {
-				if (!this.mainWindow || !this.loadingView || !this.views) return;
-				if (!this.mainWindow.contentView.children?.find((x) => this.loadingView?.webContents && x === this.loadingView)) {
-					this.mainWindow.contentView.addChildView(this.loadingView);
-				}
-			}, 100),
-		);
+				serverMain.on("app.loadEnd", handleLoadEnd);
+				serverMain.on("app.loadStart", handleLoadStart);
+			});
+		};
+		this._youtubeReadyPromise = createNewReadyPromise();
 	}
 
 	private setupWindowEvents() {
