@@ -3,7 +3,6 @@
 // Made by: Marco Pfeiffer <git@marco.zone>
 
 import definePlugin from "@plugins/utils";
-
 export default definePlugin(
 	"player-volume-ratio",
 	{

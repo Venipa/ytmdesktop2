@@ -51,10 +51,9 @@ export class BaseProvider<TView extends WebContentsView = WebContentsView> {
 		if (this.views.youtubeView.webContents.isDestroyed()) return false;
 		if (this.views.youtubeView.webContents.isCrashed()) return false;
 		if (this.views.youtubeView.webContents.isLoading()) await new Promise<void>((resolve) => this.views.youtubeView.webContents.on("did-finish-load", resolve));
-		if (this.views.youtubeView.webContents.isLoading()) return false;
-		return await this.views.youtubeView.webContents.executeJavaScript(
-			`(window && window.isYTMLoaded && window.isYTMLoaded() || window.__ytmd_loadingPromise && await window.__ytmd_loadingPromise.then(() => window.isYTMLoaded ? window.isYTMLoaded() : false).catch(() => false))`,
-		);
+		const isReady = await this.views.youtubeView.webContents.executeJavaScript(`(window && window.isYTMLoaded && window.isYTMLoaded())`);
+		this.logger.debug("YTM ready:", isReady);
+		return isReady;
 	}
 	getName() {
 		return this.name;
