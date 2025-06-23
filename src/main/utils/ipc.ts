@@ -1,4 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
+import { logger } from "@shared/utils/console";
 import { IpcMainEvent, WebContentsView, ipcMain } from "electron";
 
 export function createSendHandler<T = unknown>(view: WebContentsView, event: string, options: { timeout?: number } = {}) {
@@ -24,6 +25,7 @@ export function createSendHandler<T = unknown>(view: WebContentsView, event: str
 				clearTimeout(timeout);
 				if (err) reject(err);
 			};
+			logger.debug("Sent plugin command event", event, requestId, requestArgs);
 			return destroyPromise;
 		});
 }

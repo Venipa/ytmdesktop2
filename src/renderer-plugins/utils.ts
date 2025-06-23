@@ -1,14 +1,4 @@
-import type { Logger } from "@shared/utils/console";
-import type { PlayerApi } from "ytm-client-api";
-type PluginSettings = Record<string, any>;
-
-type PluginContext = {
-	settings: PluginSettings;
-	log: Logger;
-	playerApi: PlayerApi;
-	api: Window["api"];
-	domUtils: Window["domUtils"];
-};
+import type { PluginContext } from "@preload/pluginManager";
 type PluginOptions = {
 	name: string;
 	enabled: boolean;
@@ -96,9 +86,9 @@ export function initializePluginCommandsWithIPC(plugin: ClientPlugin, pluginCont
 	const pluginName = plugin.name.replace(/:/g, "_");
 	Object.entries(cmds).forEach(([cmd, fn]) => {
 		const commandKey = pluginCommandKeySlug(cmd);
-		const handler = (ev: unknown, { requestId, payload }: { requestId: string; payload: any[] }) => {
+		const handler = async (ev: unknown, { requestId, payload }: { requestId: string; payload: any[] }) => {
 			pluginContext.log.debug(`Received command \`${cmd}\` with IPC`, { requestId, payload });
-			const response = fn(pluginContext, ...(Array.isArray(payload) ? payload : [payload]));
+			const response = await Promise.resolve(fn(pluginContext, ...(Array.isArray(payload) ? payload : [payload])));
 			window.ipcRenderer.send(`plugins:${pluginName}:cmd:${commandKey}/response.${requestId}`, requestId, response);
 			pluginContext.log.debug(`Sent response for command \`${cmd}\` with IPC`, { requestId, response });
 		};

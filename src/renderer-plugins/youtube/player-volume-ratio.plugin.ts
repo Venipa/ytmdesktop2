@@ -2,7 +2,10 @@
 // https://greasyfork.org/en/scripts/397686-youtube-music-fix-volume-ratio
 // Made by: Marco Pfeiffer <git@marco.zone>
 
+import disableScriptContent from "@main/plugins/resources/volume-ratio/disable-script.js?raw";
+import enableScriptContent from "@main/plugins/resources/volume-ratio/enable-script.js?raw";
 import definePlugin from "@plugins/utils";
+
 export default definePlugin(
 	"player-volume-ratio",
 	{
@@ -10,7 +13,26 @@ export default definePlugin(
 		displayName: "Youtube Player Volume Ratio Handler",
 	},
 	{
+		afterInit({ settings, domUtils, log }) {
+			if (!settings.volumeRatio?.enabled) return;
+			domUtils.ensureWindowLoaded(() => {
+				domUtils.createAndRunScript(enableScriptContent, "player-volume-ratio-enable");
+				log.debug("Volume ratio enabled");
+			});
+		},
 		cmds: {
+			async enable({ name, log, domUtils }) {
+				log.debug("Enabling volume ratio", name);
+				domUtils.ensureDomLoaded(() => {
+					domUtils.createAndRunScript(enableScriptContent, "player-volume-ratio-enable");
+				});
+			},
+			async disable({ name, log, domUtils }) {
+				log.debug("Disabling volume ratio", name);
+				domUtils.ensureDomLoaded(() => {
+					domUtils.createAndRunScript(disableScriptContent, "player-volume-ratio-disable");
+				});
+			},
 			async forceUpdate({ playerApi, api, log }, [volume]: [number]) {
 				playerApi.setVolume((volume = volume ?? playerApi.getVolume()));
 				log.debug("Force updated volume ratio", volume);

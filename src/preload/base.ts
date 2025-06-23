@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webFrame } from "electron";
 import { webUtils } from "electron/renderer";
 import pkg from "../../package.json";
 import translations from "../translations";
@@ -22,11 +22,11 @@ export const setContext = (key: string, value: any) => (process.contextIsolated 
 ipcRenderer.setMaxListeners(100);
 export default {
 	ipcRenderer: {
-		emit: (event, ...data) => ipcRenderer.send(event, ...data),
-		send: (event, ...data) => ipcRenderer.send(event, ...data),
-		on: (channel, func) => ipcRenderer.on(channel, func),
-		off: (channel, func) => ipcRenderer.off(channel, func),
-		invoke: (channel, ...data) => ipcRenderer.invoke(channel, ...data),
+		emit: (event: string, ...data: any[]) => ipcRenderer.send(event, ...data),
+		send: (event: string, ...data: any[]) => ipcRenderer.send(event, ...data),
+		on: (channel: string, func: (...args: any[]) => void) => ipcRenderer.on(channel, func),
+		off: (channel: string, func: (...args: any[]) => void) => ipcRenderer.off(channel, func),
+		invoke: (channel: string, ...data: any[]) => ipcRenderer.invoke(channel, ...data),
 		appVersion: appVersion,
 	},
 	process: {
@@ -77,10 +77,14 @@ export default {
 	},
 	translations,
 	domUtils: {
+		async createAndRunScript(script: string, key?: string) {
+			return await webFrame.executeJavaScript(script);
+		},
 		ensureDomLoaded,
 		ensureWindowLoaded(f: () => void) {
 			return ensureDomLoaded(() => {
-				window.addEventListener("load", f);
+				if (document.readyState === "complete") return f();
+				window.addEventListener("load", f, { once: true });
 			});
 		},
 		ensureWindow() {

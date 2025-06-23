@@ -1,15 +1,18 @@
 import { basename } from "path";
 import { ClientPlugin, initializePluginCommandsWithIPC } from "@plugins/utils";
-import { createLogger } from "@shared/utils/console";
+import { Logger, createLogger } from "@shared/utils/console";
 import { merge, set } from "lodash-es";
+import type { PlayerApi } from "ytm-client-api";
 import pkg from "../../package.json";
 
+export type PluginSettings = Record<string, any>;
 export interface PluginContext {
-	settings: any;
-	playerApi: any;
-	api: any;
-	domUtils: any;
-	log: any;
+	name: string;
+	settings: PluginSettings;
+	log: Logger;
+	playerApi: PlayerApi;
+	api: Window["api"];
+	domUtils: Window["domUtils"];
 }
 
 export interface PluginInfo {
@@ -64,7 +67,7 @@ export class PluginManager {
 						.join(".")
 						.replace(/.plugin$/, ""),
 					displayName: meta.displayName,
-				};
+				} as PluginInfo;
 			})
 			.filter((p): p is NonNullable<typeof p> => p !== undefined && p.meta && p.meta.enabled !== false);
 
@@ -83,6 +86,7 @@ export class PluginManager {
 			api: window.api,
 			domUtils: window.domUtils,
 			log: this.log,
+			name: null,
 		};
 	}
 
@@ -127,7 +131,7 @@ export class PluginManager {
 		const results = await Promise.all(
 			this.plugins.map(async (plugin) => {
 				plugin.log.debug(plugin.name, plugin.meta);
-				const result = plugin.exec({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi() });
+				const result = plugin.exec({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi(), name: plugin.name });
 				return result;
 			}),
 		);
