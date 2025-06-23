@@ -286,4 +286,9 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		this.app.on("before-quit", () => events.off("track:state-change", callback));
 		return () => events.off("track:state-change", callback);
 	}
+	onTrackChange(callback: (track: TrackData) => void) {
+		events.on("track:change", callback);
+		this.app.on("before-quit", () => events.off("track:change", callback));
+		return () => events.off("track:change", callback);
+	}
 }

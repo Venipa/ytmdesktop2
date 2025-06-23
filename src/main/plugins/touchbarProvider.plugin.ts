@@ -1,7 +1,8 @@
 import { platform } from "@electron-toolkit/utils";
 import { BaseProvider } from "@main/utils/baseProvider";
 import { IpcContext } from "@main/utils/onIpcEvent";
-import { NativeImage, TouchBar } from "electron";
+import { NativeImage, TouchBar, nativeImage } from "electron";
+import appIconPath from "~/build/favicon.ico?asset";
 const emotes = {
 	pause: "⏸️",
 	play: "▶️",
@@ -54,6 +55,13 @@ export default class TouchbarProvider extends BaseProvider {
 			likeButton.backgroundColor = state.liked ? "#ffffff0a" : "transparent";
 			dislikeButton.backgroundColor = state.disliked ? "#ffffff0a" : "transparent";
 			pausePlayButton.label = state.playing ? emotes.pause : emotes.play;
+		});
+		this.getProvider("track").onTrackChange(async (track) => {
+			songTitle.label = track.video.title;
+			const buffer = await fetch(track.video?.thumbnail.thumbnails?.[0]?.url ?? appIconPath).catch(() => null);
+			songImage.icon = (buffer ? nativeImage.createFromBuffer(Buffer.from(await buffer.arrayBuffer())) : nativeImage.createFromPath(appIconPath)).resize({
+				height: 23,
+			});
 		});
 		const likeButton = new TouchBar.TouchBarButton({
 			label: emotes.like,

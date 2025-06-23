@@ -1,7 +1,8 @@
 import definePlugin from "@plugins/utils";
+import { PlayerApi } from "ytm-client-api";
 
 // todo
-const trackControls = {
+const trackControls: Record<string, (playerApi: PlayerApi) => any> = {
 	toggle: (player) => {
 		const state = player.getPlayerStateObject();
 		if (!state) throw new Error("Player state not found");
