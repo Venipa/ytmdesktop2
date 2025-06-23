@@ -12,6 +12,8 @@ export const API_ROUTES = {
 	TRACK_CONTROL_SEEK: "api/track/seek",
 	TRACK_CONTROL_PAUSE: "api/track/pause",
 	TRACK_CONTROL_TOGGLE_PLAY: "api/track/toggle-play-state",
+	TRACK_CONTROL_REPEAT: "api/track/repeat",
+	TRACK_CONTROL_SHUFFLE: "api/track/shuffle",
 	TRACK_SOCKET: "api/socket",
 } as const;
 const IPC_EVENT_NAMES = {

@@ -1,3 +1,4 @@
+import { EventEmitter } from "events";
 import { AfterInit, BaseProvider } from "@main/utils/baseProvider";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
 import type { TrackData } from "@main/utils/trackData";
@@ -21,7 +22,7 @@ type TrackState = {
 };
 
 type TrackEntry = { id: string } & TrackData;
-
+const events = new EventEmitter();
 class TrackCollection {
 	private tracks: Map<string, TrackEntry> = new Map();
 	private readonly maxSize = 10;
@@ -118,6 +119,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		this.windowContext.sendToAllViews("track:play-state", {
 			...this._trackState,
 		});
+		events.emit("track:state-change", this._trackState);
 	}
 
 	async getActiveTrackByDOM(): Promise<string | null> {
@@ -277,5 +279,11 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			state.disliked = isDLiked;
 			state.duration = duration;
 		});
+	}
+
+	onTrackStateChange(callback: (state: TrackState) => void) {
+		events.on("track:state-change", callback);
+		this.app.on("before-quit", () => events.off("track:state-change", callback));
+		return () => events.off("track:state-change", callback);
 	}
 }

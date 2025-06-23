@@ -152,7 +152,14 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 	async nextTrack() {
 		return await this.windowContext.sendTrackControl("next");
 	}
-
+	@IpcHandle(API_ROUTES.TRACK_CONTROL_REPEAT)
+	async repeatTrack() {
+		return await this.windowContext.sendTrackControl("repeat");
+	}
+	@IpcHandle(API_ROUTES.TRACK_CONTROL_SHUFFLE)
+	async shuffleTrack() {
+		return await this.windowContext.sendTrackControl("shuffle");
+	}
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_FORWARD)
 	async forwardTrack(_ev, data) {
 		const { time } = data ?? {};
