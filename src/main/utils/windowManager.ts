@@ -11,7 +11,7 @@ import { createApiView, createView, googleLoginPopup } from "./view";
 import { callWindowListeners, pushWindowStates } from "./webContentUtils";
 import { wrapWindowHandler } from "./windowUtils";
 
-function isPreventedNavOrRedirect(url: URL): boolean {
+export function isPreventedNavOrRedirect(url: URL): boolean {
 	return (
 		/^(?!consent\.youtube\.com|accounts\.youtube\.com|music\.youtube\.com|accounts\.google\.\w+)$/.test(url.hostname) &&
 		!/^(www\.youtube\.com|youtube\.com)\/(premium|musicpremium)$/i.test(url.hostname + url.pathname) &&
@@ -188,8 +188,10 @@ export class WindowManager {
 				ev.preventDefault();
 				return;
 			}
-
-			if (location?.match(/^https?\:\/\/(accounts)?.google.(\w+)/)) {
+			if (!lastLocation || new URL(lastLocation).origin !== new URL(location).origin) {
+				logger.info(`will-navigate: ${location}`);
+			}
+			if (location?.match(/^https?\:\/\/(accounts)?.google.([a-z]+)/)) {
 				ev.preventDefault();
 				this.handleGoogleLogin(location, view);
 			}
@@ -234,38 +236,27 @@ export class WindowManager {
 			this.isGoogleLoginProcessing = false;
 		}
 	}
-	private _youtubeReadyPromise: Promise<void> | null = null;
 	private _youtubeReady: boolean = false;
 	get youtubeReady() {
 		return this._youtubeReady;
 	}
-	get youtubeReadyPromise() {
-		return this._youtubeReadyPromise;
-	}
 	private setupViewEvents() {
-		const createNewReadyPromise = () => {
-			this._youtubeReady = false;
-			return new Promise<void>((resolve) => {
-				const handleLoadEnd = () => {
-					if (!this.mainWindow || !this.loadingView || !this.views) return;
-					this.mainWindow.contentView.removeChildView(this.loadingView);
-					this.mainWindow.contentView.addChildView(this.views.toolbarView);
-					this._youtubeReady = true;
-					resolve();
-				};
-				const handleLoadStart = debounce(() => {
-					if (!this.mainWindow || !this.loadingView || !this.views) return;
-					if (!this.mainWindow.contentView.children?.find((x) => this.loadingView?.webContents && x === this.loadingView)) {
-						this.mainWindow.contentView.addChildView(this.loadingView);
-					}
-					this._youtubeReady = false;
-				}, 100);
-
-				serverMain.on("app.loadEnd", handleLoadEnd);
-				serverMain.on("app.loadStart", handleLoadStart);
-			});
+		const handleLoadEnd = () => {
+			if (!this.mainWindow || !this.loadingView || !this.views) return;
+			this.mainWindow.contentView.removeChildView(this.loadingView);
+			this.mainWindow.contentView.addChildView(this.views.toolbarView);
+			this._youtubeReady = true;
 		};
-		this._youtubeReadyPromise = createNewReadyPromise();
+		const handleLoadStart = debounce(() => {
+			if (!this.mainWindow || !this.loadingView || !this.views) return;
+			if (!this.mainWindow.contentView.children?.find((x) => this.loadingView?.webContents && x === this.loadingView)) {
+				this.mainWindow.contentView.addChildView(this.loadingView);
+			}
+			this._youtubeReady = false;
+		}, 100);
+
+		serverMain.on("app.loadEnd", handleLoadEnd);
+		serverMain.on("app.loadStart", handleLoadStart);
 	}
 
 	private setupWindowEvents() {

@@ -1,6 +1,6 @@
 import { join } from "path";
 import translations from "@translations/index";
-import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView, WebContentsViewConstructorOptions, WebPreferences, ipcMain } from "electron";
+import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView, WebContentsViewConstructorOptions, WebPreferences, ipcMain, shell } from "electron";
 import appIconPath from "~/build/favicon.ico?asset";
 import { defaultUrl, isDevelopment, isProduction } from "./devUtils";
 import { LockSizeOptions, loadUrlOfWebContents, lockSizeToParent } from "./webContentUtils";
@@ -64,19 +64,7 @@ export const createPopup = async (options?: BrowserWindowConstructorOptions) => 
 	const lockSize = lockSizeToParent(wnd);
 	return { popup: wnd, lockSize };
 };
-export const GoogleUA = {
-	darwin: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.152 Safari/537.36",
-	win32: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.152 Safari/537.36",
-	linux: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.152 Safari/537.36",
-	unknown: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0",
-};
-// todo: proper google login fix
-export const getCurrentPlatformUserAgent = () => {
-	return GoogleUA.unknown;
-	const platform = process.platform;
-	const userAgent = GoogleUA[platform as keyof typeof GoogleUA];
-	return userAgent ?? GoogleUA.unknown;
-};
+
 export const googleLoginPopup = async (authUrl: string, parent?: Electron.BrowserWindow) => {
 	const webPreferences: Electron.WebPreferences = {
 		nodeIntegration: false,
@@ -104,8 +92,6 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
 		...((parent && { parent, modal: true }) || {}),
 	});
 	popup.setMenu(null);
-	const USER_AGENT = getCurrentPlatformUserAgent();
-	const secureBrowserHeaders = `User-Agent: ${USER_AGENT}`;
 	const noticeView = await createApiView("youtube/login-notice");
 	popup.contentView.addChildView(noticeView);
 	const [width, height] = popup.getContentSize();
@@ -116,24 +102,19 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
 	});
 	popup.contentView.addChildView(loginView, 0);
 	loginView.setBounds({ height: height - noticeHeight, width, x: 0, y: noticeHeight });
-	loginView.webContents.setUserAgent(getCurrentPlatformUserAgent());
 	await loginView.webContents.loadURL(authUrl, {
-		userAgent: USER_AGENT,
 		httpReferrer: defaultUrl,
 	});
-	loginView.webContents.setUserAgent(USER_AGENT);
-	loginView.webContents.session.webRequest.onBeforeSendHeaders(
-		{
-			urls: ["https://accounts.google.com/*"],
-		},
-		(details, callback) => {
-			secureBrowserHeaders.split("\n").forEach((header) => {
-				const [key, value] = [header.slice(0, header.indexOf(":"))?.trimStart?.(), header.slice(header.indexOf(":") + 1)?.trimStart?.()];
-				if (key) details.requestHeaders[key.trimStart()] = value.trimStart();
-			});
-			callback(details);
-		},
-	);
+	loginView.webContents.setWindowOpenHandler(({ url }) => {
+		if (!url.startsWith("http")) {
+			return { action: "deny" };
+		}
+		if (/^https?\:\/\/([a-zA-Z0-9]+)?\.google\.([a-z]+)/.test(url)) {
+			shell.openExternal(url);
+			return { action: "deny" };
+		}
+		return { action: "allow" };
+	});
 	if (isDevelopment) {
 		loginView.webContents.openDevTools({ mode: "detach" });
 		noticeView.webContents.openDevTools({ mode: "detach" });
