@@ -3,7 +3,7 @@ import { AfterInit, BaseProvider } from "@main/utils/baseProvider";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
 import type { TrackData } from "@main/utils/trackData";
 import { App } from "electron";
-import { clamp, clone } from "lodash-es";
+import { clamp, clone, debounce } from "lodash-es";
 import { firstBy } from "thenby";
 
 import IPC_EVENT_NAMES from "../utils/eventNames";
@@ -135,8 +135,8 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		try {
 			const values = await this.views.youtubeView.webContents.executeJavaScript(
 				`[
-          document.querySelector("#like-button-renderer .like")?.ariaPressed,
-          document.querySelector("#like-button-renderer .dislike")?.ariaPressed
+          document.querySelector("#like-button-renderer #button-shape-like.like button")?.ariaPressed,
+          document.querySelector("#like-button-renderer #button-shape-dislike.dislike button")?.ariaPressed
         ]`,
 			);
 			return values.map((x: string) => x === "true") as [boolean, boolean];
@@ -214,6 +214,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		this.views.toolbarView?.webContents.send("track:title", track?.video?.title);
 		this.views.youtubeView?.webContents.send("track.change", track.video.videoId);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
+		events.emit("track:change", track);
 
 		try {
 			const media = this.getProvider("mediaController");
@@ -281,14 +282,18 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		});
 	}
 
-	onTrackStateChange(callback: (state: TrackState) => void) {
-		events.on("track:state-change", callback);
-		this.app.on("before-quit", () => events.off("track:state-change", callback));
-		return () => events.off("track:state-change", callback);
+	onTrackStateChange(callback: (state: TrackState) => void, options: { debounce?: number; immediate?: boolean } = { immediate: false }) {
+		const handler = debounce(callback, options?.debounce);
+		if (options.immediate) handler(this.trackState);
+		events.on("track:state-change", handler);
+		this.app.on("before-quit", () => events.off("track:state-change", handler));
+		return () => events.off("track:state-change", handler);
 	}
-	onTrackChange(callback: (track: TrackData) => void) {
-		events.on("track:change", callback);
-		this.app.on("before-quit", () => events.off("track:change", callback));
-		return () => events.off("track:change", callback);
+	onTrackChange(callback: (track: TrackData) => void, options: { debounce?: number; immediate?: boolean } = { debounce: 1000, immediate: false }) {
+		const handler = debounce(callback, options?.debounce);
+		if (options.immediate) handler(this.trackData);
+		events.on("track:change", handler);
+		this.app.on("before-quit", () => events.off("track:change", handler));
+		return () => events.off("track:change", handler);
 	}
 }

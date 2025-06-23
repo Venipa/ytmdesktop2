@@ -20,8 +20,8 @@ declare module "ytm-client-api" {
 		previousVideo: () => any;
 		playVideoAt: () => any;
 		getVideoData: () => any;
-		seekBy: () => any;
-		seekTo: () => any;
+		seekBy: (value: number) => any;
+		seekTo: (value: number) => any;
 		showControls: () => any;
 		hideControls: () => any;
 		cancelPlayback: () => any;

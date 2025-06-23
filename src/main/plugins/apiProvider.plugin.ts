@@ -106,7 +106,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 		const doLike = (await this.trackProvider.currentSongLikeState())?.[0] === like;
 		if (!doLike) {
 			return this.views.youtubeView.webContents
-				.executeJavaScript(`document.querySelector("#like-button-renderer tp-yt-paper-icon-button.like").click()`)
+				.executeJavaScript(`document.querySelector("#like-button-renderer #button-shape-like.like button").click()`)
 				.then(() => this.trackProvider.currentSongLikeState())
 				.catch((error) => {
 					this.logger.error("Error toggling like state:", error);
@@ -127,7 +127,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 		const likeState = (await this.trackProvider.currentSongLikeState())?.[1] === like;
 		if (!likeState) {
 			return this.views.youtubeView.webContents
-				.executeJavaScript(`document.querySelector("#like-button-renderer tp-yt-paper-icon-button.dislike").click()`)
+				.executeJavaScript(`document.querySelector("#like-button-renderer #button-shape-dislike.dislike button").click()`)
 				.then(() => this.trackProvider.currentSongLikeState())
 				.catch((error) => {
 					this.logger.error("Error toggling dislike state:", error);

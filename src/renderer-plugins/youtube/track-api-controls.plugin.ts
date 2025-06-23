@@ -41,14 +41,10 @@ export default definePlugin(
 		displayName: "Track API Controls",
 	},
 	{
-		afterInit({ log }) {
-			window.domUtils.ensureDomLoaded(() => {
-				function setTimeSkip(_ev, data) {
-					/**
-					 * @type {HTMLMediaElement}
-					 */
+		afterInit({ log, playerApi, domUtils }) {
+			domUtils.ensureDomLoaded(() => {
+				function setTimeSkip(_ev, data: { time: number; type?: "seek" }) {
 					if (data && typeof data.time === "number") {
-						const playerApi = window.domUtils.playerApi();
 						if (playerApi?.seekTo) {
 							if (data.type === "seek") playerApi.seekTo(data.time / 1000);
 							else playerApi.seekBy(data.time / 1000);
@@ -62,7 +58,6 @@ export default definePlugin(
 					try {
 						const handler = trackControls[type as keyof typeof trackControls];
 						if (!handler) return;
-						const playerApi = window.domUtils.playerApi();
 						// not ready yet
 						if (!playerApi) return;
 
