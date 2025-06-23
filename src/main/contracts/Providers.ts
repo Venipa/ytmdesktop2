@@ -9,6 +9,7 @@ import type MiniPlayerProvider from "@main/plugins/miniPlayerProvider.plugin";
 import type NavigationProvider from "@main/plugins/navigationProvider.plugin";
 import type SettingsProvider from "@main/plugins/settingsProvider.plugin";
 import type StartupProvider from "@main/plugins/startupProvider.plugin";
+import type TouchbarProvider from "@main/plugins/touchbarProvider.plugin";
 import type TrackProvider from "@main/plugins/trackProvider.plugin";
 import type TrayProvider from "@main/plugins/trayProvider.plugin";
 import type UpdateProvider from "@main/plugins/updateProvider.plugin";
@@ -35,5 +36,6 @@ declare module "ytmd" {
 		youtube: YoutubeControlProvider;
 		window: WindowUtilsProvider;
 		volumeRatio: VolumeRatioProvider;
+		touchbar: TouchbarProvider;
 	}
 }
