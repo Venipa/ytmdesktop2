@@ -1,7 +1,7 @@
 import { join } from "path";
 import { logger } from "@shared/utils/console";
 import translations from "@translations/index";
-import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView } from "electron";
+import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView, app } from "electron";
 import { debounce } from "lodash-es";
 import appIconPath from "~/build/favicon.ico?asset";
 import { defaultUrl, isDevelopment } from "./devUtils";
@@ -10,7 +10,9 @@ import { serverMain } from "./serverEvents";
 import { createApiView, createView, googleLoginPopup } from "./view";
 import { callWindowListeners, pushWindowStates } from "./webContentUtils";
 import { wrapWindowHandler } from "./windowUtils";
-
+export function isGoogleLoginUrl(url: URL): boolean {
+	return /^accounts\.google\.(\w+)/.test(url.hostname);
+}
 export function isPreventedNavOrRedirect(url: URL): boolean {
 	return (
 		/^(?!consent\.youtube\.com|accounts\.youtube\.com|music\.youtube\.com|accounts\.google\.\w+)$/.test(url.hostname) &&
@@ -37,7 +39,7 @@ export class WindowManager {
 	private loadingView: WebContentsView | null = null;
 	private isGoogleLoginProcessing = false;
 
-	constructor(private readonly userAgent: string) {}
+	constructor(private readonly userAgent?: string) {}
 
 	async createRootWindow(options?: BrowserWindowConstructorOptions) {
 		const winSize = {
@@ -86,20 +88,20 @@ export class WindowManager {
 	}
 
 	private setupWindowUserAgent() {
-		if (!this.mainWindow) return;
-
-		this.mainWindow.webContents.setUserAgent(this.userAgent);
-		this.mainWindow.webContents.session.setUserAgent(this.userAgent);
-
-		this.mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
-			{
-				urls: ["https://accounts.google.com/*"],
-			},
-			(details, callback) => {
-				details.requestHeaders["User-Agent"] = this.userAgent;
-				callback(details);
-			},
-		);
+		if (!this.mainWindow || !this.userAgent) return;
+		let originalUserAgent: string | undefined;
+		app.on("web-contents-created", (event, webContents) => {
+			webContents.setUserAgent(this.userAgent);
+			webContents.session.webRequest.onBeforeSendHeaders((details, cb) => {
+				if (isGoogleLoginUrl(new URL(details.url))) {
+					logger.debug(`Setting user agent to ${originalUserAgent} for ${details.url}`);
+					details.requestHeaders["User-Agent"] = originalUserAgent;
+				} else {
+					details.requestHeaders["User-Agent"] = this.userAgent;
+				}
+				cb({ requestHeaders: details.requestHeaders });
+			});
+		});
 	}
 
 	private async setupViews() {
