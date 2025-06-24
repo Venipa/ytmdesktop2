@@ -1,9 +1,9 @@
 import { App } from "electron";
 import { EventCollection } from "./eventCollection";
-import { ProviderCollection } from "./providerCollection";
+import { ServiceCollection } from "./providerCollection";
 
-export async function createPluginCollection(app: App) {
-	const collection = new ProviderCollection(app);
+export async function createServiceCollection(app: App) {
+	const collection = new ServiceCollection(app);
 	await collection.initialize();
 	return collection;
 }

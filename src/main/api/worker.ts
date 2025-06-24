@@ -6,7 +6,7 @@ import expressWs from "express-ws";
 
 import EventEmitter from "events";
 import { Server } from "http";
-import type { SettingsStore } from "@main/plugins/settingsProvider.plugin";
+import type { SettingsStore } from "@main/services/settingsProvider.plugin";
 import { createLogger } from "@shared/utils/console";
 import { parentPort } from "worker_threads";
 if (!parentPort) throw new Error("This module has been run as parent");

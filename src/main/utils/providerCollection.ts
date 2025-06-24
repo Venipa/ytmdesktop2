@@ -4,13 +4,13 @@ import { BaseProviderNames } from "ytmd";
 import { BaseCollection, LifecycleEvent } from "./baseCollection";
 import { BaseProvider } from "./baseProvider";
 
-export class ProviderCollection extends BaseCollection<BaseProvider> {
+export class ServiceCollection extends BaseCollection<BaseProvider> {
 	constructor(app: App) {
 		super(app);
 	}
 
 	async initialize() {
-		await this.initializeItems("plugins");
+		await this.initializeItems("services");
 		this.registerProviders(this.items);
 		return this;
 	}

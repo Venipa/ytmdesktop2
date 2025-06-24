@@ -5,14 +5,14 @@ import { BrowserWindow, IpcMainEvent, app, protocol } from "electron";
 import { isDevelopment } from "./utils/devUtils";
 import { initializeCustomElectronEnvironment } from "./utils/electron";
 import { serverMain } from "./utils/serverEvents";
-import { createEventCollection, createPluginCollection } from "./utils/serviceCollection";
+import { createEventCollection, createServiceCollection } from "./utils/serviceCollection";
 import { WindowManager } from "./utils/windowManager";
 
 initializeCustomElectronEnvironment();
 const log = logger.child("main");
 
 const runApp = async function () {
-	const serviceCollection = await createPluginCollection(app),
+	const serviceCollection = await createServiceCollection(app),
 		eventCollection = await createEventCollection(app, serviceCollection.getItems());
 
 	log.debug(`Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`);

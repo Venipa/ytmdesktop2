@@ -13,7 +13,7 @@ export interface CollectionItem {
 export type LifecycleEvent = "OnInit" | "OnDestroy" | "AfterInit" | "BeforeStart";
 
 const GLOB_PATTERNS = {
-	plugins: () => import.meta.glob("../plugins/*.plugin.ts", { eager: true }),
+	services: () => import.meta.glob("../services/*.service.ts", { eager: true }),
 	providers: () => import.meta.glob("../providers/*.provider.ts", { eager: true }),
 	events: () => import.meta.glob("../events/*.event.ts", { eager: true }),
 } as const;

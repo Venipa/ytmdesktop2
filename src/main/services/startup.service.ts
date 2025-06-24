@@ -58,11 +58,6 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 				});
 			}
 		}
-		this.getProvider("tray")
-			.initializeTray()
-			.then(() => {
-				this.logger.debug("tray initialized");
-			});
 	}
 	@IpcOn("settingsProvider.change", {
 		debounce: 1000,

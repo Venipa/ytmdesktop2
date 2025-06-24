@@ -21,7 +21,7 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 		super("tray");
 	}
 	async AfterInit() {
-		// todo, custom balloon player + info
+		await this.initializeTray();
 	}
 
 	private buildMenu() {

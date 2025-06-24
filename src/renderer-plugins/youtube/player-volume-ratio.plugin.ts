@@ -2,8 +2,8 @@
 // https://greasyfork.org/en/scripts/397686-youtube-music-fix-volume-ratio
 // Made by: Marco Pfeiffer <git@marco.zone>
 
-import disableScriptContent from "@main/plugins/resources/volume-ratio/disable-script.js?raw";
-import enableScriptContent from "@main/plugins/resources/volume-ratio/enable-script.js?raw";
+import disableScriptContent from "@main/services/resources/volume-ratio/disable-script.js?raw";
+import enableScriptContent from "@main/services/resources/volume-ratio/enable-script.js?raw";
 import definePlugin from "@plugins/utils";
 
 export default definePlugin(

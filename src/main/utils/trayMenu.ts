@@ -1,7 +1,7 @@
 import translations from "@translations/index";
 import { Menu, shell } from "electron";
-import AppProvider from "../plugins/appProvider.plugin";
-import SettingsProvider from "../plugins/settingsProvider.plugin";
+import AppProvider from "../services/appProvider.plugin";
+import SettingsProvider from "../services/settingsProvider.plugin";
 import { BaseProvider } from "./baseProvider";
 import { serverMain } from "./serverEvents";
 
