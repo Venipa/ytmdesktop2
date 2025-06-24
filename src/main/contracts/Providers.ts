@@ -1,21 +1,21 @@
-import type ApiProvider from "@main/services/apiProvider.plugin";
-import type AppProvider from "@main/services/appProvider.plugin";
-import type CustomCSSProvider from "@main/services/customCssProvider.plugin";
-import type DiscordProvider from "@main/services/discordProvider.plugin";
-import type EventProvider from "@main/services/eventProvider.plugin";
-import type LastFMProvider from "@main/services/lastfmProvider.plugin";
-import type MediaControlProvider from "@main/services/mediaControlProvider.plugin";
-import type MiniPlayerProvider from "@main/services/miniPlayerProvider.plugin";
-import type NavigationProvider from "@main/services/navigationProvider.plugin";
-import type SettingsProvider from "@main/services/settingsProvider.plugin";
-import type StartupProvider from "@main/services/startupProvider.plugin";
-import type TouchbarProvider from "@main/services/touchbarProvider.plugin";
-import type TrackProvider from "@main/services/trackProvider.plugin";
-import type TrayProvider from "@main/services/trayProvider.plugin";
-import type UpdateProvider from "@main/services/updateProvider.plugin";
-import type VolumeRatioProvider from "@main/services/volumeRatio.plugin";
-import type WindowUtilsProvider from "@main/services/windowProvider.plugin";
-import type YoutubeControlProvider from "@main/services/youtubeProvider.plugin";
+import type ApiProvider from "@main/services/api.service";
+import type AppProvider from "@main/services/app.service";
+import type CustomCSSProvider from "@main/services/customCss.service";
+import type DiscordProvider from "@main/services/discord.service";
+import type EventProvider from "@main/services/event.service";
+import type LastFMProvider from "@main/services/lastfm.service";
+import type MediaControlProvider from "@main/services/mediaControl.service";
+import type MiniPlayerProvider from "@main/services/miniPlayer.service";
+import type NavigationProvider from "@main/services/navigation.service";
+import type SettingsProvider from "@main/services/settings.service";
+import type StartupProvider from "@main/services/startup.service";
+import type TouchbarProvider from "@main/services/touchbar.service";
+import type TrackProvider from "@main/services/track.service";
+import type TrayProvider from "@main/services/tray.service";
+import type UpdateProvider from "@main/services/update.service";
+import type VolumeRatioProvider from "@main/services/volumeRatio.service";
+import type WindowUtilsProvider from "@main/services/window.service";
+import type YoutubeControlProvider from "@main/services/youtube.service";
 
 declare module "ytmd" {
 	interface BaseProviderNames {
