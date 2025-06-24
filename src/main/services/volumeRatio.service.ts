@@ -1,6 +1,5 @@
 import { AfterInit, BaseProvider } from "@main/utils/baseProvider";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
-import { onWindowLoad } from "@main/utils/windowUtils";
 
 @IpcContext
 export default class VolumeRatioProvider extends BaseProvider implements AfterInit {
@@ -10,17 +9,7 @@ export default class VolumeRatioProvider extends BaseProvider implements AfterIn
 	get settingsInstance() {
 		return this.getProvider("settings");
 	}
-	async AfterInit() {
-		if (this.settingsInstance.get("volumeRatio.enabled")) {
-			await onWindowLoad(
-				this.views.youtubeView,
-				async () => {
-					await this.enable();
-				},
-				{ once: true },
-			);
-		}
-	}
+	async AfterInit() {}
 	@IpcOn("settingsProvider.change", {
 		filter(key: string) {
 			return key === "volumeRatio.enabled";

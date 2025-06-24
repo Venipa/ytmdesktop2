@@ -173,29 +173,33 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	}
 
 	async handleTrackStart(track: TrackData) {
-		{
-			if (!this.client.isConnected()) return;
-			this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "start");
-			await this.client
-				.updateNowPlaying({
-					artist: track.video.author,
-					track: track.video.title,
-					duration: track.meta.duration,
-				})
-				.then(stringifyJson)
-				.then((d) => this.logger.debug(d))
-				.then(() => {
-					this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
-				})
-				.catch((err) => {
-					this.logger.error(err);
-					this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
-				});
+		if (!this.client.isConnected()) {
+			this.logger.debug("lastfm.handleTrackStart", track.video.videoId, "not connected");
+			return;
 		}
+		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "start");
+		await this.client
+			.updateNowPlaying({
+				artist: track.video.author,
+				track: track.video.title,
+				duration: track.meta.duration,
+			})
+			.then(stringifyJson)
+			.then((d) => this.logger.debug(d))
+			.then(() => {
+				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
+			})
+			.catch((err) => {
+				this.logger.error(err);
+				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
+			});
 	}
 
 	async handleTrackChange(track: TrackData) {
-		if (!this.client.isConnected()) return;
+		if (!this.client.isConnected()) {
+			this.logger.debug("lastfm.handleTrackChange", track.video.videoId, "not connected");
+			return;
+		}
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "change");
 		await this.client
 			.scrobble({

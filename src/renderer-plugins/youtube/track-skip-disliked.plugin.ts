@@ -3,7 +3,7 @@ import definePlugin from "@plugins/utils";
 const afterInit = ({ settings }) => {
 	let lastVideoId = null,
 		waitForTick = false;
-	window.ipcRenderer.on("track.change", (ev, id) => {
+	window.ipcRenderer.on("trackId:change", (ev, id) => {
 		const skipDisliked = settings.player && settings.player.skipDisliked;
 		if (id && skipDisliked && lastVideoId != id && !waitForTick) {
 			lastVideoId = id;

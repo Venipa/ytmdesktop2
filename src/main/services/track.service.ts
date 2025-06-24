@@ -150,7 +150,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		return td ? parseTrackDuration(td) : null;
 	}
 
-	@IpcOn("track:info-req")
+	@IpcOn("track:info-req", { debounce: 10 })
 	private async __onTrackInfo(ev: any, ytTrack: TrackData) {
 		if (!ytTrack.video) return;
 
@@ -186,7 +186,6 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 
 		this.log(`active track:`, trackId);
 		this._activeTrackId = trackId;
-
 		if (this.trackData) {
 			const td = this.trackData;
 			const [isLiked, isDLiked] = await this.currentSongLikeState();
@@ -202,6 +201,8 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 				uiProgress: 0,
 				startedAt: Date.now() / 1000,
 			});
+		} else {
+			this._activeTrackId = null;
 		}
 	}
 
@@ -212,7 +213,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		track.meta.startedAt = Date.now() / 1000;
 
 		this.views.toolbarView?.webContents.send("track:title", track?.video?.title);
-		this.views.youtubeView?.webContents.send("track.change", track.video.videoId);
+		this.views.youtubeView?.webContents.send("trackId:change", track.video.videoId);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
 		events.emit("track:change", track);
 
@@ -230,24 +231,28 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 
 		const lastfm = this.getProvider("lastfm");
 		const lastfmState = lastfm.getState();
+		try {
+			if (updateLastFm && lastfm && lastfmState.connected && !lastfmState.processing && track.video.videoId) {
+				await lastfm.handleTrackStart(track);
+				this.logger.debug("lastfm.handleTrackStart", track.video.videoId, { lastfmState });
+				if (this.trackChangeTimeout) {
+					clearTimeout(this.trackChangeTimeout);
+				}
 
-		if (updateLastFm && lastfm && lastfmState.connected && !lastfmState.processing && track.video.videoId) {
-			await lastfm.handleTrackStart(track);
-
-			if (this.trackChangeTimeout) {
-				clearTimeout(this.trackChangeTimeout);
+				this.trackChangeTimeout = setTimeout(
+					() => {
+						this.logger.debug("lastfm.handleTrackChange", track.video.videoId, { lastfmState });
+						lastfm.handleTrackChange(track);
+						if (this.trackChangeTimeout) {
+							clearTimeout(this.trackChangeTimeout);
+							this.trackChangeTimeout = null;
+						}
+					},
+					clamp(track.meta.duration * 0.65, 30, 90) * 1000, // 65% of the duration, minimum 30 seconds, maximum 90 seconds
+				);
 			}
-
-			this.trackChangeTimeout = setTimeout(
-				() => {
-					lastfm.handleTrackChange(track);
-					if (this.trackChangeTimeout) {
-						clearTimeout(this.trackChangeTimeout);
-						this.trackChangeTimeout = null;
-					}
-				},
-				clamp(track.meta.duration * 0.65, 30, 90) * 1000,
-			);
+		} catch (error) {
+			this.logger.error("Failed to update lastfm:", error);
 		}
 	}
 

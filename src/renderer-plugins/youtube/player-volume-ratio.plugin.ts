@@ -13,10 +13,12 @@ export default definePlugin(
 		displayName: "Youtube Player Volume Ratio Handler",
 	},
 	{
-		afterInit({ settings, domUtils, log }) {
+		afterInit({ settings, domUtils, log, playerApi }) {
 			if (!settings.volumeRatio?.enabled) return;
-			domUtils.ensureWindowLoaded(() => {
-				domUtils.createAndRunScript(enableScriptContent, "player-volume-ratio-enable");
+			domUtils.ensureWindowLoaded(async () => {
+				await domUtils.createAndRunScript(enableScriptContent, "player-volume-ratio-enable");
+
+				playerApi.setVolume(playerApi.getVolume());
 				log.debug("Volume ratio enabled");
 			});
 		},
