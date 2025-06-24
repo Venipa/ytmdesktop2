@@ -1,9 +1,9 @@
 import { createLogger } from "@shared/utils/console";
 import DOMPurify from "dompurify";
 import { ipcRenderer } from "electron";
-import { get, merge, set } from "lodash-es";
+import { debounce, get, merge, set } from "lodash-es";
 import { setContext } from "./base";
-import { PluginManager } from "./pluginManager";
+import { PluginContext, PluginManager, PluginSettings } from "./pluginManager";
 
 // Types
 export interface SettingsManager {
@@ -31,7 +31,7 @@ export interface PluginUtils {
 	createPluginName: (filename: string) => string;
 	createPluginLogger: (baseLogger: any, pluginName: string) => any;
 	createPlayerReadyWaiter: (timeoutMs?: number) => Promise<void>;
-	createPluginContext: (settings: any, playerApi: any, api: any, domUtils: any, log: any) => any;
+	createPluginContext: (name: string, settings: any, playerApi: any, api: any, domUtils: any, log: any) => PluginContext;
 }
 
 // Constants
@@ -113,7 +113,7 @@ export const createInitializationUtils = (): InitializationUtils => ({
 		await pluginManager.initialize(force);
 	},
 });
-
+export const parsePluginSettingKey = (name: string) => name.replace(/[-\ ]/g, "_");
 // Plugin utilities
 export const createPluginUtils = (): PluginUtils => ({
 	createPluginName: (filename: string) =>
@@ -150,15 +150,33 @@ export const createPluginUtils = (): PluginUtils => ({
 
 			checkYTRoot();
 		}),
-
-	createPluginContext: (settings: any, playerApi: any, api: any, domUtils: any, log: any) => ({
-		settings: new Proxy(settings, {}),
-		playerApi,
-		api,
-		domUtils,
-		log,
-		name: null,
-	}),
+	createPluginContext: (name: string, settings: any, playerApi: any, api: any, domUtils: any, log: any) => {
+		const pluginKey = parsePluginSettingKey(name);
+		return {
+			settings: new Proxy(settings, {
+				get: (target, prop) => {
+					return target[prop];
+				},
+			}) as PluginSettings,
+			pluginSettings: new Proxy(settings, {
+				get: (target, prop) => {
+					return target.plugins?.[pluginKey]?.[prop];
+				},
+			}) as PluginSettings,
+			playerApi,
+			api,
+			domUtils,
+			log,
+			name: null,
+			onSettingsChange: (fn: (key: string, value: any) => void) => {
+				const handler = debounce((ev: unknown, { key, value }: { key: string; value: any }) => {
+					fn(key, value);
+				}, 100);
+				window.ipcRenderer.on("settingsProvider.change", handler);
+				return () => window.ipcRenderer.off("settingsProvider.change", handler);
+			},
+		};
+	},
 });
 
 // Common initialization patterns

@@ -90,6 +90,16 @@ const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
 				});
 			},
 		},
+		{
+			version: 2,
+			hook(store) {
+				store.set("plugins", {
+					bypass_age_restrictions: {
+						enabled: true,
+					},
+				});
+			},
+		},
 	],
 });
 

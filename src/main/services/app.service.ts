@@ -4,9 +4,10 @@ import { setSentryEnabled } from "@main/utils/sentry";
 import { App, BrowserWindow, IpcMainEvent } from "electron";
 
 import { version as releaseVersion } from "node:os";
+import { clamp } from "lodash-es";
 import { isDevelopment } from "../utils/devUtils";
 import { serverMain } from "../utils/serverEvents";
-import { createAppWindow } from "../utils/windowUtils";
+import { createAppDialogWindow, createAppWindow } from "../utils/windowUtils";
 
 const STATE_PAUSE_TIME = isDevelopment ? 5000 : 30e4; // dev: 5s, production: 5 minutes
 @IpcContext
@@ -112,6 +113,42 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 	@IpcHandle("app.isWin11")
 	async handleIsWin11() {
 		return releaseVersion()?.toLowerCase().startsWith("windows 11");
+	}
+	private restartWindow: BrowserWindow | null = null;
+	@IpcHandle("app.restartNeeded", {
+		debounce: 1000,
+	})
+	async handleRestartNeeded() {
+		if (this.restartWindow) {
+			this.restartWindow.show();
+			return;
+		}
+		const parent = this.windowContext.main;
+		const height = clamp(parent.getBounds().height, 600, clamp(parent.getBounds().height - 48, 600, 800));
+		this.restartWindow = await createAppDialogWindow({
+			parent: this.windowContext.main,
+			path: "/restart",
+			height,
+			width: 460,
+			minWidth: 460,
+			maxWidth: 460,
+			minHeight: height,
+			maxHeight: height,
+			maximizeable: false,
+			minimizeable: false,
+			showTaskBar: true,
+			top: true,
+			show: false,
+			onResponse: (action) => {
+				if (action === "close") {
+					this.restartWindow.close();
+					this.restartWindow = null;
+				} else if (action === "ok") {
+					this.app.relaunch();
+				}
+			},
+		});
+		this.restartWindow.show();
 	}
 	@IpcOn("subwindow.close")
 	private __onSubWindowClose(_ev: IpcMainEvent, windowName?: string) {

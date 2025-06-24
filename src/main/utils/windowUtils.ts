@@ -1,4 +1,4 @@
-import path, { join } from "path";
+import { join } from "path";
 import { createYmlStore } from "@main/lib/store/createYmlStore";
 import { createLogger } from "@shared/utils/console";
 import { BrowserWindow, WebContentsView, screen, shell } from "electron";
@@ -68,7 +68,17 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	syncWindowStateToWebContents(win)(win.webContents);
 	return win;
 }
-
+export async function createAppDialogWindow<Action extends "close" | "ok">(appOptions?: Partial<WindowOptions> & { onResponse?: (action: Action) => void }) {
+	const win = await createAppWindow(appOptions);
+	const onResponse = appOptions?.onResponse;
+	win.webContents.on("ipc-message", (ev, channel, data) => {
+		if (channel === "window.response" && typeof data === "object" && typeof data.action === "string") {
+			ev.reply("window.response", "ok");
+			onResponse?.(data.action as Action);
+		}
+	});
+	return win;
+}
 export async function wrapWindowHandler(win: BrowserWindow, windowName: string, { width: defaultWidth, height: defaultHeight }: { width: number; height: number }) {
 	const key = "window-state";
 	const name = `window-state-${windowName}`;

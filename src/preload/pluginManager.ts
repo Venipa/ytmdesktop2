@@ -1,7 +1,7 @@
 import { basename } from "path";
 import { ClientPlugin, initializePluginCommandsWithIPC } from "@plugins/utils";
 import { Logger, createLogger } from "@shared/utils/console";
-import { merge, set } from "lodash-es";
+import { debounce, get, merge, set } from "lodash-es";
 import type { PlayerApi } from "ytm-client-api";
 import pkg from "../../package.json";
 import { createPluginUtils, isYoutubeMusicHost } from "./utils";
@@ -10,10 +10,12 @@ export type PluginSettings = Record<string, any>;
 export interface PluginContext {
 	name: string;
 	settings: PluginSettings;
+	pluginSettings: PluginSettings;
 	log: Logger;
 	playerApi: PlayerApi;
 	api: Window["api"];
 	domUtils: Window["domUtils"];
+	onSettingsChange: (fn: (key: string, value: any) => void) => () => void;
 }
 
 export interface PluginInfo {
@@ -78,19 +80,36 @@ export class PluginManager {
 		return window.domUtils.playerApi();
 	}
 
-	private createPluginContext(): PluginContext {
-		return this.pluginUtils.createPluginContext(window.__ytd_settings, this.getPlayerApi(), window.api, window.domUtils, this.log);
+	private createPluginContext(name: string): PluginContext {
+		return this.pluginUtils.createPluginContext(name, window.__ytd_settings, this.getPlayerApi(), window.api, window.domUtils, this.log);
 	}
 
 	private async waitForPlayerReady(): Promise<void> {
 		return this.pluginUtils.createPlayerReadyWaiter();
 	}
-
+	onSettingsChange(fn: (key: string, value: any) => void): () => void {
+		const handler = debounce((ev: unknown, { key, value }: { key: string; value: any }) => {
+			fn(key, value);
+		}, 100);
+		window.ipcRenderer.on("settingsProvider.change", handler);
+		return () => window.ipcRenderer.off("settingsProvider.change", handler);
+	}
 	private setupSettingsListener(): void {
 		try {
 			window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
 				this.log.debug("settings.change", key, value);
+				const prevValue = get(window.__ytd_settings, key);
 				window.__ytd_settings = set(window.__ytd_settings, key, value);
+				if (key.startsWith("plugins.")) {
+					const [pluginName, settingKey] = key.split(".").slice(1);
+					const plugin = this.plugins.find((p) => p.name === pluginName);
+					if (plugin) {
+						plugin.log.debug("settings.change", settingKey, value);
+						if (plugin.meta.restartNeeded && settingKey === "enabled" && !!prevValue !== !!value) {
+							window.api.action("app.restartNeeded");
+						}
+					}
+				}
 			});
 		} catch (ex) {
 			this.log.error("settings listener setup failed", ex);
@@ -98,13 +117,12 @@ export class PluginManager {
 	}
 
 	private async initializePlugins(): Promise<void> {
-		const pluginContext = this.createPluginContext();
-
 		// Execute plugins and collect destroy functions
 		const results = await Promise.all(
 			this.plugins.map(async (plugin) => {
+				const pluginContext = this.createPluginContext(plugin.name);
 				plugin.log.debug(plugin.name, plugin.meta);
-				const result = await Promise.resolve(plugin.exec({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi(), name: plugin.name }));
+				const result = await Promise.resolve(plugin.exec({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi() }));
 				return result;
 			}),
 		);
@@ -122,11 +140,10 @@ export class PluginManager {
 	}
 
 	private async runAfterInitHooks(): Promise<void> {
-		const pluginContext = this.createPluginContext();
-
 		await Promise.all(
 			this.plugins.map(async (plugin) => {
 				if (!plugin.afterInit) return;
+				const pluginContext = this.createPluginContext(plugin.name);
 				await Promise.resolve(plugin.afterInit({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi() }));
 				this.log.child(`Client Plugin, ${plugin.name}`).debug(`afterInit execute`);
 			}),
@@ -134,10 +151,9 @@ export class PluginManager {
 	}
 
 	private async initializePluginCommands(): Promise<void> {
-		const pluginContext = this.createPluginContext();
-
 		await Promise.all(
 			this.plugins.map((plugin) => {
+				const pluginContext = this.createPluginContext(plugin.name);
 				// Convert PluginInfo to ClientPlugin for the initializePluginCommandsWithIPC function
 				const clientPlugin: ClientPlugin = {
 					name: plugin.name,

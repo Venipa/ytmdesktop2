@@ -99,6 +99,7 @@ const ipc = {
 	off: ipcRenderer.off.bind(ipcRenderer) as typeof ipcRenderer.off,
 	invoke: ipcRenderer.invoke.bind(ipcRenderer) as typeof ipcRenderer.invoke,
 	action: (event: string, ...data: any[]) => ipcRenderer.invoke(`action:${event}`, ...data),
+	frame: ipcRenderer.sendToHost.bind(ipcRenderer) as typeof ipcRenderer.sendToHost,
 };
 export default {
 	ipcRenderer: {

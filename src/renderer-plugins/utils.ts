@@ -4,6 +4,7 @@ type PluginOptions = {
 	enabled: boolean;
 	displayName: string;
 	afterInit?: () => void;
+	restartNeeded?: boolean;
 };
 type PluginDestroy = () => void | Promise<void>;
 type PluginFn = (context: PluginContext) => PluginDestroy | void;
@@ -54,6 +55,7 @@ export default function definePlugin(name: string, options: Omit<PluginOptions, 
 			name,
 			enabled: options.enabled,
 			displayName: options.displayName,
+			restartNeeded: options.restartNeeded,
 		},
 	};
 }
