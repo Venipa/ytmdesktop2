@@ -7,8 +7,8 @@ import { clamp, clone, debounce } from "lodash-es";
 import { firstBy } from "thenby";
 
 import IPC_EVENT_NAMES from "../utils/eventNames";
-import ApiProvider from "./apiProvider.plugin";
-import DiscordProvider from "./discordProvider.plugin";
+import ApiProvider from "./api.service";
+import DiscordProvider from "./discord.service";
 
 type TrackState = {
 	id: string;

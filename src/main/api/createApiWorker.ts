@@ -1,5 +1,5 @@
-import ApiProvider from "@main/services/apiProvider.plugin";
-import SettingsProvider from "@main/services/settingsProvider.plugin";
+import ApiProvider from "@main/services/api.service";
+import SettingsProvider from "@main/services/settings.service";
 import { API_ROUTES } from "@main/utils/eventNames";
 import { WorkerAgent } from "@main/utils/worker";
 import { apiWorkerModuleId } from "@main/workerPaths";

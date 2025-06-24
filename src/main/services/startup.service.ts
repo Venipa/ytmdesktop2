@@ -5,7 +5,7 @@ import { App, powerSaveBlocker } from "electron";
 
 import { platform } from "@electron-toolkit/utils";
 import { isProduction } from "@main/utils/devUtils";
-import SettingsProvider from "./settingsProvider.plugin";
+import SettingsProvider from "./settings.service";
 
 @IpcContext
 export default class StartupProvider extends BaseProvider implements AfterInit, BeforeStart {

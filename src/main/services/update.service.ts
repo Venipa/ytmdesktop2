@@ -9,7 +9,7 @@ import { createAppWindow } from "@main/utils/windowUtils";
 import { authorName, compareUrlParse } from "@shared/utils/github";
 import { clamp } from "lodash-es";
 import IPC_EVENT_NAMES from "../utils/eventNames";
-import SettingsProvider from "./settingsProvider.plugin";
+import SettingsProvider from "./settings.service";
 const devShowUpdateDialog = isDevelopment && process.env.DEV_SHOW_UPDATE_DIALOG === "1";
 if (isDevelopment) import.meta.env.__SKIP_BUILD == null;
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = import.meta.env.VITE_GITHUB_REPOSITORY.split("/", 2);

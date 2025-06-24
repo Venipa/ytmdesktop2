@@ -12,7 +12,7 @@ import { get as _get, debounce } from "lodash-es";
 import { Subject, distinctUntilChanged, filter, map, startWith, takeUntil } from "rxjs";
 import { LastFMSettings } from "ytmd";
 import { stringifyJson } from "../lib/json";
-import { CustomCssConfig } from "./customCssProvider.plugin";
+import { CustomCssConfig } from "./customCss.service";
 
 const defaultSettings = {
 	api: {

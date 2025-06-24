@@ -7,7 +7,7 @@ import type { App } from "electron";
 import { debounce } from "lodash";
 import { compileAsync } from "sass";
 import customDefaultCss from "~/src/renderer/src/assets/default-custom.scss?raw";
-import SettingsProvider from "./settingsProvider.plugin";
+import SettingsProvider from "./settings.service";
 
 interface CompiledCSS {
 	css: string;

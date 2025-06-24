@@ -6,7 +6,7 @@ import fetch from "node-fetch";
 import Vibrant from "node-vibrant";
 
 import IPC_EVENT_NAMES, { API_ROUTES } from "../utils/eventNames";
-import TrackProvider from "./trackProvider.plugin";
+import TrackProvider from "./track.service";
 
 @IpcContext
 export default class ApiProvider extends BaseProvider implements AfterInit {

@@ -6,7 +6,7 @@ import { App, BrowserWindow, Tray } from "electron";
 import TracIconPath from "~/build/favicon.ico?asset";
 import { isDevelopment } from "../utils/devUtils";
 import { createAppWindow } from "../utils/windowUtils";
-import SettingsProvider from "./settingsProvider.plugin";
+import SettingsProvider from "./settings.service";
 
 @IpcContext
 export default class TrayProvider extends BaseProvider implements AfterInit, OnDestroy {
