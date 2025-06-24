@@ -35,7 +35,7 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 
 ### Mini Player (Beta)
 
-![image](https://github.com/user-attachments/assets/1bd51f13-9cc4-4795-9bb3-4c6d680ed56d)
+![explorer_JVI8CNSAaY](https://github.com/user-attachments/assets/599e34fc-d47f-42f4-8650-8fdcc20f259d)
 
 
 ### Discord Rich Presence
