@@ -62,7 +62,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	}
 	async AfterInit() {
 		if (!this.views.toolbarView?.webContents.isLoading()) this.sendState();
-		else this.views.toolbarView.webContents.on("did-finish-load", () => this.sendState());
+		this.views.toolbarView.webContents.on("did-finish-load", () => this.sendState());
 	}
 	private authProgress = false;
 	private async authorizeSession() {
@@ -175,7 +175,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	async handleTrackStart(track: TrackData) {
 		{
 			if (!this.client.isConnected()) return;
-			this.views.toolbarView?.webContents.send(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "start");
+			this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "start");
 			await this.client
 				.updateNowPlaying({
 					artist: track.video.author,
@@ -185,18 +185,18 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 				.then(stringifyJson)
 				.then((d) => this.logger.debug(d))
 				.then(() => {
-					this.views.toolbarView?.webContents.send(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
+					this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
 				})
 				.catch((err) => {
 					this.logger.error(err);
-					this.views.toolbarView?.webContents.send(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
+					this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
 				});
 		}
 	}
 
 	async handleTrackChange(track: TrackData) {
 		if (!this.client.isConnected()) return;
-		this.views.toolbarView?.webContents.send(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "change");
+		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "change");
 		await this.client
 			.scrobble({
 				artist: track.video.author,
@@ -207,11 +207,11 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			.then(stringifyJson)
 			.then((d) => this.logger.debug(d))
 			.then(() => {
-				this.views.toolbarView?.webContents.send(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
+				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
 			})
 			.catch((err) => {
 				this.logger.error(err);
-				this.views.toolbarView?.webContents.send(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
+				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
 			});
 	}
 }
