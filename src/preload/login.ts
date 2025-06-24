@@ -1,19 +1,19 @@
-import { contextBridge, ipcRenderer } from "electron";
 import preloadRoot from "./base";
+import { YOUTUBE_HOST_PREFIX, createContextExposer, createHostDetector, createIpcReporter, initializeWithDomLoaded } from "./utils";
 
-(() => {
-	function reportLoginSuccess() {
-		ipcRenderer.send("g-login-success");
-	}
-	const prefixHost = "music.youtube";
+// Initialize utilities
+const contextExposer = createContextExposer();
+const reportLoginSuccess = createIpcReporter("g-login-success");
+const isYoutubeWindow = createHostDetector(YOUTUBE_HOST_PREFIX);
 
-	const isYoutubeWindow = () => window && document.location.host.indexOf(prefixHost) === 0;
-	preloadRoot.domUtils.ensureDomLoaded(() => {
-		if (isYoutubeWindow()) reportLoginSuccess();
-	});
-	contextBridge.exposeInMainWorld("ytdapi", {
-		isYoutubeWindow: isYoutubeWindow(),
-		api: preloadRoot.api,
-		process: preloadRoot.process,
-	});
-})();
+// Initialize login functionality
+initializeWithDomLoaded(() => {
+	if (isYoutubeWindow()) reportLoginSuccess();
+}, preloadRoot);
+
+// Expose API to window
+contextExposer.expose("ytdapi", {
+	isYoutubeWindow: isYoutubeWindow(),
+	api: preloadRoot.api,
+	process: preloadRoot.process,
+});

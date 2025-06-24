@@ -4,6 +4,7 @@ import { Logger, createLogger } from "@shared/utils/console";
 import { merge, set } from "lodash-es";
 import type { PlayerApi } from "ytm-client-api";
 import pkg from "../../package.json";
+import { createPluginUtils, isYoutubeMusicHost } from "./utils";
 
 export type PluginSettings = Record<string, any>;
 export interface PluginContext {
@@ -32,6 +33,7 @@ export class PluginManager {
 	private settingsPromise: Promise<any>;
 	private destroyFns: (() => void)[] = [];
 	private isLoaded = false;
+	private pluginUtils = createPluginUtils();
 
 	constructor() {
 		this.settingsPromise = window.api.settingsProvider.getAll({}).then((x) => (window.__ytd_settings = merge({}, x)));
@@ -47,7 +49,8 @@ export class PluginManager {
 			.map(([filename, p]: [string, any]) => {
 				const m = basename(filename);
 				let { meta, exec, afterInit, cmds } = p.default as ClientPlugin;
-				const pluginLog = this.log.child(`Client Plugin, ${meta.name}`);
+				const pluginName = meta?.name;
+				const pluginLog = this.pluginUtils.createPluginLogger(this.log, pluginName);
 
 				if (meta) pluginLog.debug("enabled:", meta.enabled !== false);
 				else return undefined;
@@ -61,11 +64,7 @@ export class PluginManager {
 					cmds,
 					afterInit,
 					log: pluginLog,
-					name: m
-						.split(".")
-						.slice(0, -1)
-						.join(".")
-						.replace(/.plugin$/, ""),
+					name: this.pluginUtils.createPluginName(m),
 					displayName: meta.displayName,
 				} as PluginInfo;
 			})
@@ -80,48 +79,22 @@ export class PluginManager {
 	}
 
 	private createPluginContext(): PluginContext {
-		return {
-			settings: new Proxy(window.__ytd_settings, {}),
-			playerApi: this.getPlayerApi(),
-			api: window.api,
-			domUtils: window.domUtils,
-			log: this.log,
-			name: null,
-		};
+		return this.pluginUtils.createPluginContext(window.__ytd_settings, this.getPlayerApi(), window.api, window.domUtils, this.log);
 	}
 
 	private async waitForPlayerReady(): Promise<void> {
-		return new Promise<void>((resolve, reject) => {
-			let timeoutHandle: any;
-			let checkHandle: any;
-
-			const checkYTRoot = () => {
-				if (!timeoutHandle) {
-					timeoutHandle = setTimeout(() => {
-						clearTimeout(checkHandle);
-						reject(new Error("Unable to hook yt player"));
-					}, 30 * 1000);
-				}
-
-				const ready = !!window.domUtils.playerApi()?.isReady();
-				if (!ready) {
-					checkHandle = setTimeout(checkYTRoot, 100);
-				} else {
-					clearTimeout(checkHandle);
-					clearTimeout(timeoutHandle);
-					return resolve();
-				}
-			};
-
-			checkYTRoot();
-		});
+		return this.pluginUtils.createPlayerReadyWaiter();
 	}
 
 	private setupSettingsListener(): void {
-		window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
-			this.log.debug("settings.change", key, value);
-			window.__ytd_settings = set(window.__ytd_settings, key, value);
-		});
+		try {
+			window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
+				this.log.debug("settings.change", key, value);
+				window.__ytd_settings = set(window.__ytd_settings, key, value);
+			});
+		} catch (ex) {
+			this.log.error("settings listener setup failed", ex);
+		}
 	}
 
 	private async initializePlugins(): Promise<void> {
@@ -131,7 +104,7 @@ export class PluginManager {
 		const results = await Promise.all(
 			this.plugins.map(async (plugin) => {
 				plugin.log.debug(plugin.name, plugin.meta);
-				const result = plugin.exec({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi(), name: plugin.name });
+				const result = await Promise.resolve(plugin.exec({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi(), name: plugin.name }));
 				return result;
 			}),
 		);
@@ -185,17 +158,16 @@ export class PluginManager {
 		if (window.isYTMLoaded?.() && !force) {
 			throw new Error("YTMD is already loaded, " + pkg.version);
 		}
-
+		this.log.debug("initializing...");
 		this.isLoaded = false;
 		window.isYTMLoaded = () => this.isLoaded;
 
 		this.setupSettingsListener();
+		this.log.debug("dom init...");
 
 		await new Promise<void>((resolve) =>
 			window.domUtils.ensureDomLoaded(async () => {
-				const currentUrl = new URL(location.href);
-
-				if (currentUrl.host === "music.youtube.com") {
+				if (isYoutubeMusicHost()) {
 					await this.initializePlugins();
 					await this.waitForPlayerReady();
 

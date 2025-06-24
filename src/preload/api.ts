@@ -1,23 +1,14 @@
-import { contextBridge } from "electron";
-import { get, merge, set } from "lodash-es";
 import preloadRoot from "./base";
+import { createContextExposer, createSettingsManager } from "./utils";
 
-Object.entries(preloadRoot).forEach(([key, endpoints]) => {
-	contextBridge.exposeInMainWorld(key, endpoints);
-});
+// Initialize context exposure
+const contextExposer = createContextExposer();
+contextExposer.exposeAll(preloadRoot);
 
+// Initialize settings management
 (async function () {
-	let settings = {};
-	await preloadRoot.api.settingsProvider.getAll({}).then((x) => {
-		settings = merge(settings, x);
-	});
-	contextBridge.exposeInMainWorld("settings", {
-		get: (key) => get(settings, key),
-	});
-	document.addEventListener("DOMContentLoaded", () => {
-		preloadRoot.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
-			if (settings) set(settings, key, value);
-			console.log("api:update-setting", key, value);
-		});
+	const settingsManager = await createSettingsManager(preloadRoot);
+	contextExposer.expose("settings", {
+		get: settingsManager.get,
 	});
 })();

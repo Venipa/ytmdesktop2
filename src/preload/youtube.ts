@@ -1,43 +1,31 @@
-import { createLogger } from "@shared/utils/console";
-import DOMPurify from "dompurify";
 import pkg from "../../package.json";
 import exposeData, { setContext } from "./base";
-import { PluginManager } from "./pluginManager";
+import { createContextExposer, createDomUtils, createInitializationUtils, createPreloadLogger } from "./utils";
 
 const appVersion = pkg.version;
 
-const log = createLogger("YTMD");
+// Initialize utilities
+const log = createPreloadLogger("YTMD");
+const contextExposer = createContextExposer();
+const domUtils = createDomUtils();
+const initUtils = createInitializationUtils();
+
+// Setup context and trusted types
 setContext("appVersion", appVersion);
-Object.entries(exposeData).forEach(([key, endpoints]) => {
-	setContext(key, endpoints);
-});
+contextExposer.exposeAll(exposeData);
+domUtils.setupTrustedTypes();
 
-try {
-	if (window.trustedTypes?.defaultPolicy?.name === "default")
-		window.trustedTypes.createPolicy("default", {
-			createHTML: (string) => DOMPurify.sanitize(string, { RETURN_TRUSTED_TYPE: true }) as any,
-			createScriptURL: (string) => string, // warning: this is unsafe!
-			createScript: (string) => string, // warning: this is unsafe!
-		});
-} catch {}
-
-// Create plugin manager instance
-const pluginManager = new PluginManager();
+// Create plugin manager and initialization
+const pluginManager = initUtils.createPluginManager();
+const initFn = initUtils.createInitFunction(pluginManager);
 
 // Create loading promise
-window.__ytmd_loadingPromise = new Promise<void>((resolve) => {
-	window.addEventListener("message", (ev) => {
-		if (ev.data !== "ytmd-ready") return;
-		resolve();
-	});
-});
+window.__ytmd_loadingPromise = domUtils.createLoadingPromise();
 
-const initFn = async (force?: boolean) => {
-	await pluginManager.initialize(force);
-};
-
+// Expose initialization function
 setContext("__initYTMD", initFn);
 
+// Initialize on process load
 process.on("loaded", () => {
 	initFn();
 });
