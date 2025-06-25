@@ -47,7 +47,6 @@ export abstract class BaseCollection<T extends CollectionItem> {
 		const itemsWithMethod = this.items.filter((x) => typeof (x as any)[methodName] === "function");
 		if (itemsWithMethod.length === 0) return [];
 
-		this.logger.debug(`Executing ${methodName} on ${itemsWithMethod.map((x) => x.getName?.() ?? x.eventName).join(", ")}`);
 		return await Promise.all(itemsWithMethod.map((x) => Promise.resolve((x as any)[methodName](...args))));
 	}
 
@@ -56,7 +55,12 @@ export abstract class BaseCollection<T extends CollectionItem> {
 	}
 
 	async executeLifecycleEvent(event: LifecycleEvent, ...args: any[]): Promise<any[]> {
-		return await this.executeMethod(event, ...args);
+		try {
+			return await this.executeMethod(event, ...args);
+		} catch (err) {
+			this.logger.error(`Error executing ${event}`, err);
+			throw err;
+		}
 	}
 
 	registerWindows(context: any) {

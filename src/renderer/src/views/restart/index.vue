@@ -1,9 +1,12 @@
 <template>
   <div class="min-h-screen flex flex-col p-4 bg-black overflow-y-auto overflow-x-hidden h-full">
     <!-- Checking for Updates View -->
-    <div class="text-center py-12 px-6 flex items-center justify-center flex-col flex-grow">
-      <h2 class="text-white text-xl font-semibold mb-2">Restart Required</h2>
-      <p class="text-gray-400 text-sm mb-6">{{ message }}</p>
+    <div class="text-center py-12 px-6 flex items-center justify-center flex-col flex-grow gap-4 mb-6">
+      <template v-if="IconComponent">
+        <icon-component :size="64" class="text-white" />
+      </template>
+      <h2 class="text-white text-xl font-semibold">Restart Required</h2>
+      <p class="text-gray-400 text-sm mb-6">{{ meta.message }}</p>
     </div>
     <div class="flex gap-3 pt-2">
       <button @click="action('later')"
@@ -16,9 +19,30 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref } from "vue";
+import { AlertTriangleIcon, CheckCircleIcon, InfoIcon, XCircleIcon } from "lucide-vue-next";
+import { computed, ref } from "vue";
 const isBusy = ref(false);
-const message = ref(new URLSearchParams(location.href.slice(location.href.indexOf("?"))).get("message") ?? "Please restart the application to apply pending changes.");
+const meta = computed(() => {
+  const params = new URLSearchParams(location.href.slice(location.href.indexOf("?")));
+  const icon = params.get("icon") ?? "info";
+  const message = params.get("message") ?? "Please restart the application to apply pending changes.";
+  return {
+    message,
+    icon
+  };
+});
+const IconMap = {
+  "check-circle": CheckCircleIcon,
+  "x-circle": XCircleIcon,
+  "info": InfoIcon,
+  "warning": AlertTriangleIcon,
+  "error": XCircleIcon
+}
+const IconComponent = computed(() => {
+  const { icon } = meta.value;
+  if (!icon) return null;
+  return IconMap[icon];
+});
 function action(action: "later" | "ok") {
   isBusy.value = true;
   window.api.send("window.response", { action });

@@ -4,13 +4,14 @@ import { setSentryEnabled } from "@main/utils/sentry";
 import { App, BrowserWindow, IpcMainEvent } from "electron";
 
 import { version as releaseVersion } from "node:os";
+import { stripUndefined } from "@shared/utils/object";
 import { clamp } from "lodash-es";
 import { isDevelopment } from "../utils/devUtils";
 import { serverMain } from "../utils/serverEvents";
 import { createAppDialogWindow, createAppWindow } from "../utils/windowUtils";
 
 const STATE_PAUSE_TIME = isDevelopment ? 5000 : 30e4; // dev: 5s, production: 5 minutes
-const TEST_RESTART_NEEDED_DIALOG = process.env.TEST_RESTART_NEEDED_DIALOG === "1";
+const TEST_RESTART_NEEDED_DIALOG = import.meta.env.TEST_RESTART_NEEDED_DIALOG === "1";
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit, BeforeStart {
 	private appLock: boolean = false;
@@ -123,7 +124,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 	@IpcHandle("app.restartNeeded", {
 		debounce: 1000,
 	})
-	async handleRestartNeeded(ev: unknown, { message }: { message?: string } = {}) {
+	async handleRestartNeeded(ev: unknown, { message, icon }: { message?: string; icon?: string } = {}) {
 		if (this.restartWindow) {
 			this.restartWindow.show();
 			return;
@@ -133,7 +134,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 		const height = clamp(parentHeight, 300, clamp(parentHeight - 48, 300, 300));
 		this.restartWindow = await createAppDialogWindow({
 			parent: this.windowContext.main,
-			path: ["/restart?", message && new URLSearchParams({ message }).toString()].filter(Boolean).join(""),
+			path: ["/restart?", new URLSearchParams(stripUndefined({ message, icon })).toString()].filter(Boolean).join(""),
 			height,
 			width: 400,
 			minWidth: 400,

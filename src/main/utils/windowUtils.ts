@@ -23,7 +23,7 @@ type WindowOptions = {
 const log = createLogger("main");
 export function parseScriptPath(p: string) {
 	log.child("parseScriptPath").debug(__dirname, p);
-	return path.join(__dirname, "../preload", p);
+	return join(__dirname, "../preload", p);
 }
 export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	// eslint-disable-next-line prefer-const

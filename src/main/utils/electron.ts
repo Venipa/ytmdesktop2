@@ -10,7 +10,7 @@ import { isProduction } from "./devUtils";
 
 let isInitialized = false;
 
-const fsLogger = (() => {
+const fsLogger = () => {
 	const logDir = path.join(app.getPath("userData"), "logs");
 	if (!isProduction) console.log("logDir", logDir);
 	if (!fs.existsSync(logDir)) {
@@ -27,9 +27,11 @@ const fsLogger = (() => {
 	process.on("SIGQUIT", () => writeStream.end());
 	process.on("SIGBREAK", () => writeStream.end());
 	process.on("uncaughtException", (err) => {
+		console.error("[uncaughtException]:\n", err);
 		writeStream.write(`[uncaughtException]: ${err.message}\n${err.stack}\n`);
 	});
 	process.on("unhandledRejection", (reason, promise) => {
+		console.error("[unhandledRejection]:\n", reason);
 		writeStream.write(`[unhandledRejection]: ${reason}\n${promise}\n`);
 	});
 	const allowedLevels = [LogLevel.Error, LogLevel.Warning];
@@ -41,7 +43,7 @@ const fsLogger = (() => {
 			}
 		});
 	};
-})();
+};
 
 export function initializeCustomElectronEnvironment() {
 	if (isInitialized) {
@@ -59,7 +61,8 @@ export function initializeCustomElectronEnvironment() {
 
 	if (import.meta.env.PROD && !process.env.DEBUG) {
 		Logger.enableProductionMode();
-		Logger.outputs.push(fsLogger);
+		const fsOutput = fsLogger();
+		Logger.outputs.push(fsOutput);
 	}
 	process.env.NODE_ENV = import.meta.env.MODE;
 	WebContentsView.prototype.invoke = function <T>(channel: string, data: any) {
