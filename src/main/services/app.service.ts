@@ -10,6 +10,7 @@ import { serverMain } from "../utils/serverEvents";
 import { createAppDialogWindow, createAppWindow } from "../utils/windowUtils";
 
 const STATE_PAUSE_TIME = isDevelopment ? 5000 : 30e4; // dev: 5s, production: 5 minutes
+const TEST_RESTART_NEEDED_DIALOG = process.env.TEST_RESTART_NEEDED_DIALOG === "1";
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit, BeforeStart {
 	private appLock: boolean = false;
@@ -41,6 +42,10 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 	async AfterInit() {
 		this._app.on("browser-window-focus", this.windowFocus.bind(this));
 		this._app.on("browser-window-blur", this.windowBlur.bind(this));
+
+		if (TEST_RESTART_NEEDED_DIALOG) {
+			this.handleRestartNeeded(null);
+		}
 	}
 	private _blurTimestamp: Date | null = null;
 	private _blurAfkHandle: any;
@@ -118,21 +123,21 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 	@IpcHandle("app.restartNeeded", {
 		debounce: 1000,
 	})
-	async handleRestartNeeded() {
+	async handleRestartNeeded(ev: unknown, { message }: { message?: string } = {}) {
 		if (this.restartWindow) {
 			this.restartWindow.show();
 			return;
 		}
 		const parent = this.windowContext.main;
 		const parentHeight = parent.getBounds().height;
-		const height = clamp(parentHeight, 400, clamp(parentHeight - 48, 400, 560));
+		const height = clamp(parentHeight, 300, clamp(parentHeight - 48, 300, 300));
 		this.restartWindow = await createAppDialogWindow({
 			parent: this.windowContext.main,
-			path: "/restart",
+			path: ["/restart?", message && new URLSearchParams({ message }).toString()].filter(Boolean).join(""),
 			height,
-			width: 460,
-			minWidth: 460,
-			maxWidth: 460,
+			width: 400,
+			minWidth: 400,
+			maxWidth: 400,
 			minHeight: height,
 			maxHeight: height,
 			maximizeable: false,
@@ -141,11 +146,12 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 			top: true,
 			show: false,
 			onResponse: (action) => {
-				if (action === "close") {
-					this.restartWindow.close();
-					this.restartWindow = null;
-				} else if (action === "ok") {
+				this.logger.debug("restartWindow response", action);
+				this.restartWindow.close();
+				this.restartWindow = null;
+				if (action === "ok") {
 					this.app.relaunch();
+					this.app.exit();
 				}
 			},
 		});

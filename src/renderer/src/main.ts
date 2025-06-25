@@ -51,6 +51,10 @@ const router = createRouter({
 			component: () => import("./views/update/index.vue"),
 		},
 		{
+			path: "/restart",
+			component: () => import("./views/restart/index.vue"),
+		},
+		{
 			path: "/youtube/toolbar",
 			component: () => import("./views/youtube/toolbar.vue"),
 		},
