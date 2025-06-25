@@ -11,7 +11,7 @@ import { serverMain } from "../utils/serverEvents";
 import { createAppDialogWindow, createAppWindow } from "../utils/windowUtils";
 
 const STATE_PAUSE_TIME = isDevelopment ? 5000 : 30e4; // dev: 5s, production: 5 minutes
-const TEST_RESTART_NEEDED_DIALOG = import.meta.env.TEST_RESTART_NEEDED_DIALOG === "1";
+const TEST_RESTART_NEEDED_DIALOG = isDevelopment && process.env.TEST_RESTART_NEEDED_DIALOG === "1";
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit, BeforeStart {
 	private appLock: boolean = false;

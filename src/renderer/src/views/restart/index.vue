@@ -1,15 +1,15 @@
 <template>
-  <div class="min-h-screen flex flex-col p-4 bg-black overflow-y-auto overflow-x-hidden h-full">
+  <div class="min-h-screen flex flex-col p-4 bg-black overflow-hidden h-full">
     <!-- Checking for Updates View -->
-    <div class="text-center py-12 px-6 flex items-center justify-center flex-col flex-grow gap-4 mb-6">
+    <div class="text-center py-4 px-6 flex items-center justify-center flex-col flex-grow gap-4 mb-6">
       <template v-if="IconComponent">
-        <icon-component :size="64" class="text-white" />
+        <icon-component :size="40" class="text-white" />
       </template>
       <h2 class="text-white text-xl font-semibold">Restart Required</h2>
-      <p class="text-gray-400 text-sm mb-6">{{ meta.message }}</p>
+      <p class="text-gray-400 text-sm">{{ meta.message }}</p>
     </div>
     <div class="flex gap-3 pt-2">
-      <button @click="action('later')"
+      <button @click="action('close')"
               :disabled="isBusy"
               class="flex-1 px-4 py-2 border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"> Later </button>
       <button @click="action('ok')"
@@ -43,7 +43,7 @@ const IconComponent = computed(() => {
   if (!icon) return null;
   return IconMap[icon];
 });
-function action(action: "later" | "ok") {
+function action(action: "close" | "ok") {
   isBusy.value = true;
   window.api.send("window.response", { action });
   setTimeout(() => {
