@@ -124,7 +124,8 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 			return;
 		}
 		const parent = this.windowContext.main;
-		const height = clamp(parent.getBounds().height, 600, clamp(parent.getBounds().height - 48, 600, 800));
+		const parentHeight = parent.getBounds().height;
+		const height = clamp(parentHeight, 400, clamp(parentHeight - 48, 400, 560));
 		this.restartWindow = await createAppDialogWindow({
 			parent: this.windowContext.main,
 			path: "/restart",
