@@ -24,6 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
         # install dbus-1 dep for xosms
       - if: matrix.os == 'ubuntu-latest'
         name: update apt and install utils
