@@ -29,12 +29,13 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	// eslint-disable-next-line prefer-const
 	let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top, showTaskBar, minimizeable, maximizeable, show } = appOptions ?? {};
 	if (!path) path = "/";
+	const scaleFactor = screen.getPrimaryDisplay().scaleFactor;
 	// Create the browser window.
 	const win = new BrowserWindow({
-		width: width ?? 800,
-		height: height ?? 600,
-		minWidth: minWidth ?? 800,
-		minHeight: minHeight ?? 480,
+		width: (width ?? 800) * scaleFactor,
+		height: (height ?? 600) * scaleFactor,
+		minWidth: (minWidth ?? 800) * scaleFactor,
+		minHeight: (minHeight ?? 480) * scaleFactor,
 		maxWidth,
 		maxHeight,
 		show: show ?? true,
@@ -80,12 +81,13 @@ export async function createAppDialogWindow<Action extends "close" | "ok">(appOp
 	return win;
 }
 export async function wrapWindowHandler(win: BrowserWindow, windowName: string, { width: defaultWidth, height: defaultHeight }: { width: number; height: number }) {
+	const scaleFactor = screen.getPrimaryDisplay().scaleFactor;
 	const key = "window-state";
 	const name = `window-state-${windowName}`;
 	const store = createYmlStore(name);
 	const defaultSize = {
-		width: defaultWidth,
-		height: defaultHeight,
+		width: defaultWidth * scaleFactor,
+		height: defaultHeight * scaleFactor,
 	};
 	let state: { width: number; height: number; x: number; y: number; maximized?: boolean } | null = null;
 	const restore = () => store.get(key, defaultSize);
@@ -116,6 +118,8 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 		return Object.assign({}, defaultSize, {
 			x: (bounds.width - defaultSize.width) / 2,
 			y: (bounds.height - defaultSize.height) / 2,
+			width: defaultSize.width,
+			height: defaultSize.height,
 		});
 	};
 

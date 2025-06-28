@@ -16,7 +16,7 @@ const fsLogger = () => {
 	if (!fs.existsSync(logDir)) {
 		fs.mkdirSync(logDir, { recursive: true });
 	}
-	const logFile = path.join(logDir, `app_${format(new Date(), "yyyy-MM-dd_HH-mm-ss")}.log`);
+	const logFile = path.join(logDir, `app_${format(new Date(), "yyyy-MM-dd")}.log`);
 	const writeStream = fs.createWriteStream(logFile, {
 		flags: "w+", // append and create if doesn't exist
 		highWaterMark: 64 * 1024, // 64KB buffer size

@@ -21,11 +21,20 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 	constructor(private app: App) {
 		super("startup");
 		app.commandLine.appendSwitch("disable-http-cache");
-		if (process.platform === "win32") {
+		if (platform.isWindows) {
 			app.commandLine.appendSwitch("enable-gpu-rasterization"); // performance feature flags
 			app.commandLine.appendSwitch("enable-zero-copy");
 			app.commandLine.appendSwitch("enable-features", "CanvasOopRasterization,EnableDrDc"); // Enables Display Compositor to use a new gpu thread. todo: testing
 		}
+		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "3");
+		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
+		this.app.commandLine.appendSwitch(
+			"enable-features",
+			["OverlayScrollbar", "SharedArrayBuffer", "UseOzonePlatform", "WaylandWindowDecorations", platform.isWindows && ["CanvasOopRasterization", "EnableDrDc"]]
+				.flat()
+				.filter(Boolean)
+				.join(","),
+		);
 	}
 	async BeforeStart() {
 		if (this.settingsInstance.instance.app.disableHardwareAccel) this.app.disableHardwareAcceleration();

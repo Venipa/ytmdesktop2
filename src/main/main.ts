@@ -25,14 +25,35 @@ const runApp = async function () {
 		log.error(ex); // before start can be ignored, experimental
 	}
 
-	protocol.registerSchemesAsPrivileged([{ scheme: "app", privileges: { secure: true, standard: true } }]);
-	const brickGoogleUA = {
-		darwin: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.7; rv:139.0) Gecko/20100101 Firefox/139.0",
-		win32: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
-		linux: "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0",
-	};
-	const currentUserAgent = brickGoogleUA[process.platform] ?? brickGoogleUA.win32;
-	const windowManager = new WindowManager(currentUserAgent);
+	protocol.registerSchemesAsPrivileged([
+		{ scheme: "app", privileges: { secure: true, standard: true } },
+		{
+			scheme: "http",
+			privileges: {
+				standard: true,
+				bypassCSP: true,
+				allowServiceWorkers: true,
+				supportFetchAPI: true,
+				corsEnabled: true,
+				stream: true,
+				codeCache: true,
+			},
+		},
+		{
+			scheme: "https",
+			privileges: {
+				standard: true,
+				bypassCSP: true,
+				allowServiceWorkers: true,
+				supportFetchAPI: true,
+				corsEnabled: true,
+				stream: true,
+				codeCache: true,
+			},
+		},
+		{ scheme: "mailto", privileges: { standard: true } },
+	]);
+	const windowManager = new WindowManager();
 	let mainWindow: ReturnType<typeof windowManager.createRootWindow> extends Promise<infer T> ? T : never;
 
 	const reactivate = async () => {

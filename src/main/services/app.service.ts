@@ -4,6 +4,7 @@ import { setSentryEnabled } from "@main/utils/sentry";
 import { App, BrowserWindow, IpcMainEvent } from "electron";
 
 import { version as releaseVersion } from "node:os";
+import { platform } from "@electron-toolkit/utils";
 import { stripUndefined } from "@shared/utils/object";
 import { clamp } from "lodash-es";
 import { isDevelopment } from "../utils/devUtils";
@@ -39,6 +40,12 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 				});
 			}
 		}
+		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "3");
+		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
+		this.app.commandLine.appendSwitch("enable-features", "OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations");
+
+		// TODO: implement own shortcut handler for media keys
+		// this.app.commandLine.appendSwitch("disable-features", "MediaSessionService");
 	}
 	async AfterInit() {
 		this._app.on("browser-window-focus", this.windowFocus.bind(this));
