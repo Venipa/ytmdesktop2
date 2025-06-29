@@ -80,6 +80,7 @@
     "@electron-toolkit/eslint-config": "^1.0.2",
     "@electron-toolkit/eslint-config-ts": "^2.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron/fuses": "^1.8.0",
     "@rushstack/eslint-patch": "^1.10.4",
     "@types/cors": "^2.8.17",
     "@types/crypto-js": "^4.2.2",
