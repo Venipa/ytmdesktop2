@@ -132,6 +132,10 @@ export default {
 		async createAndRunScript(script: string, key?: string) {
 			return await webFrame.executeJavaScript(script);
 		},
+		async createStyle(css: string) {
+			const key = webFrame.insertCSS(css);
+			return () => webFrame.removeInsertedCSS(key);
+		},
 		ensureDomLoaded,
 		ensureWindowLoaded(f: () => void) {
 			return ensureDomLoaded(() => {
@@ -150,6 +154,27 @@ export default {
 				),
 			);
 		},
+		awaitElement: <T extends HTMLElement>(selector: string, options: MutationObserverInit = { childList: true, subtree: true }) =>
+			new Promise<T>((resolve) => {
+				const element = document.querySelector(selector) as T;
+				if (element) {
+					resolve(element as T);
+				} else {
+					const observer = new MutationObserver((mutations) => {
+						mutations.forEach((mutation) => {
+							mutation.addedNodes.forEach((node) => {
+								if (node instanceof HTMLElement && (node.matches(selector) || node.querySelector(selector))) {
+									resolve(node as T);
+									observer.disconnect();
+								}
+							});
+						});
+					});
+					ensureDomLoaded(() => {
+						observer.observe(document.body, options);
+					});
+				}
+			}),
 		playerApi: createPlayerApi(),
 		setInteractiveElements: createInteractiveElementsManager(),
 	},

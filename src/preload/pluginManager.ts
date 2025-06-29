@@ -167,7 +167,14 @@ export class PluginManager {
 			}),
 		);
 	}
-
+	private async removeChromecastIcon() {
+		const style = await window.domUtils.createStyle(`
+      ytmusic-cast-button.cast-button {
+        display: none !important;
+      }
+    `);
+		return () => style();
+	}
 	public async initialize(force?: boolean): Promise<void> {
 		await this.settingsPromise;
 
@@ -181,12 +188,12 @@ export class PluginManager {
 		this.setupSettingsListener();
 		this.log.debug("dom init...");
 
+		await this.removeChromecastIcon().catch((ex) => this.log.error("removeChromecastIcon failed", ex));
 		await new Promise<void>((resolve) =>
 			window.domUtils.ensureDomLoaded(async () => {
 				if (isYoutubeMusicHost()) {
 					await this.initializePlugins();
 					await this.waitForPlayerReady();
-
 					this.log.debug("ytplayer loaded");
 
 					await this.runAfterInitHooks();

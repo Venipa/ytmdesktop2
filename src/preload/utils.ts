@@ -102,7 +102,6 @@ export const createDomUtils = (): DomUtils => ({
 			});
 		}),
 });
-
 // Initialization utilities
 export const createInitializationUtils = (): InitializationUtils => ({
 	createPluginManager: () => {
