@@ -19,6 +19,7 @@ type TrackState = {
 	liked: boolean;
 	disliked: boolean;
 	startedAt: number;
+	percentage: number;
 	eventType: "state" | "progress";
 };
 
@@ -103,6 +104,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 				liked: false,
 				disliked: false,
 				startedAt: Date.now() / 1000,
+				percentage: 0,
 				eventType: "state",
 			};
 		}
@@ -114,6 +116,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		if (!isVoid) {
 			this._trackState = ret as TrackState;
 		}
+		if (typeof this.trackState?.percentage === "number") this.trackState.percentage = clamp(this.trackState.percentage, 0, 100);
 		if (prevId !== this.trackState.id) {
 			this.logger.debug("title id change", prevId, "=>", this.trackState.id);
 			this.getProvider("discord").updateTrackProgress(true, 0); // update discord presence instantly on change
@@ -202,6 +205,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 				progress: 0,
 				uiProgress: 0,
 				startedAt: Date.now() / 1000,
+				percentage: 0,
 				eventType: "state",
 			});
 		} else {
@@ -271,6 +275,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			if (state.progress !== progressSeconds) {
 				state.progress = progressSeconds;
 				state.uiProgress = progressSeconds;
+				state.percentage = (progressSeconds / duration) * 100;
 			}
 			state.liked = isLiked;
 			state.disliked = isDLiked;
@@ -293,10 +298,12 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, { debounce: 100 })
 	private async __onPlayStateProgress(_ev: any, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
-		await this.updateMediaTimeline(Number(this.trackData.meta.duration), progressSeconds, isPlaying);
+		const duration = Number(this.trackData.meta.duration);
+		await this.updateMediaTimeline(duration, progressSeconds, isPlaying);
 		this.setTrackState((state) => {
 			state.progress = progressSeconds;
 			state.uiProgress = progressSeconds;
+			state.percentage = (progressSeconds / duration) * 100;
 			state.playing = isPlaying;
 			state.eventType = "progress";
 		});

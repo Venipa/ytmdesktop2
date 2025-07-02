@@ -14,7 +14,7 @@ export default class WinControlProvider extends BaseProvider implements AfterIni
 	constructor() {
 		super("winControl");
 	}
-	private trackStateSubscription: () => void;
+	private disposeSubscriptions: (() => void)[] = [];
 	private get trackProvider() {
 		return this.getProvider("track");
 	}
@@ -22,11 +22,23 @@ export default class WinControlProvider extends BaseProvider implements AfterIni
 		return this.getProvider("api");
 	}
 	async AfterInit() {
-		if (!platform.isWindows) return;
-		this.updateThumbarButtons();
-		this.trackStateSubscription = this.trackProvider.onTrackStateChange((s) => s.eventType === "state" && this.updateThumbarButtons(s.playing));
+		try {
+			if (platform.isWindows) {
+				this.updateThumbarButtons();
+			}
+			this.updateThumbProgress(0, false);
+			this.disposeSubscriptions.push(
+				this.trackProvider.onTrackStateChange((s) => {
+					if (s.eventType === "state") this.updateThumbarButtons(s.playing);
+					this.updateThumbProgress(s.percentage, s.playing);
+				}),
+			);
+		} catch (error) {
+			this.logger.error("Failed to initialize winControl", error);
+		}
 	}
 	private updateThumbarButtons(isPlaying: boolean = false) {
+		if (!platform.isWindows) return;
 		try {
 			this.windowContext.main.setThumbarButtons([
 				{
@@ -46,12 +58,16 @@ export default class WinControlProvider extends BaseProvider implements AfterIni
 					click: () => this.apiProvider.nextTrack(),
 				},
 			]);
+			this.windowContext.main.setProgressBar(isPlaying ? 1 : 0);
 		} catch (error) {
 			this.logger.error("Failed to update thumbar buttons", error);
 		}
 	}
+	private updateThumbProgress(progress: number = 0, playing: boolean = false) {
+		this.windowContext.main.setProgressBar(progress > 0.0 ? progress / 100 : 0, { mode: platform.isWindows ? (playing ? "normal" : "paused") : "normal" });
+	}
 	async OnDestroy() {
 		this.windowContext.main.setThumbarButtons([]);
-		this.trackStateSubscription?.();
+		this.disposeSubscriptions.forEach((d) => d());
 	}
 }
