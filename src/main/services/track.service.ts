@@ -262,22 +262,8 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE, { debounce: 100 })
 	private async __onPlayStateChange(_ev: any, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
-
-		this._playState = isPlaying ? "playing" : "paused";
-		const discordProvider = this.getProvider("discord") as DiscordProvider;
-
 		const duration = Number(this.trackData.meta.duration);
-		await discordProvider.updateTrackProgress(isPlaying, progressSeconds);
-
-		try {
-			const mediaController = this.getProvider("mediaController");
-			if (mediaController?.instance) {
-				mediaController.instance.setTimeline(duration, progressSeconds);
-			}
-		} catch (error) {
-			this.logger.error("Failed to update media timeline:", error);
-		}
-
+		await this.updateMediaTimeline(duration, progressSeconds, isPlaying);
 		const [isLiked, isDLiked] = await this.currentSongLikeState();
 
 		this.setTrackState((state) => {
@@ -292,9 +278,22 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			state.eventType = "state";
 		});
 	}
+	private async updateMediaTimeline(duration: number, progressSeconds: number, isPlaying: boolean) {
+		const discordProvider = this.getProvider("discord") as DiscordProvider;
+		await discordProvider.updateTrackProgress(isPlaying, progressSeconds);
+		try {
+			const mediaController = this.getProvider("mediaController");
+			if (mediaController?.instance) {
+				mediaController.instance.setTimeline(duration, progressSeconds);
+			}
+		} catch (error) {
+			this.logger.error("Failed to update media timeline:", error);
+		}
+	}
 	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, { debounce: 100 })
 	private async __onPlayStateProgress(_ev: any, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
+		await this.updateMediaTimeline(Number(this.trackData.meta.duration), progressSeconds, isPlaying);
 		this.setTrackState((state) => {
 			state.progress = progressSeconds;
 			state.uiProgress = progressSeconds;

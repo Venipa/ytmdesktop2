@@ -51,6 +51,7 @@ export default class WinControlProvider extends BaseProvider implements AfterIni
 		}
 	}
 	async OnDestroy() {
+		this.windowContext.main.setThumbarButtons([]);
 		this.trackStateSubscription?.();
 	}
 }
