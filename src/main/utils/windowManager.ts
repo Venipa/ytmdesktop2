@@ -1,10 +1,10 @@
 import { join } from "path";
 import { logger } from "@shared/utils/console";
 import translations from "@translations/index";
-import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView, app } from "electron";
+import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView, screen } from "electron";
 import { debounce } from "lodash-es";
 import appIconPath from "~/build/favicon.ico?asset";
-import { defaultUrl, isDevelopment } from "./devUtils";
+import { defaultUrl, isDevelopment, isProduction } from "./devUtils";
 import { createWindowContext } from "./mappedWindow";
 import { serverMain } from "./serverEvents";
 import { createApiView, createView, googleLoginPopup } from "./view";
@@ -42,13 +42,12 @@ export class WindowManager {
 	constructor(private readonly userAgent?: string) {}
 
 	async createRootWindow(options?: BrowserWindowConstructorOptions) {
-		const winSize = {
+		const bounds = {
 			width: 1500,
 			height: 800,
 		};
-
 		this.mainWindow = new BrowserWindow({
-			...winSize,
+			...bounds,
 			minWidth: 800,
 			minHeight: 480,
 			autoHideMenuBar: true,
@@ -68,9 +67,10 @@ export class WindowManager {
 				nodeIntegration: true,
 				contextIsolation: true,
 				sandbox: false,
-				webSecurity: isDevelopment,
-				allowRunningInsecureContent: !isDevelopment,
+				webSecurity: isProduction,
+				allowRunningInsecureContent: !isProduction,
 				backgroundThrottling: false,
+				autoplayPolicy: "user-gesture-required",
 				...(options?.webPreferences || {}),
 			},
 			...(options || {}),
@@ -79,7 +79,7 @@ export class WindowManager {
 		this.setupWindowUserAgent();
 		await this.setupViews();
 		this.setupWindowEvents();
-		await this.initializeWindowState(winSize);
+		await this.initializeWindowState(bounds);
 
 		return createWindowContext({
 			main: this.mainWindow,
@@ -87,22 +87,7 @@ export class WindowManager {
 		});
 	}
 
-	private setupWindowUserAgent() {
-		if (!this.mainWindow || !this.userAgent) return;
-		let originalUserAgent: string | undefined;
-		app.on("web-contents-created", (event, webContents) => {
-			webContents.setUserAgent(this.userAgent);
-			webContents.session.webRequest.onBeforeSendHeaders((details, cb) => {
-				if (isGoogleLoginUrl(new URL(details.url))) {
-					logger.debug(`Setting user agent to ${originalUserAgent} for ${details.url}`);
-					details.requestHeaders["User-Agent"] = originalUserAgent;
-				} else {
-					details.requestHeaders["User-Agent"] = this.userAgent;
-				}
-				cb({ requestHeaders: details.requestHeaders });
-			});
-		});
-	}
+	private setupWindowUserAgent() {}
 
 	private async setupViews() {
 		if (!this.mainWindow) return;
@@ -300,11 +285,17 @@ export class WindowManager {
 			height: winHeight - toolbarBounds.height,
 		});
 	}
-
-	private async initializeWindowState(winSize: { width: number; height: number }) {
+	private resolveBoundsFromFactor({ width, height }: { width: number; height: number }) {
+		const factor = screen.getPrimaryDisplay().scaleFactor;
+		return {
+			width: width * factor,
+			height: height * factor,
+		};
+	}
+	private async initializeWindowState(bounds: { width: number; height: number }) {
 		if (!this.mainWindow || !this.views) return;
 
-		const { state } = await wrapWindowHandler(this.mainWindow, "root", { ...winSize });
+		const { state } = await wrapWindowHandler(this.mainWindow, "root", { ...bounds });
 
 		if (state?.maximized) {
 			this.mainWindow.maximize();

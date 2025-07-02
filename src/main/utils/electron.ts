@@ -17,6 +17,7 @@ const fsLogger = () => {
 		fs.mkdirSync(logDir, { recursive: true });
 	}
 	const logFile = path.join(logDir, `app_${format(new Date(), "yyyy-MM-dd")}.log`);
+	logger.debug("logFile", logFile);
 	const writeStream = fs.createWriteStream(logFile, {
 		flags: "w+", // append and create if doesn't exist
 		highWaterMark: 64 * 1024, // 64KB buffer size
@@ -63,6 +64,13 @@ export function initializeCustomElectronEnvironment() {
 		Logger.enableProductionMode();
 		const fsOutput = fsLogger();
 		Logger.outputs.push(fsOutput);
+	} else {
+		process.on("uncaughtException", (err) => {
+			logger.error("Uncaught exception", err);
+		});
+		process.on("unhandledRejection", (reason, promise) => {
+			logger.error("Unhandled rejection", reason);
+		});
 	}
 	process.env.NODE_ENV = import.meta.env.MODE;
 	WebContentsView.prototype.invoke = function <T>(channel: string, data: any) {

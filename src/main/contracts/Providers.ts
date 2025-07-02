@@ -14,6 +14,7 @@ import type TrackProvider from "@main/services/track.service";
 import type TrayProvider from "@main/services/tray.service";
 import type UpdateProvider from "@main/services/update.service";
 import type VolumeRatioProvider from "@main/services/volumeRatio.service";
+import type WinControlProvider from "@main/services/winControl.service";
 import type WindowUtilsProvider from "@main/services/window.service";
 import type YoutubeControlProvider from "@main/services/youtube.service";
 
@@ -37,5 +38,6 @@ declare module "ytmd" {
 		window: WindowUtilsProvider;
 		volumeRatio: VolumeRatioProvider;
 		touchbar: TouchbarProvider;
+		winControl: WinControlProvider;
 	}
 }

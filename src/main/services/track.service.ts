@@ -19,6 +19,7 @@ type TrackState = {
 	liked: boolean;
 	disliked: boolean;
 	startedAt: number;
+	eventType: "state" | "progress";
 };
 
 type TrackEntry = { id: string } & TrackData;
@@ -102,6 +103,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 				liked: false,
 				disliked: false,
 				startedAt: Date.now() / 1000,
+				eventType: "state",
 			};
 		}
 		const prevId = this._trackState.id;
@@ -200,6 +202,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 				progress: 0,
 				uiProgress: 0,
 				startedAt: Date.now() / 1000,
+				eventType: "state",
 			});
 		} else {
 			this._activeTrackId = null;
@@ -279,11 +282,24 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 
 		this.setTrackState((state) => {
 			state.playing = isPlaying;
-			state.progress = progressSeconds;
-			state.uiProgress = progressSeconds;
+			if (state.progress !== progressSeconds) {
+				state.progress = progressSeconds;
+				state.uiProgress = progressSeconds;
+			}
 			state.liked = isLiked;
 			state.disliked = isDLiked;
 			state.duration = duration;
+			state.eventType = "state";
+		});
+	}
+	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, { debounce: 100 })
+	private async __onPlayStateProgress(_ev: any, isPlaying: boolean, progressSeconds: number = 0) {
+		if (!this.trackData?.meta) return;
+		this.setTrackState((state) => {
+			state.progress = progressSeconds;
+			state.uiProgress = progressSeconds;
+			state.playing = isPlaying;
+			state.eventType = "progress";
 		});
 	}
 

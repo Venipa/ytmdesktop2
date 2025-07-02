@@ -14,16 +14,13 @@ export default definePlugin(
 				playerApi.addEventListener(
 					"onVideoProgress",
 					(progress) => {
-						window.api.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, isPlaying(), progress);
+						window.api.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, isPlaying(), progress);
 					},
 					{ passive: true },
 				);
-				// const videoDataChangeLoadedType = ["dataupdated", "dataloaded"]
-				// playerApi.addEventListener("onVideoDataChange", ev => {
-				//   if (ev.playertype !== 1 || !videoDataChangeLoadedType.includes(ev.type)) return;
-
-				//   window.api.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, isPlaying(), 0);
-				// })
+				playerApi.addEventListener("onStateChange", () => {
+					window.api.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, isPlaying(), playerApi.getCurrentTime());
+				});
 			});
 		},
 	},
