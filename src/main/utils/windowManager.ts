@@ -245,18 +245,17 @@ export class WindowManager {
 		serverMain.on("app.loadEnd", handleLoadEnd);
 		serverMain.on("app.loadStart", handleLoadStart);
 	}
-
+	private fromMaximized = false;
+	private scaleFactor: number = 1;
 	private setupWindowEvents() {
 		if (!this.mainWindow || !this.views) return;
-
-		let fromMaximized = false;
-
+		this.scaleFactor = screen.getPrimaryDisplay().scaleFactor;
 		this.mainWindow.on("maximize", () => {
-			fromMaximized = true;
+			this.fromMaximized = true;
 			this.updateViewBounds();
 		});
 		this.mainWindow.on("unmaximize", () => {
-			fromMaximized = false;
+			this.fromMaximized = false;
 			this.updateViewBounds();
 		});
 		this.mainWindow.on(
@@ -266,19 +265,18 @@ export class WindowManager {
 			}, 100),
 		);
 	}
-
 	private updateViewBounds() {
 		if (!this.mainWindow || !this.views) return;
 
-		const [winWidth, winHeight] = this.mainWindow.getSize();
+		let [winWidth, winHeight] = this.mainWindow.getContentSize();
 		const youtubeBounds = this.views.youtubeView.getBounds();
 		const toolbarBounds = this.views.toolbarView.getBounds();
-
+		winWidth = winWidth * this.scaleFactor;
+		winHeight = winHeight * this.scaleFactor;
 		this.views.toolbarView.setBounds({
 			...toolbarBounds,
 			width: winWidth,
 		});
-
 		this.views.youtubeView.setBounds({
 			...youtubeBounds,
 			width: winWidth,
@@ -286,10 +284,9 @@ export class WindowManager {
 		});
 	}
 	private resolveBoundsFromFactor({ width, height }: { width: number; height: number }) {
-		const factor = screen.getPrimaryDisplay().scaleFactor;
 		return {
-			width: width * factor,
-			height: height * factor,
+			width: width * this.scaleFactor,
+			height: height * this.scaleFactor,
 		};
 	}
 	private async initializeWindowState(bounds: { width: number; height: number }) {
