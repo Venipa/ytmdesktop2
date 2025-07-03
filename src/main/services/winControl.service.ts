@@ -24,9 +24,9 @@ export default class WinControlProvider extends BaseProvider implements AfterIni
 	async AfterInit() {
 		try {
 			if (platform.isWindows) {
-				this.updateThumbarButtons();
+				this.updateThumbarButtons(this.trackProvider.playing);
 			}
-			this.updateThumbProgress(0, false);
+			this.updateThumbProgress(0, this.trackProvider.playing);
 			this.disposeSubscriptions.push(
 				this.trackProvider.onTrackStateChange((s) => {
 					if (s.eventType === "state") this.updateThumbarButtons(s.playing);
