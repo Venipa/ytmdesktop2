@@ -26,6 +26,8 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 			app.commandLine.appendSwitch("enable-zero-copy");
 			app.commandLine.appendSwitch("enable-features", "CanvasOopRasterization,EnableDrDc"); // Enables Display Compositor to use a new gpu thread. todo: testing
 		}
+		app.commandLine.appendSwitch("high-dpi-support", "1");
+		app.commandLine.appendSwitch("force-device-scale-factor", "1");
 		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "3");
 		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
 		this.app.commandLine.appendSwitch(

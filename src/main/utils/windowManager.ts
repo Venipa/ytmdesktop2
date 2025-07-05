@@ -1,7 +1,7 @@
 import { join } from "path";
 import { logger } from "@shared/utils/console";
 import translations from "@translations/index";
-import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView, screen } from "electron";
+import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView } from "electron";
 import { debounce } from "lodash-es";
 import appIconPath from "~/build/favicon.ico?asset";
 import { defaultUrl, isDevelopment, isProduction } from "./devUtils";
@@ -246,10 +246,8 @@ export class WindowManager {
 		serverMain.on("app.loadStart", handleLoadStart);
 	}
 	private fromMaximized = false;
-	private scaleFactor: number = 1;
 	private setupWindowEvents() {
 		if (!this.mainWindow || !this.views) return;
-		this.scaleFactor = screen.getPrimaryDisplay().scaleFactor;
 		this.mainWindow.on("maximize", () => {
 			this.fromMaximized = true;
 			this.updateViewBounds();
@@ -271,8 +269,8 @@ export class WindowManager {
 		let [winWidth, winHeight] = this.mainWindow.getContentSize();
 		const youtubeBounds = this.views.youtubeView.getBounds();
 		const toolbarBounds = this.views.toolbarView.getBounds();
-		winWidth = winWidth * this.scaleFactor;
-		winHeight = winHeight * this.scaleFactor;
+		winWidth = winWidth;
+		winHeight = winHeight;
 		this.views.toolbarView.setBounds({
 			...toolbarBounds,
 			width: winWidth,
@@ -282,12 +280,6 @@ export class WindowManager {
 			width: winWidth,
 			height: winHeight - toolbarBounds.height,
 		});
-	}
-	private resolveBoundsFromFactor({ width, height }: { width: number; height: number }) {
-		return {
-			width: width * this.scaleFactor,
-			height: height * this.scaleFactor,
-		};
 	}
 	private async initializeWindowState(bounds: { width: number; height: number }) {
 		if (!this.mainWindow || !this.views) return;
