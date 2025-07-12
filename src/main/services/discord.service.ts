@@ -129,11 +129,13 @@ class DiscordRPCManager {
 			await this._refreshActivity(true);
 			client
 				.once("error", (err) => {
+					if (isAborted) return;
 					this.logger.error("discord error", err);
 					this.onDisconnected();
 					this.enable();
 				})
 				.once("disconnected", () => {
+					if (isAborted) return;
 					this.logger.error("discord disconnected, trying to reconnect");
 					this.onDisconnected();
 					if (tries < 3) {
@@ -198,6 +200,7 @@ class DiscordRPCManager {
 		if (this.presence.startTimestamp === null) delete this.presence.startTimestamp;
 		if (this.presence.endTimestamp === null) delete this.presence.endTimestamp;
 		if (resetUpdateHandle) await this._refreshActivity(false);
+		if (!this.client?.user) return;
 		return await this.client.user?.setActivity(this.presence).catch((err) => {
 			this.logger.error(err);
 		});
