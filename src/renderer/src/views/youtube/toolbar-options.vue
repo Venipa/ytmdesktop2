@@ -100,7 +100,7 @@ const [discordConnected, setDiscordConnected] = refIpc(["discord.connected", "di
 	},
 	ignoreUndefined: true,
 });
-const [discordConnectionError] = refIpc(["discord.error"], {
+const [discordConnectionError, setDiscordConnectionError] = refIpc(["discord.error"], {
 	defaultValue: null,
 	debug: true,
 });
@@ -165,7 +165,10 @@ const [updateDownloaded] = refIpc<boolean>("APP_UPDATE_DOWNLOADED");
 
 async function toggleSetting(key) {
 	const setting = await window.api.settingsProvider.update(key, !window.settings.get(key));
-	if (key === "discord.enabled") setDiscordEnabled(setting);
+	if (key === "discord.enabled") {
+    setDiscordConnectionError(null);
+    setDiscordEnabled(setting);
+  }
 }
 function checkUpdate() {
 	if (updateChecking.value) return;

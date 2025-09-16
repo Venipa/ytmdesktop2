@@ -127,23 +127,16 @@ class DiscordRPCManager {
 			this.client = client;
 			this.onConnected();
 			await this._refreshActivity(true);
-			client
-				.once("error", (err) => {
-					if (isAborted) return;
-					this.logger.error("discord error", err);
-					this.onDisconnected();
-					this.enable();
-				})
-				.once("disconnected", () => {
-					if (isAborted) return;
-					this.logger.error("discord disconnected, trying to reconnect");
-					this.onDisconnected();
-					if (tries < 3) {
-						this.createClient(presence, isAborted, tries + 1);
-					} else {
-						this.onError(new Error("Discord disconnected"));
-					}
-				});
+			client.once("disconnected", () => {
+				if (isAborted) return;
+				this.logger.error("discord disconnected, trying to reconnect");
+				this.onDisconnected();
+				if (tries < 3) {
+					this.createClient(presence, isAborted, tries + 1);
+				} else {
+					this.onError(new Error("Discord disconnected"));
+				}
+			});
 			return [client, presence];
 		} catch (err) {
 			this._isConnected = false;
