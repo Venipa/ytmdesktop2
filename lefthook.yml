@@ -2,6 +2,13 @@ pre-commit:
   parallel: true
   commands:
     format:
-      glob: "src/**/*.{js,jsx,ts,tsx,json,yaml,yml,html}"
+      glob: 
+        - src/**/*.{js,jsx,ts,tsx,json,yaml,yml,html,vue}
+        - tailwind.config.ts
+        - vite.config.ts
+        - electron.vite.config.ts
+        - postcss.config.js
+        - tsconfig.*.json
+        - tsconfig.json
       run: npx @biomejs/biome check --write --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {staged_files}
       stage_fixed: true

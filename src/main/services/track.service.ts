@@ -158,7 +158,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 	@IpcOn("track:info-req", { debounce: 10 })
 	private async __onTrackInfo(ev: any, ytTrack: TrackData) {
 		if (!ytTrack.video) return;
-
+		const musicObject = ytTrack.music?.album ? { album: ytTrack.music.album } : undefined;
 		const track = {
 			...ytTrack,
 			meta: {
@@ -166,7 +166,9 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 				isAudioExclusive: ytTrack?.video?.musicVideoType === "MUSIC_VIDEO_TYPE_ATV",
 				startedAt: Date.now() / 1000,
 				duration: parseTrackDuration(ytTrack),
+				isAlbum: !!musicObject,
 			},
+			music: musicObject,
 		};
 
 		trackCollection.addOrUpdate(ytTrack.video.videoId, track as TrackData);

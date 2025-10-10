@@ -73,7 +73,12 @@ const appMethods = {
 // Player API cache
 const createPlayerApi = () => {
 	let playerApiCache: any;
-	return () => playerApiCache || (playerApiCache = (document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as any)?.playerApi);
+	return () => playerApiCache || (playerApiCache = (document.querySelector("body>ytmusic-app") as any)?.playerApi);
+};
+
+const createPlayerUiService = () => {
+	let playerUiServiceCache: any;
+	return () => playerUiServiceCache || (playerUiServiceCache = (document.querySelector("body>ytmusic-app") as any)?.playerUiService);
 };
 
 // Interactive elements management
@@ -176,6 +181,7 @@ export default {
 				}
 			}),
 		playerApi: createPlayerApi(),
+		playerUiService: createPlayerUiService(),
 		setInteractiveElements: createInteractiveElementsManager(),
 	},
 };

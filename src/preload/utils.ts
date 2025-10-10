@@ -31,7 +31,7 @@ export interface PluginUtils {
 	createPluginName: (filename: string) => string;
 	createPluginLogger: (baseLogger: any, pluginName: string) => any;
 	createPlayerReadyWaiter: (timeoutMs?: number) => Promise<void>;
-	createPluginContext: (name: string, settings: any, playerApi: any, api: any, domUtils: any, log: any) => PluginContext;
+	createPluginContext: (name: string, settings: any, playerApi: any, playerUiService: any, api: any, domUtils: any, log: any) => PluginContext;
 }
 
 // Constants
@@ -149,7 +149,7 @@ export const createPluginUtils = (): PluginUtils => ({
 
 			checkYTRoot();
 		}),
-	createPluginContext: (name: string, settings: any, playerApi: any, api: any, domUtils: any, log: any) => {
+	createPluginContext: (name: string, settings: any, playerApi: any, playerUiService: any, api: any, domUtils: any, log: any) => {
 		const pluginKey = parsePluginSettingKey(name);
 		return {
 			settings: new Proxy(settings, {
@@ -163,6 +163,7 @@ export const createPluginUtils = (): PluginUtils => ({
 				},
 			}) as PluginSettings,
 			playerApi,
+			playerUiService,
 			api,
 			domUtils,
 			log,

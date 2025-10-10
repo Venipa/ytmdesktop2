@@ -210,4 +210,8 @@ declare module "ytm-client-api" {
 		setCreatorEndscreenVisibility: (...args: any[]) => void;
 		setCreatorEndscreenHideButton: (...args: any[]) => void;
 	}
+
+	export interface PlayerUiService {
+		[key: string]: any;
+	}
 }

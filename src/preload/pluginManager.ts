@@ -2,7 +2,7 @@ import { basename } from "path";
 import { ClientPlugin, initializePluginCommandsWithIPC } from "@plugins/utils";
 import { Logger, createLogger } from "@shared/utils/console";
 import { debounce, get, merge, set } from "lodash-es";
-import type { PlayerApi } from "ytm-client-api";
+import type { PlayerApi, PlayerUiService } from "ytm-client-api";
 import pkg from "../../package.json";
 import { createPluginUtils, isYoutubeMusicHost } from "./utils";
 
@@ -13,6 +13,7 @@ export interface PluginContext {
 	pluginSettings: PluginSettings;
 	log: Logger;
 	playerApi: PlayerApi;
+	playerUiService: PlayerUiService;
 	api: Window["api"];
 	domUtils: Window["domUtils"];
 	onSettingsChange: (fn: (key: string, value: any) => void) => () => void;
@@ -79,9 +80,12 @@ export class PluginManager {
 	private getPlayerApi() {
 		return window.domUtils.playerApi();
 	}
+	private getPlayerUiService() {
+		return window.domUtils.playerUiService();
+	}
 
 	private createPluginContext(name: string): PluginContext {
-		return this.pluginUtils.createPluginContext(name, window.__ytd_settings, this.getPlayerApi(), window.api, window.domUtils, this.log);
+		return this.pluginUtils.createPluginContext(name, window.__ytd_settings, this.getPlayerApi(), this.getPlayerUiService(), window.api, window.domUtils, this.log);
 	}
 
 	private async waitForPlayerReady(): Promise<void> {

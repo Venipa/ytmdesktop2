@@ -7,7 +7,7 @@ export default definePlugin(
 		displayName: "Track Info Watcher",
 	},
 	{
-		afterInit({ domUtils, playerApi, api }) {
+		afterInit({ domUtils, playerApi, playerUiService, api }) {
 			const videoDataChangeLoadedType = ["dataupdated", "dataloaded", "newdata"];
 			domUtils.ensureDomLoaded(() => {
 				playerApi.addEventListener(
@@ -19,7 +19,15 @@ export default definePlugin(
 						if (!videoData) return; // check if newdata has fetched
 						const requestData = {
 							video: videoData.videoDetails,
-							context: (videoData.microformat && videoData.microformat.microformatDataRenderer) || null,
+							context: (videoData.microformat ? videoData.microformat.microformatDataRenderer : null) || null,
+							music:
+								videoData.videoDetails.musicVideoType === "MUSIC_VIDEO_TYPE_ATV"
+									? {
+											album:
+												playerUiService.store.store.getState()?.playerPage?.playerOverlay?.playerOverlayRenderer?.browserMediaSession?.browserMediaSessionRenderer?.album?.runs?.[0] // experimental
+													?.text,
+										}
+									: null,
 						};
 						api.emit("track:info-req", requestData);
 					},

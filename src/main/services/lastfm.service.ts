@@ -177,12 +177,14 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			this.logger.debug("lastfm.handleTrackStart", track.video.videoId, "not connected");
 			return;
 		}
+		this.logger.debug("isAlbum", !!track.music?.album);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "start");
 		await this.client
 			.updateNowPlaying({
 				artist: track.video.author,
 				track: track.video.title,
 				duration: track.meta.duration,
+				...(track.music?.album && { album: track.music.album }),
 			})
 			.then(stringifyJson)
 			.then((d) => this.logger.debug(d))
@@ -200,6 +202,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			this.logger.debug("lastfm.handleTrackChange", track.video.videoId, "not connected");
 			return;
 		}
+		this.logger.debug("isAlbum", !!track.music?.album);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "change");
 		await this.client
 			.scrobble({
@@ -207,6 +210,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 				track: track.video.title,
 				timestamp: track.meta.startedAt,
 				duration: track.meta.duration,
+				...(track.music?.album && { album: track.music.album }),
 			})
 			.then(stringifyJson)
 			.then((d) => this.logger.debug(d))

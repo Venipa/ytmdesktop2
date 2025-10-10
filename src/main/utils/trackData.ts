@@ -89,6 +89,9 @@ export interface TrackData {
 	video: TrackVideoData;
 	context: TrackMicroFormatData;
 	meta: TrackMeta;
+	music?: {
+		album: string;
+	};
 }
 
 export const parseMusicUrlById = (id: string) => `https://music.youtube.com/watch?v=${id}&feature=share`;
