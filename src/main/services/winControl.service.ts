@@ -1,7 +1,8 @@
 import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, OnDestroy } from "@main/utils/baseProvider";
+import IPC_EVENT_NAMES from "@main/utils/eventNames";
 import { getNativeImage } from "@main/utils/imageUtils";
-import { IpcOn } from "@main/utils/onIpcEvent";
+import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
 import { IpcMainInvokeEvent } from "electron";
 import NextIconPath from "~/build/next.png?asset";
 import PauseIconPath from "~/build/pause.png?asset";
@@ -12,6 +13,7 @@ const PauseIcon = getNativeImage(PauseIconPath);
 const PlayIcon = getNativeImage(PlayIconPath);
 const NextIcon = getNativeImage(NextIconPath);
 
+@IpcContext
 export default class WinControlProvider extends BaseProvider implements AfterInit, OnDestroy {
 	constructor() {
 		super("winControl");
@@ -77,7 +79,7 @@ export default class WinControlProvider extends BaseProvider implements AfterIni
 		this.windowContext.main.setThumbarButtons([]);
 		this.disposeSubscriptions.forEach((d) => d());
 	}
-	@IpcOn("settingsProvider.change", { filter: (ev, key: string) => key === "app.enableTaskbarProgress" })
+	@IpcOn(IPC_EVENT_NAMES.SERVER_SETTINGS_CHANGE, { filter: (ev, key: string) => key === "app.enableTaskbarProgress" })
 	private async _onSettingsUpdate(ev: IpcMainInvokeEvent, key: string, value: boolean, prevValue: boolean) {
 		if (!value && prevValue) this.windowContext.main.setProgressBar(-1, { mode: "none" });
 		else if (value && !prevValue) await this.AfterInit();
