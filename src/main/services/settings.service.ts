@@ -1,4 +1,3 @@
-import { readFileSync, rmSync, statSync } from "fs";
 import path from "path";
 import { createYmlStore } from "@main/lib/store/createYmlStore";
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/utils/baseProvider";
@@ -7,12 +6,14 @@ import eventNames from "@main/utils/eventNames";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { serverMain } from "@main/utils/serverEvents";
 import { VideoResSetting } from "@shared/utils/ISettings";
-import { App, IpcMainEvent, IpcMainInvokeEvent, app } from "electron";
+import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import { Migration } from "electron-conf";
 import { get as _get, debounce } from "lodash-es";
 import { Subject, distinctUntilChanged, filter, map, startWith, takeUntil } from "rxjs";
 import { LastFMSettings } from "ytmd";
 import { stringifyJson } from "../lib/json";
 import { CustomCssConfig } from "./customCss.service";
+import migrations from "./settings.migrations";
 
 const defaultSettings = {
 	api: {
@@ -63,45 +64,13 @@ export type SettingsStore = typeof defaultSettings & { [key: string]: any };
 
 const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
 	defaults: defaultSettings as SettingsStore,
-	migrations: [
-		{
-			version: 0,
-			hook(store) {
-				const { migratedFromJson } = store.store?.__meta ?? {};
-				if (migratedFromJson) return;
-				const oldConfigPath = path.resolve(app.getPath("userData"), "app-settings.json");
-				if (!statSync(oldConfigPath, { throwIfNoEntry: false })) {
-					store.set("__meta.migratedFromJson", true);
-					return;
-				}
-				const oldConfigBody = readFileSync(oldConfigPath, "utf8");
-				if (!oldConfigBody) return;
-				rmSync(oldConfigPath);
-				const oldConfig = JSON.parse(oldConfigBody);
-				store.set(oldConfig);
-				store.set("__meta.migratedFromJson", true);
-			},
-		},
-		{
-			version: 1,
-			hook(store) {
-				store.set("volumeRatio", {
-					enabled: true,
-					volume: 0.1,
-				});
-			},
-		},
-		{
-			version: 2,
-			hook(store) {
-				store.set("plugins", {
-					bypass_age_restrictions: {
-						enabled: true,
-					},
-				});
-			},
-		},
-	],
+	migrations: migrations.map(
+		(migration, version) =>
+			({
+				version,
+				...migration,
+			}) as Migration<SettingsStore>,
+	),
 });
 
 @IpcContext
@@ -139,11 +108,12 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 	}
 
 	set(key: string, value: any) {
+		const prevValue = this.get(key);
 		_settingsStore.set(key, value ?? null);
 		this.onChange.next(_settingsStore.store);
 		try {
-			serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value);
-			this.windowContext.sendToAllViews(eventNames.SERVER_SETTINGS_CHANGE, key, value);
+			serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value, prevValue);
+			this.windowContext.sendToAllViews(eventNames.SERVER_SETTINGS_CHANGE, key, value, prevValue);
 		} catch (ex) {
 			this.logger.error(ex);
 		}
