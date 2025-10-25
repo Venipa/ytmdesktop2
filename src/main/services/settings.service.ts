@@ -29,6 +29,7 @@ const defaultSettings = {
 		minimizeTrayOverride: false,
 		enableStatisticsAndErrorTracing: true,
 		disableHardwareAccel: false,
+		enableTaskbarProgress: true,
 	},
 	volumeRatio: {
 		enabled: true,

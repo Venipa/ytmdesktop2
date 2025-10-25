@@ -21,16 +21,20 @@ export default class WinControlProvider extends BaseProvider implements AfterIni
 	private get apiProvider() {
 		return this.getProvider("api");
 	}
+	private get settingsProvider() {
+		return this.getProvider("settings");
+	}
 	async AfterInit() {
 		try {
 			if (platform.isWindows) {
 				this.updateThumbarButtons(this.trackProvider.playing);
 			}
-			this.updateThumbProgress(0, this.trackProvider.playing);
+			const enableTaskbarProgress = this.settingsProvider.instance.app.enableTaskbarProgress;
+			if (enableTaskbarProgress) this.updateThumbProgress(0, this.trackProvider.playing);
 			this.disposeSubscriptions.push(
 				this.trackProvider.onTrackStateChange((s) => {
-					if (s.eventType === "state") this.updateThumbarButtons(s.playing);
-					this.updateThumbProgress(s.percentage, s.playing);
+					if (s.eventType === "state" && platform.isWindows) this.updateThumbarButtons(s.playing);
+					if (enableTaskbarProgress) this.updateThumbProgress(s.percentage, s.playing);
 				}),
 			);
 		} catch (error) {

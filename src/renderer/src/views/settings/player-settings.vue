@@ -48,6 +48,13 @@
           </settings-select>
         </template>
       </div>
+      
+      <settings-checkbox config-key="app.enableTaskbarProgress">
+        <div class="flex flex-col">
+          <span>Enable Taskbar Progress</span>
+          <span class="opacity-80">(shows a progress bar in the taskbar when playing music.)</span>
+        </div>
+      </settings-checkbox>
     </div>
   </div>
 </template>
