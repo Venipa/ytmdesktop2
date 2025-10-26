@@ -76,11 +76,16 @@ export default class WinControlProvider extends BaseProvider implements AfterIni
 	}
 	async OnDestroy() {
 		this.windowContext.main.setThumbarButtons([]);
+		this.disposeEvents();
+	}
+	private disposeEvents() {
 		this.disposeSubscriptions.forEach((d) => d());
 	}
 	@IpcOn(IPC_EVENT_NAMES.SERVER_SETTINGS_CHANGE, { filter: (key: string) => key === "app.enableTaskbarProgress" })
 	private async __onSettingsUpdate(key: string, value: boolean, prevValue: boolean) {
-		if (!value && prevValue) this.windowContext.main.setProgressBar(-1);
-		else if (value && !prevValue) await this.AfterInit();
+		if (!value && prevValue) {
+			this.windowContext.main.setProgressBar(-1);
+			this.disposeEvents();
+		} else if (value && !prevValue) await this.AfterInit();
 	}
 }
