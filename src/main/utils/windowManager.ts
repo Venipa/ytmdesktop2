@@ -8,8 +8,8 @@ import { defaultUrl, isDevelopment, isProduction } from "./devUtils";
 import { createWindowContext } from "./mappedWindow";
 import { serverMain } from "./serverEvents";
 import { createApiView, createView, googleLoginPopup } from "./view";
-import { callWindowListeners, pushWindowStates } from "./webContentUtils";
-import { wrapWindowHandler } from "./windowUtils";
+import { pushWindowStates } from "./webContentUtils";
+import { getBoundsWithScaleFactor, wrapWindowHandler } from "./windowUtils";
 export function isGoogleLoginUrl(url: URL): boolean {
 	return /^accounts\.google\.(\w+)/.test(url.hostname);
 }
@@ -269,6 +269,7 @@ export class WindowManager {
 		let [winWidth, winHeight] = this.mainWindow.getContentSize();
 		const youtubeBounds = this.views.youtubeView.getBounds();
 		const toolbarBounds = this.views.toolbarView.getBounds();
+		logger.debug("updateViewBounds", { winWidth, winHeight, youtubeBounds, toolbarBounds });
 		winWidth = winWidth;
 		winHeight = winHeight;
 		this.views.toolbarView.setBounds({
@@ -290,10 +291,12 @@ export class WindowManager {
 			this.mainWindow.maximize();
 		} else {
 			this.mainWindow.setBounds({ ...state });
+			logger.debug("initializeWindowState", state);
 		}
 
-		callWindowListeners(this.mainWindow, "will-resize", state);
+		// callWindowListeners(this.mainWindow, "will-resize", state);
 		serverMain.emit("app.loadStart");
+		logger.debug("windowState", this.mainWindow.getBounds());
 
 		await this.views.youtubeView.webContents.loadURL(defaultUrl).then(() => {
 			if (isDevelopment) {
@@ -301,7 +304,7 @@ export class WindowManager {
 			}
 
 			if (process.platform === "darwin") {
-				const bounds = this.mainWindow!.getBounds();
+				const bounds = getBoundsWithScaleFactor(this.mainWindow!);
 				this.mainWindow!.setBounds({
 					width: bounds.width + 1,
 				});

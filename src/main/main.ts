@@ -1,9 +1,10 @@
 import { onWindowLoad } from "@main/utils/windowUtils";
 import logger from "@shared/utils/Logger";
 import { waitMs } from "@shared/utils/promises";
-import { BrowserWindow, IpcMainEvent, app, protocol } from "electron";
-import { isDevelopment } from "./utils/devUtils";
+import { BrowserWindow, app, protocol } from "electron";
 import { initializeCustomElectronEnvironment } from "./utils/electron";
+import { attachQuitHandler } from "./utils/handlers/quitHandler";
+import { attachTrayState } from "./utils/handlers/trayState";
 import { serverMain } from "./utils/serverEvents";
 import { createEventCollection, createServiceCollection } from "./utils/serviceCollection";
 import { WindowManager } from "./utils/windowManager";
@@ -69,12 +70,6 @@ const runApp = async function () {
 		}
 	};
 
-	app.on("window-all-closed", () => {
-		if (process.platform !== "darwin") {
-			serverMain.emit("app.quit", null, true);
-		}
-	});
-
 	app.on("activate", reactivate);
 	app.on("ready", async () => {
 		await waitMs(); // next tick
@@ -110,55 +105,8 @@ const runApp = async function () {
 		if (!youtubeView || youtubeView.webContents.isDestroyed() || !youtubeView.webContents.navigationHistory.canGoBack()) return;
 		youtubeView.webContents.navigationHistory.goBack();
 	});
-
-	let forcedQuit = false;
-	serverMain.on("app.quit", (ev: IpcMainEvent, forceQuit: boolean) => {
-		forcedQuit = !!forceQuit;
-		app.quit();
-	});
-
-	app.on("before-quit", (ev) => {
-		if (forcedQuit || serviceCollection.getTypedProvider("update").updateQueuedForInstall) return;
-
-		const settings = serviceCollection.getTypedProvider("settings");
-		if (settings.get("app.minimizeTrayOverride")) {
-			serverMain.emit("app.trayState", null, "hidden");
-			ev.preventDefault(); // prevent quit - minimize to tray
-		} else {
-			serviceCollection.getTypedProvider("settings")?.saveToDrive();
-		}
-	});
-
-	serverMain.on("app.restore", () => {
-		if (!mainWindow.main.isVisible()) {
-			serverMain.emit("app.trayState", null, "visible");
-		}
-	});
-
-	serverMain.on("app.trayState", (ev: IpcMainEvent, state: string) => {
-		if (state === "visible" && !mainWindow.main.isVisible()) {
-			mainWindow.main.show();
-			mainWindow.main.setSkipTaskbar(false);
-		} else if (state === "hidden" && mainWindow.main.isVisible()) {
-			mainWindow.main.hide();
-			mainWindow.main.setSkipTaskbar(true);
-		}
-	});
-
-	// Exit cleanly on request from parent process in development mode.
-	if (isDevelopment) {
-		if (process.platform === "win32") {
-			process.on("message", (data) => {
-				if (data === "graceful-exit") {
-					serviceCollection.exec("OnDestroy").then(() => serverMain.emit("app.quit", true));
-				}
-			});
-		} else {
-			process.on("SIGTERM", () => {
-				serviceCollection.exec("OnDestroy").then(() => serverMain.emit("app.quit", true));
-			});
-		}
-	}
+	attachQuitHandler(mainWindow, serviceCollection);
+	attachTrayState(mainWindow);
 };
 
 runApp();

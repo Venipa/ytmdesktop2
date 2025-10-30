@@ -1,4 +1,5 @@
 import { join } from "path";
+import { platform } from "@electron-toolkit/utils";
 import { createYmlStore } from "@main/lib/store/createYmlStore";
 import { createLogger } from "@shared/utils/console";
 import { BrowserWindow, WebContentsView, screen, shell } from "electron";
@@ -57,6 +58,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 			preload: join(__dirname, "../preload/api.js"),
 		},
 	});
+
 	await loadUrlOfWindow(win, path);
 	if (isDevelopment) win.webContents.openDevTools();
 	win.webContents.setWindowOpenHandler(({ url }) => {
@@ -79,6 +81,49 @@ export async function createAppDialogWindow<Action extends "close" | "ok">(appOp
 	});
 	return win;
 }
+function getScaleFactor(win: BrowserWindow) {
+	if (!platform.isWindows) {
+		return 1;
+	}
+	const [x, y] = win.getPosition();
+	const currentDisplay = screen.getDisplayNearestPoint({ x, y });
+	return currentDisplay.scaleFactor;
+}
+function calculateSizeWithScaleFactor(x: number, y: number, width: number, height: number) {
+	const currentDisplay = screen.getDisplayNearestPoint({ x, y });
+	const scaleFactor = platform.isWindows ? currentDisplay.scaleFactor : 1;
+	if (scaleFactor === 1) return { width, height, scaleFactor };
+	return {
+		width: width / scaleFactor,
+		height: height / scaleFactor,
+		scaleFactor,
+	};
+}
+function getSizeOfWindowNative(win: BrowserWindow) {
+	const { width, height } = win.getBounds();
+	return {
+		width,
+		height,
+	};
+}
+function getSizeOfWindow(win: BrowserWindow) {
+	const { width, height, x, y } = win.getBounds();
+	return calculateSizeWithScaleFactor(x, y, width, height);
+}
+function getDisplayNearestPoint(win: BrowserWindow) {
+	const [x, y] = win.getPosition();
+	const { bounds } = screen.getDisplayNearestPoint({ x, y });
+	return bounds;
+}
+function getNearestDisplay(win: BrowserWindow) {
+	const [x, y] = win.getPosition();
+	return screen.getDisplayNearestPoint({ x, y });
+}
+export function getBoundsWithScaleFactor(win: BrowserWindow) {
+	const { width, height, x, y } = win.getBounds();
+	const { width: dWidth, height: dHeight, scaleFactor } = calculateSizeWithScaleFactor(x, y, width, height);
+	return { x, y, width: dWidth, height: dHeight, scaleFactor };
+}
 export async function wrapWindowHandler(win: BrowserWindow, windowName: string, { width: defaultWidth, height: defaultHeight }: { width: number; height: number }) {
 	const key = "window-state";
 	const name = `window-state-${windowName}`;
@@ -92,7 +137,7 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 
 	const getCurrentPosition = () => {
 		const [x, y] = win.getPosition();
-		const [width, height] = win.getSize();
+		const { width, height } = getSizeOfWindowNative(win);
 		return {
 			x,
 			y,
@@ -112,13 +157,17 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 	};
 
 	const resetToDefaults = () => {
-		const bounds = screen.getPrimaryDisplay().bounds;
-		return Object.assign({}, defaultSize, {
-			x: (bounds.width - defaultSize.width) / 2,
-			y: (bounds.height - defaultSize.height) / 2,
-			width: defaultSize.width,
-			height: defaultSize.height,
-		});
+		const bounds = win.getBounds();
+		const { width, height } = getSizeOfWindowNative(win);
+		return Object.assign(
+			{},
+			{
+				x: (bounds.width - width) / 2,
+				y: (bounds.height - height) / 2,
+				width,
+				height,
+			},
+		);
 	};
 
 	const ensureVisibleOnSomeDisplay = (windowState) => {
@@ -137,8 +186,18 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 			state = Object.assign({}, state, getCurrentPosition());
 		}
 		store.set(key, state);
+		log.debug("saveWindowState", state);
 	};
 	state = ensureVisibleOnSomeDisplay(restore());
+
+	const { width: dWidth, height: dHeight, scaleFactor } = calculateSizeWithScaleFactor(state.x, state.y, state.width, state.height);
+	if (scaleFactor !== 1) {
+		state.width = dWidth;
+		state.height = dHeight;
+		log.debug("restoreWindowStateWithScale", state, { scaleFactor });
+	} else {
+		log.debug("restoreWindowState", state, { scaleFactor });
+	}
 	win.on("close", saveState);
 	return { state, saveState };
 }
