@@ -1,7 +1,7 @@
 import { onWindowLoad } from "@main/utils/windowUtils";
 import logger from "@shared/utils/Logger";
 import { waitMs } from "@shared/utils/promises";
-import { BrowserWindow, IpcMainEvent, app, protocol } from "electron";
+import { BrowserWindow, type IpcMainEvent, app, protocol } from "electron";
 import { isDevelopment } from "./utils/devUtils";
 import { initializeCustomElectronEnvironment } from "./utils/electron";
 import { serverMain } from "./utils/serverEvents";
@@ -11,7 +11,7 @@ import { WindowManager } from "./utils/windowManager";
 initializeCustomElectronEnvironment();
 const log = logger.child("main");
 
-const runApp = async function () {
+const runApp = async () => {
 	const serviceCollection = await createServiceCollection(app),
 		eventCollection = await createEventCollection(app, serviceCollection.getItems());
 
@@ -79,6 +79,7 @@ const runApp = async function () {
 	app.on("ready", async () => {
 		await waitMs(); // next tick
 		mainWindow = await windowManager.createRootWindow();
+
 		serviceCollection.registerWindows(mainWindow);
 
 		await waitMs(); // next tick

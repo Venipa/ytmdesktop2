@@ -1,7 +1,8 @@
 import { join } from "path";
+import { ElectronBlocker, type Request, fullLists } from "@ghostery/adblocker-electron";
 import { logger } from "@shared/utils/console";
 import translations from "@translations/index";
-import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView } from "electron";
+import { BrowserWindow, type BrowserWindowConstructorOptions, type WebContentsView } from "electron";
 import { debounce } from "lodash-es";
 import appIconPath from "~/build/favicon.ico?asset";
 import { defaultUrl, isDevelopment, isProduction } from "./devUtils";
@@ -75,6 +76,34 @@ export class WindowManager {
 			},
 			...(options || {}),
 		});
+		const blocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch); // ads and tracking
+		blocker.enableBlockingInSession(this.mainWindow.webContents.session);
+
+		blocker.on("request-blocked", (request: Request) => {
+			console.log("blocked", request.tabId, request.url);
+		});
+
+		blocker.on("request-redirected", (request: Request) => {
+			console.log("redirected", request.tabId, request.url);
+		});
+
+		blocker.on("request-whitelisted", (request: Request) => {
+			console.log("whitelisted", request.tabId, request.url);
+		});
+
+		blocker.on("csp-injected", (request: Request, csps: string) => {
+			console.log("csp", request.url, csps);
+		});
+
+		blocker.on("script-injected", (script: string, url: string) => {
+			console.log("script", script.length, url);
+		});
+
+		blocker.on("style-injected", (style: string, url: string) => {
+			console.log("style", style.length, url);
+		});
+
+		blocker.on("filter-matched", console.log.bind(console, "filter-matched"));
 
 		this.setupWindowUserAgent();
 		await this.setupViews();
@@ -178,7 +207,7 @@ export class WindowManager {
 			if (!lastLocation || new URL(lastLocation).origin !== new URL(location).origin) {
 				logger.info(`will-navigate: ${location}`);
 			}
-			if (location?.match(/^https?\:\/\/(accounts)?.google.([a-z]+)/)) {
+			if (location?.match(/^https?:\/\/(accounts)?.google.([a-z]+)/)) {
 				ev.preventDefault();
 				this.handleGoogleLogin(location, view);
 			}
@@ -281,10 +310,15 @@ export class WindowManager {
 			height: winHeight - toolbarBounds.height,
 		});
 	}
-	private async initializeWindowState(bounds: { width: number; height: number }) {
+	private async initializeWindowState(bounds: {
+		width: number;
+		height: number;
+	}) {
 		if (!this.mainWindow || !this.views) return;
 
-		const { state } = await wrapWindowHandler(this.mainWindow, "root", { ...bounds });
+		const { state } = await wrapWindowHandler(this.mainWindow, "root", {
+			...bounds,
+		});
 
 		if (state?.maximized) {
 			this.mainWindow.maximize();

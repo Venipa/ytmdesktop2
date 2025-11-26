@@ -1,20 +1,21 @@
+import type { SettingsStore } from "@main/services/settings.service";
 import { isDevelopment } from "@main/utils/devUtils";
-import { TrackData } from "@main/utils/trackData";
+import type { TrackData } from "@main/utils/trackData";
 import { createId as cuid } from "@paralleldrive/cuid2";
-import createApp, { json, Router } from "express";
-import expressWs from "express-ws";
+import { createLogger } from "@shared/utils/console";
 
 import EventEmitter from "events";
-import { Server } from "http";
-import type { SettingsStore } from "@main/services/settings.service";
-import { createLogger } from "@shared/utils/console";
+import type { Server } from "http";
+import createApp, { json, Router } from "express";
+import expressWs from "express-ws";
 import { parentPort } from "worker_threads";
+
 if (!parentPort) throw new Error("This module has been run as parent");
-const { app, getWss } = expressWs(createApp());
+const { app, getWss } = expressWs(createApp() as any);
 let appConfig: SettingsStore;
 let apiRoutes: string[] = [];
 const log = createLogger("api-server");
-const router = Router() as expressWs.Router;
+const router = Router() as any;
 const parentEvents = new EventEmitter();
 const requestParent = <T = any>(name: string, data?: any) => {
 	const requestId = cuid();
@@ -30,10 +31,13 @@ const requestParent = <T = any>(name: string, data?: any) => {
 			parentEvents.off(requestId, handle);
 			reject(new Error("handle Timeout error"));
 		}, 30e3);
-		parentPort!.postMessage({ type: "operationOutput", value: { name, data, id: requestId } });
+		parentPort!.postMessage({
+			type: "operationOutput",
+			value: { name, data, id: requestId },
+		});
 	});
 };
-app.use(function (req, res, next) {
+app.use((req, res, next) => {
 	res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
 	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 	next();
@@ -96,7 +100,13 @@ app.post("/track/*", async (req, res) => {
 	}
 });
 let server: Server;
-const initialize = async ({ config, routes }: { config: SettingsStore; routes: string[] }) => {
+const initialize = async ({
+	config,
+	routes,
+}: {
+	config: SettingsStore;
+	routes: string[];
+}) => {
 	appConfig = config;
 	const serverPort = config.api.port;
 	apiRoutes = routes;
