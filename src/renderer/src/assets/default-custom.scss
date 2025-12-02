@@ -102,3 +102,25 @@ tp-yt-paper-listbox.ytmusic-menu-popup-renderer {
     0px 61px 80px rgba(0, 0, 0, 0.07);
   border-radius: 8px;
 }
+
+ytmusic-player-page:not([is-mweb-modernization-enabled]) .content.ytmusic-player-page:before {
+  content: "";
+  background-image: var(--ytmd-thumbnail-url);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: var(--ytmd-thumbnail-accent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  filter: saturate(120%) brightness(1.15) opacity(0.33) blur(16px);
+  mix-blend-mode: overlay;
+  border-radius: 8px;
+  overflow: hidden;
+  transform: translate3d(0, 0, 1px) scale(1.1);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}

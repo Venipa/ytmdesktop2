@@ -24,6 +24,7 @@
            :value="value"
            class="input input-ghost"
            @change="(ev) => updateSetting(ev.target as any)" />
+    <slot name="hint"></slot>
   </div>
 </template>
 <script lang="ts">

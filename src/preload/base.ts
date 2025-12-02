@@ -127,10 +127,11 @@ export default {
 		...appMethods,
 		settingsProvider,
 		...ipc,
-		reloadCustomCss: () => ipcRenderer.send("settings.customCssUpdate"),
+		reloadCustomCss: () => ipcRenderer.send("customcss.update"),
 		mainWindowState: createIpcInvoker("mainWindowState"),
 		windowState: createIpcInvoker("windowState"),
 		getPathFromFile: (file: File) => webUtils.getPathForFile(file),
+		openFile: (path: string) => ipcRenderer.invoke("app.openFile", path),
 	},
 	translations,
 	domUtils: {

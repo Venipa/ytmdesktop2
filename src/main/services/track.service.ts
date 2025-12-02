@@ -6,6 +6,8 @@ import { App } from "electron";
 import { clamp, clone, debounce } from "lodash-es";
 import { firstBy } from "thenby";
 
+import CSSHandler from "@main/lib/css/handler";
+import Vibrant from "node-vibrant";
 import IPC_EVENT_NAMES from "../utils/eventNames";
 import ApiProvider from "./api.service";
 import DiscordProvider from "./discord.service";
@@ -21,6 +23,7 @@ type TrackState = {
 	startedAt: number;
 	percentage: number;
 	eventType: "state" | "progress";
+	accent: string | null;
 };
 
 type TrackEntry = { id: string } & TrackData;
@@ -85,7 +88,9 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		super("track");
 	}
 
-	async AfterInit() {}
+	async AfterInit() {
+		this.handleTrackStyle();
+	}
 
 	get trackData(): TrackEntry | null {
 		if (this._trackDataCache?.id === this._activeTrackId) {
@@ -106,6 +111,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 				startedAt: Date.now() / 1000,
 				percentage: 0,
 				eventType: "state",
+				accent: null,
 			};
 		}
 		const prevId = this._trackState.id;
@@ -311,6 +317,27 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		});
 	}
 
+	private _currentPallete: { id: string; color: string } | null = null;
+	async getTrackAccent(track: TrackData = this.trackData) {
+		if (!track?.video?.thumbnail?.thumbnails?.[0]?.url) return null;
+
+		const videoId = track.video.videoId;
+		if (this._currentPallete && this._currentPallete.id === videoId) return this._currentPallete.color;
+
+		const color = await fetch(track.video.thumbnail.thumbnails[0].url)
+			.then((th) => th.arrayBuffer())
+			.then((file) => Vibrant.from(Buffer.from(file)))
+			.then((clr) => clr.getPalette())
+			.then((clr) => clr.Vibrant?.hex)
+			.catch((err) => {
+				this.logger.error("Error extracting accent color:", err);
+				return null;
+			});
+
+		if (color) this._currentPallete = { id: videoId, color };
+		return color;
+	}
+
 	onTrackStateChange(callback: (state: TrackState) => void, options: { debounce?: number; immediate?: boolean } = { immediate: false }) {
 		const handler = debounce(callback, options?.debounce);
 		if (options.immediate) handler(this.trackState);
@@ -324,5 +351,27 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		events.on("track:change", handler);
 		this.app.on("before-quit", () => events.off("track:change", handler));
 		return () => events.off("track:change", handler);
+	}
+
+	private handleTrackStyle() {
+		if (!this.windowContext.views.youtubeView.webContents) {
+			this.logger.error("youtubeView not found");
+			return;
+		}
+		const accentHandler = new CSSHandler(this.windowContext.views.youtubeView.webContents);
+		this.onTrackChange(async (track) => {
+			const trackAccent = await this.getTrackAccent(track);
+			this.setTrackState((state) => {
+				state.accent = trackAccent;
+			});
+			accentHandler.createOrUpdate(`:root { --ytmd-thumbnail-accent: ${trackAccent ?? "transparent"}; }`);
+			this.logger.debug("track:accent", trackAccent, track.video.thumbnail.thumbnails?.[0]?.url);
+		});
+		const thumbnailHandler = new CSSHandler(this.windowContext.views.youtubeView.webContents);
+		this.onTrackChange(async (track) => {
+			const thumbnailUrl = track.meta.thumbnail ? `url(${track.meta.thumbnail})` : "transparent";
+			thumbnailHandler.createOrUpdate(`:root { --ytmd-thumbnail-url: ${thumbnailUrl}; }`);
+			this.logger.debug("track:thumbnail", thumbnailUrl);
+		});
 	}
 }

@@ -1,10 +1,11 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { setSentryEnabled } from "@main/utils/sentry";
-import { App, BrowserWindow, IpcMainEvent } from "electron";
+import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
 
 import { version as releaseVersion } from "node:os";
 import { platform } from "@electron-toolkit/utils";
+import { logger } from "@shared/utils/console";
 import { stripUndefined } from "@shared/utils/object";
 import { clamp } from "lodash-es";
 import { isDevelopment } from "../utils/devUtils";
@@ -13,6 +14,7 @@ import { createAppDialogWindow, createAppWindow } from "../utils/windowUtils";
 
 const STATE_PAUSE_TIME = 30e4;
 const TEST_RESTART_NEEDED_DIALOG = isDevelopment && process.env.TEST_RESTART_NEEDED_DIALOG === "1";
+const whitelistFileExtensions = /\.(scss|sass|css|txt|log)$/;
 @IpcContext
 export default class AppProvider extends BaseProvider implements AfterInit, BeforeStart {
 	private appLock: boolean = false;
@@ -174,5 +176,20 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 		}
 		const evName = "subwindow.close/" + windowName;
 		if (serverMain.eventNames().includes(evName)) serverMain.emit("subwindow.close/" + windowName, _ev);
+	}
+	@IpcHandle("app.openFile", {
+		debounce: 500,
+		filter: (ev: IpcMainInvokeEvent, path: string) => {
+			logger.debug("openFile", path, whitelistFileExtensions.test(path));
+			return path && whitelistFileExtensions.test(path);
+		},
+	})
+	async handleOpenFile(ev: IpcMainInvokeEvent, path: string) {
+		const errorMessage = await shell.openPath(path);
+		if (errorMessage) {
+			this.logger.error("Failed to open file", errorMessage);
+			return false;
+		}
+		return true;
 	}
 }

@@ -1,0 +1,48 @@
+/* basic scrollbar style */
+:root {
+  --ytmd-scrollbar-size: 12px;
+  --ytmd-scrollbar-border-radius: 8px;
+  --ytmd-scrollbar-border-width: 4px;
+  --ytmd-scrollbar-thumb-size: 32px;
+  --ytmd-scrollbar-thumb-color: var(--ytmusic-text-secondary);
+  --ytmd-scrollbar-thumb-active-color: var(--ytmusic-text-primary);
+}
+
+// Define targets for custom scrollbars
+html,
+body,
+& {
+  &::-webkit-scrollbar {
+    width: var(--ytmd-scrollbar-size);
+    height: var(--ytmd-scrollbar-size);
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    border-radius: var(--ytmd-scrollbar-border-radius);
+    background: var(--ytmd-scrollbar-thumb-color);
+    min-height: var(--ytmd-scrollbar-thumb-size);
+    min-width: var(--ytmd-scrollbar-thumb-size);
+    border: var(--ytmd-scrollbar-border-width) solid transparent !important;
+    background-clip: padding-box !important;
+    transition: background 0.2s;
+  }
+  &::-webkit-scrollbar-thumb:hover,
+  &::-webkit-scrollbar-thumb:active {
+    border: var(--ytmd-scrollbar-border-width) solid transparent;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--ytmd-scrollbar-thumb-active-color);
+  }
+  &::-webkit-scrollbar-thumb:active {
+    background: var(--ytmd-scrollbar-thumb-active-color);
+  }
+  &::-webkit-scrollbar-corner,
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  @media (pointer: coarse) {
+    &::-webkit-scrollbar-thumb {
+      background: var(--ytmd-scrollbar-thumb-color);
+    }
+  }
+}

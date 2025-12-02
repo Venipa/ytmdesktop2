@@ -1,12 +1,14 @@
 import fs from "fs";
 import path from "path";
+import CSSHandler from "@main/lib/css/handler";
+import basicScrollStyle from "@main/services/resources/basic-style/thumb.scss?raw";
 import { AfterInit, BaseProvider } from "@main/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { rootWindowClearCustomCss, rootWindowInjectCustomCss } from "@main/utils/webContentUtils";
+import customDefaultCss from "@renderer/assets/default-custom.scss?raw";
 import type { App } from "electron";
 import { debounce } from "lodash";
 import { compileAsync } from "sass";
-import customDefaultCss from "~/src/renderer/src/assets/default-custom.scss?raw";
 import SettingsProvider from "./settings.service";
 
 interface CompiledCSS {
@@ -170,6 +172,7 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 		return false;
 	}
 	async AfterInit() {
+		this.attachBasicStyle();
 		await this._initializeSCSS();
 		const config = this.settingsInstance.get<CustomCssConfig>("customcss");
 		if (config?.enabled) {
@@ -178,6 +181,15 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 				this.setupFileWatcher(config.scssFile);
 			}
 		}
+	}
+	private attachBasicStyle() {
+		const youtubeView = this.windowContext.views.youtubeView.webContents;
+		if (!youtubeView) {
+			this.logger.error("youtubeView not found");
+			return;
+		}
+		const basicStyleHandler = new CSSHandler(youtubeView, { translateSass: true });
+		basicStyleHandler.createOrUpdate(basicScrollStyle);
 	}
 	private async _initializeSCSS() {
 		const scssPath = this.getScssPath();
