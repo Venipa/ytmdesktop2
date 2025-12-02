@@ -51,6 +51,7 @@ const defaultSettings = {
 		enabled: true,
 		scssFile: null,
 		watching: false,
+		thumbnailBackground: true,
 	} as CustomCssConfig,
 	state: {
 		currentUrl: null,

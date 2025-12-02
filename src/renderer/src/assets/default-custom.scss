@@ -115,28 +115,6 @@ tp-yt-paper-listbox.ytmusic-menu-popup-renderer {
 }
 
 
-ytmusic-player-page:not([is-mweb-modernization-enabled]) .content.ytmusic-player-page:before {
-  content: "";
-  background-image: var(--ytmd-thumbnail-url);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: var(--ytmd-thumbnail-accent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  filter: saturate(120%) brightness(1.15) opacity(0.33) blur(16px);
-  mix-blend-mode: exclusion;
-  border-radius: 8px;
-  overflow: hidden;
-  transform: translate3d(0, 0, 1px) scale(1.1);
-  position: absolute;
-  top: -12px;
-  left: calc(var(--ytmusic-guide-width) * -1);
-  right: calc(var(--ytmusic-guide-width) * -1);
-  bottom: -20px;
-  z-index: -1;
-}
-
 // player icon/button sizes adjustments
 
 $playerIconSize: 20px;

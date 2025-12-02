@@ -4,6 +4,7 @@
       <settings-checkbox ref="customCssToggle"
                          config-key="customcss.enabled"> Enable Custom CSS </settings-checkbox>
       <settings-checkbox config-key="customcss.watching"> Update on Changes </settings-checkbox>
+      <settings-checkbox config-key="customcss.thumbnailBackground"> Enable Thumbnail Background </settings-checkbox>
       <ease-transition>
         <div v-if="customCssToggle && customCssToggle.value"
              class="flex flex-col gap-4">

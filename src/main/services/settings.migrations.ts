@@ -44,6 +44,11 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 			store.set("app.enableTaskbarProgress", true);
 		},
 	},
+	{
+		hook(store) {
+			store.set("customcss.thumbnailBackground", true);
+		},
+	},
 ];
 
 export default migrations;

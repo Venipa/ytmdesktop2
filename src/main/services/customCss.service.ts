@@ -1,8 +1,10 @@
 import fs from "fs";
 import path from "path";
 import CSSHandler from "@main/lib/css/handler";
+import playerThumbnailStyle from "@main/services/resources/basic-style/player-thumbnail-background.scss?raw";
 import basicScrollStyle from "@main/services/resources/basic-style/thumb.scss?raw";
 import { AfterInit, BaseProvider } from "@main/utils/baseProvider";
+import IPC_EVENT_NAMES from "@main/utils/eventNames";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { rootWindowClearCustomCss, rootWindowInjectCustomCss } from "@main/utils/webContentUtils";
 import customDefaultCss from "@renderer/assets/default-custom.scss?raw";
@@ -21,6 +23,7 @@ export interface CustomCssConfig {
 	enabled: boolean;
 	scssFile: string | null;
 	watching: boolean;
+	thumbnailBackground?: boolean;
 }
 
 @IpcContext
@@ -140,7 +143,7 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 	private async _event_customCssUpdate() {
 		await this.updateCSS();
 	}
-	@IpcOn("settingsProvider.change", {
+	@IpcOn(IPC_EVENT_NAMES.SERVER_SETTINGS_CHANGE, {
 		filter: (key: string) => ["customcss.enabled", "customcss.scssFile", "customcss.watching"].includes(key),
 		debounce: 1000,
 	})
@@ -162,6 +165,15 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 			await rootWindowClearCustomCss(this.views.youtubeView);
 		}
 	}
+	@IpcOn(IPC_EVENT_NAMES.SERVER_SETTINGS_CHANGE, {
+		filter: (key: string) => ["customcss.thumbnailBackground"].includes(key),
+		debounce: 1000,
+	})
+	private async _event_settingsChangeThumbnailBackground(_key: string, thumbnailBackgroundEnabled: boolean) {
+		if (!this.thumbnailBackgroundStyle) this.thumbnailBackgroundStyle = new CSSHandler(this.windowContext.views.youtubeView.webContents, { translateSass: true });
+		if (thumbnailBackgroundEnabled && !this.thumbnailBackgroundStyle.isCreated) await this.thumbnailBackgroundStyle.createOrUpdate(playerThumbnailStyle);
+		else await this.thumbnailBackgroundStyle.remove().catch(() => {});
+	}
 	@IpcHandle("action:css")
 	async injectCSS() {
 		const scssFile = this.getScssPath();
@@ -182,14 +194,22 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 			}
 		}
 	}
+	private basicStyleHandler?: CSSHandler;
+	private thumbnailBackgroundStyle?: CSSHandler;
 	private attachBasicStyle() {
 		const youtubeView = this.windowContext.views.youtubeView.webContents;
 		if (!youtubeView) {
 			this.logger.error("youtubeView not found");
 			return;
 		}
-		const basicStyleHandler = new CSSHandler(youtubeView, { translateSass: true });
-		basicStyleHandler.createOrUpdate(basicScrollStyle);
+		this.basicStyleHandler = new CSSHandler(youtubeView, { translateSass: true });
+		this.basicStyleHandler.createOrUpdate(basicScrollStyle);
+
+		this.thumbnailBackgroundStyle = new CSSHandler(youtubeView, { translateSass: true });
+		const thumbnailBackgroundEnabled = this.settingsInstance.instance.customcss?.thumbnailBackground ?? true;
+		if (thumbnailBackgroundEnabled) this.thumbnailBackgroundStyle.createOrUpdate(playerThumbnailStyle);
+
+		this.logger.debug("basicStyleContent", { thumbnail: playerThumbnailStyle, basic: basicScrollStyle });
 	}
 	private async _initializeSCSS() {
 		const scssPath = this.getScssPath();
