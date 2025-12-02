@@ -9,6 +9,9 @@
 }
 
 // Define targets for custom scrollbars
+html, body {
+  overflow: overlay;
+}
 html,
 body,
 & {

@@ -71,6 +71,7 @@ export class WindowManager {
 				allowRunningInsecureContent: !isProduction,
 				backgroundThrottling: false,
 				autoplayPolicy: "user-gesture-required",
+				enableBlinkFeatures: "FluentScrollbars,FluentOverlayScrollbar,OverlayScrollbar",
 				...(options?.webPreferences || {}),
 			},
 			...(options || {}),

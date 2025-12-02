@@ -44,7 +44,10 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 		}
 		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "3");
 		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
-		this.app.commandLine.appendSwitch("enable-features", "OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations");
+		this.app.commandLine.appendSwitch(
+			"enable-features",
+			"CanvasOopRasterization,EnableDrDc,FluentOverlayScrollbar,OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations",
+		);
 
 		// TODO: implement own shortcut handler for media keys
 		// this.app.commandLine.appendSwitch("disable-features", "MediaSessionService");
