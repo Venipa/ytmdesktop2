@@ -215,6 +215,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 				startedAt: Date.now() / 1000,
 				percentage: 0,
 				eventType: "state",
+				accent: null,
 			});
 		} else {
 			this._activeTrackId = null;

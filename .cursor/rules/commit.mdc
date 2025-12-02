@@ -1,0 +1,42 @@
+---
+alwaysApply: true
+---
+# Commit Messages Guidelines
+
+## Commit Messages
+
+- Use the common format for commit messages: "type(scope): description"
+  - Don't use scope if it's not necessary.
+- Only use lowercase letters in the entire body of the commit message.
+- The type can be one of the following:
+  - feat: A new feature
+  - fix: A bug fix
+  - chore: A chore (non-code change)
+  - refactor: A code refactor (optional; only use if it's a significant refactor)
+  - test: A test change (optional; only use if it's a significant test change or new test added)
+  - docs: Documentation changes
+  - style: Code style changes (optional; only use if it's a significant style change)
+  - perf: Performance improvements (optional; only use if it's a significant performance improvement)
+- Keep it short and to the point, max 50 characters
+  - Example: "feat: added new timer feature to the reports page"
+  - Example: "feat: updated layout in timer page"
+  - Example: "fix: fixed issue with login"
+  - Example: "chore: updated dependencies"
+  - Example: "refactor: refactored code in timer page - improved performance and readability, reduced code complexity, extended with new features"
+  - Example: "test: added new test for timer page"
+  - Example: "docs: updated documentation for timer page"
+  - Example: "style: updated code style in timer page"
+  - Example: "perf: improved performance of timer page"
+
+
+## Commit Body
+
+- Add a detailed description of the commit, max 60 characters (if necessary, add more details in the body, not in the subject, only if a significant change is made)
+
+
+## Commit Footer
+
+- if the commit is signed off, add the Signed-off-by: <username>
+  - otherwise leave empty
+
+
