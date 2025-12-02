@@ -370,7 +370,8 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		});
 		const thumbnailHandler = new CSSHandler(this.windowContext.views.youtubeView.webContents);
 		this.onTrackChange(async (track) => {
-			const thumbnailUrl = track.meta.thumbnail ? `url(${track.meta.thumbnail})` : "transparent";
+			const hqThumbnail = track.context?.thumbnail?.thumbnails?.sort(firstBy((d) => d.width, "desc"))[0]?.url ?? track.meta.thumbnail;
+			const thumbnailUrl = hqThumbnail ? `url(${hqThumbnail})` : "transparent";
 			thumbnailHandler.createOrUpdate(`:root { --ytmd-thumbnail-url: ${thumbnailUrl}; }`);
 			this.logger.debug("track:thumbnail", thumbnailUrl);
 		});
