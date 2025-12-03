@@ -41,7 +41,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 				});
 			}
 		}
-		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "4");
+		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "3");
 		// better gpu performance - for faster blur effect
 		this.app.commandLine.appendSwitch("disable-gpu-sandbox");
 		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
