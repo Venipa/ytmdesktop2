@@ -1,12 +1,11 @@
+import { version as releaseVersion } from "node:os";
+import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { setSentryEnabled } from "@main/utils/sentry";
-import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
-
-import { version as releaseVersion } from "node:os";
-import { platform } from "@electron-toolkit/utils";
 import { logger } from "@shared/utils/console";
 import { stripUndefined } from "@shared/utils/object";
+import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
 import { clamp } from "lodash-es";
 import { isDevelopment } from "../utils/devUtils";
 import { serverMain } from "../utils/serverEvents";
@@ -42,7 +41,9 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 				});
 			}
 		}
-		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "3");
+		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "4");
+		// better gpu performance - for faster blur effect
+		this.app.commandLine.appendSwitch("disable-gpu-sandbox");
 		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
 		this.app.commandLine.appendSwitch(
 			"enable-features",

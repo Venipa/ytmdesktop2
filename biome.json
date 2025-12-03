@@ -1,8 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
-  "organizeImports": {
-    "enabled": true
-  },
+  "$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
   "formatter": {
     "indentStyle": "tab",
     "formatWithErrors": true,
@@ -24,9 +21,6 @@
     "enabled": true,
     "rules": {
       "recommended": false
-    },
-    "ignore": [
-      "node_modules"
-    ]
+    }
   }
 }
