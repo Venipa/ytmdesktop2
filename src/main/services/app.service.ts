@@ -1,5 +1,4 @@
 import { version as releaseVersion } from "node:os";
-import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { setSentryEnabled } from "@main/utils/sentry";
@@ -41,15 +40,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 				});
 			}
 		}
-		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "3");
-		// better gpu performance - for faster blur effect
-		this.app.commandLine.appendSwitch("disable-gpu-sandbox");
 		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
-		this.app.commandLine.appendSwitch(
-			"enable-features",
-			"CanvasOopRasterization,EnableDrDc,FluentOverlayScrollbar,OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations",
-		);
-
 		// TODO: implement own shortcut handler for media keys
 		// this.app.commandLine.appendSwitch("disable-features", "MediaSessionService");
 	}

@@ -1,11 +1,12 @@
-import { basename } from "path";
+import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
+import { isProduction } from "@main/utils/devUtils";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
 import { App, powerSaveBlocker } from "electron";
-
-import { platform } from "@electron-toolkit/utils";
-import { isProduction } from "@main/utils/devUtils";
+import { basename } from "path";
 import SettingsProvider from "./settings.service";
+
+const GTK_VERSION = /^[2-4]+$/.test(process.env.GTK_VERSION ?? "") ? process.env.GTK_VERSION : "3";
 
 @IpcContext
 export default class StartupProvider extends BaseProvider implements AfterInit, BeforeStart {
@@ -20,21 +21,28 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 	}
 	constructor(private app: App) {
 		super("startup");
-		app.commandLine.appendSwitch("disable-http-cache");
 		if (platform.isWindows) {
 			app.commandLine.appendSwitch("enable-gpu-rasterization"); // performance feature flags
 			app.commandLine.appendSwitch("enable-zero-copy");
-			app.commandLine.appendSwitch("enable-features", "CanvasOopRasterization,EnableDrDc"); // Enables Display Compositor to use a new gpu thread. todo: testing
 		}
 		app.commandLine.appendSwitch("high-dpi-support", "1");
 		if (!platform.isWindows)
 			// todo: testing on other os platforms
 			app.commandLine.appendSwitch("force-device-scale-factor", "1");
-		if (platform.isLinux) this.app.commandLine.appendSwitch("gtk-version", "3");
+		if (platform.isLinux && GTK_VERSION) this.app.commandLine.appendSwitch("gtk-version", GTK_VERSION);
 		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
+		// better gpu performance - for faster blur effect
+		this.app.commandLine.appendSwitch("disable-gpu-sandbox");
 		this.app.commandLine.appendSwitch(
 			"enable-features",
-			["OverlayScrollbar", "SharedArrayBuffer", "UseOzonePlatform", "WaylandWindowDecorations", platform.isWindows && ["CanvasOopRasterization", "EnableDrDc"]]
+			[
+				"OverlayScrollbar",
+				"FluentOverlayScrollbar",
+				"CanvasOopRasterization",
+				"SharedArrayBuffer",
+				platform.isLinux && ["UseOzonePlatform", "WaylandWindowDecorations"],
+				platform.isWindows && ["CanvasOopRasterization", "EnableDrDc"],
+			]
 				.flat()
 				.filter(Boolean)
 				.join(","),

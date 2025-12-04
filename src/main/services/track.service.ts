@@ -1,13 +1,12 @@
-import { EventEmitter } from "events";
+import CSSHandler from "@main/lib/css/handler";
 import { AfterInit, BaseProvider } from "@main/utils/baseProvider";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
 import type { TrackData } from "@main/utils/trackData";
 import { App } from "electron";
+import { EventEmitter } from "events";
 import { clamp, clone, debounce } from "lodash-es";
-import { firstBy } from "thenby";
-
-import CSSHandler from "@main/lib/css/handler";
 import Vibrant from "node-vibrant";
+import { firstBy } from "thenby";
 import IPC_EVENT_NAMES from "../utils/eventNames";
 import ApiProvider from "./api.service";
 import DiscordProvider from "./discord.service";
@@ -320,12 +319,13 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 
 	private _currentPallete: { id: string; color: string } | null = null;
 	async getTrackAccent(track: TrackData = this.trackData) {
-		if (!track?.video?.thumbnail?.thumbnails?.[0]?.url) return null;
+		const thumbnailUrl = track?.video?.thumbnail?.thumbnails?.[0]?.url;
+		if (!thumbnailUrl) return null;
 
 		const videoId = track.video.videoId;
 		if (this._currentPallete && this._currentPallete.id === videoId) return this._currentPallete.color;
 
-		const color = await fetch(track.video.thumbnail.thumbnails[0].url)
+		const color = await fetch(thumbnailUrl)
 			.then((th) => th.arrayBuffer())
 			.then((file) => Vibrant.from(Buffer.from(file)))
 			.then((clr) => clr.getPalette())
