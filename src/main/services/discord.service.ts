@@ -98,7 +98,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 			else this.windowContext.sendToAllViews("discord.disconnected");
 			this.connectionPromise = null;
 		});
-		this.rpcManager.on("close", () => {
+		this.rpcManager.once("close", () => {
 			if (this.connectionPromise) return;
 			this.windowContext.sendToAllViews("discord.disconnected");
 			this.tryConnect();
