@@ -104,42 +104,48 @@ export const discordEmbedFromTrack = (track: TrackData, playing: boolean = true,
 	const detailsUrl = track.video.videoId ? parseMusicUrlById(track.video.videoId) : undefined;
 	const stateUrl = track.video.channelId ? parseMusicChannelById(track.video.channelId) : undefined;
 	const albumUrl = track.music?.album ? parseMusicAlbumById(track.music.album) : undefined;
+	const author = track.video.author;
+	const authorUrl = track.video.channelId ? parseMusicChannelById(track.video.channelId) : undefined;
+	const title = track.video.title;
+	const albumName = track.music?.album ?? title ?? undefined;
+	const buttons: Presence["buttons"] = [
+		...(detailsUrl
+			? [
+					{
+						label: "Open in Browser",
+						url: detailsUrl,
+					},
+				]
+			: []),
+		...(stateUrl
+			? [
+					{
+						label: "View Channel",
+						url: stateUrl,
+					},
+				]
+			: []),
+	];
+
 	return {
 		type: DiscordActivityType.Listening,
 		status_display_type: DiscordActivityStatusDisplayType.State,
-		details: track.video.title,
+		details: title,
 		details_url: detailsUrl,
-		state: `by ${track.video.author}`,
-		state_url: stateUrl,
+		state: author,
+		state_url: authorUrl,
 		timestamps: {
 			start: playing ? startDate.getTime() : undefined,
 			end: playing ? endDate.getTime() : undefined,
 		},
 		assets: {
 			large_image: track.video.thumbnail.thumbnails.find((x) => YoutubeMatcher.Thumbnail.test(x.url))?.url ?? "logo",
-			large_text: track.video.author,
+			large_text: albumName,
 			large_url: albumUrl,
 			small_image: playing ? "playx1024" : "pausex1024",
 			small_text: `${Number.parseInt(track.video.viewCount)?.toLocaleString("de") || track.video.viewCount} views`,
 		},
 		instance: false,
-		buttons: [
-			...(detailsUrl
-				? [
-						{
-							label: "Open in Browser",
-							url: detailsUrl,
-						},
-					]
-				: []),
-			...(stateUrl
-				? [
-						{
-							label: "View Channel",
-							url: stateUrl,
-						},
-					]
-				: []),
-		],
+		buttons: buttons.length > 0 ? buttons : undefined,
 	};
 };

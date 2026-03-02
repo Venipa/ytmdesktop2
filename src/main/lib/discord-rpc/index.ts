@@ -47,11 +47,11 @@ function stringLimit(str: string, limit: number, minimum: number) {
 }
 
 function activityDetailString(activity: DiscordActivity) {
-	activity.details = stringLimit(activity.details ?? "", 128, 2);
-	activity.state = stringLimit(activity.state ?? "", 128, 2);
+	if (activity.details) activity.details = stringLimit(activity.details, 128, 2);
+	if (activity.state) activity.state = stringLimit(activity.state, 128, 2);
 	if (activity.assets) {
-		activity.assets.large_text = stringLimit(activity.assets.large_text ?? "", 128, 2);
-		activity.assets.small_text = stringLimit(activity.assets.small_text ?? "", 128, 2);
+		if (activity.assets.large_text) activity.assets.large_text = stringLimit(activity.assets.large_text, 128, 2);
+		if (activity.assets.small_text) activity.assets.small_text = stringLimit(activity.assets.small_text, 128, 2);
 	}
 	return activity;
 }

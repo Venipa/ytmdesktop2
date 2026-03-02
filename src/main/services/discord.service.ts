@@ -135,7 +135,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		}
 
 		if (options.showButtons === false) {
-			activity.buttons = [];
+			delete activity.buttons;
 		}
 		if (options.showThumbnails === false) {
 			if (!activity.assets)
