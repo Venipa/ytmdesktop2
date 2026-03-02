@@ -13,8 +13,7 @@ html, body {
   overflow: overlay;
 }
 html,
-body,
-& {
+body {
   &::-webkit-scrollbar {
     width: var(--ytmd-scrollbar-size);
     height: var(--ytmd-scrollbar-size);
