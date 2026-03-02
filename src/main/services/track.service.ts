@@ -156,7 +156,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 	@IpcOn("track:info-req", { debounce: 10 })
 	private async __onTrackInfo(ev: any, ytTrack: TrackData) {
 		if (!ytTrack.video) return;
-		const musicObject = ytTrack.music?.album ? { album: ytTrack.music.album } : undefined;
+		const musicObject = ytTrack.music?.album ? { ...ytTrack.music } : undefined;
 		const track = {
 			...ytTrack,
 			meta: {
