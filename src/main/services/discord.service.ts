@@ -54,6 +54,10 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 	private connectionPromise: Promise<void> | null = null;
 	private tryConnect(): Promise<void> {
 		if (this.connectionPromise) return this.connectionPromise;
+		if (this.isConnected) {
+			this.windowContext.sendToAllViews("discord.connected");
+			return Promise.resolve();
+		}
 		this.connectionPromise = new Promise<void>((resolve, reject) => {
 			this.logger.info(`Connecting to Discord attempt ${this.connectionRetries}/${this.maxConnectionRetries}`);
 			if (this.enabled) {
@@ -94,12 +98,18 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 			else this.windowContext.sendToAllViews("discord.disconnected");
 			this.connectionPromise = null;
 		});
+		this.rpcManager.on("close", () => {
+			if (this.connectionPromise) return;
+			this.windowContext.sendToAllViews("discord.disconnected");
+			this.tryConnect();
+		});
 		return this.connectionPromise;
 	}
 	private updateActivity(activity: DiscordActivity, options?: Partial<{ showButtons?: boolean; showThumbnails?: boolean }>) {
 		if (!this.isConnected) {
 			throw new Error("Discord is not connected");
 		}
+
 		if (!options)
 			options = {
 				showButtons: this.settingsInstance.get("discord.buttons", true),
