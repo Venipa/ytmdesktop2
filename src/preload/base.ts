@@ -1,8 +1,8 @@
-import { createRendererCSSHandler } from "@preload/webFrameUtils";
 import { contextBridge, ipcRenderer, webFrame } from "electron";
 import { webUtils } from "electron/renderer";
 import pkg from "../../package.json";
 import translations from "../translations";
+import { createRendererCSSHandler } from "./webFrameUtils";
 
 const appVersion = import.meta.env.APP_VERSION || pkg.version;
 

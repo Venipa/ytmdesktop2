@@ -1,9 +1,9 @@
 import DiscordClient from "@main/lib/discord-rpc";
-import { AfterInit, BaseProvider } from "@main/utils/baseProvider";
+import { type DiscordActivity, DiscordActivityStatusDisplayType, DiscordActivityType } from "@main/lib/discord-rpc/discord-rpc";
+import { AfterInit, BaseProvider, OnDestroy } from "@main/utils/baseProvider";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { discordEmbedFromTrack, TrackData } from "@main/utils/trackData";
 import translations from "@translations/index";
-import { DiscordActivity, DiscordActivityStatusDisplayType, DiscordActivityType } from "discord-rpc";
 import { type App } from "electron";
 
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
@@ -19,7 +19,7 @@ const DEFAULT_PRESENCE: DiscordActivity = {
 const CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
 const DISCORD_SERVICE_ENABLED = !!CLIENT_ID;
 @IpcContext
-export default class DiscordProvider extends BaseProvider implements AfterInit {
+export default class DiscordProvider extends BaseProvider implements AfterInit, OnDestroy {
 	private rpcManager: DiscordClient;
 	private _enabled = !!DISCORD_SERVICE_ENABLED;
 
@@ -47,7 +47,59 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
 	private get trackService() {
 		return this.getProvider("track");
 	}
+
+	private connectionRetries = 0;
+	private maxConnectionRetries = 30;
+	private connectionRetryTimeout: NodeJS.Timeout | null = null;
+	private connectionPromise: Promise<void> | null = null;
+	private tryConnect(): Promise<void> {
+		if (this.connectionPromise) return this.connectionPromise;
+		this.connectionPromise = new Promise<void>((resolve, reject) => {
+			this.logger.info(`Connecting to Discord attempt ${this.connectionRetries}/${this.maxConnectionRetries}`);
+			if (this.enabled) {
+				this.windowContext.sendToAllViews("discord.loading");
+				if (this.connectionRetries < this.maxConnectionRetries) {
+					this.connectionRetries++;
+					this.connectionRetryTimeout = setTimeout(() => {
+						if (this.rpcManager) {
+							this.rpcManager
+								.connect()
+								.then(resolve)
+								.catch(() => {
+									this.connectionPromise = null; // reset the promise to allow for a new connection attempt
+									return this.tryConnect(); // try to connect again
+								});
+						}
+					}, 5 * 1000);
+				} else {
+					const errorMessage = `Failed to connect to Discord after ${this.maxConnectionRetries} attempts`;
+					this.connectionRetries = 0;
+					this.connectionRetryTimeout = null;
+					this.connectionPromise = null;
+					this.windowContext.sendToAllViews("discord.error", errorMessage);
+					this.logger.error(errorMessage);
+					reject(new Error(errorMessage));
+				}
+			} else {
+				const errorMessage = "Discord is not enabled";
+				this.connectionRetries = 0;
+				this.connectionRetryTimeout = null;
+				this.connectionPromise = null;
+				this.logger.warn(errorMessage);
+				resolve();
+			}
+		}).finally(() => {
+			// remove the promise from the memory after it's resolved or rejected
+			if (this.isConnected) this.windowContext.sendToAllViews("discord.connected");
+			else this.windowContext.sendToAllViews("discord.disconnected");
+			this.connectionPromise = null;
+		});
+		return this.connectionPromise;
+	}
 	private updateActivity(activity: DiscordActivity, options?: Partial<{ showButtons?: boolean; showThumbnails?: boolean }>) {
+		if (!this.isConnected) {
+			throw new Error("Discord is not connected");
+		}
 		if (!options)
 			options = {
 				showButtons: this.settingsInstance.get("discord.buttons", true),
@@ -84,10 +136,12 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
 
 	async disable() {
 		this.rpcManager.destroy();
+
+		this.windowContext.sendToAllViews("discord.disconnected");
 	}
 
 	async enable() {
-		await this.rpcManager.connect();
+		await this.tryConnect();
 		if (this.trackService.trackData) {
 			const { trackData: track, playing, trackState } = this.trackService;
 			if (track) {
@@ -146,5 +200,9 @@ export default class DiscordProvider extends BaseProvider implements AfterInit {
 	private async __onTrackInfo(track: TrackData) {
 		if (!track?.video) return;
 		this.updateActivity(discordEmbedFromTrack(track));
+	}
+
+	async OnDestroy() {
+		await this.disable();
 	}
 }

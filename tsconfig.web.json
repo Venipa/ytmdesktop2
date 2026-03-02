@@ -1,50 +1,37 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
-  "include": [
-    "src/env.d.ts",
-    "src/renderer/src/**/*",
-    "src/preload/*.d.ts",
-    "src/shared/**/*.ts",
-    "src/main/utils/trackData.ts",
-    "src/main/utils/youtubeMatcher.ts",
-    "src/main/utils/eventNames.ts",
-    "src/translations/**/*.ts",
-  ],
-  "exclude": ["src/main/worker/**/*.ts"],
-  "compilerOptions": {
-    "composite": true,
-    "baseUrl": ".",
-    "allowSyntheticDefaultImports": true,
-    "strict": false,
-    "noImplicitReturns": false,
-    "allowUnusedLabels": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "strictNullChecks": false,
-    "skipLibCheck": true,
-    "paths": {
-      "@shared/*": [
-        "src/shared/*"
-      ],
-      "@translations/*": [
-        "src/translations/*"
-      ],
-      "@main/*": [
-        "src/main/*"
-      ],
-      "@renderer/*": [
-        "src/renderer/src/*"
-      ],
-      "@plugins/*": [
-        "src/renderer-plugins/*"
-      ],
-      "@/*": [
-        "src/renderer/src/*"
-      ],
-      "~/*": [
-        "*"
-      ],
-    },
-    "types": []
-  }
+	"extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+	"include": [
+		"src/env.d.ts",
+		"src/renderer/src/**/*",
+		"src/preload/*.d.ts",
+		"src/shared/**/*.ts",
+		"src/main/utils/trackData.ts",
+		"src/main/lib/discord-rpc/discord-rpc.ts",
+		"src/main/utils/youtubeMatcher.ts",
+		"src/main/utils/eventNames.ts",
+		"src/translations/**/*.ts"
+	],
+	"exclude": ["src/main/worker/**/*.ts"],
+	"compilerOptions": {
+		"composite": true,
+		"baseUrl": ".",
+		"allowSyntheticDefaultImports": true,
+		"strict": false,
+		"noImplicitReturns": false,
+		"allowUnusedLabels": true,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"strictNullChecks": false,
+		"skipLibCheck": true,
+		"paths": {
+			"@shared/*": ["src/shared/*"],
+			"@translations/*": ["src/translations/*"],
+			"@main/*": ["src/main/*"],
+			"@renderer/*": ["src/renderer/src/*"],
+			"@plugins/*": ["src/renderer-plugins/*"],
+			"@/*": ["src/renderer/src/*"],
+			"~/*": ["*"]
+		},
+		"types": []
+	}
 }

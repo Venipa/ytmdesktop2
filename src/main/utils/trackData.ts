@@ -1,4 +1,4 @@
-import { DiscordActivityType, type DiscordActivity as Presence } from "discord-rpc";
+import { DiscordActivityStatusDisplayType, DiscordActivityType, type DiscordActivity as Presence } from "@main/lib/discord-rpc/discord-rpc";
 import { YoutubeMatcher } from "./youtubeMatcher";
 
 export interface Thumbnails {
@@ -96,33 +96,47 @@ export interface TrackData {
 
 export const parseMusicUrlById = (id: string) => `https://music.youtube.com/watch?v=${id}&feature=share`;
 export const parseMusicChannelById = (id: string) => `https://music.youtube.com/channel/${id}?feature=share`;
+export const parseMusicAlbumById = (id: string) => `https://music.youtube.com/browse/${id}?feature=share`;
 export const discordEmbedFromTrack = (track: TrackData, playing: boolean = true, progress: number = 0): Presence => {
 	const startDate = progress ? new Date(Date.now() - progress * 1000) : new Date(),
 		endDate = new Date(startDate.getTime() + ~~Number(track.video.lengthSeconds) * 1000);
+
+	const detailsUrl = track.video.videoId ? parseMusicUrlById(track.video.videoId) : undefined;
+	const stateUrl = track.video.channelId ? parseMusicChannelById(track.video.channelId) : undefined;
+	const albumUrl = track.music?.album ? parseMusicAlbumById(track.music.album) : undefined;
 	return {
-		details: track.video.title,
-		state: `by ${track.video.author}`,
-		assets: {},
-		startTimestamp: playing ? startDate : undefined,
-		endTimestamp: playing ? endDate : undefined,
-		largeImageKey: track.video.thumbnail.thumbnails.find((x) => YoutubeMatcher.Thumbnail.test(x.url))?.url ?? "logo",
-		smallImageKey: playing ? "playx1024" : "pausex1024",
-		smallImageText: `${Number.parseInt(track.video.viewCount)?.toLocaleString("de") || track.video.viewCount} views`,
 		type: DiscordActivityType.Listening,
+		status_display_type: DiscordActivityStatusDisplayType.State,
+		details: track.video.title,
+		details_url: detailsUrl,
+		state: `by ${track.video.author}`,
+		state_url: stateUrl,
+		timestamps: {
+			start: playing ? startDate.getTime() : undefined,
+			end: playing ? endDate.getTime() : undefined,
+		},
+		assets: {
+			large_image: track.video.thumbnail.thumbnails.find((x) => YoutubeMatcher.Thumbnail.test(x.url))?.url ?? "logo",
+			large_text: track.video.author,
+			large_url: albumUrl,
+			small_image: playing ? "playx1024" : "pausex1024",
+			small_text: `${Number.parseInt(track.video.viewCount)?.toLocaleString("de") || track.video.viewCount} views`,
+		},
+		instance: false,
 		buttons: [
-			...(track.video.videoId
+			...(detailsUrl
 				? [
 						{
 							label: "Open in Browser",
-							url: parseMusicUrlById(track.video.videoId),
+							url: detailsUrl,
 						},
 					]
 				: []),
-			...(track.video.channelId
+			...(stateUrl
 				? [
 						{
 							label: "View Channel",
-							url: parseMusicChannelById(track.video.channelId),
+							url: stateUrl,
 						},
 					]
 				: []),

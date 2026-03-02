@@ -50,10 +50,9 @@
       <MiniPlayerIcon />
     </button>
     <button class="control-button relative"
-            :class="{ 'opacity-100': discordEnabled || discordConnectionError, 'opacity-70': !discordEnabled }"
             @click="() => toggleSetting('discord.enabled')">
-      <RPCIcon :class="{ 'text-red-500': discordConnectionError && discordEnabled }"></RPCIcon>
-      <div v-if="discordConnected && !discordConnectionError"
+      <RPCIcon :class="{ 'text-red-500': discordConnectionError && discordEnabled, 'opacity-100': discordEnabled || discordConnectionError, 'opacity-70': !discordEnabled || discordLoading }"></RPCIcon>
+      <div v-if="discordConnected && !discordConnectionError && !discordLoading"
            class="p-0.5 rounded-full bg-green-500 absolute top-0 right-0 w-3 h-3 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg"
              class="w-4 h-4"
@@ -65,6 +64,10 @@
              stroke-linejoin="round">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
+      </div>
+      <div v-else-if="discordLoading"
+           class="p-0.5 rounded-full bg-gray-600 absolute top-0 right-0 w-3 h-3 flex items-center justify-center">
+        <Spinner size="sm" />
       </div>
     </button>
     <button class="control-button"
@@ -88,12 +91,18 @@ import LastFMIcon from "@renderer/assets/icons/lastfm.svg";
 import MiniPlayerIcon from "@renderer/assets/icons/mini-player.svg";
 import RefreshIcon from "@renderer/assets/icons/refresh.svg";
 import Spinner from "@renderer/components/Spinner.vue";
-import { refIpc } from "@shared/utils/Ipc";
 import { logger } from "@shared/utils/console";
+import { refIpc } from "@shared/utils/Ipc";
 import type { UpdateInfo } from "@shared/utils/updater";
 import { AlertCircleIcon, CheckIcon, DownloadIcon } from "lucide-vue-next";
 import { onMounted, ref } from "vue";
+
 const discordConnectionMap = { ["discord.connected"]: true, ["discord.disconnected"]: false } as const;
+const [discordLoading, setDiscordLoading] = refIpc("discord.loading", {
+	defaultValue: false,
+	mapper: () => true,
+	ignoreUndefined: false,
+});
 const [discordConnected, setDiscordConnected] = refIpc(["discord.connected", "discord.disconnected"], {
 	defaultValue: false,
 	mapper: (data, name) => {
@@ -103,6 +112,7 @@ const [discordConnected, setDiscordConnected] = refIpc(["discord.connected", "di
 		if (eventName === "discord.connected") {
 			setDiscordConnectionError(null);
 			setDiscordConnected(item);
+			setDiscordLoading(false);
 		}
 	},
 	ignoreUndefined: true,

@@ -1,11 +1,12 @@
 import { existsSync, statSync } from "node:fs";
-import { logger } from "@shared/utils/console";
+import { pid } from "node:process";
+import { type DiscordActivity } from "@main/lib/discord-rpc/discord-rpc";
+import { createLogger } from "@shared/utils/console";
 import { randomUUID } from "crypto";
-import { DiscordActivity } from "discord-rpc";
 import EventEmitter from "events";
 import IPCClient, { OPCode } from "./ipc";
 
-const log = logger.child("DiscordRPCClient");
+const log = createLogger("Lib:DiscordRPC.Client");
 function directoryExists(dirPath: string): boolean {
 	try {
 		return existsSync(dirPath) && statSync(dirPath).isDirectory();
@@ -28,6 +29,31 @@ function getIPCPath(id: number): string {
 	} else {
 		return `${prefix}/discord-ipc-${id}`;
 	}
+}
+
+const PROCESS_PID = pid;
+const MAX_CONNECTION_ITERATIONS = 10;
+
+function stringLimit(str: string, limit: number, minimum: number) {
+	if (str.length > limit) {
+		return str.substring(0, limit - 3) + "...";
+	}
+
+	if (str.length < minimum) {
+		return str.padEnd(minimum, "​"); // There's a zero width space here
+	}
+
+	return str;
+}
+
+function activityDetailString(activity: DiscordActivity) {
+	activity.details = stringLimit(activity.details ?? "", 128, 2);
+	activity.state = stringLimit(activity.state ?? "", 128, 2);
+	if (activity.assets) {
+		activity.assets.large_text = stringLimit(activity.assets.large_text ?? "", 128, 2);
+		activity.assets.small_text = stringLimit(activity.assets.small_text ?? "", 128, 2);
+	}
+	return activity;
 }
 
 export default class DiscordClient extends EventEmitter {
@@ -55,23 +81,23 @@ export default class DiscordClient extends EventEmitter {
 		// Promise chaining is OK here, we're looping through different IPC paths and seeing which one works
 		// eslint-disable-next-line no-async-promise-executor
 		this.connectionPromise = new Promise(async (resolve, reject) => {
-			log.debug("dipc: initiated connection loop over 10 ids");
+			log.debug(`initiated connection loop over ${MAX_CONNECTION_ITERATIONS} ids`);
 			let id = 0;
-			while (id < 10) {
+			while (id < MAX_CONNECTION_ITERATIONS) {
 				try {
 					await new Promise<void>((ipcResolve, ipcReject) => {
 						const ipcPath = getIPCPath(id);
-						log.debug("dipc: connecting to discord at", ipcPath);
+						log.debug("connecting to discord at", ipcPath);
 						this.ipcClient.once("close", () => {
 							this.ipcClient.removeAllListeners();
-							log.debug("dipc: failed to connect to discord at", ipcPath);
+							log.debug("failed to connect to discord at", ipcPath);
 							ipcReject();
 						});
 						this.ipcClient.once("error", (error) => {
-							log.error("dipc: socket error connecting to discord", error);
+							log.error("socket error connecting to discord", error);
 						});
 						this.ipcClient.once("connect", () => {
-							log.debug("dipc: connected to discord at", ipcPath);
+							log.debug("connected to discord at", ipcPath);
 							this.ipcClient.removeAllListeners();
 							ipcResolve();
 						});
@@ -136,27 +162,39 @@ export default class DiscordClient extends EventEmitter {
 		this.removeAllListeners();
 		this.ipcClient.destroy();
 	}
-
+	private previousActivity: string | null = null;
 	public setActivity(activity: DiscordActivity) {
-		this.currentActivity = activity;
-		this.ipcClient.send({
-			cmd: "SET_ACTIVITY",
-			args: {
-				pid: process.pid,
-				activity,
-			},
-			nonce: randomUUID(),
-		});
+		this.currentActivity = activityDetailString(activity);
+		try {
+			this.ipcClient.send({
+				cmd: "SET_ACTIVITY",
+				args: {
+					pid: PROCESS_PID,
+					activity,
+				},
+				nonce: randomUUID(),
+			});
+			if (this.previousActivity !== activity.details) {
+				log.debug("activity set", `${this.previousActivity ?? "empty"} -> ${activity.details}`);
+				this.previousActivity = activity.details;
+			}
+		} catch (error) {
+			log.error("error setting activity", error);
+		}
 	}
 
 	public clearActivity() {
 		this.currentActivity = undefined;
-		this.ipcClient.send({
-			cmd: "SET_ACTIVITY",
-			args: {
-				pid: process.pid,
-			},
-			nonce: randomUUID(),
-		});
+		try {
+			this.ipcClient.send({
+				cmd: "SET_ACTIVITY",
+				args: {
+					pid: PROCESS_PID,
+				},
+				nonce: randomUUID(),
+			});
+		} catch (error) {
+			log.error("error clearing activity", error);
+		}
 	}
 }

@@ -4,7 +4,8 @@ import { merge } from "lodash-es";
 import { basename, resolve } from "path";
 import { UserConfigExport } from "vite";
 import svgLoader from "vite-svg-loader";
-const glob = (await import('fast-glob')).default;
+
+const glob = (await import("fast-glob")).default;
 const resolveOptions: UserConfigExport = {
 	resolve: {
 		alias: {
@@ -16,15 +17,16 @@ const resolveOptions: UserConfigExport = {
 			"@plugins": resolve("src/renderer-plugins"),
 			"@": resolve("src"),
 			"~": resolve("."),
+			"discord-rpc": resolve("src/main/lib/discord-rpc/discord-rpc.ts"),
 		},
 	},
 };
 const externalizedEsmDeps = ["lodash-es", "@faker-js/faker", "@trpc-limiter/memory", "got", "encryption.js"];
 export default defineConfig(() => {
-  const youtubeClientPlugins = glob.globSync("./src/renderer-plugins/youtube/*.plugin.ts").map((file) => {
-    const name = basename(file, ".ts");
-    return [name, file];
-  });
+	const youtubeClientPlugins = glob.globSync("./src/renderer-plugins/youtube/*.plugin.ts").map((file) => {
+		const name = basename(file, ".ts");
+		return [name, file];
+	});
 	return {
 		main: {
 			...resolveOptions,
