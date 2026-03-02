@@ -96,7 +96,7 @@ export interface TrackData {
 
 export const parseMusicUrlById = (id: string) => `https://music.youtube.com/watch?v=${id}&feature=share`;
 export const parseMusicChannelById = (id: string) => `https://music.youtube.com/channel/${id}?feature=share`;
-export const parseMusicAlbumById = (id: string) => `https://music.youtube.com/browse/${id}?feature=share`;
+export const parseMusicAlbumById = (ident: string) => `https://music.youtube.com/browse/${encodeURIComponent(ident)}?feature=share`;
 export const discordEmbedFromTrack = (track: TrackData, playing: boolean = true, progress: number = 0): Presence => {
 	const startDate = playing ? new Date(Date.now() - progress * 1000) : undefined,
 		endDate = startDate ? new Date(startDate.getTime() + ~~Number(track.video.lengthSeconds) * 1000) : undefined;
