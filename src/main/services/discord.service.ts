@@ -108,9 +108,9 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 	}
 	private _updateActivity = (activity: DiscordActivity, options?: Partial<{ showButtons?: boolean; showThumbnails?: boolean }>) => {
 		if (!this.isConnected) {
+			if (!this.connectionPromise) this.tryConnect(); // try to connect to Discord if not connected :: investigating, potential discord issue instead of my code
 			throw new Error("Discord is not connected");
 		}
-
 		if (!options)
 			options = {
 				showButtons: this.settingsInstance.get("discord.buttons", true),
