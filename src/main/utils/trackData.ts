@@ -1,4 +1,4 @@
-import { SetActivity as Presence } from "@xhayper/discord-rpc";
+import { DiscordActivityType, type DiscordActivity as Presence } from "discord-rpc";
 import { YoutubeMatcher } from "./youtubeMatcher";
 
 export interface Thumbnails {
@@ -102,12 +102,13 @@ export const discordEmbedFromTrack = (track: TrackData, playing: boolean = true,
 	return {
 		details: track.video.title,
 		state: `by ${track.video.author}`,
+		assets: {},
 		startTimestamp: playing ? startDate : undefined,
 		endTimestamp: playing ? endDate : undefined,
 		largeImageKey: track.video.thumbnail.thumbnails.find((x) => YoutubeMatcher.Thumbnail.test(x.url))?.url ?? "logo",
 		smallImageKey: playing ? "playx1024" : "pausex1024",
 		smallImageText: `${Number.parseInt(track.video.viewCount)?.toLocaleString("de") || track.video.viewCount} views`,
-		type: 2,
+		type: DiscordActivityType.Listening,
 		buttons: [
 			...(track.video.videoId
 				? [

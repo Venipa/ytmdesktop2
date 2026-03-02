@@ -1,3 +1,4 @@
+import { createRendererCSSHandler } from "@preload/webFrameUtils";
 import { contextBridge, ipcRenderer, webFrame } from "electron";
 import { webUtils } from "electron/renderer";
 import pkg from "../../package.json";
@@ -135,13 +136,14 @@ export default {
 	},
 	translations,
 	domUtils: {
-		async createAndRunScript(script: string, key?: string) {
+		async createAndRunScript(script: string, _key?: string) {
 			return await webFrame.executeJavaScript(script);
 		},
 		async createStyle(css: string) {
 			const key = webFrame.insertCSS(css);
 			return () => webFrame.removeInsertedCSS(key);
 		},
+		createCSSHandler: () => createRendererCSSHandler(webFrame),
 		ensureDomLoaded,
 		ensureWindowLoaded(f: () => void) {
 			return ensureDomLoaded(() => {
