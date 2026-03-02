@@ -104,6 +104,12 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 			this.windowContext.sendToAllViews("discord.disconnected");
 			this.enable();
 		});
+		this.rpcManager.once("error", (error) => {
+			this.logger.error("Discord error", error);
+			if (this.connectionPromise) return;
+			this.windowContext.sendToAllViews("discord.disconnected");
+			this.enable();
+		});
 		return this.connectionPromise;
 	}
 	private _updateActivity = (activity: DiscordActivity, options?: Partial<{ showButtons?: boolean; showThumbnails?: boolean }>) => {
