@@ -1,5 +1,4 @@
 import { existsSync, statSync } from "node:fs";
-import { pid } from "node:process";
 import { type DiscordActivity } from "@main/lib/discord-rpc/discord-rpc";
 import { createLogger } from "@shared/utils/console";
 import { randomUUID } from "crypto";
@@ -31,7 +30,8 @@ function getIPCPath(id: number): string {
 	}
 }
 
-const PROCESS_PID = pid;
+const PROCESS_PID = import.meta.env.PROD ? (process?.pid ?? 0) : 0;
+log.debug("PROCESS_PID", PROCESS_PID);
 const MAX_CONNECTION_ITERATIONS = 10;
 
 function stringLimit(str: string, limit: number, minimum: number) {

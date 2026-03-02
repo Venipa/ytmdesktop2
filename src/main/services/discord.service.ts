@@ -5,6 +5,7 @@ import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { discordEmbedFromTrack, TrackData } from "@main/utils/trackData";
 import translations from "@translations/index";
 import { type App } from "electron";
+import { debounce } from "lodash-es";
 
 const DISCORD_UPDATE_INTERVAL = 1000 * 15;
 const DEFAULT_PRESENCE: DiscordActivity = {
@@ -101,11 +102,11 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		this.rpcManager.once("close", () => {
 			if (this.connectionPromise) return;
 			this.windowContext.sendToAllViews("discord.disconnected");
-			this.tryConnect();
+			this.enable();
 		});
 		return this.connectionPromise;
 	}
-	private updateActivity(activity: DiscordActivity, options?: Partial<{ showButtons?: boolean; showThumbnails?: boolean }>) {
+	private _updateActivity = (activity: DiscordActivity, options?: Partial<{ showButtons?: boolean; showThumbnails?: boolean }>) => {
 		if (!this.isConnected) {
 			throw new Error("Discord is not connected");
 		}
@@ -139,12 +140,14 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 			else activity.assets.large_image = "logo";
 		}
 		this.rpcManager.setActivity(activity);
-	}
+	};
+	private updateActivity = debounce(this._updateActivity, 1000);
 	get settingsEnabled() {
 		return !!this.settingsInstance.get("discord.enabled", false);
 	}
 
 	async disable() {
+		this.rpcManager.clearActivity();
 		this.rpcManager.destroy();
 
 		this.windowContext.sendToAllViews("discord.disconnected");
@@ -166,9 +169,10 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		await this.enable();
 	}
 
-	async updateTrackProgress(isPlaying: boolean, mediaProgress: number = 0) {
+	async updateTrackProgress(isPlaying: boolean, mediaProgress: number = 0, updateImmediate: boolean = false) {
 		if (this.trackService.trackData && this.isConnected) {
-			this.updateActivity(discordEmbedFromTrack(this.trackService.trackData, isPlaying, mediaProgress));
+			if (updateImmediate) this._updateActivity(discordEmbedFromTrack(this.trackService.trackData, isPlaying, mediaProgress));
+			else this.updateActivity(discordEmbedFromTrack(this.trackService.trackData, isPlaying, mediaProgress));
 		}
 	}
 
@@ -205,7 +209,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 	}
 
 	@IpcOn("track:change", {
-		debounce: 100,
+		debounce: 1000,
 	})
 	private async __onTrackInfo(track: TrackData) {
 		if (!track?.video) return;

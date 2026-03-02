@@ -124,7 +124,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		if (typeof this.trackState?.percentage === "number") this.trackState.percentage = clamp(this.trackState.percentage, 0, 100);
 		if (prevId !== this.trackState.id) {
 			this.logger.debug("title id change", prevId, "=>", this.trackState.id);
-			this.getProvider("discord").updateTrackProgress(true, 0); // update discord presence instantly on change
+			this.getProvider("discord").updateTrackProgress(true, 0, true); // update discord presence instantly on change
 		}
 		this.windowContext.sendToAllViews("track:play-state", {
 			...this._trackState,
@@ -303,7 +303,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			this.logger.error("Failed to update media timeline:", error);
 		}
 	}
-	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, { debounce: 100 })
+	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, { debounce: 1000 })
 	private async __onPlayStateProgress(_ev: any, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
