@@ -30,7 +30,7 @@ function getIPCPath(id: number): string {
 	}
 }
 
-const PROCESS_PID = import.meta.env.PROD ? (process?.pid ?? 0) : 0;
+const PROCESS_PID = process?.pid ?? 0;
 log.debug("PROCESS_PID", PROCESS_PID);
 const MAX_CONNECTION_ITERATIONS = 10;
 

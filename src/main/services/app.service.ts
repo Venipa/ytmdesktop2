@@ -61,25 +61,44 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 		return this.getProvider("discord");
 	}
 	private windowBlur() {
-		if (this.isPlaying) return;
+		// Only track window blur when nothing is playing
+		if (this.isPlaying) {
+			return;
+		}
+
 		this._blurTimestamp = new Date();
+
+		// Set an idle timeout; on expiry, if still not playing, disable Discord
 		this._blurAfkHandle = setTimeout(() => {
 			if (this.isPlaying) {
+				// If playback started during timeout, reset timestamp and treat as focus
 				this._blurTimestamp = new Date();
 				this.windowFocus();
-				return;
+			} else {
+				this.discord.disable();
 			}
-			this.discord.disable();
 		}, STATE_PAUSE_TIME);
 	}
+
 	private windowFocus() {
-		if (!this._blurTimestamp) return;
-		const isAway = Date.now() - this._blurTimestamp.getTime() > STATE_PAUSE_TIME;
-		if (!isAway) return;
+		// Only act if a blur time was set
+		if (!this._blurTimestamp) {
+			return;
+		}
+
+		const elapsedSinceBlur = Date.now() - this._blurTimestamp.getTime();
+		const wasAwayLongEnough = elapsedSinceBlur > STATE_PAUSE_TIME;
+
+		if (!wasAwayLongEnough) return;
+
 		this._blurTimestamp = null;
-		clearTimeout(this._blurAfkHandle);
-		this._blurAfkHandle = null;
-		if (this.discord.settingsEnabled) this.discord.enable();
+
+		if (this._blurAfkHandle) {
+			clearTimeout(this._blurAfkHandle);
+			this._blurAfkHandle = null;
+		}
+
+		if (this.discord.settingsEnabled && !this.discord.isConnected) this.discord.enable();
 	}
 	@IpcOn("settingsProvider.change", {
 		filter: (key: string) => key === "app.enableStatisticsAndErrorTracing",

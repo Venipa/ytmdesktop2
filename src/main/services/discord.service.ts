@@ -153,10 +153,14 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 	}
 
 	async disable() {
-		this.rpcManager.clearActivity();
-		this.rpcManager.destroy();
-
-		this.windowContext.sendToAllViews("discord.disconnected");
+		try {
+			this.rpcManager.clearActivity();
+			this.rpcManager.destroy();
+		} catch (error) {
+			this.logger.error("Error disabling Discord", error);
+		} finally {
+			this.windowContext.sendToAllViews("discord.disconnected");
+		}
 	}
 
 	async enable() {

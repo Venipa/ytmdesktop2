@@ -67,20 +67,14 @@ const parseTrackDuration = (td: TrackData): number | null => {
 @IpcContext
 export default class TrackProvider extends BaseProvider implements AfterInit {
 	private _activeTrackId: string | null = null;
-	private _playState: "playing" | "paused" | undefined;
 	private _trackState: TrackState | null = null;
 	private _trackDataCache: TrackEntry | null = null;
-
-	get playState() {
-		return this._playState;
-	}
-
 	get trackState() {
 		return this._trackState;
 	}
 
 	get playing() {
-		return this.playState === "playing";
+		return !!this.trackState?.playing;
 	}
 
 	constructor(private app: App) {
