@@ -122,10 +122,10 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		}
 		if (options.showThumbnails === false) {
 			if (!activity.assets)
-				activity.assets = {
+				Object.assign(activity.assets, {
 					large_image: "logo",
 					large_text: translations.appName,
-				};
+				});
 			else activity.assets.large_image = "logo";
 		}
 		this.rpcManager.setActivity(activity);

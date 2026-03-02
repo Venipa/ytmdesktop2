@@ -98,8 +98,8 @@ export const parseMusicUrlById = (id: string) => `https://music.youtube.com/watc
 export const parseMusicChannelById = (id: string) => `https://music.youtube.com/channel/${id}?feature=share`;
 export const parseMusicAlbumById = (id: string) => `https://music.youtube.com/browse/${id}?feature=share`;
 export const discordEmbedFromTrack = (track: TrackData, playing: boolean = true, progress: number = 0): Presence => {
-	const startDate = progress ? new Date(Date.now() - progress * 1000) : new Date(),
-		endDate = new Date(startDate.getTime() + ~~Number(track.video.lengthSeconds) * 1000);
+	const startDate = playing ? new Date(Date.now() - progress * 1000) : undefined,
+		endDate = startDate ? new Date(startDate.getTime() + ~~Number(track.video.lengthSeconds) * 1000) : undefined;
 
 	const detailsUrl = track.video.videoId ? parseMusicUrlById(track.video.videoId) : undefined;
 	const stateUrl = track.video.channelId ? parseMusicChannelById(track.video.channelId) : undefined;
