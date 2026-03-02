@@ -1,4 +1,3 @@
-import CSSHandler from "@main/lib/css/handler";
 import { AfterInit, BaseProvider } from "@main/utils/baseProvider";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
 import type { TrackData } from "@main/utils/trackData";
@@ -297,11 +296,11 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			this.logger.error("Failed to update media timeline:", error);
 		}
 	}
-	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, { debounce: 1000 })
+	// Synchronize track state with the media timeline of Mini Player and other views
+	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, { debounce: 100 })
 	private async __onPlayStateProgress(_ev: any, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
-		await this.updateMediaTimeline(duration, progressSeconds, isPlaying);
 		this.setTrackState((state) => {
 			state.progress = progressSeconds;
 			state.uiProgress = progressSeconds;
@@ -309,6 +308,13 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			state.playing = isPlaying;
 			state.eventType = "progress";
 		});
+	}
+	// Synchronize the media timeline with services outside of the app with a longer debounce
+	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, { debounce: 1000 })
+	private async __onProgressHandler(_ev: any, isPlaying: boolean, progressSeconds: number = 0) {
+		if (!this.trackData?.meta) return;
+		const duration = Number(this.trackData.meta.duration);
+		await this.updateMediaTimeline(duration, progressSeconds, isPlaying);
 	}
 
 	private _currentPallete: { id: string; color: string } | null = null;
@@ -353,20 +359,18 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			this.logger.error("youtubeView not found");
 			return;
 		}
-		const accentHandler = new CSSHandler(this.windowContext.views.youtubeView.webContents);
 		this.onTrackChange(async (track) => {
 			const trackAccent = await this.getTrackAccent(track);
 			this.setTrackState((state) => {
 				state.accent = trackAccent;
 			});
-			accentHandler.createOrUpdate(`:root { --ytmd-thumbnail-accent: ${trackAccent ?? "transparent"}; }`);
+			this.windowContext.views.youtubeView.webContents.send("css.thumbnail-accent", trackAccent ?? "transparent");
 			this.logger.debug("track:accent", trackAccent, track.video.thumbnail.thumbnails?.[0]?.url);
 		});
-		const thumbnailHandler = new CSSHandler(this.windowContext.views.youtubeView.webContents);
 		this.onTrackChange(async (track) => {
 			const hqThumbnail = track.context?.thumbnail?.thumbnails?.sort(firstBy((d) => d.width, "desc"))[0]?.url ?? track.meta.thumbnail;
 			const thumbnailUrl = hqThumbnail ? `url(${hqThumbnail})` : "transparent";
-			thumbnailHandler.createOrUpdate(`:root { --ytmd-thumbnail-url: ${thumbnailUrl}; }`);
+			this.windowContext.views.youtubeView.webContents.send("css.thumbnail", thumbnailUrl);
 			this.logger.debug("track:thumbnail", thumbnailUrl);
 		});
 	}

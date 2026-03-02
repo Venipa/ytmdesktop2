@@ -8,10 +8,6 @@
   --ytmd-scrollbar-thumb-active-color: var(--ytmusic-text-primary);
 }
 
-// Define targets for custom scrollbars
-html, body {
-  overflow: overlay;
-}
 html,
 body {
   &::-webkit-scrollbar {
