@@ -40,7 +40,7 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 
 ### Discord Rich Presence
 
-![image](https://github.com/user-attachments/assets/f548b072-48c8-412f-8d6d-a960f223bacd)
+<img width="285" height="133" alt="DiscordPTB_rObJDxsJQ8" src="https://github.com/user-attachments/assets/6f6c6836-8916-4a58-940e-e25d632e66ad" />
 
 
 ### Custom CSS
