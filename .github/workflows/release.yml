@@ -104,3 +104,24 @@ jobs:
 
           # Create new deploy for this Sentry release
           sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_DEPLOY_ENVIRONMENT
+          
+      - if: matrix.os == 'windows-latest'
+        name: Upload new winget release
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+    # The PackageIdentifier of the package (case-sensitive).
+          identifier: net.venipa.ytmdesktop
+    # The PackageVersion of the package you want to release.
+          version: ${{steps.getVersion.outputs.value}}
+    # The regex to match the installers.
+          installers-regex: setup.(exe|msi|msix|appx)(bundle){0,1}$
+    # The maximum number of versions to keep in WinGet Community Repository (Default: 0 - no limit)
+          max-versions-to-keep: 10
+    # The repository where the release is present (should be present under same user/organization).
+          release-repository: ${{ github.event.repository.name }}
+    # The release tag to be used for creating manifests.
+          release-tag: v${{steps.getVersion.outputs.value}}
+    # GitHub token to create pull request on Windows Package Manager Community Repository.
+          token: ${{ secrets.GITHUB_TOKEN }}
+    # GitHub username where the fork of winget-pkgs is present.
+          fork-user: ${{ github.repository_owner }}
