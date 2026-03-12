@@ -78,9 +78,7 @@ jobs:
       - if: matrix.os == 'macos-latest'
         name: Write APPLE_API_KEY to AuthKey.p8
         run: |
-          mkdir -p .secrets
-          echo ${{ secrets.APPLE_API_KEY }} > .secrets/AuthKey.p8
-          chmod 600 .secrets/AuthKey.p8
+          echo ${{ secrets.APPLE_API_KEY }} > AuthKey.p8
       - name: Build Electron release
         run: pnpm release
         env:
@@ -91,12 +89,12 @@ jobs:
           VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY: .secrets/AuthKey.p8
+          APPLE_API_KEY: AuthKey.p8
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
       - if: matrix.os == 'macos-latest'
         name: Cleanup certificates and keys
         run: |
-          rm -rf .secrets
+          rm -rf *.p8
       - if: matrix.os == 'ubuntu-latest'
         name: Upload release source maps to sentry
         continue-on-error: true
