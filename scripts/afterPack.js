@@ -1,6 +1,7 @@
 const { FuseVersion, FuseV1Options } = require("@electron/fuses");
 const { Arch } = require("electron-builder");
 const { notarize } = require("@electron/notarize");
+const { signAsync } = require("@electron/osx-sign");
 /**
  *
  * @param {import("electron-builder").AfterPackContext} context
@@ -18,15 +19,28 @@ exports.default = async function (context) {
 	};
 	await context.packager.addElectronFuses(context, fuses);
 	if (context.electronPlatformName === "darwin") {
-		const requiredEnvVars = ["APPLE_API_KEY", "APPLE_API_ISSUER", "APPLE_API_KEY_ID"];
+		const requiredEnvVars = ["APPLE_API_KEY", "APPLE_API_ISSUER", "APPLE_API_KEY_ID", "CSC_LINK", "CSC_KEY_PASSWORD"];
 		for (const envVar of requiredEnvVars) {
 			if (!process.env[envVar]) throw new Error(`Apple Notarize failed, Missing environment variable: ${envVar}`);
 		}
-    const arch = context.arch === Arch.arm64 ? "arm64" : "x64";
-    const appPath = `dist/mac-${arch}/${context.packager.appInfo.productFilename}.app`;
-    console.log(`Notarizing ${appPath} for ${arch}...`);
+    // if we are building for multiple architectures, we need to use the specific architecture folder
+    const arch = context.targets.length > 1 ? (context.arch === Arch.arm64 ? "mac-arm64" : "mac-x64") : "mac";
+    const appPath = `dist/${arch}/${context.packager.appInfo.productFilename}.app`;
+    console.log(`\n\n\tSigning ${appPath} with certificate...`);
+    // keychain should already be unlocked
+    await signAsync({
+      app: appPath,
+      platform: "darwin",
+      
+    });
+    console.log(`\tNotarizing ${appPath} for ${arch}...\n\n`);
 		await notarize({
 			appBundleId: context.packager.appInfo.productFilename,
+      keychainProfile: undefined, // we are using the certificate directly for notarization
+      keychain: undefined,
+      appleId: undefined,
+      appleIdPassword: undefined,
+      teamId: undefined,
 			appPath,
 			appleApiKey: process.env.APPLE_API_KEY,
 			appleApiIssuer: process.env.APPLE_API_ISSUER,
