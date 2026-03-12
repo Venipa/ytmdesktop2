@@ -81,6 +81,7 @@ jobs:
           security create-keychain -p actions build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p actions build.keychain
+          security set-keychain-settings build.keychain
           mkdir -p .secrets
           echo "${{ secrets.APPLE_API_KEY }}" > ${{ github.workspace }}/.secrets/AuthKey.p8
           chmod 600 ${{ github.workspace }}/.secrets/AuthKey.p8
