@@ -60,8 +60,10 @@ jobs:
           script: |
             const isVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
             const id = process.env.REF_NAME && process.env.REF_NAME.split('v')[1] || process.env.REF_NAME
+            const isRC = id.includes('-rc.')
             core.setOutput("value", id);
             core.setOutput("ok", isVersion.test(id))
+            core.setOutput("releaseType", isRC ? 'rc' : 'stable')
       - if: github.ref_type == 'tag' && steps.getVersion.outputs.ok
         name: set app version
         uses: jossef/action-set-json-field@v2.2
@@ -82,6 +84,9 @@ jobs:
           VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
           VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
       - if: matrix.os == 'ubuntu-latest'
         name: Upload release source maps to sentry
         continue-on-error: true
@@ -105,23 +110,23 @@ jobs:
           # Create new deploy for this Sentry release
           sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_DEPLOY_ENVIRONMENT
           
-      - if: matrix.os == 'windows-latest'
-        name: Upload new winget release
-        uses: vedantmgoyal9/winget-releaser@v2
-        with:
-    # The PackageIdentifier of the package (case-sensitive).
-          identifier: net.venipa.ytmdesktop
-    # The PackageVersion of the package you want to release.
-          version: ${{steps.getVersion.outputs.value}}
-    # The regex to match the installers.
-          installers-regex: setup.(exe|msi|msix|appx)(bundle){0,1}$
-    # The maximum number of versions to keep in WinGet Community Repository (Default: 0 - no limit)
-          max-versions-to-keep: 10
-    # The repository where the release is present (should be present under same user/organization).
-          release-repository: ${{ github.event.repository.name }}
-    # The release tag to be used for creating manifests.
-          release-tag: v${{steps.getVersion.outputs.value}}
-    # GitHub token to create pull request on Windows Package Manager Community Repository.
-          token: ${{ secrets.GITHUB_TOKEN }}
-    # GitHub username where the fork of winget-pkgs is present.
-          fork-user: ${{ github.repository_owner }}
+    #   - if: matrix.os == 'windows-latest' && steps.getVersion.outputs.releaseType == 'stable'
+    #     name: Upload new winget release
+    #     uses: vedantmgoyal9/winget-releaser@v2
+    #     with:
+    # # The PackageIdentifier of the package (case-sensitive).
+    #       identifier: venipa.ytmdesktop
+    # # The PackageVersion of the package you want to release.
+    #       version: ${{steps.getVersion.outputs.value}}
+    # # The regex to match the installers.
+    #       installers-regex: dist\\.*-setup.(exe|msi|msix|appx)(bundle){0,1}$
+    # # The maximum number of versions to keep in WinGet Community Repository (Default: 0 - no limit)
+    #       max-versions-to-keep: 10
+    # # The repository where the release is present (should be present under same user/organization).
+    #       release-repository: ${{ github.event.repository.name }}
+    # # The release tag to be used for creating manifests.
+    #       release-tag: v${{steps.getVersion.outputs.value}}
+    # # GitHub token to create pull request on Windows Package Manager Community Repository.
+    #       token: ${{ secrets.GITHUB_TOKEN }}
+    # # GitHub username where the fork of winget-pkgs is present.
+    #       fork-user: ${{ github.repository_owner }}

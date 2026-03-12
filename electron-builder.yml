@@ -43,7 +43,7 @@ mac:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   category: public.app-category.music 
-  notarize: false
+  notarize: true
   hardenedRuntime: true
   gatekeeperAssess: false
   target:
@@ -78,6 +78,7 @@ flatpak:
 #   electronUpdaterAware: true
 #   addAutoLaunchExtension: true
 afterPack: ./scripts/afterPack.js
+forceCodeSigning: true
 
 npmRebuild: false
 publish:
