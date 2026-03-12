@@ -81,7 +81,7 @@ jobs:
           mkdir -p .secrets
           echo "${{ secrets.APPLE_API_KEY }}" > .secrets/AuthKey.p8
           chmod 600 .secrets/AuthKey.p8
-          export APPLE_API_KEY="${{ GITHUB_WORKSPACE }}/.secrets/AuthKey.p8"
+          export APPLE_API_KEY="${{ github.workspace }}/.secrets/AuthKey.p8"
           export APPLE_API_KEY_ID=${{ secrets.APPLE_API_KEY_ID }}
           export APPLE_API_ISSUER=${{ secrets.APPLE_API_ISSUER }}
       - name: Build Electron release
