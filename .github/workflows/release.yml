@@ -79,8 +79,10 @@ jobs:
         name: Write APPLE_API_KEY to AuthKey.p8
         run: |
           mkdir -p .secrets
-          echo "${{ secrets.APPLE_API_KEY }}" > .secrets/AuthKey.p8
-          chmod 600 .secrets/AuthKey.p8
+          echo "${{ secrets.APPLE_API_KEY }}" > ${{ github.workspace }}/.secrets/AuthKey.p8
+          chmod 600 ${{ github.workspace }}/.secrets/AuthKey.p8
+          export CSC_LINK="${{ secrets.CSC_LINK }}"
+          export CSC_KEY_PASSWORD="${{ secrets.CSC_KEY_PASSWORD }}"
           export APPLE_API_KEY="${{ github.workspace }}/.secrets/AuthKey.p8"
           export APPLE_API_KEY_ID=${{ secrets.APPLE_API_KEY_ID }}
           export APPLE_API_ISSUER=${{ secrets.APPLE_API_ISSUER }}
