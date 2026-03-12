@@ -81,11 +81,11 @@ jobs:
           mkdir -p .secrets
           echo "${{ secrets.APPLE_API_KEY }}" > ${{ github.workspace }}/.secrets/AuthKey.p8
           chmod 600 ${{ github.workspace }}/.secrets/AuthKey.p8
-          export CSC_LINK="${{ secrets.CSC_LINK }}"
-          export CSC_KEY_PASSWORD="${{ secrets.CSC_KEY_PASSWORD }}"
-          export APPLE_API_KEY="${{ github.workspace }}/.secrets/AuthKey.p8"
-          export APPLE_API_KEY_ID=${{ secrets.APPLE_API_KEY_ID }}
-          export APPLE_API_ISSUER=${{ secrets.APPLE_API_ISSUER }}
+          echo "APPLE_API_KEY=${{ github.workspace }}/.secrets/AuthKey.p8" >> $GITHUB_ENV
+          echo "APPLE_API_KEY_ID=${{ secrets.APPLE_API_KEY_ID }}" >> $GITHUB_ENV
+          echo "APPLE_API_ISSUER=${{ secrets.APPLE_API_ISSUER }}" >> $GITHUB_ENV
+          echo "CSC_LINK=${{ secrets.CSC_LINK }}" >> $GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=${{ secrets.CSC_KEY_PASSWORD }}" >> $GITHUB_ENV
       - name: Build Electron release
         run: pnpm release
         env:
@@ -98,6 +98,8 @@ jobs:
           APPLE_API_KEY: ${{ env.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ env.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ env.APPLE_API_ISSUER }}
+          CSC_LINK: ${{ env.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ env.CSC_KEY_PASSWORD }}
       - if: matrix.os == 'macos-latest'
         name: Cleanup certificates and keys
         run: |
