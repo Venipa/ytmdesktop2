@@ -90,8 +90,8 @@ jobs:
           echo "CSC_LINK=${{ secrets.CSC_LINK }}" >> $GITHUB_ENV
           echo "CSC_KEY_PASSWORD=${{ secrets.CSC_KEY_PASSWORD }}" >> $GITHUB_ENV
           echo "${{ secrets.CSC_LINK }}" | base64 --decode > ${{ github.workspace }}/.secrets/csc.p12
-          security import "${{ github.workspace }}/.secrets/csc.p12" -k build.keychain -P "${{ secrets.CSC_KEY_PASSWORD }}" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k actions build.keychain
+          security import "${{ github.workspace }}/.secrets/csc.p12" -k build.keychain -P "${{ secrets.CSC_KEY_PASSWORD }}" -T /usr/bin/codesign &> /dev/null
+          security set-key-partition-list -S apple-tool:,apple: -s -k actions build.keychain &> /dev/null
       - name: Build Electron release
         run: pnpm release
         env:

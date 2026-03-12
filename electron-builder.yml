@@ -43,7 +43,7 @@ mac:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   category: public.app-category.music 
-  notarize: true
+  notarize: false
   hardenedRuntime: true
   gatekeeperAssess: false
   target:
@@ -52,7 +52,7 @@ mac:
     - target: dmg
       arch: arm64
   icon: build/icon.icns
-  forceCodeSigning: true
+  forceCodeSigning: false
 dmg:
   title: "Install or Update ${productName} ${version}"
 linux:  
