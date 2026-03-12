@@ -1,13 +1,17 @@
 import type { PluginContext } from "@preload/pluginManager";
+import { createLogger, Logger } from "@shared/utils/console";
+import { isPromise } from "util/types";
+
 type PluginOptions = {
 	name: string;
 	enabled: boolean;
 	displayName: string;
+	throwOnError?: boolean;
 	afterInit?: () => void;
 	restartNeeded?: boolean;
 };
 type PluginDestroy = () => void | Promise<void>;
-type PluginFn = (context: PluginContext) => PluginDestroy | void;
+type PluginFn = (context: PluginContext) => Promise<void> | void | PluginDestroy;
 type PluginCmdFn = (context: PluginContext, ...args: any[]) => void;
 type PluginExec =
 	| PluginFn
@@ -35,6 +39,42 @@ export interface ClientPlugin {
 	cmds?: Record<string, PluginCmdFn>;
 	meta: PluginOptions;
 }
+function handleAsyncFn(fn: PluginFn, log: Logger, options: PluginOptions) {
+	const originalFn = fn;
+	let executingPromise: Promise<void> | undefined;
+
+	const newFnExec = async (context: any) => {
+		try {
+			if (executingPromise) return executingPromise;
+			executingPromise = Promise.resolve(originalFn(context)).finally(() => (executingPromise = undefined)) as Promise<any>;
+			return await executingPromise;
+		} catch (error) {
+			log.error("Error executing plugin", error);
+			if (options.throwOnError) throw error;
+			return undefined;
+		} finally {
+			executingPromise = undefined;
+		}
+	};
+	return newFnExec;
+}
+function applyAsyncFnHandler(pluginExec: PluginExec, pluginName: string, log: Logger, options: PluginOptions) {
+	const isObject = typeof pluginExec === "object";
+	const asyncFnKeys = ["exec", "afterInit"];
+	asyncFnKeys.forEach((key) => {
+		const fn = (isObject ? (pluginExec as any)[key] : pluginExec)[key] as PluginFn;
+		if (fn && isPromise(fn)) {
+			(isObject ? (pluginExec as any)[key] : pluginExec)[key] = handleAsyncFn(fn as any, log, options) as any;
+		}
+	});
+	return {
+		exec: isObject ? (pluginExec as any).exec : pluginExec,
+		afterInit: isObject ? (pluginExec as any).afterInit : undefined,
+	} as {
+		exec: PluginFn;
+		afterInit: PluginFn | undefined;
+	};
+}
 /**
  * definePlugin is a helper function to define a plugin.
  * It is used to define a plugin and its commands.
@@ -43,13 +83,15 @@ export interface ClientPlugin {
  * @param fn - The plugin function or an object with exec, afterInit, and cmds properties
  * @returns The internal plugin object instance
  */
-export default function definePlugin(name: string, options: Omit<PluginOptions, "name"> = { enabled: true, displayName: name }, fn: PluginExec): ClientPlugin {
+export default function definePlugin(name: string, options: Omit<PluginOptions, "name"> = { enabled: true, displayName: name, throwOnError: true }, fn: PluginExec): ClientPlugin {
+	const log = createLogger(`Plugin`).child(name);
 	const isObject = typeof fn === "object";
+	const pluginExec = applyAsyncFnHandler(fn, name, log, options as PluginOptions);
 	return {
 		name,
 		displayName: options.displayName,
-		exec: (isObject ? fn.exec : fn) || (() => {}),
-		afterInit: isObject ? fn.afterInit : undefined,
+		exec: pluginExec.exec,
+		afterInit: pluginExec.afterInit,
 		cmds: isObject ? fn.cmds : undefined,
 		meta: {
 			name,
