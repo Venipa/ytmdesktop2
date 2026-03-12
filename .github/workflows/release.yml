@@ -76,7 +76,7 @@ jobs:
           pnpm install --frozen-lockfile
 
       - if: matrix.os == 'macos-latest'
-        name: Write APPLE_API_KEY to AuthKey.p8
+        name: Setup Apple credentials
         run: |
           mkdir -p .secrets
           echo "${{ secrets.APPLE_API_KEY }}" > ${{ github.workspace }}/.secrets/AuthKey.p8
