@@ -51,10 +51,6 @@ mac:
       arch: x64
     - target: dmg
       arch: arm64
-    - target: zip
-      arch: x64
-    - target: zip
-      arch: arm64
   icon: build/icon.icns
   forceCodeSigning: true
 dmg:
