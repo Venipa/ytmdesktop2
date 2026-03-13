@@ -87,12 +87,14 @@ jobs:
           chmod 600 ${{ github.workspace }}/.secrets/AuthKey.p8
           echo "APPLE_API_KEY=${{ github.workspace }}/.secrets/AuthKey.p8" >> $GITHUB_ENV
           echo "APPLE_API_KEY_ID=${{ secrets.APPLE_API_KEY_ID }}" >> $GITHUB_ENV
+          echo "APPLE_API_KEYCHAIN_PROFILE=ytmdesktop-keychain" >> $GITHUB_ENV
           echo "APPLE_API_ISSUER=${{ secrets.APPLE_API_ISSUER }}" >> $GITHUB_ENV
           echo "CSC_LINK=${{ secrets.CSC_LINK }}" >> $GITHUB_ENV
           echo "CSC_KEY_PASSWORD=${{ secrets.CSC_KEY_PASSWORD }}" >> $GITHUB_ENV
           echo "${{ secrets.CSC_LINK }}" | base64 --decode > ${{ github.workspace }}/.secrets/csc.p12
           security import "${{ github.workspace }}/.secrets/csc.p12" -k build.keychain -P "${{ secrets.CSC_KEY_PASSWORD }}" -T /usr/bin/codesign &> /dev/null
           security set-key-partition-list -S apple-tool:,apple: -s -k actions build.keychain &> /dev/null
+          xcrun notarytool store-credentials ${{ env.APPLE_API_KEYCHAIN_PROFILE }} --key "${{ secrets.APPLE_API_KEY }}" --key-id "${{ secrets.APPLE_API_KEY_ID }}" --issuer "${{ secrets.APPLE_API_ISSUER }}"
       - name: Build Electron release
         run: pnpm release
         env:
