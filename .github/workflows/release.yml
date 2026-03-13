@@ -87,6 +87,7 @@ jobs:
           export APPLE_API_ISSUER=${{ secrets.APPLE_API_ISSUER }}
           export CSC_LINK=${{ secrets.CSC_LINK }}
           export CSC_KEY_PASSWORD=${{ secrets.CSC_KEY_PASSWORD }}
+          export KEYCHAIN_PASSWORD=actions
 
           echo "APPLE_API_KEYCHAIN_PROFILE=$APPLE_API_KEYCHAIN_PROFILE" >> $GITHUB_ENV
           echo "APPLE_API_KEY=$APPLE_API_KEY" >> $GITHUB_ENV
@@ -94,15 +95,16 @@ jobs:
           echo "APPLE_API_ISSUER=$APPLE_API_ISSUER" >> $GITHUB_ENV
           echo "CSC_LINK=$CSC_LINK" >> $GITHUB_ENV
           echo "CSC_KEY_PASSWORD=$CSC_KEY_PASSWORD" >> $GITHUB_ENV
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
 
           echo "${{ secrets.CSC_LINK }}" | base64 --decode > ${{ github.workspace }}/.secrets/csc.p12
 
-          security create-keychain -p actions build.keychain
+          security create-keychain -p $KEYCHAIN_PASSWORD build.keychain
           security default-keychain -s build.keychain
-          security unlock-keychain -p actions build.keychain
+          security unlock-keychain -p $KEYCHAIN_PASSWORD build.keychain
           security set-keychain-settings build.keychain
           security import ${{ github.workspace }}/.secrets/csc.p12 -k build.keychain -P $CSC_KEY_PASSWORD -T /usr/bin/codesign &> /dev/null
-          security set-key-partition-list -S apple-tool:,apple: -s -k actions build.keychain &> /dev/null
+          security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASSWORD build.keychain &> /dev/null
           
           xcrun notarytool store-credentials $APPLE_API_KEYCHAIN_PROFILE --key "$APPLE_API_KEY" --key-id $APPLE_API_KEY_ID --issuer $APPLE_API_ISSUER
       - name: Build Electron release

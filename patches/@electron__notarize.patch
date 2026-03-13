@@ -1,0 +1,12 @@
+diff --git a/lib/notarytool.js b/lib/notarytool.js
+index 6328fae1185159bfc97c75b61a8776d700c489bc..8e736167f32a5e86e29853c237e0f0c6366892c0 100644
+--- a/lib/notarytool.js
++++ b/lib/notarytool.js
+@@ -127,7 +127,6 @@ function notarizeAndWaitForNotaryTool(opts) {
+                 'submit',
+                 filePath,
+                 ...authorizationArgs(opts),
+-                '--wait',
+                 '--output-format',
+                 'json',
+             ];
