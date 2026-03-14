@@ -1,6 +1,6 @@
-import { join } from "path";
 import translations from "@translations/index";
-import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView, WebContentsViewConstructorOptions, WebPreferences, ipcMain, shell } from "electron";
+import { BrowserWindow, BrowserWindowConstructorOptions, ipcMain, shell, WebContentsView, WebContentsViewConstructorOptions, WebPreferences } from "electron";
+import { join } from "path";
 import appIconPath from "~/build/favicon.ico?asset";
 import { defaultUrl, isDevelopment, isProduction } from "./devUtils";
 import { LockSizeOptions, loadUrlOfWebContents, lockSizeToParent } from "./webContentUtils";

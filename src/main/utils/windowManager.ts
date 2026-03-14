@@ -1,10 +1,10 @@
-import { join } from "path";
 import { logger } from "@shared/utils/console";
 import translations from "@translations/index";
 import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView } from "electron";
 import { debounce } from "lodash-es";
+import { join } from "path";
 import appIconPath from "~/build/favicon.ico?asset";
-import { defaultUrl, isDevelopment, isProduction } from "./devUtils";
+import { defaultUrl, isDevelopment, isProdDebug, isProduction } from "./devUtils";
 import { createWindowContext } from "./mappedWindow";
 import { serverMain } from "./serverEvents";
 import { createApiView, createView, googleLoginPopup } from "./view";
@@ -106,7 +106,7 @@ export class WindowManager {
 			if (!this.mainWindow) return;
 
 			this.mainWindow.contentView.addChildView(view);
-			if (isDevelopment) view.webContents.openDevTools({ mode: "detach" });
+			if (isDevelopment || isProdDebug) view.webContents.openDevTools({ mode: "detach" });
 
 			const [width, height] = this.mainWindow.getSize();
 			view.setBounds({
@@ -300,7 +300,7 @@ export class WindowManager {
 		logger.debug("windowState", this.mainWindow.getBounds());
 
 		await this.views.youtubeView.webContents.loadURL(defaultUrl).then(() => {
-			if (isDevelopment) {
+			if (isDevelopment || isProdDebug) {
 				this.views!.youtubeView.webContents.openDevTools({ mode: "detach" });
 			}
 

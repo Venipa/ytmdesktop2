@@ -1,11 +1,12 @@
-import { join } from "path";
 import { platform } from "@electron-toolkit/utils";
 import { createYmlStore } from "@main/lib/store/createYmlStore";
 import { createLogger } from "@shared/utils/console";
-import { BrowserWindow, WebContentsView, screen, shell } from "electron";
+import { BrowserWindow, screen, shell, WebContentsView } from "electron";
+import { join } from "path";
 import appIconPath from "~/build/favicon.ico?asset";
-import { isDevelopment } from "./devUtils";
+import { isDevelopment, isProdDebug } from "./devUtils";
 import { loadUrlOfWindow, syncWindowStateToWebContents } from "./webContentUtils";
+
 type WindowOptions = {
 	path: string;
 	parent: BrowserWindow;
@@ -60,7 +61,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	});
 
 	await loadUrlOfWindow(win, path);
-	if (isDevelopment) win.webContents.openDevTools();
+	if (isDevelopment || isProdDebug) win.webContents.openDevTools({ mode: "detach" });
 	win.webContents.setWindowOpenHandler(({ url }) => {
 		if (url.startsWith("http")) {
 			shell.openExternal(url);

@@ -1,6 +1,5 @@
 import type { PluginContext } from "@preload/pluginManager";
 import { createLogger, Logger } from "@shared/utils/console";
-import { isPromise } from "util/types";
 
 type PluginOptions = {
 	name: string;
@@ -63,8 +62,8 @@ function applyAsyncFnHandler(pluginExec: PluginExec, pluginName: string, log: Lo
 	const asyncFnKeys = ["exec", "afterInit"];
 	asyncFnKeys.forEach((key) => {
 		const fn = (isObject ? (pluginExec as any)[key] : pluginExec) as PluginFn;
-		if (fn && isPromise(fn)) {
-			(isObject ? (pluginExec as any)[key] : pluginExec)[key] = handleAsyncFn(fn as any, log, options) as any;
+		if (fn && typeof fn === "function") {
+			(isObject ? (pluginExec as any)[key] : pluginExec)[key] = handleAsyncFn(fn, log, options) as any;
 		}
 	});
 	return {

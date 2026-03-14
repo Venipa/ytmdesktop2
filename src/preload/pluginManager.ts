@@ -1,7 +1,7 @@
-import { basename } from "path";
 import { ClientPlugin, initializePluginCommandsWithIPC } from "@plugins/utils";
-import { Logger, createLogger } from "@shared/utils/console";
+import { createLogger, Logger } from "@shared/utils/console";
 import { debounce, get, merge, set } from "lodash-es";
+import { basename } from "path";
 import type { PlayerApi, PlayerUiService } from "ytm-client-api";
 import pkg from "../../package.json";
 import { createPluginUtils, isYoutubeMusicHost } from "./utils";
@@ -148,7 +148,9 @@ export class PluginManager {
 			this.plugins.map(async (plugin) => {
 				if (!plugin.afterInit) return;
 				const pluginContext = this.createPluginContext(plugin.name);
-				await Promise.resolve(plugin.afterInit({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi() }));
+				await Promise.resolve(plugin.afterInit({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi() })).catch((err) => {
+					this.log.error(`Error running afterInit hook for plugin ${plugin.name}`, err);
+				});
 				this.log.child(`Client Plugin, ${plugin.name}`).debug(`afterInit execute`);
 			}),
 		);
