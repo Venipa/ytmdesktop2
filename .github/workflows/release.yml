@@ -10,7 +10,7 @@ jobs:
     # Platforms to build on/for
     strategy:
       matrix:
-        os: [windows-latest] # for testing reasons, only build on windows for now
+        os: [windows-latest, ubuntu-latest, macos-latest]
         node-version: [24.14.0]
 
 
