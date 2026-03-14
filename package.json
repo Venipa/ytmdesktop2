@@ -33,7 +33,7 @@
     "@mdx-js/vue": "^3.1.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@poppinss/utils": "^5.0.0",
-    "@sentry/electron": "^7.10.0",
+    "@sentry/electron": "^5.6.0",
     "@tailwindcss/line-clamp": "^0.4.2",
     "@types/dompurify": "^3.0.5",
     "autoprefixer": "^10.4.8",
