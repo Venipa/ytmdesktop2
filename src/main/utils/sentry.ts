@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/electron/main";
 import logger from "@shared/utils/Logger";
+
 let enabledReporting = true;
 const sentryLog = logger.child("Sentry");
 export const setSentryEnabled = (enable: boolean) => {
