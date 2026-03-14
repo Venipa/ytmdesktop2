@@ -6,7 +6,9 @@ on:
 
 
 permissions:
-  packages: read
+  packages: write
+  contents: write
+  id-token: write
 jobs:
   build:
     runs-on: ${{ matrix.os }}
