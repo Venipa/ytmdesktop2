@@ -10,10 +10,10 @@ importers:
     dependencies:
       '@electron-toolkit/preload':
         specifier: ^3.0.2
-        version: 3.0.2(electron@40.8.2)
+        version: 3.0.2(electron@36.9.5)
       '@electron-toolkit/utils':
         specifier: ^3.0.0
-        version: 3.0.0(electron@40.8.2)
+        version: 3.0.0(electron@36.9.5)
       '@headlessui/vue':
         specifier: ^1.6.7
         version: 1.6.7(vue@3.5.12(typescript@5.6.3))
@@ -64,7 +64,7 @@ importers:
         version: 3.1.7
       electron-conf:
         specifier: ^1.2.1
-        version: 1.2.1(electron@40.8.2)
+        version: 1.2.1(electron@36.9.5)
       electron-threads:
         specifier: ^1.0.2
         version: 1.0.2
@@ -235,8 +235,8 @@ importers:
         specifier: ^7.0.3
         version: 7.0.3
       electron:
-        specifier: ^40.8.2
-        version: 40.8.2
+        specifier: ^36.9.5
+        version: 36.9.5
       electron-builder:
         specifier: ^26.8.1
         version: 26.8.1(electron-builder-squirrel-windows@26.0.0-alpha.6)
@@ -1666,8 +1666,8 @@ packages:
   '@types/node@20.17.6':
     resolution: {integrity: sha512-VEI7OdvK2wP7XHnsuXbAJnEpEkF6NjSN45QJlL4VGqZSXsnicpesdTWsg9RISeSdYd3yeRj/y3k5KGjUXYnFwQ==}
 
-  '@types/node@24.12.0':
-    resolution: {integrity: sha512-GYDxsZi3ChgmckRT9HPU0WEhKLP08ev/Yfcq2AstjrDASOYCSXeyjDsHg4v5t4jOj7cyDX3vmprafKlWIG9MXQ==}
+  '@types/node@22.19.15':
+    resolution: {integrity: sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg==}
 
   '@types/pg-pool@2.0.7':
     resolution: {integrity: sha512-U4CwmGVQcbEuqpyju8/ptOKg6gEC+Tqsvj2xS9o1g71bUh8twxnC6ZL5rZKCsGN0iyH0CwgUyc9VR5owNQF9Ng==}
@@ -2913,8 +2913,8 @@ packages:
       '@swc/core':
         optional: true
 
-  electron@40.8.2:
-    resolution: {integrity: sha512-EFgQHG0GBO9glpY/x2v4e7xH5uGuoKOQyXeleljlXZeThbjFsNu0NTUyTCVBOkoKT0F5xCwAOAHcI83b3b8jzA==}
+  electron@36.9.5:
+    resolution: {integrity: sha512-1UCss2IqxqujSzg/2jkRjuiT3G+EEXgd6UKB5kUekwQW1LJ6d4QCr8YItfC3Rr9VIGRDJ29eOERmnRNO1Eh+NA==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
@@ -5583,8 +5583,8 @@ packages:
   undici-types@6.19.8:
     resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
 
-  undici-types@7.16.0:
-    resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+  undici-types@6.21.0:
+    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
   unified@11.0.5:
     resolution: {integrity: sha512-xKvGhPWw3k84Qjh8bI3ZeJjqnyadK+GEFtazSfZv/rKeTkTjOJho6mFqh2SM96iIcZokxiOpg78GazTSg8+KHA==}
@@ -6238,17 +6238,17 @@ snapshots:
     dependencies:
       eslint: 8.57.1
 
-  '@electron-toolkit/preload@3.0.2(electron@40.8.2)':
+  '@electron-toolkit/preload@3.0.2(electron@36.9.5)':
     dependencies:
-      electron: 40.8.2
+      electron: 36.9.5
 
   '@electron-toolkit/tsconfig@1.0.1(@types/node@20.17.6)':
     dependencies:
       '@types/node': 20.17.6
 
-  '@electron-toolkit/utils@3.0.0(electron@40.8.2)':
+  '@electron-toolkit/utils@3.0.0(electron@36.9.5)':
     dependencies:
-      electron: 40.8.2
+      electron: 36.9.5
 
   '@electron/asar@3.2.17':
     dependencies:
@@ -7444,9 +7444,9 @@ snapshots:
     dependencies:
       undici-types: 6.19.8
 
-  '@types/node@24.12.0':
+  '@types/node@22.19.15':
     dependencies:
-      undici-types: 7.16.0
+      undici-types: 6.21.0
 
   '@types/pg-pool@2.0.7':
     dependencies:
@@ -8957,10 +8957,10 @@ snapshots:
       - electron-builder-squirrel-windows
       - supports-color
 
-  electron-conf@1.2.1(electron@40.8.2):
+  electron-conf@1.2.1(electron@36.9.5):
     dependencies:
       ajv: 8.17.1
-      electron: 40.8.2
+      electron: 36.9.5
 
   electron-devtools-installer@3.2.0:
     dependencies:
@@ -9026,10 +9026,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@40.8.2:
+  electron@36.9.5:
     dependencies:
       '@electron/get': 2.0.3
-      '@types/node': 24.12.0
+      '@types/node': 22.19.15
       extract-zip: 2.0.1
     transitivePeerDependencies:
       - supports-color
@@ -12173,7 +12173,7 @@ snapshots:
 
   undici-types@6.19.8: {}
 
-  undici-types@7.16.0: {}
+  undici-types@6.21.0: {}
 
   unified@11.0.5:
     dependencies:
