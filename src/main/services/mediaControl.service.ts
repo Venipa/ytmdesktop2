@@ -1,8 +1,8 @@
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/utils/baseProvider";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
 import { TrackData } from "@main/utils/trackData";
+import { MediaPlayerMediaType, MediaPlayerPlaybackStatus, MediaPlayerThumbnail, MediaPlayerThumbnailType, MediaPlayer as MediaServiceProvider } from "@venipa/xosms";
 import { type App, app } from "electron";
-import { MediaPlayerMediaType, MediaPlayerPlaybackStatus, MediaPlayerThumbnail, MediaPlayerThumbnailType, MediaPlayer as MediaServiceProvider } from "xosms";
 
 import { clamp } from "lodash-es";
 import IPC_EVENT_NAMES from "../utils/eventNames";

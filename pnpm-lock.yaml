@@ -38,6 +38,9 @@ importers:
       '@types/dompurify':
         specifier: ^3.0.5
         version: 3.0.5
+      '@venipa/xosms':
+        specifier: 0.7.3
+        version: 0.7.3
       autoprefixer:
         specifier: ^10.4.8
         version: 10.4.8(postcss@8.4.47)
@@ -143,9 +146,6 @@ importers:
       winston-transport:
         specifier: ^4.4.0
         version: 4.5.0
-      xosms:
-        specifier: ^0.6.2
-        version: 0.6.2
       yaml:
         specifier: ^2.6.0
         version: 2.6.0
@@ -1806,6 +1806,51 @@ packages:
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
 
+  '@venipa/xosms-darwin-arm64@0.7.3':
+    resolution: {integrity: sha512-gTj0uoBzTJZlayl++JgfTK6CLPXrhfYLhnGqb5yv9JVlvQb4iHewnsRA0hZ+GGcvRRZ59B80mh7sjRKkhgmoyg==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-darwin-arm64/0.7.3/f75312f26578c1a54a5feb68c0d948822971a854}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@venipa/xosms-darwin-universal@0.7.3':
+    resolution: {integrity: sha512-iA+P4IiHwMUKxqBFwxRk+iy3SNlAhy8hUuGkwEBzR1nsZZ2k26khTcGq8GUy14vTnmHHoSQeKx0X5+9cgGtFuQ==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-darwin-universal/0.7.3/9a0d54c0d30418fecce55e58b3be212fa64e8a9c}
+    engines: {node: '>= 10'}
+    os: [darwin]
+
+  '@venipa/xosms-darwin-x64@0.7.3':
+    resolution: {integrity: sha512-t47TvKc1r+uGDN0MA8w13w2/MTpUujSbmrqwCBrO++PXArhCnOCo71G1Oxv4kZjhh6HqgVUnsX6y61xTSKB/7g==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-darwin-x64/0.7.3/c72aa81dcf056dfe70440ac938f7f8778ec36850}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@venipa/xosms-linux-arm64-gnu@0.7.3':
+    resolution: {integrity: sha512-iu9DDrDXVt+3SsKbZyf2gnxDt4QeLXIOPYIRe6ESobZNGV+AGsBC7bB+KQY34ima/f4RT9LqUyNBKdOs1FDu0w==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-linux-arm64-gnu/0.7.3/ae8680b44b2c56d5f04a1f25e4dfa847811c48fc}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@venipa/xosms-linux-x64-gnu@0.7.3':
+    resolution: {integrity: sha512-Xewpl25+L1sLlJbye0r/h++k0RmBviTWw22prx/ey2RXm18WutkULiNb8qT6H6UtZIf3CGlMUQJyC0vCbPWz8w==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-linux-x64-gnu/0.7.3/a5930f320ebc3324aa56db665b8c4636d6e4a17a}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@venipa/xosms-win32-arm64-msvc@0.7.3':
+    resolution: {integrity: sha512-AWGVoyfdb9L0TTiJNmqXEGZ21jQIYZZAQ39scng9CmfjOBY+kJ+50hGPkNwN3fh6riMoAEPKp1bWgKGFXNrguQ==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-win32-arm64-msvc/0.7.3/95b65bd27488c34ba33a60d3fa4367ed7d698821}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@venipa/xosms-win32-x64-msvc@0.7.3':
+    resolution: {integrity: sha512-EvDja/UzS/MMpZo2MEz4Qp9eJDxX66hCert5eWPWjSIGaE01cL95xzb/uVGhVzkbX73cjPsDXbUyMiX7ivrt2A==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-win32-x64-msvc/0.7.3/487086f2bb22fdbe32762877441dc5a7914ce4a3}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@venipa/xosms@0.7.3':
+    resolution: {integrity: sha512-0EygXZeLVfqZp4DFswdnsjxMGUK1Xfnm0UDI9ZYo06SNZZW0HondJLZmlIa2pbiTjO6CUqyiDSxW+/4OIHIo3w==, tarball: https://npm.pkg.github.com/download/@venipa/xosms/0.7.3/bd6826013fefded6138591ee299070dd8eb8d213}
+    engines: {node: '>= 10'}
+
   '@vibrant/color@3.2.1-alpha.1':
     resolution: {integrity: sha512-cvm+jAPwao2NerTr3d1JttYyLhp3eD/AQBeevxF7KT6HctToWZCwr2AeTr003/wKgbjzdOV1qySnbyOeu+R+Jw==}
 
@@ -1918,47 +1963,6 @@ packages:
   '@xmldom/xmldom@0.8.10':
     resolution: {integrity: sha512-2WALfTl4xo2SkGCYRt6rDTFfk9R1czmBvUQy12gK2KuRKIpWEhcbbzy8EZXtz/jkRqHX8bFEc6FC1HjX4TUWYw==}
     engines: {node: '>=10.0.0'}
-
-  '@xosms/xosms-darwin-arm64@0.6.2':
-    resolution: {integrity: sha512-szFxnsM/GWKxPnTZ95m6mVBbHTIZC9LlVB7o8KGikOnpfmFI/tIcX5RJSInW10H5lIyZyDPV6wo/Hi9Djxt8oA==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@xosms/xosms-darwin-universal@0.6.2':
-    resolution: {integrity: sha512-K+pqTqFA85x5kSSRS49G9q2bnlJLQyI77HbkTgVJkbKNyXm9nQ2xVQjdsQv2fOL8NRMk+ztOGQrsrm7QYgJDmg==}
-    engines: {node: '>= 10'}
-    os: [darwin]
-
-  '@xosms/xosms-darwin-x64@0.6.2':
-    resolution: {integrity: sha512-vImyEvDTEUAL1E2Plp2vTqApCoNqeHY+N6r1+ITQGaJTrSqIilpbsjLxupqIP3Lj8vYsQ2GKI1jQoTbhFvW3WQ==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [darwin]
-
-  '@xosms/xosms-linux-arm64-gnu@0.6.2':
-    resolution: {integrity: sha512-OIgnWpElLiy8YLukuZuzKJ//J2nM3QNMdkFMtgKjRvjcwSl7kmqpgKmJI+DrOgwMWQ2O9mD6H3cFYYQNIl2ANw==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [linux]
-
-  '@xosms/xosms-linux-x64-gnu@0.6.2':
-    resolution: {integrity: sha512-f692hDvUleavQZVFb7iRMfcGsDOkAkwiUj4lMc83JZIC8r1AqW1xWd8CMWVrAIzEyw0Rk9YmVAs5duUEcmMLmQ==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [linux]
-
-  '@xosms/xosms-win32-arm64-msvc@0.6.2':
-    resolution: {integrity: sha512-VLZPVbplAQMUAHj1gQ34+o1jETFOjTEjW7iPzg35sTnK5CR92W9CszBtAI7pFVv5fNoVHQR+LOt2H/DmurhV7Q==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [win32]
-
-  '@xosms/xosms-win32-x64-msvc@0.6.2':
-    resolution: {integrity: sha512-/1WgX+BXX5JbitxOsfnUApx6ktykIK6oYWo6/L4Y08Ejii6wqyMo8DzTMe4TdRNW8wKWhc9eA9ratN6e21Abbg==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [win32]
 
   '@yarnpkg/lockfile@1.1.0':
     resolution: {integrity: sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==}
@@ -5733,10 +5737,6 @@ packages:
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
 
-  xosms@0.6.2:
-    resolution: {integrity: sha512-6oMk2rAwlMdlzSt4Z0cxRW0ZRECcMPPouRXfdO5797RdddDd/jn73IQjl+hqPFvn65fqBzslhP1RyTJVvnPRnA==}
-    engines: {node: '>= 10'}
-
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
     engines: {node: '>=0.4'}
@@ -7442,6 +7442,37 @@ snapshots:
 
   '@ungap/structured-clone@1.3.0': {}
 
+  '@venipa/xosms-darwin-arm64@0.7.3':
+    optional: true
+
+  '@venipa/xosms-darwin-universal@0.7.3':
+    optional: true
+
+  '@venipa/xosms-darwin-x64@0.7.3':
+    optional: true
+
+  '@venipa/xosms-linux-arm64-gnu@0.7.3':
+    optional: true
+
+  '@venipa/xosms-linux-x64-gnu@0.7.3':
+    optional: true
+
+  '@venipa/xosms-win32-arm64-msvc@0.7.3':
+    optional: true
+
+  '@venipa/xosms-win32-x64-msvc@0.7.3':
+    optional: true
+
+  '@venipa/xosms@0.7.3':
+    optionalDependencies:
+      '@venipa/xosms-darwin-arm64': 0.7.3
+      '@venipa/xosms-darwin-universal': 0.7.3
+      '@venipa/xosms-darwin-x64': 0.7.3
+      '@venipa/xosms-linux-arm64-gnu': 0.7.3
+      '@venipa/xosms-linux-x64-gnu': 0.7.3
+      '@venipa/xosms-win32-arm64-msvc': 0.7.3
+      '@venipa/xosms-win32-x64-msvc': 0.7.3
+
   '@vibrant/color@3.2.1-alpha.1': {}
 
   '@vibrant/core@3.2.1-alpha.1':
@@ -7610,27 +7641,6 @@ snapshots:
   '@vue/shared@3.5.12': {}
 
   '@xmldom/xmldom@0.8.10': {}
-
-  '@xosms/xosms-darwin-arm64@0.6.2':
-    optional: true
-
-  '@xosms/xosms-darwin-universal@0.6.2':
-    optional: true
-
-  '@xosms/xosms-darwin-x64@0.6.2':
-    optional: true
-
-  '@xosms/xosms-linux-arm64-gnu@0.6.2':
-    optional: true
-
-  '@xosms/xosms-linux-x64-gnu@0.6.2':
-    optional: true
-
-  '@xosms/xosms-win32-arm64-msvc@0.6.2':
-    optional: true
-
-  '@xosms/xosms-win32-x64-msvc@0.6.2':
-    optional: true
 
   '@yarnpkg/lockfile@1.1.0': {}
 
@@ -12091,16 +12101,6 @@ snapshots:
   xmlbuilder@15.1.1: {}
 
   xmlchars@2.2.0: {}
-
-  xosms@0.6.2:
-    optionalDependencies:
-      '@xosms/xosms-darwin-arm64': 0.6.2
-      '@xosms/xosms-darwin-universal': 0.6.2
-      '@xosms/xosms-darwin-x64': 0.6.2
-      '@xosms/xosms-linux-arm64-gnu': 0.6.2
-      '@xosms/xosms-linux-x64-gnu': 0.6.2
-      '@xosms/xosms-win32-arm64-msvc': 0.6.2
-      '@xosms/xosms-win32-x64-msvc': 0.6.2
 
   xtend@4.0.2: {}
 

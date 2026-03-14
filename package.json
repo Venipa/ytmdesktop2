@@ -36,6 +36,7 @@
 		"@sentry/electron": "^5.6.0",
 		"@tailwindcss/line-clamp": "^0.4.2",
 		"@types/dompurify": "^3.0.5",
+		"@venipa/xosms": "0.7.3",
 		"autoprefixer": "^10.4.8",
 		"chalk": "^5.0.1",
 		"core-js": "^3.24.1",
@@ -71,7 +72,6 @@
 		"winston": "^3.3.3",
 		"winston-daily-rotate-file": "^4.5.2",
 		"winston-transport": "^4.4.0",
-		"xosms": "^0.6.2",
 		"yaml": "^2.6.0"
 	},
 	"devDependencies": {

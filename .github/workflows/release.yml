@@ -74,6 +74,8 @@ jobs:
       - name: Install dependencies
         run: |
           pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - if: matrix.os == 'macos-latest'
         name: Setup Apple keychain
         run: |
