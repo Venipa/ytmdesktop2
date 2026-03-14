@@ -1,15 +1,15 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { isDevelopment, isProduction } from "@main/utils/devUtils";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
-import { App, BrowserWindow } from "electron";
-import { CancellationToken, UpdateInfo, autoUpdater } from "electron-updater";
-import semver from "semver";
-
 import { createAppWindow } from "@main/utils/windowUtils";
 import { authorName, compareUrlParse } from "@shared/utils/github";
+import { App, BrowserWindow } from "electron";
+import { autoUpdater, CancellationToken, UpdateInfo } from "electron-updater";
 import { clamp } from "lodash-es";
+import semver from "semver";
 import IPC_EVENT_NAMES from "../utils/eventNames";
 import SettingsProvider from "./settings.service";
+
 const devShowUpdateDialog = isDevelopment && process.env.DEV_SHOW_UPDATE_DIALOG === "1";
 if (isDevelopment) import.meta.env.__SKIP_BUILD == null;
 const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = import.meta.env.VITE_GITHUB_REPOSITORY.split("/", 2);
@@ -87,10 +87,15 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	private isUpdateInRange(ver: string): boolean {
 		this.logger.debug("isUpdateInRange", { newVersion: ver, currentVersion: this.app.getVersion() });
 		if (devShowUpdateDialog) return true;
-		return semver.gtr(ver, this.app.getVersion(), {
-			includePrerelease: !!this.settingsInstance.instance?.app?.beta,
-			loose: true,
-		});
+		try {
+			return semver.gtr(ver, this.app.getVersion(), {
+				includePrerelease: !!this.settingsInstance.instance?.app?.beta,
+				loose: true,
+			});
+		} catch (err) {
+			this.logger.error("Error checking if update is in range", err);
+			return false;
+		}
 	}
 	private sendToAllViews(ev: string, ...args: any[]) {
 		this.windowContext.sendToAllViews(ev, ...args);
