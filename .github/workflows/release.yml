@@ -73,8 +73,6 @@ jobs:
           value: ${{ steps.getVersion.outputs.value }}
       - name: Install dependencies
         run: |
-          # Remove the patch file for the notarize action to wait for the notarization to complete instead of skipping the wait.
-          rm patches/@electron__notarize.patch
           pnpm install --frozen-lockfile
       - if: matrix.os == 'macos-latest'
         name: Setup Apple keychain
