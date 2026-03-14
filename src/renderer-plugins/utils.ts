@@ -62,7 +62,7 @@ function applyAsyncFnHandler(pluginExec: PluginExec, pluginName: string, log: Lo
 	const isObject = typeof pluginExec === "object";
 	const asyncFnKeys = ["exec", "afterInit"];
 	asyncFnKeys.forEach((key) => {
-		const fn = (isObject ? (pluginExec as any)[key] : pluginExec)[key] as PluginFn;
+		const fn = (isObject ? (pluginExec as any)[key] : pluginExec) as PluginFn;
 		if (fn && isPromise(fn)) {
 			(isObject ? (pluginExec as any)[key] : pluginExec)[key] = handleAsyncFn(fn as any, log, options) as any;
 		}
@@ -90,8 +90,16 @@ export default function definePlugin(name: string, options: Omit<PluginOptions, 
 	return {
 		name,
 		displayName: options.displayName,
-		exec: pluginExec.exec,
-		afterInit: pluginExec.afterInit,
+		exec:
+			pluginExec.exec ??
+			((() => {
+				log.warn("Plugin exec is not defined, using default empty function");
+			}) as PluginFn),
+		afterInit:
+			pluginExec.afterInit ??
+			((() => {
+				log.warn("Plugin afterInit is not defined, using default empty function");
+			}) as PluginFn),
 		cmds: isObject ? fn.cmds : undefined,
 		meta: {
 			name,

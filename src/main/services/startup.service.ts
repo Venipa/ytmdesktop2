@@ -1,6 +1,6 @@
 import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
-import { isProduction } from "@main/utils/devUtils";
+import { isDevelopment, isProduction } from "@main/utils/devUtils";
 import { IpcContext, IpcOn } from "@main/utils/onIpcEvent";
 import { App, powerSaveBlocker } from "electron";
 import { basename } from "path";
@@ -25,6 +25,7 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 			app.commandLine.appendSwitch("enable-gpu-rasterization"); // performance feature flags
 			app.commandLine.appendSwitch("enable-zero-copy");
 		}
+		if (isDevelopment) app.commandLine.appendSwitch("disable-web-security");
 		app.commandLine.appendSwitch("high-dpi-support", "1");
 		if (!platform.isWindows)
 			// todo: testing on other os platforms
