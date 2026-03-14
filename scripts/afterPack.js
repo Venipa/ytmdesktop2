@@ -1,8 +1,5 @@
 const { FuseVersion, FuseV1Options } = require("@electron/fuses");
 const { Arch } = require("electron-builder");
-const { notarize } = require("@electron/notarize");
-const { signAsync } = require("@electron/osx-sign");
-const { spawnSync } = require("child_process");
 /**
  *
  * @param {import("electron-builder").AfterPackContext} context
