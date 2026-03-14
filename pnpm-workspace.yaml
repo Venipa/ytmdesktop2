@@ -1,3 +1,10 @@
+ignoredBuiltDependencies:
+  - bufferutil
+  - core-js
+  - utf-8-validate
+
 onlyBuiltDependencies:
+  - '@biomejs/biome'
   - electron
-  - "@biomejs/biome"
+  - esbuild
+  - lefthook
