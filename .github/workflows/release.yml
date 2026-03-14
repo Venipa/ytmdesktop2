@@ -73,12 +73,12 @@ jobs:
           value: ${{ steps.getVersion.outputs.value }}
       - name: Install dependencies
         run: |
+          # Remove the patch file for the notarize action to wait for the notarization to complete instead of skipping the wait.
+          rm patches/@electron__notarize.patch
           pnpm install --frozen-lockfile
       - if: matrix.os == 'macos-latest'
         name: Setup Apple keychain
         run: |
-          # Remove the patch file for the notarize action to wait for the notarization to complete instead of skipping the wait.
-          rm patches/@electron__notarize.patch
           mkdir -p .secrets
           echo "${{ secrets.APPLE_API_KEY }}" > ${{ github.workspace }}/.secrets/AuthKey.p8
           chmod 600 ${{ github.workspace }}/.secrets/AuthKey.p8
