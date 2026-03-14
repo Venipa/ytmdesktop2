@@ -2,5 +2,4 @@ onlyBuiltDependencies:
   - electron
   - '@biomejs/biome'
 
-patchedDependencies:
-  '@electron/notarize': patches/@electron__notarize.patch
+patchedDependencies: []
