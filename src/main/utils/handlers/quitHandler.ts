@@ -1,4 +1,4 @@
-import { IpcMainEvent, app } from "electron";
+import { app, IpcMainEvent } from "electron";
 import { isDevelopment } from "../devUtils";
 import { BrowserWindowViews } from "../mappedWindow";
 import { ServiceCollection } from "../providerCollection";
@@ -26,7 +26,8 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 	});
 
 	app.on("window-all-closed", () => {
-		if (process.platform !== "darwin") {
+		const updateProvider = serviceCollection.getTypedProvider("update");
+		if (process.platform !== "darwin" || updateProvider?.updateQueuedForInstall) {
 			serverMain.emit("app.quit", null, true);
 		}
 	});

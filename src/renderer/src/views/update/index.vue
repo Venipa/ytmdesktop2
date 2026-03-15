@@ -72,7 +72,7 @@
             <button class="w-full px-4 py-2 border border-gray-700 text-gray-300 rounded-md opacity-50 cursor-not-allowed"
                     disabled> Downloading... </button>
           </template>
-          <template v-else-if="updateDownloaded && !isInstalling">
+          <template v-else-if="updateDownloaded && !isInstalling && !window.api.platform.isMacOS">
             <button @click="window.close()"
                     class="flex-1 px-4 py-2 border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"> Later </button>
             <button @click="installUpdate(true)"
@@ -89,9 +89,9 @@
           <template v-else-if="!updateDownloaded">
             <button @click="window.close()"
                     class="flex-1 px-4 py-2 border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white rounded-md transition-colors"> Later </button>
-            <button @click="installUpdate(false)"
+            <button @click="installUpdate(window.api.platform.isMacOS)"
                     class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center justify-center gap-2">
-              <DownloadIcon :size="16" /> Download
+              <DownloadIcon :size="16" /> {{ window.api.platform.isMacOS ? "Download and Install" : "Download" }}
             </button>
           </template>
         </div>
@@ -120,95 +120,93 @@
   </div>
 </template>
 <script setup lang="ts">
-import { MDXProvider } from '@mdx-js/vue'
-import Spinner from '@renderer/components/Spinner.vue'
-import { MDXComponents } from '@renderer/views/update/mdx-components'
-import { refIpc } from '@shared/utils/Ipc'
-import type { ProgressInfo, UpdateInfo } from '@shared/utils/updater'
-import {
-CheckCircleIcon,
-DownloadIcon
-} from 'lucide-vue-next'
-import _prettyBytes from "pretty-bytes"
-import { ref } from 'vue'
+import { MDXProvider } from "@mdx-js/vue";
+import Spinner from "@renderer/components/Spinner.vue";
+import { MDXComponents } from "@renderer/views/update/mdx-components";
+import { refIpc } from "@shared/utils/Ipc";
+import type { ProgressInfo, UpdateInfo } from "@shared/utils/updater";
+import { CheckCircleIcon, DownloadIcon } from "lucide-vue-next";
+import _prettyBytes from "pretty-bytes";
+import { ref } from "vue";
 
 const prettyBytes = (bytes: number) => {
-  return _prettyBytes(bytes, {
-    binary: true,
-    space: true
-  })
-}
+	return _prettyBytes(bytes, {
+		binary: true,
+		space: true,
+	});
+};
 
-const isComplete = ref(false)
-const currentVersion = ref("v" + window.api.version)
+const isComplete = ref(false);
+const currentVersion = ref("v" + window.api.version);
 const [updateChecking, setUpdateChecking] = refIpc<boolean>("APP_UPDATE_CHECKING");
 
 const [updateInfo, setUpdateInfo] = refIpc<UpdateInfo | null>("APP_UPDATE", {
-  getInitialValue: async () => {
-    return await window.api.action("app.getUpdate")
-  }
+	getInitialValue: async () => {
+		return await window.api.action("app.getUpdate");
+	},
 });
 
 const [updateInfoProgress, setUpdateInfoProgress] = refIpc<ProgressInfo | null>("APP_UPDATE_PROGRESS", {
-  ignoreUndefined: true,
-  defaultValue: null,
+	ignoreUndefined: true,
+	defaultValue: null,
 });
 const [updateDownloaded, setUpdateDownloaded] = refIpc("APP_UPDATE_DOWNLOADED", {
-  ignoreUndefined: true,
-  defaultValue: null,
-  mapper: (x) => !!x,
-  async getInitialValue() {
-    return await window.api.action("app.updateDownloaded").then(x => {
-      console.log("updateDownloaded", x)
-      return !!x
-    })
-  },
+	ignoreUndefined: true,
+	defaultValue: null,
+	mapper: (x) => !!x,
+	async getInitialValue() {
+		return await window.api.action("app.updateDownloaded").then((x) => {
+			console.log("updateDownloaded", x);
+			return !!x;
+		});
+	},
 });
 const isInstalling = ref(false);
 function installUpdate(quitAndInstall: boolean = true) {
-  if (isInstalling.value) return Promise.resolve(null);
-  isInstalling.value = true;
-  if (!updateDownloaded.value) {
-    setUpdateInfoProgress({
-      total: 0,
-      delta: 0,
-      transferred: 0,
-      percent: 0,
-      bytesPerSecond: 0
-    })
-  } else {
-    isInstalling.value = true
-  }
-  return window.api
-    .action("app.installUpdate", quitAndInstall)
-    .then((downloaded) => {
-      if (!updateDownloaded.value) {
-        isComplete.value = downloaded
-        setUpdateDownloaded(downloaded)
-      } else {
-        setTimeout(() => {
-          isInstalling.value = false
-          installUpdate(true)
-        }, 20000)
-      }
-      setUpdateInfoProgress(null)
-    }).catch(err => {
-      setUpdateInfoProgress(null)
-      if (err instanceof Error && err.message.endsWith("[E002]")) {
-        isInstalling.value = true;
-      } else throw err;
-    })
-    .finally(() => {
-      isInstalling.value = false;
-    });
+	if (isInstalling.value) return Promise.resolve(null);
+	isInstalling.value = true;
+	if (!updateDownloaded.value) {
+		setUpdateInfoProgress({
+			total: 0,
+			delta: 0,
+			transferred: 0,
+			percent: 0,
+			bytesPerSecond: 0,
+		});
+	} else {
+		isInstalling.value = true;
+	}
+	return window.api
+		.action("app.installUpdate", quitAndInstall)
+		.then((downloaded) => {
+			if (!updateDownloaded.value) {
+				isComplete.value = downloaded;
+				setUpdateDownloaded(downloaded);
+			} else {
+				setTimeout(() => {
+					isInstalling.value = false;
+					installUpdate(true);
+				}, 20000);
+			}
+			setUpdateInfoProgress(null);
+		})
+		.catch((err) => {
+			setUpdateInfoProgress(null);
+			if (err instanceof Error && err.message.endsWith("[E002]")) {
+				isInstalling.value = true;
+			} else throw err;
+		})
+		.finally(() => {
+			isInstalling.value = false;
+		});
 }
 
 async function checkUpdate() {
-  if (updateChecking.value) return;
-  setUpdateChecking(true);
-  await window.api.action("app.checkUpdate").finally(() => {
-    setUpdateChecking(false);
-  });
+	if (updateChecking.value) return;
+	setUpdateChecking(true);
+	await window.api.action("app.checkUpdate").finally(() => {
+		setUpdateChecking(false);
+	});
 }
 </script>
 <style>

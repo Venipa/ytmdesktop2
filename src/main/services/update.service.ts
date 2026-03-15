@@ -137,7 +137,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_DOWNLOADED, await this.parseUpdateInfo(ev));
 
 		if (this.isAutoUpdate) {
-			autoUpdater.quitAndInstall(false, true);
+			this.quitAndInstall();
 		}
 	}
 	private _showUpdateDialogPromise: Promise<void> | null = null;
@@ -242,6 +242,12 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		return this._update;
 	}
 
+	private quitAndInstall() {
+		this._updateQueuedForInstall = true;
+		autoUpdater.quitAndInstall(false, true);
+		this.app.quit();
+	}
+
 	@IpcHandle("action:app.installUpdate")
 	@IpcOn("app.installUpdate", { debounce: 1000 })
 	async onAutoUpdateRun(__ev: any, quitAndInstall: boolean = true) {
@@ -252,8 +258,8 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			await downloadPromise;
 		}
 		if (!quitAndInstall) return this._updateDownloaded;
-		if (!this.isAutoUpdate || this.updateQueuedForInstall) autoUpdater.quitAndInstall(false, true);
-		else if (this.updateDownloaded) autoUpdater.quitAndInstall(false, true);
+		if (!this.isAutoUpdate || this.updateQueuedForInstall) this.quitAndInstall();
+		else if (this.updateDownloaded) this.quitAndInstall();
 		return this._updateDownloaded;
 	}
 
