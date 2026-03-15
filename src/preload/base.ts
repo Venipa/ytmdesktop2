@@ -65,7 +65,7 @@ const appMethods = {
 	minimize: createIpcSender("app.minimize"),
 	maximize: createIpcSender("app.maximize"),
 	goback: createIpcSender("app.goback"),
-	quit: (force?: boolean) => ipcRenderer.send("app.quit", !!force),
+	quit: createIpcSender("app.quit") as (force?: boolean) => void,
 	installUpdate: createIpcSender("app.installUpdate"),
 	checkUpdate: createIpcInvoker("app.checkUpdate"),
 	isWin11: () => ipcRenderer.invoke("app.isWin11").catch(() => false),

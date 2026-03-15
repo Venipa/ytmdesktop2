@@ -1,48 +1,103 @@
-import { app, IpcMainEvent } from "electron";
+import { platform } from "@electron-toolkit/utils";
+import { app, IpcMainEvent, ipcMain } from "electron";
 import { isDevelopment } from "../devUtils";
 import { BrowserWindowViews } from "../mappedWindow";
 import { ServiceCollection } from "../providerCollection";
-import { serverMain } from "../serverEvents";
 import { setTrayState } from "./trayState";
 
-let forcedQuit = false;
+let isQuitRequested = false;
+let isForceQuitRequested = false;
+let isCleanupRunning = false;
+let cleanupPromise: Promise<void> | null = null;
 
 export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serviceCollection: ServiceCollection) {
-	serverMain.on("app.quit", (ev: IpcMainEvent, forceQuit: boolean) => {
-		forcedQuit = !!forceQuit;
+	const getSettingsProvider = () => serviceCollection.getTypedProvider("settings");
+	const getUpdateProvider = () => serviceCollection.getTypedProvider("update");
+	const isUpdaterQuitRequested = () => !!getUpdateProvider()?.updateQueuedForInstall;
+	const isMinimizeToTrayEnabled = () => !!getSettingsProvider()?.get("app.minimizeTrayOverride");
+
+	const hideToTray = () => {
+		setTrayState("hidden");
+		if (mainWindow.main.isVisible()) {
+			mainWindow.main.hide();
+			mainWindow.main.setSkipTaskbar(true);
+		}
+	};
+
+	const shouldMinimizeToTray = (forceQuit: boolean) => isMinimizeToTrayEnabled() && !forceQuit && !isUpdaterQuitRequested();
+
+	const ensureCleanup = async () => {
+		if (!cleanupPromise) {
+			cleanupPromise = (async () => {
+				getSettingsProvider()?.saveToDrive();
+				await serviceCollection.exec("OnDestroy");
+			})().catch((error) => {
+				console.error("Error while running app cleanup during quit", error);
+			});
+		}
+		return cleanupPromise;
+	};
+
+	const requestQuit = async (forceQuit: boolean = false) => {
+		if (shouldMinimizeToTray(forceQuit)) {
+			hideToTray();
+			return;
+		}
+		isForceQuitRequested = isForceQuitRequested || forceQuit || isUpdaterQuitRequested();
+		if (isCleanupRunning || isQuitRequested) return;
+		isCleanupRunning = true;
+		await ensureCleanup();
+		isQuitRequested = true;
 		app.quit();
+	};
+
+	ipcMain.on("app.quit", (ev: IpcMainEvent, forceQuit: boolean = false) => {
+		void requestQuit(!!forceQuit);
+	});
+
+	mainWindow.main.on("close", (ev) => {
+		if (isCleanupRunning && !isQuitRequested) {
+			ev.preventDefault();
+			return;
+		}
+		if (isQuitRequested || isForceQuitRequested || isUpdaterQuitRequested()) return;
+		if (shouldMinimizeToTray(false)) {
+			ev.preventDefault();
+			hideToTray();
+			return;
+		}
+		ev.preventDefault();
+		void requestQuit(true);
 	});
 
 	app.on("before-quit", (ev) => {
-		if (forcedQuit || serviceCollection.getTypedProvider("update").updateQueuedForInstall) return;
-
-		const settings = serviceCollection.getTypedProvider("settings");
-		if (settings.get("app.minimizeTrayOverride")) {
-			setTrayState("hidden");
-			ev.preventDefault(); // prevent quit - minimize to tray
-		} else {
-			serviceCollection.getTypedProvider("settings")?.saveToDrive();
+		if (isQuitRequested || isForceQuitRequested || isUpdaterQuitRequested()) return;
+		if (shouldMinimizeToTray(false)) {
+			ev.preventDefault();
+			hideToTray();
+			return;
 		}
+		ev.preventDefault();
+		void requestQuit(true);
 	});
 
 	app.on("window-all-closed", () => {
-		const updateProvider = serviceCollection.getTypedProvider("update");
-		if (process.platform !== "darwin" || updateProvider?.updateQueuedForInstall) {
-			serverMain.emit("app.quit", null, true);
+		if (!platform.isMacOS || isUpdaterQuitRequested()) {
+			void requestQuit(true);
 		}
 	});
 
 	// Exit cleanly on request from parent process in development mode.
 	if (isDevelopment) {
-		if (process.platform === "win32") {
+		if (platform.isWindows) {
 			process.on("message", (data) => {
 				if (data === "graceful-exit") {
-					serviceCollection.exec("OnDestroy").then(() => serverMain.emit("app.quit", true));
+					void requestQuit(true);
 				}
 			});
 		} else {
 			process.on("SIGTERM", () => {
-				serviceCollection.exec("OnDestroy").then(() => serverMain.emit("app.quit", true));
+				void requestQuit(true);
 			});
 		}
 	}

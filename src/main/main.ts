@@ -1,7 +1,7 @@
 import { onWindowLoad } from "@main/utils/windowUtils";
 import logger from "@shared/utils/Logger";
 import { waitMs } from "@shared/utils/promises";
-import { BrowserWindow, app, protocol } from "electron";
+import { app, BrowserWindow, protocol } from "electron";
 import { initializeCustomElectronEnvironment } from "./utils/electron";
 import { attachQuitHandler } from "./utils/handlers/quitHandler";
 import { attachTrayState } from "./utils/handlers/trayState";
@@ -87,6 +87,9 @@ const runApp = async function () {
 		}
 		await onWindowLoad(mainWindow.main, () => serviceCollection.exec("AfterInit"), { once: true });
 		mainWindow.main.webContents.on("did-finish-load", () => serviceCollection.exec("AfterInit")); // if reloaded run afterInit again
+
+		attachQuitHandler(mainWindow, serviceCollection);
+		attachTrayState(mainWindow);
 	});
 
 	// Window control events
@@ -105,8 +108,6 @@ const runApp = async function () {
 		if (!youtubeView || youtubeView.webContents.isDestroyed() || !youtubeView.webContents.navigationHistory.canGoBack()) return;
 		youtubeView.webContents.navigationHistory.goBack();
 	});
-	attachQuitHandler(mainWindow, serviceCollection);
-	attachTrayState(mainWindow);
 };
 
 runApp();

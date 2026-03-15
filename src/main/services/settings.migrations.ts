@@ -1,7 +1,8 @@
-import { readFileSync, rmSync, statSync } from "fs";
-import path from "path";
+import { platform } from "@electron-toolkit/utils";
 import { app } from "electron";
 import { Migration } from "electron-conf";
+import { readFileSync, rmSync, statSync } from "fs";
+import path from "path";
 import type { SettingsStore } from "./settings.service";
 
 const migrations: Omit<Migration<SettingsStore>, "version">[] = [
@@ -41,12 +42,12 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 	},
 	{
 		hook(store) {
-			store.set("app.enableTaskbarProgress", true);
+			store.set("app.enableTaskbarProgress", platform.isWindows);
 		},
 	},
 	{
 		hook(store) {
-			store.set("customcss.thumbnailBackground", true);
+			store.set("customcss.thumbnailBackground", false);
 		},
 	},
 ];
