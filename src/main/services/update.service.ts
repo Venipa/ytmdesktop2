@@ -245,7 +245,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	private quitAndInstall() {
 		this._updateQueuedForInstall = true;
 		autoUpdater.quitAndInstall(false, true);
-		this.app.quit();
 	}
 
 	@IpcHandle("action:app.installUpdate")
