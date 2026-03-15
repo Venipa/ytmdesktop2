@@ -9,7 +9,8 @@
 		"src/main/lib/discord-rpc/discord-rpc.ts",
 		"src/main/utils/youtubeMatcher.ts",
 		"src/main/utils/eventNames.ts",
-		"src/translations/**/*.ts"
+		"src/translations/**/*.ts",
+		"src/renderer/src/typings.d.ts"
 	],
 	"exclude": ["src/main/worker/**/*.ts"],
 	"compilerOptions": {

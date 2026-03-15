@@ -1,4 +1,3 @@
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import slugify, { SlugifyOptions } from "@shared/slug";
 import { base64 } from "@shared/utils/base64";
@@ -6,7 +5,9 @@ import { generateRandom } from "@shared/utils/randomString";
 import { app } from "electron";
 import { ConfOptions as Options, Conf as Store } from "electron-conf/main";
 import Encryption from "encryption.js";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs";
 import { parse as deserialize, stringify as serialize } from "yaml";
+
 const slugifyOptions = {
 	lower: true,
 	replacement: "_",

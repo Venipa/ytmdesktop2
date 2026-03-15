@@ -1,10 +1,9 @@
-ignoredBuiltDependencies:
-  - bufferutil
-  - core-js
-  - utf-8-validate
+
 
 onlyBuiltDependencies:
   - '@biomejs/biome'
+  - '@parcel/watcher'
+  - 'electron-winstaller'
   - electron
   - esbuild
   - lefthook

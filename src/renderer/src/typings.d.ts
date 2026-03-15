@@ -18,7 +18,7 @@ declare global {
 	}
 }
 
-declare module "@vue/runtime-core" {
+declare module "vue" {
 	interface ComponentCustomProperties {
 		window: typeof window;
 		console: typeof console;

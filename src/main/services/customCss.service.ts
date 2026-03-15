@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import CSSHandler from "@main/lib/css/handler";
 import playerThumbnailStyle from "@main/services/resources/basic-style/player-thumbnail-background.scss?raw";
 import basicScrollStyle from "@main/services/resources/basic-style/thumb.scss?raw";
@@ -9,7 +7,9 @@ import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { rootWindowClearCustomCss, rootWindowInjectCustomCss } from "@main/utils/webContentUtils";
 import customDefaultCss from "@renderer/assets/default-custom.scss?raw";
 import type { App } from "electron";
-import { debounce } from "lodash";
+import fs from "fs";
+import { debounce } from "lodash-es";
+import path from "path";
 import { compileAsync } from "sass";
 import SettingsProvider from "./settings.service";
 

@@ -37,6 +37,7 @@ export default defineConfig({
 				output: {
 					manualChunks: (id: string): any => {
 						if (externalizedEsmDeps.find((d) => d === id)) return id;
+						return null;
 					},
 				},
 			},

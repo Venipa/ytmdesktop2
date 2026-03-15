@@ -1,4 +1,5 @@
 import { createEncryptedStore } from "../store/createYmlStore";
+
 type Credential = {
 	account: string;
 	password: string;
