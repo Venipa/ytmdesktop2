@@ -89,7 +89,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		if (devShowUpdateDialog) return true;
 		try {
 			return semver.gtr(ver, this.app.getVersion(), {
-				includePrerelease: !!this.settingsInstance.instance?.app?.beta,
+				includePrerelease: !!this.settingsInstance.get("app.beta"),
 				loose: true,
 			});
 		} catch (err) {
@@ -185,6 +185,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	// Lifecycle methods
 	BeforeStart() {
 		autoUpdater.logger = this.logger;
+		const betaEnabled = this.settingsInstance.get("app.beta");
 		autoUpdater.setFeedURL({
 			provider: "github",
 			owner: GITHUB_AUTHOR,
@@ -193,6 +194,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		if (devShowUpdateDialog) autoUpdater.forceDevUpdateConfig = true;
 		autoUpdater.autoDownload = false;
 		autoUpdater.autoInstallOnAppQuit = isProduction;
+		autoUpdater.allowPrerelease = betaEnabled;
 
 		this.logger.debug(autoUpdater.updateConfigPath);
 		this.logger.debug("Updater Cache: " + autoUpdater["app"].baseCachePath);
@@ -265,8 +267,8 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	private async _checkUpdate() {
 		try {
 			this.sendUpdateStatus(true);
-			const beta = !!this.settingsInstance.instance?.app?.beta;
-			autoUpdater.allowPrerelease = beta;
+			const betaEnabled = !!this.settingsInstance.get("app.beta");
+			autoUpdater.allowPrerelease = betaEnabled;
 
 			const result = await autoUpdater.checkForUpdates();
 			if (!result?.updateInfo || !this.isUpdateInRange(result.updateInfo.version)) {
