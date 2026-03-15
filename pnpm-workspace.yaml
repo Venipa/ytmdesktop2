@@ -1,4 +1,5 @@
-
+shamefullyHoist: true
+nodeLinker: hoisted
 
 onlyBuiltDependencies:
   - '@biomejs/biome'
