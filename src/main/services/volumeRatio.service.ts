@@ -23,17 +23,15 @@ export default class VolumeRatioProvider extends BaseProvider implements AfterIn
 	private async enable() {
 		this.logger.debug("Enabling volume ratio");
 		await this.isYtmReady();
-		await this.executeCommand("enable");
 		await this.forceUpdateVolume();
 	}
 	private async disable() {
 		this.logger.debug("Disabling volume ratio");
 		await this.isYtmReady();
-		await this.executeCommand("disable");
 		await this.forceUpdateVolume();
 	}
 	async forceUpdateVolume(volume?: number) {
 		this.logger.debug("Force updating volume ratio", volume ?? "refreshing");
-		return await this.executeCommand<number>("force_update", volume).catch(this.logger.error);
+		return await this.executeCommand<number>("syncVolume", volume).catch(this.logger.error);
 	}
 }

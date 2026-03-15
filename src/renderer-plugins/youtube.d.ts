@@ -1,4 +1,5 @@
 declare module "ytm-client-api" {
+	export type PlayerState = number;
 	export interface PlayerApi {
 		// Player API Types
 		addEventListener: (...args: any[]) => any;
@@ -34,7 +35,7 @@ declare module "ytm-client-api" {
 		getVideoStats: () => any;
 		getCurrentTime: () => any;
 		getDuration: () => any;
-		getPlayerState: () => any;
+		getPlayerState: () => PlayerState;
 		getVideoLoadedFraction: () => any;
 		mute: () => any;
 		unMute: () => any;
