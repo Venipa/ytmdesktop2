@@ -131,13 +131,31 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 			this.logger.error(err);
 		}
 	}
+
+	private _windowMap = new Map<string, BrowserWindow>();
 	@IpcOn("subwindow.show")
-	private __onSubWindowOpen(_ev, windowName: string) {
+	private async __onSubWindowOpen(_ev, windowName: string) {
 		if (!windowName) {
 			return;
 		}
 		const evName = "subwindow.show/" + windowName;
-		if (serverMain.eventNames().includes(evName)) serverMain.emitServer("subwindow.show/" + windowName, _ev);
+		if (serverMain.eventNames().includes(evName)) {
+			serverMain.emitServer("subwindow.show/" + windowName, _ev);
+			return;
+		}
+		if (this._windowMap.has(windowName)) {
+			const window = this._windowMap.get(windowName);
+			if (window) {
+				if (window.isMinimized()) window.restore();
+				if (!window.isVisible()) {
+					window.show();
+					window.setSkipTaskbar(false);
+				} else window.show(); // show focuses and brings to front
+				return;
+			}
+		}
+		const window = await createAppWindow({ parent: this.windowContext.main, path: "/" + windowName });
+		this._windowMap.set(windowName, window);
 	}
 	@IpcHandle("app.isWin11")
 	async handleIsWin11() {

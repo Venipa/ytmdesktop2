@@ -39,6 +39,14 @@ export const createTrayMenu = (provider: BaseProvider) => {
 			},
 		},
 		{
+			label: "Enable Quit to Tray",
+			type: "checkbox",
+			checked: settings.app.minimizeTrayOverride,
+			click: (item) => {
+				set("app.minimizeTrayOverride", item.checked);
+			},
+		},
+		{
 			type: "separator",
 		},
 		{

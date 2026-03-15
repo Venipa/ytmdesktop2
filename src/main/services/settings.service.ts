@@ -1,4 +1,3 @@
-import path from "path";
 import { createYmlStore } from "@main/lib/store/createYmlStore";
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/utils/baseProvider";
 import { defaultUri, defaultUrl, isDevelopment } from "@main/utils/devUtils";
@@ -9,7 +8,7 @@ import { VideoResSetting } from "@shared/utils/ISettings";
 import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { Migration } from "electron-conf";
 import { get as _get, debounce } from "lodash-es";
-import { Subject, distinctUntilChanged, filter, map, startWith, takeUntil } from "rxjs";
+import { distinctUntilChanged, filter, map, Subject, startWith, takeUntil } from "rxjs";
 import { LastFMSettings } from "ytmd";
 import { stringifyJson } from "../lib/json";
 import { CustomCssConfig } from "./customCss.service";
@@ -91,14 +90,7 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 		super("settings");
 	}
 
-	private getConfigPath() {
-		return path.resolve(this.app.getPath("userData"), "app-settings.json");
-	}
-
-	async BeforeStart() {
-		const configFile = this.getConfigPath();
-		this.logger.debug(configFile);
-	}
+	async BeforeStart() {}
 
 	get instance() {
 		return _settingsStore.store;
