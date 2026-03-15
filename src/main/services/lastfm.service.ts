@@ -1,7 +1,7 @@
 import secureStore from "@main/lib/secureStore";
 import { AfterInit, BaseProvider, OnInit } from "@main/utils/baseProvider";
 import { IpcContext, IpcHandle } from "@main/utils/onIpcEvent";
-import { string } from "@poppinss/utils/build/helpers";
+import { escapeHTML } from "@shared/utils/string";
 import { App, BrowserWindow, shell } from "electron";
 import { LastFMSettings } from "ytmd";
 import { parseJson, stringifyJson } from "../lib/json";
@@ -56,7 +56,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 				this.client.setAuthorize({
 					token: lastFMState.token,
 					session: lastFMState.session,
-					name: lastfm.name ? string.escapeHTML(lastfm.name!) : "",
+					name: lastfm.name ? encodeURIComponent(lastfm.name!) : "",
 				});
 		}
 	}
@@ -108,7 +108,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 
 					this.logger.debug(`[Auth]> Authenticated: ${sessionToken}`);
 					settings.set("lastfm.enabled", true);
-					settings.set("lastfm.name", string.escapeHTML(this.client.getName() || null, { encodeSymbols: true }));
+					settings.set("lastfm.name", escapeHTML(this.client.getName() || null));
 					settings.saveToDrive();
 				}
 			}
@@ -143,7 +143,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	async handleLastFMProfile() {
 		if (!this.client.isConnected()) return;
 		const username = this.client.getName() || this.getProvider("settings")?.instance.lastfm.name;
-		return await shell.openExternal(`https://www.last.fm/user/${string.escapeHTML(username)}/`);
+		return await shell.openExternal(`https://www.last.fm/user/${escapeHTML(username)}/`);
 	}
 	@IpcHandle(IPC_EVENT_NAMES.LAST_FM_AUTHORIZE)
 	async handleLastFMAuth() {
