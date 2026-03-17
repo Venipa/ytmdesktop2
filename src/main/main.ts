@@ -82,14 +82,13 @@ const runApp = async function () {
 		const startupService = serviceCollection.getTypedProvider("startup");
 		log.debug({ isStartupContext: startupService.isStartupContext });
 
+		attachQuitHandler(mainWindow, serviceCollection);
+		attachTrayState(mainWindow);
 		if (startupService.isStartupContext ? !startupService.isEnabled || !startupService.isInitialMinimized : !startupService.isMinimizedArg) {
 			mainWindow.main.show();
 		}
 		await onWindowLoad(mainWindow.main, () => serviceCollection.exec("AfterInit"), { once: true });
 		mainWindow.main.webContents.on("did-finish-load", () => serviceCollection.exec("AfterInit")); // if reloaded run afterInit again
-
-		attachQuitHandler(mainWindow, serviceCollection);
-		attachTrayState(mainWindow);
 	});
 
 	// Window control events
