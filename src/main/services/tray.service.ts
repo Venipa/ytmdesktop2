@@ -1,8 +1,8 @@
 import { AfterInit, BaseProvider, OnDestroy } from "@main/utils/baseProvider";
+import { setTrayState } from "@main/utils/handlers/trayState";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { createTrayMenu } from "@main/utils/trayMenu";
 import { App, BrowserWindow, Tray } from "electron";
-
 import TracIconPath from "~/build/favicon.ico?asset";
 import { isDevelopment } from "../utils/devUtils";
 import { createAppWindow } from "../utils/windowUtils";
@@ -31,11 +31,14 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 		if (this._tray && !this._tray.isDestroyed()) this._tray.destroy();
 		this._tray = new Tray(TracIconPath);
 		this._tray.setToolTip(`YouTube Music for Desktop`);
-		this._tray.addListener("click", () => BrowserWindow.fromWebContents(this.views.youtubeView.webContents)?.show());
 		this._tray.setContextMenu(this.buildMenu());
 		this._tray.setIgnoreDoubleClickEvents(true);
-		this._tray.on("click", (ev) => {
-			if (ev.triggeredByAccelerator) BrowserWindow.fromWebContents(this.views.youtubeView.webContents)?.show();
+		this._tray.on("click", () => {
+			const window = BrowserWindow.fromWebContents(this.views.youtubeView.webContents);
+			if (window) {
+				window.show();
+				setTrayState("visible");
+			}
 			// if (!ev.triggeredByAccelerator && isDevelopment) this.__trayWindow(); // todo
 		});
 		return this._tray;

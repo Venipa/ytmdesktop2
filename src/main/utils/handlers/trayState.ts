@@ -1,14 +1,13 @@
 import { IpcMainEvent } from "electron";
 import { BrowserWindowViews } from "../mappedWindow";
 import { serverMain } from "../serverEvents";
+
 let mainWindowRef: BrowserWindowViews<any, any> | null = null;
 export function attachTrayState<T extends BrowserWindowViews<any, any>>(mainWindow: T) {
 	if (mainWindowRef) throw new Error("Tray state handler already attached to a main window");
 	mainWindowRef = mainWindow;
 	serverMain.on("app.restore", () => {
-		if (!mainWindow.main.isVisible()) {
-			serverMain.emit("app.trayState", null, "visible");
-		}
+		serverMain.emit("app.trayState", null, "visible");
 	});
 
 	serverMain.on("app.trayState", (ev: IpcMainEvent, state: string) => {
@@ -17,6 +16,9 @@ export function attachTrayState<T extends BrowserWindowViews<any, any>>(mainWind
 		} else if (state === "hidden" && mainWindow.main.isVisible()) {
 			setTrayState("hidden");
 		}
+	});
+	mainWindow.main.on("restore", () => {
+		serverMain.emit("app.restore");
 	});
 }
 
