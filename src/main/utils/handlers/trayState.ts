@@ -24,11 +24,11 @@ export function attachTrayState<T extends BrowserWindowViews<any, any>>(mainWind
 
 export function setTrayState(state: "visible" | "hidden") {
 	if (!mainWindowRef) return;
-	if (state === "visible" && !mainWindowRef.main.isVisible()) {
-		mainWindowRef.main.show();
+	if (state === "visible") {
+		if (!mainWindowRef.main.isVisible()) mainWindowRef.main.show();
 		mainWindowRef.main.setSkipTaskbar(false);
-	} else if (state === "hidden" && mainWindowRef.main.isVisible()) {
-		mainWindowRef.main.hide();
+	} else if (state === "hidden") {
+		if (mainWindowRef.main.isVisible()) mainWindowRef.main.hide();
 		mainWindowRef.main.setSkipTaskbar(true);
 	}
 }
