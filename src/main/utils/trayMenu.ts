@@ -6,7 +6,8 @@ import { BaseProvider } from "./baseProvider";
 import { serverMain } from "./serverEvents";
 
 export const createTrayMenu = (provider: BaseProvider) => {
-	const { set, instance: settings } = provider.getProvider("settings") as SettingsProvider;
+	const settings = provider.getProvider("settings") as SettingsProvider;
+	const { instance: sp } = settings;
 	const { app } = provider.getProvider("app") as AppProvider;
 	const { updateAvailable, onCheckUpdate: checkUpdate, onAutoUpdateRun: applyUpdate, updateInfo } = provider.getProvider("update");
 	const menu = Menu.buildFromTemplate([
@@ -25,25 +26,25 @@ export const createTrayMenu = (provider: BaseProvider) => {
 		{
 			label: "Auto Startup",
 			type: "checkbox",
-			checked: settings.app.autostart,
+			checked: sp.app.autostart,
 			click: (item) => {
-				set("app.autostart", item.checked);
+				settings.set("app.autostart", item.checked);
 			},
 		},
 		{
 			label: "Auto Update",
 			type: "checkbox",
-			checked: settings.app.autoupdate,
+			checked: sp.app.autoupdate,
 			click: (item) => {
-				set("app.autoupdate", item.checked);
+				settings.set("app.autoupdate", item.checked);
 			},
 		},
 		{
 			label: "Enable Quit to Tray",
 			type: "checkbox",
-			checked: settings.app.minimizeTrayOverride,
+			checked: sp.app.minimizeTrayOverride,
 			click: (item) => {
-				set("app.minimizeTrayOverride", item.checked);
+				settings.set("app.minimizeTrayOverride", item.checked);
 			},
 		},
 		{
@@ -65,17 +66,17 @@ export const createTrayMenu = (provider: BaseProvider) => {
 				{
 					label: "Show Presence",
 					type: "checkbox",
-					checked: settings.discord.enabled,
+					checked: sp.discord.enabled,
 					click: (item) => {
-						set("discord.enabled", item.checked);
+						settings.set("discord.enabled", item.checked);
 					},
 				},
 				{
 					label: "Show Buttons",
 					type: "checkbox",
-					checked: settings.discord.buttons,
+					checked: sp.discord.buttons,
 					click: (item) => {
-						set("discord.buttons", item.checked);
+						settings.set("discord.buttons", item.checked);
 					},
 				},
 			],
@@ -90,21 +91,21 @@ export const createTrayMenu = (provider: BaseProvider) => {
 				{
 					label: "Enable CSS",
 					type: "checkbox",
-					checked: settings.customcss.enabled,
+					checked: sp.customcss.enabled,
 					click: (item) => {
-						set("customcss.enabled", item.checked);
+						settings.set("customcss.enabled", item.checked);
 					},
 				},
 				{
 					label: "Open selected CSS File",
-					enabled: settings.customcss.enabled && !!settings.customcss.scssFile,
+					enabled: sp.customcss.enabled && !!sp.customcss.scssFile,
 					click: (item) => {
-						if (item.enabled) shell.openExternal(settings.customcss.scssFile!);
+						if (item.enabled && sp.customcss?.scssFile) shell.openExternal(sp.customcss.scssFile!);
 					},
 				},
 				{
 					label: "Change CSS File",
-					enabled: settings.customcss.enabled,
+					enabled: sp.customcss.enabled,
 					click: (item) => {
 						if (item.enabled) serverMain.emit("subwindow.show", null, "settingsWindow");
 					},
