@@ -55,6 +55,9 @@
       <settings-checkbox config-key="app.minimizeTrayOverride">
         Close window to tray instead of quitting
       </settings-checkbox>
+      <settings-checkbox config-key="app.windowsStyleWindowSizeControls">
+        Use Windows-style window resizing buttons
+      </settings-checkbox>
       <settings-checkbox config-key="app.enableDev" class="group">
         <div class="flex flex-col">
           <div>Enable Developer Mode</div>
