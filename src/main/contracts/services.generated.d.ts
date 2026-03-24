@@ -43,4 +43,5 @@ export interface ServiceTypeMap {
 declare module "ytmd" {
 	export interface BaseProviderNames extends ServiceTypeMap {}
 }
+
 export {};

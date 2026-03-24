@@ -10,5 +10,6 @@ pre-commit:
         - postcss.config.js
         - tsconfig.*.json
         - tsconfig.json
+        - "!src/**/*.generated.d.ts"
       run: npx @biomejs/biome check --write --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {staged_files}
       stage_fixed: true
