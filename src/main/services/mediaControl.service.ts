@@ -35,11 +35,17 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 			}
 
 			switch (keyName) {
+				case "playpause":
+					trackProvider.toggleTrackPlayback();
+					break;
 				case "pause":
 					trackProvider.pauseTrack();
 					break;
 				case "play":
 					trackProvider.playTrack();
+					break;
+				case "stop":
+					trackProvider.pauseTrack();
 					break;
 				case "next":
 					trackProvider.nextTrack();
