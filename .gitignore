@@ -8,6 +8,8 @@ node_modules
 .env.*.local
 .secrets
 .secrets.*
+.npmrc
+.yarnrc
 
 # Log files
 npm-debug.log*

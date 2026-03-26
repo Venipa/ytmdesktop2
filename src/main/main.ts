@@ -1,8 +1,9 @@
 import { onWindowLoad } from "@main/utils/windowUtils";
 import logger from "@shared/utils/Logger";
 import { waitMs } from "@shared/utils/promises";
-import { app, BrowserWindow, protocol } from "electron";
+import { app, BrowserWindow, globalShortcut, protocol } from "electron";
 import { initializeCustomElectronEnvironment } from "./utils/electron";
+import { attachGlobalShortcutHandler } from "./utils/handlers/globalShortcutHandler";
 import { attachQuitHandler } from "./utils/handlers/quitHandler";
 import { attachTrayState } from "./utils/handlers/trayState";
 import { serverMain } from "./utils/serverEvents";
@@ -84,6 +85,7 @@ const runApp = async function () {
 
 		attachQuitHandler(mainWindow, serviceCollection);
 		attachTrayState(mainWindow);
+		attachGlobalShortcutHandler(mainWindow, serviceCollection);
 		if (startupService.isStartupContext ? !startupService.isEnabled || !startupService.isInitialMinimized : !startupService.isMinimizedArg) {
 			mainWindow.main.show();
 		}
@@ -92,6 +94,10 @@ const runApp = async function () {
 	});
 
 	// Window control events
+	app.on("will-quit", () => {
+		globalShortcut.unregisterAll();
+	});
+
 	serverMain.on("app.minimize", (ev) => {
 		const window = BrowserWindow.fromWebContents(ev.sender);
 		if (window && window.isMinimizable()) window.minimize();

@@ -1,20 +1,21 @@
+import type { SettingsStore } from "@main/services/settings.service";
 import { isDevelopment } from "@main/utils/devUtils";
 import { TrackData } from "@main/utils/trackData";
 import { createId as cuid } from "@paralleldrive/cuid2";
-import createApp, { json, Router } from "express";
-import expressWs from "express-ws";
+import { createLogger } from "@shared/utils/console";
 
 import EventEmitter from "events";
+import createApp, { json, Router } from "express";
+import expressWs from "express-ws";
 import { Server } from "http";
-import type { SettingsStore } from "@main/services/settings.service";
-import { createLogger } from "@shared/utils/console";
 import { parentPort } from "worker_threads";
+
 if (!parentPort) throw new Error("This module has been run as parent");
-const { app, getWss } = expressWs(createApp());
+const { app, getWss } = expressWs(createApp() as any);
 let appConfig: SettingsStore;
 let apiRoutes: string[] = [];
 const log = createLogger("api-server");
-const router = Router() as expressWs.Router;
+const router = Router() as any as expressWs.Router;
 const parentEvents = new EventEmitter();
 const requestParent = <T = any>(name: string, data?: any) => {
 	const requestId = cuid();
@@ -134,13 +135,7 @@ const functionCollection = {
 	socket: sendMessage,
 	event: (requestId: string, result?: any) => parentEvents.emit(requestId, result),
 };
-export default async function runCommand({
-	name: eventName,
-	data: args,
-}: {
-	name: string;
-	data: any;
-}) {
+export default async function runCommand({ name: eventName, data: args }: { name: string; data: any }) {
 	if (eventName !== "socket") log.child(eventName).debug({ payload: args });
 	if (!functionCollection[eventName]) throw new Error("Method not found in api worker");
 	return await new Promise<any>((resolve, reject) => {

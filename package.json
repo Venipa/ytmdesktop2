@@ -35,7 +35,7 @@
 		"@sentry/electron": "^5.6.0",
 		"@tailwindcss/line-clamp": "^0.4.2",
 		"@types/dompurify": "^3.0.5",
-		"@venipa/xosms": "0.7.3",
+		"@venipa/xosms": "github:Venipa/xosms#v0.7.3",
 		"autoprefixer": "^10.4.8",
 		"chalk": "^5.0.1",
 		"core-js": "^3.24.1",
