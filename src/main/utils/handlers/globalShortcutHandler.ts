@@ -76,7 +76,7 @@ const KEYBOARD_FALLBACK_SCRIPT = {
 	})()`,
 } as const;
 
-type TrackAction = "next" | "previous";
+type TrackAction = "next" | "previous" | "playPause";
 
 async function runFallback(webContents: WebContents, action: TrackAction) {
 	if (webContents.isDestroyed()) return;
@@ -118,8 +118,10 @@ export function attachGlobalShortcutHandler(mainWindow: BrowserWindowViews<any, 
 		try {
 			if (action === "next") {
 				await apiProvider.nextTrack();
-			} else {
+			} else if (action === "previous") {
 				await apiProvider.prevTrack();
+			} else {
+				await apiProvider.toggleTrackPlayback();
 			}
 			return;
 		} catch (error) {
@@ -161,4 +163,5 @@ export function attachGlobalShortcutHandler(mainWindow: BrowserWindowViews<any, 
 
 	register("Shift+Alt+Right", "next");
 	register("Shift+Alt+Left", "previous");
+	register("Shift+Alt+Space", "playPause");
 }
