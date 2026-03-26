@@ -2,7 +2,8 @@ import { AfterInit, BaseProvider, BeforeStart } from "@main/utils/baseProvider";
 import { isDevelopment, isProduction } from "@main/utils/devUtils";
 import { IpcContext, IpcHandle, IpcOn } from "@main/utils/onIpcEvent";
 import { createAppWindow } from "@main/utils/windowUtils";
-import { authorName, compareUrlParse } from "@shared/utils/github";
+import { cacheWithFile } from "@shared/utils/filecache";
+import { apiRepoUrl, authorName, compareUrlParse } from "@shared/utils/github";
 import { App, BrowserWindow } from "electron";
 import { autoUpdater, CancellationToken, UpdateInfo } from "electron-updater";
 import { clamp } from "lodash-es";
@@ -106,17 +107,23 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_CHECKING, checking);
 	}
 	private async parseUpdateInfo(ev: UpdateInfo) {
-		// todo: add release notes
-		// const releaseNotes = await cacheWithFile(async () => {
-		// 	return await fetch(apiRepoUrl + `/releases/tags/v${ev.version}`)
-		// 		.then((res) => res.json())
-		// 		.then((res) => res.body)
-		// 		.then(getContent);
-		// }, `version-${ev.version}`);
+		let releaseNotes = ev.releaseNotes;
+		try {
+			releaseNotes = await cacheWithFile(async () => {
+				const response = await fetch(apiRepoUrl + `/releases/tags/v${ev.version}`);
+				if (!response.ok) {
+					throw new Error(`Failed to fetch release notes: ${response.statusText}`);
+				}
+				const data = (await response.json()) as any;
+				return getContent(data.body);
+			}, `version-${ev.version}`);
+		} catch (err) {
+			this.logger.error("Error fetching release notes", err);
+		}
 
 		return {
 			...ev,
-			releaseNotes: ev.releaseNotes,
+			releaseNotes: releaseNotes || ev.releaseNotes,
 		};
 	}
 	private async handleUpdateAvailable(ev: UpdateInfo) {
