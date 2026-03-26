@@ -1,3 +1,4 @@
+import type { PluginOptions } from "@plugins/utils";
 import { ClientPlugin, initializePluginCommandsWithIPC } from "@plugins/utils";
 import { createLogger, Logger } from "@shared/utils/console";
 import { debounce, get, merge, set } from "lodash-es";
@@ -5,7 +6,6 @@ import { basename } from "path";
 import type { PlayerApi, PlayerUiService } from "ytm-client-api";
 import pkg from "../../package.json";
 import { createPluginUtils, isYoutubeMusicHost } from "./utils";
-
 export type PluginSettings = Record<string, any>;
 export interface PluginContext {
 	name: string;
@@ -22,7 +22,7 @@ export interface PluginContext {
 export interface PluginInfo {
 	file: string;
 	exec: (context: PluginContext) => void | (() => void);
-	meta: any;
+	meta: PluginOptions;
 	cmds?: Record<string, (context: PluginContext, ...args: any[]) => void>;
 	afterInit?: (context: PluginContext) => void;
 	log: any;
@@ -59,7 +59,7 @@ export class PluginManager {
 				else return undefined;
 
 				if (meta && meta.enabled === false) return undefined;
-
+        if (import.meta.env.DEV) meta.throwOnError = true;
 				return {
 					file: m,
 					exec,
@@ -195,22 +195,27 @@ export class PluginManager {
 		this.log.debug("dom init...");
 
 		await this.removeChromecastIcon().catch((ex) => this.log.error("removeChromecastIcon failed", ex));
-		await new Promise<void>((resolve) =>
+		await new Promise<void>((resolve, reject) =>
 			window.domUtils.ensureDomLoaded(async () => {
-				if (isYoutubeMusicHost()) {
-					await this.initializePlugins();
-					await this.waitForPlayerReady();
-					this.log.debug("ytplayer loaded");
-
-					await this.runAfterInitHooks();
-					await this.initializePluginCommands();
-				}
-
-				window.api.emit("app.loadEnd");
-				this.isLoaded = true;
-				window.postMessage("ytmd-ready", "*");
-				resolve();
-			}),
+				try {
+          if (isYoutubeMusicHost()) {
+            await this.initializePlugins();
+            await this.waitForPlayerReady();
+            this.log.debug("ytplayer loaded");
+  
+            await this.runAfterInitHooks();
+            await this.initializePluginCommands();
+          }
+  
+          window.api.emit("app.loadEnd");
+          this.isLoaded = true;
+          window.postMessage("ytmd-ready", "*");
+          resolve();
+        } catch (ex) {
+          this.log.error("Failed to initialize plugins", ex);
+          throw ex;
+        }
+      }),
 		);
 	}
 

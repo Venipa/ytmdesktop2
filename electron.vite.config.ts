@@ -1,6 +1,8 @@
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "electron-vite";
-import { basename, resolve } from "path";
+import fs from "fs";
+import { camelCase } from "lodash-es";
+import path, { basename, resolve } from "path";
 import { Plugin, UserConfigExport } from "vite";
 import svgLoader from "vite-svg-loader";
 
@@ -25,11 +27,6 @@ const youtubeClientPlugins = glob.globSync("./src/renderer-plugins/youtube/*.plu
 	const name = basename(file, ".ts");
 	return [name, file];
 });
-
-// Service Type Reference Generator Plugin for Electron-Vite
-import fs from "fs";
-import { camelCase } from "lodash-es";
-import path from "path";
 
 function generateServiceTypesPlugin(): Plugin {
 	return {
@@ -62,6 +59,7 @@ ${exports.map((l) => "  " + l).join("\n")}
 }
 declare module "ytmd" {
 	export interface BaseProviderNames extends ServiceTypeMap {}
+  export type ServiceName = keyof ServiceTypeMap;
 }
 export { };
 `;

@@ -30,5 +30,6 @@ setContext("__initYTMD", initFn);
 process.on("loaded", () => {
 	initFn().catch((err) => {
 		logger.error("Failed to initialize YTMD", err);
+    throw err;
 	});
 });

@@ -119,11 +119,12 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 	}
 
 	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE)
-	private __handleTrackMediaOSControl(_ev, isPlaying: boolean, progressSeconds: number = 0) {
+	private __handleTrackMediaOSControl(_ev, playing: boolean, progressSeconds: number = 0) {
 		if (!this.mediaProviderEnabled()) return;
 
 		try {
 			const { trackData } = this.getProvider("track");
+      const isPlaying = !!playing;
 			if (!trackData) {
 				this._mediaProvider!.playbackStatus = MediaPlayerPlaybackStatus.Stopped;
 				this._mediaProvider!.playButtonEnabled = true;

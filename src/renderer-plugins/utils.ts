@@ -1,8 +1,11 @@
 import type { PluginContext } from "@preload/pluginManager";
 import { createLogger, Logger } from "@shared/utils/console";
+import type { ServiceName } from "ytmd";
 
-type PluginOptions = {
+export type PluginOptions = {
 	name: string;
+	// services in main process that this plugin depends on
+	service?: ServiceName;
 	enabled: boolean;
 	displayName: string;
 	throwOnError?: boolean;
@@ -32,6 +35,7 @@ type PluginExec =
 	  };
 export interface ClientPlugin {
 	name: string;
+	service?: ServiceName;
 	displayName: string;
 	exec: PluginFn;
 	afterInit?: PluginFn;
@@ -86,6 +90,7 @@ export default function definePlugin(name: string, options: Omit<PluginOptions, 
 	const log = createLogger(`Plugin`).child(name);
 	const isObject = typeof fn === "object";
 	const pluginExec = applyAsyncFnHandler(fn, name, log, options as PluginOptions);
+  const service = options.service;
 	return {
 		name,
 		displayName: options.displayName,
@@ -102,12 +107,16 @@ export default function definePlugin(name: string, options: Omit<PluginOptions, 
 		cmds: isObject ? fn.cmds : undefined,
 		meta: {
 			name,
+			service,
 			enabled: options.enabled,
 			displayName: options.displayName,
 			restartNeeded: options.restartNeeded,
+      throwOnError: options.throwOnError,
 		},
 	};
 }
+export const createPluginHandleName = (pluginName: string) => pluginName.replace(/:/g, "_");
+// example: `togglePlayback` becomes `toggle_playback`
 export const pluginCommandKeySlug = (cmd: string) => cmd.replace(/\.?(?=[A-Z])/g, "_").toLowerCase();
 /**
  * Initialize plugin commands with IPC
@@ -134,23 +143,24 @@ export function initializePluginCommandsWithIPC(plugin: ClientPlugin, pluginCont
 	const { cmds } = plugin;
 	if (!cmds) return;
 	const loadedHandlers = new Map<string, any>();
-	const pluginName = plugin.name.replace(/:/g, "_");
+	const handleName = plugin.meta.service ? createPluginHandleName(plugin.meta.service) : createPluginHandleName(plugin.name);
 	Object.entries(cmds).forEach(([cmd, fn]) => {
 		const commandKey = pluginCommandKeySlug(cmd);
+		const commandChannel = `plugins:${handleName}:cmd:${commandKey}`;
 		const handler = async (ev: unknown, { requestId, payload }: { requestId: string; payload: any[] }) => {
 			pluginContext.log.debug(`Received command \`${cmd}\` with IPC`, { requestId, payload });
 			const response = await Promise.resolve(fn(pluginContext, ...(Array.isArray(payload) ? payload : [payload])));
-			window.ipcRenderer.send(`plugins:${pluginName}:cmd:${commandKey}/response.${requestId}`, requestId, response);
+			window.ipcRenderer.send(`${commandChannel}/response.${requestId}`, requestId, response);
 			pluginContext.log.debug(`Sent response for command \`${cmd}\` with IPC`, { requestId, response });
 		};
-		window.api.on(`plugins:${pluginName}:cmd:${commandKey}`, handler);
+		window.api.on(commandChannel, handler);
 		loadedHandlers.set(cmd, handler);
-		pluginContext.log.debug(`Initialized command \`${cmd}\` with IPC\ncall via \`plugins:${pluginName}:cmd:${commandKey}\``);
+		pluginContext.log.debug(`Initialized command \`${cmd}\` with IPC\ncall via \`${commandChannel}\``);
 	});
 	process.on("beforeExit", () => {
 		loadedHandlers.forEach((handler, cmd) => {
 			const commandKey = pluginCommandKeySlug(cmd);
-			window.ipcRenderer.off(`plugins:${pluginName}:cmd:${commandKey}`, handler);
+			window.ipcRenderer.off(`plugins:${handleName}:cmd:${commandKey}`, handler);
 		});
 	});
 }

@@ -71,6 +71,15 @@ jobs:
           file: package.json
           field: version
           value: ${{ steps.getVersion.outputs.value }}
+      - name: Prepare .npmrc
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "shamefully-hoist=true"
+          Add-Content -Path .npmrc -Value "node-linker=hoisted"
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
       - name: Install dependencies
         run: |
           pnpm install --frozen-lockfile
@@ -109,6 +118,9 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASSWORD build.keychain &> /dev/null
           
           xcrun notarytool store-credentials $APPLE_API_KEYCHAIN_PROFILE --key "$APPLE_API_KEY" --key-id $APPLE_API_KEY_ID --issuer $APPLE_API_ISSUER
+
+
+
       - name: Build Electron release
         run: pnpm release
         env:
