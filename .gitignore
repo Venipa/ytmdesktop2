@@ -10,7 +10,7 @@ node_modules
 .secrets.*
 .npmrc
 .yarnrc
-
+.env
 # Log files
 npm-debug.log*
 yarn-debug.log*
