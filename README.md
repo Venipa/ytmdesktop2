@@ -67,22 +67,13 @@ also make sure to set a custom the port (`append ?port=<custom port> to source f
 
 ## Project setup
 
+```bash
+# gh is required for fetching github packages (Venipa/xosms)
+gh auth refresh -s read:packages
+pnpm install
+pnpm dev
 ```
-yarn
-```
-
-### Compiles and hot-reloads for development
-
-```
-yarn dev
-```
-
-### Compiles and minifies for production
-
-```
-yarn build
-```
-
-### Customize configuration
-
-See [Configuration Reference](https://cli.vuejs.org/config/).
+## Contributors
+<a href="https://github.com/Venipa/ytmdesktop2/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Venipa/ytmdesktop2" />
+</a>
