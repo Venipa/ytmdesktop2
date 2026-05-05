@@ -226,7 +226,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		events.emit("track:change", track);
 
 		try {
-			const media = this.getProvider("mediaController");
+			const media = this.getProvider("mediaControl");
 			if (media?.instance) {
 				await media.handleTrackMediaOSControlChange(track);
 			}
@@ -288,7 +288,7 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 		const discordProvider = this.getProvider("discord") as DiscordProvider;
 		await discordProvider.updateTrackProgress(isPlaying, progressSeconds);
 		try {
-			const mediaController = this.getProvider("mediaController");
+			const mediaController = this.getProvider("mediaControl");
 			if (mediaController?.instance) {
 				mediaController.instance.setTimeline(duration, progressSeconds);
 			}

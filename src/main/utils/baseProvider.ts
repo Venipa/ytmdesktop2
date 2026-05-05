@@ -1,4 +1,4 @@
-import { Logger, createLogger } from "@shared/utils/console";
+import { createLogger, Logger } from "@shared/utils/console";
 import { waitMs } from "@shared/utils/promises";
 import { App, BrowserWindow, WebContentsView } from "electron";
 import { BaseProviderNames } from "ytmd";
@@ -10,6 +10,11 @@ export interface BeforeStart {
 	BeforeStart(app?: App): void | Promise<void>;
 }
 export interface OnInit {
+  /**
+   * Called when the provider is initialized.
+   * This is called after the electron app is ready.
+   * @param app 
+   */
 	OnInit(app: App): void | Promise<void>;
 }
 export interface AfterInit {
@@ -60,7 +65,7 @@ export class BaseProvider<TView extends WebContentsView = WebContentsView> {
 		return isReady;
 	}
 
-	async executeCommand<T = void>(command: string, ...args: any[]): Promise<T> {
+	async executeCommand<T = unknown>(command: string, ...args: any[]): Promise<T> {
 		return await createSendHandler<T>(this.views.youtubeView, `plugins:${this.name}:cmd:${command}`)(...args);
 	}
 	async isYtmReady() {

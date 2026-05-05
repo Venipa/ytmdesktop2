@@ -61,6 +61,9 @@
 		"postcss": "^8.4.14",
 		"pretty-bytes": "^7.0.0",
 		"reflect-metadata": "^0.1.13",
+		"remark": "^15.0.1",
+		"remark-gfm": "^4.0.1",
+		"remark-github": "^12.0.0",
 		"rxjs": "^7.8.0",
 		"sass": "^1.32.8",
 		"semver": "7.7.4",
@@ -71,6 +74,7 @@
 		"winston": "^3.3.3",
 		"winston-daily-rotate-file": "^4.5.2",
 		"winston-transport": "^4.4.0",
+		"xosms": "github:Venipa/xosms#v0.7.3",
 		"yaml": "^2.6.0"
 	},
 	"devDependencies": {

@@ -35,7 +35,11 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 			}
 
 			switch (keyName) {
+				case "playpause":
+					trackProvider.toggleTrackPlayback();
+					break;
 				case "pause":
+				case "stop":
 					trackProvider.pauseTrack();
 					break;
 				case "play":
@@ -56,7 +60,7 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 	private async onPosChange(ev: any, pos: number) {
 		try {
 			this.logger.debug("onPosChange", pos);
-			return await this.api.seekTrack(null, {
+			 await this.api.seekTrack(null, {
 				type: "seek",
 				time: pos * 1000,
 			});
@@ -68,7 +72,7 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 	private async onPosSeek(ev: any, seek: number) {
 		try {
 			this.logger.debug("onPosSeek", seek);
-			return await this.api.seekTrack(null, {
+			await this.api.seekTrack(null, {
 				time: seek * 1000,
 			});
 		} catch (error) {
@@ -115,11 +119,12 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 	}
 
 	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE)
-	private __handleTrackMediaOSControl(_ev, isPlaying: boolean, progressSeconds: number = 0) {
+	private __handleTrackMediaOSControl(_ev, playing: boolean, progressSeconds: number = 0) {
 		if (!this.mediaProviderEnabled()) return;
 
 		try {
 			const { trackData } = this.getProvider("track");
+      const isPlaying = !!playing;
 			if (!trackData) {
 				this._mediaProvider!.playbackStatus = MediaPlayerPlaybackStatus.Stopped;
 				this._mediaProvider!.playButtonEnabled = true;

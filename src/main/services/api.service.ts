@@ -8,6 +8,7 @@ import Vibrant from "node-vibrant";
 import IPC_EVENT_NAMES, { API_ROUTES } from "../utils/eventNames";
 import TrackProvider from "./track.service";
 
+type TrackControlResponse = { isPlaying: boolean, time: number };
 @IpcContext
 export default class ApiProvider extends BaseProvider implements AfterInit {
 	private _thread?: ApiWorker;
@@ -103,6 +104,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 
 	@IpcHandle(API_ROUTES.TRACK_LIKE)
 	async postTrackLike(_ev, like: boolean) {
+    return await this.executeCommand<boolean>("like", like);
 		const doLike = (await this.trackProvider.currentSongLikeState())?.[0] === like;
 		if (!doLike) {
 			return this.views.youtubeView.webContents
@@ -124,6 +126,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 
 	@IpcHandle(API_ROUTES.TRACK_DISLIKE)
 	async postTrackDisLike(_ev, like: boolean) {
+    return await this.executeCommand<boolean>("dislike", like);
 		const likeState = (await this.trackProvider.currentSongLikeState())?.[1] === like;
 		if (!likeState) {
 			return this.views.youtubeView.webContents
@@ -150,51 +153,50 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_NEXT)
 	async nextTrack() {
-		return await this.windowContext.sendTrackControl("next");
+		return await this.executeCommand<TrackControlResponse>("next");
 	}
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_REPEAT)
 	async repeatTrack() {
-		return await this.windowContext.sendTrackControl("repeat");
+		return await this.executeCommand<TrackControlResponse>("repeat");
 	}
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_SHUFFLE)
 	async shuffleTrack() {
-		return await this.windowContext.sendTrackControl("shuffle");
+		return await this.executeCommand<TrackControlResponse>("shuffle");
 	}
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_FORWARD)
 	async forwardTrack(_ev, data) {
 		const { time } = data ?? {};
 		if (typeof time === "number" && time !== 0) {
-			this.views.youtubeView.webContents.send("track:seek", { time });
+			return await this.executeCommand<TrackControlResponse>("seek", { time });
 		}
+    throw new Error("Time is not a number");
 	}
 
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_SEEK)
 	async seekTrack(_ev, data: Partial<{ time: number; type?: "seek" }>) {
 		const { time, type } = data || {};
-		if (typeof time !== "number") return;
+		if (typeof time !== "number") throw new Error("Time is not a number");
 
-		this.views.youtubeView.webContents.send("track:seek", {
-			time,
-			type,
-		});
+		return await this.executeCommand<TrackControlResponse>("seek", { time, type });
 	}
 
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_BACKWARD)
 	async backwardTrack(_ev, data) {
 		const { time } = data ?? {};
 		if (typeof time === "number" && time !== 0) {
-			this.views.youtubeView.webContents.send("track:seek", { time: -time });
+			return await this.executeCommand<TrackControlResponse>("seek", { time: -time });
 		}
+    throw new Error("Time is not a number");
 	}
 
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_PREV)
 	async prevTrack() {
-		return await this.windowContext.sendTrackControl("prev");
+		return await this.executeCommand<TrackControlResponse>("prev");
 	}
 
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_PLAY)
 	async playTrack() {
-		return await this.windowContext.sendTrackControl<{ data: { isPlaying: boolean; time: number }; type: any }>("play").then(({ data: { isPlaying, time } }) => {
+		return await this.executeCommand<TrackControlResponse>("play").then(({ isPlaying, time }) => {
 			ipcMain.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, null, isPlaying, time);
 			return { isPlaying, time };
 		});
@@ -202,7 +204,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_PAUSE)
 	async pauseTrack() {
-		return await this.windowContext.sendTrackControl<{ data: { isPlaying: boolean; time: number }; type: any }>("pause").then(({ data: { isPlaying, time } }) => {
+		return await this.executeCommand<TrackControlResponse>("pause").then(({ isPlaying, time }) => {
 			ipcMain.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, null, isPlaying, time);
 			return { isPlaying, time };
 		});
@@ -210,7 +212,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 
 	@IpcHandle(API_ROUTES.TRACK_CONTROL_TOGGLE_PLAY)
 	async toggleTrackPlayback() {
-		return await this.windowContext.sendTrackControl<{ data: { isPlaying: boolean; time: number }; type: any }>("toggle").then(({ data: { isPlaying, time } }) => {
+		return await this.executeCommand<TrackControlResponse>("toggle").then(({ isPlaying, time }) => {
 			ipcMain.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, null, isPlaying, time);
 			return { isPlaying, time };
 		});
