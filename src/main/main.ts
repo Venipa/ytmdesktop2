@@ -70,7 +70,7 @@ const runApp = async function () {
 		}
 	};
 
-	app.on("activate", reactivate);
+	app.on("activate", reactivate); // runs when the app is activated (e.g. when the app is brought back from the background)
 	app.on("ready", async () => {
 		await waitMs(); // next tick
 		mainWindow = await windowManager.createRootWindow();

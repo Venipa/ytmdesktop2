@@ -32,18 +32,17 @@ export function createWindowContext<T, TView extends WebContentsView = WebConten
 			return data as T;
 		}
 		sendToAllViews(ev: string, ...args: any[]): void {
-			return (Object.values(this.views) as TView[])
-				.filter((x) => x && (x instanceof BrowserWindow ? !x.isDestroyed() && !x.webContents.isDestroyed() : x.webContents && !x.webContents.isDestroyed()))
-				.forEach((x: TView) => {
-					try {
-						x.webContents.send(ev, ...args);
-					} catch (ex) {
-						console.error({
-							error: ex,
-							disposed: x.webContents.isDestroyed(),
-						});
-					}
-				});
-		}
+      const validViews = (Object.values(this.views) as TView[]).filter((x) => x && (x instanceof BrowserWindow ? !x.isDestroyed() && !x.webContents.isDestroyed() : x.webContents && !x.webContents.isDestroyed()))
+      for (const view of validViews) {
+        try {
+          view.webContents.send(ev, ...args);
+        } catch (ex) {
+          console.error({
+            error: ex,
+            disposed: view.webContents.isDestroyed(),
+          });
+        }
+      }
+    }
 	})();
 }
