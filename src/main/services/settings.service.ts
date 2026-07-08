@@ -30,6 +30,7 @@ const defaultSettings = {
 		enableStatisticsAndErrorTracing: true,
 		disableHardwareAccel: false,
 		enableTaskbarProgress: true,
+		windowsStyleWindowSizeControls: false,
 	},
 	volumeRatio: {
 		enabled: true,

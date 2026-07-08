@@ -50,6 +50,11 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 			store.set("customcss.thumbnailBackground", false);
 		},
 	},
+	{
+		hook(store) {
+			store.set("app.windowsStyleWindowSizeControls", false);
+		},
+	},
 ];
 
 export default migrations;

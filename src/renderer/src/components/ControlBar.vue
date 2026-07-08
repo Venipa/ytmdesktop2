@@ -22,12 +22,22 @@
       </slot>
       <div class="flex items-center space-x-1">
         <template v-if="!isMac">
-          <div v-if="state?.minimizable" class="control-button" @click="onMin">
-            <MinIcon />
-          </div>
-          <div v-if="state?.maximizable" class="control-button" @click="onMax">
-            <MaxIcon />
-          </div>
+          <template v-if="!useWindowsStyleWindowSizeControls">
+            <div v-if="state?.minimizable" class="control-button" @click="onMin">
+              <MinIcon />
+            </div>
+            <div v-if="state?.maximizable" class="control-button" @click="onMax">
+              <MaxIcon />
+            </div>
+          </template>
+          <template v-else>
+            <div v-if="state?.minimizable" class="control-button" @click="onMin">
+              <MinIconWindowsStyle />
+            </div>
+            <div v-if="state?.maximizable" class="control-button" @click="onMax">
+              <MaxIconWindowsStyle />
+            </div>
+          </template>
         </template>
         <div v-if="showClose" class="control-button control-button-danger" @click="onClose">
           <CloseIcon />
@@ -37,10 +47,13 @@
   </div>
 </template>
 <script lang="ts" setup>
+import { refIpcSetting } from "@shared/utils/Ipc";
+const [useWindowsStyleWindowSizeControls] = refIpcSetting("app.windowsStyleWindowSizeControls");
 import CloseIcon from "@renderer/assets/icons/close.svg";
 import MaxIcon from "@renderer/assets/icons/max-window.svg";
 import MinIcon from "@renderer/assets/icons/min-window.svg";
-
+import MaxIconWindowsStyle from "@renderer/assets/icons/max-window--windows-style.svg";
+import MinIconWindowsStyle from "@renderer/assets/icons/min-window--windows-style.svg";
 import { refWindowState } from "@shared/utils/Ipc";
 import { computed } from "vue";
 type ControlType = "close" | "maximize" | "minimize";
