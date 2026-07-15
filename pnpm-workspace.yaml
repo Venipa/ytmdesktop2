@@ -8,3 +8,14 @@ onlyBuiltDependencies:
   - electron
   - esbuild
   - lefthook
+
+allowBuilds:
+  '@parcel/watcher': true
+  abstract-socket: false
+  bufferutil: true
+  core-js: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  lefthook: true
+  utf-8-validate: true

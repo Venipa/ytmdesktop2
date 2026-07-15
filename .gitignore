@@ -31,3 +31,7 @@ pnpm-debug.log*
 /*config*.mjs
 
 /*.node
+
+package-lock.json
+pnpm-lock.yaml
+pnpm-lock.yaml

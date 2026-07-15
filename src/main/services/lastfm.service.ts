@@ -66,7 +66,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	}
 	private authProgress = false;
 	private async authorizeSession() {
-		if (this.authProgress) return;
+		if (this.authProgress || !this.client) return;
 		const token = await this.client.authorize();
 		const win = new BrowserWindow({
 			width: 480,
@@ -141,12 +141,13 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	}
 	@IpcHandle("action:" + IPC_EVENT_NAMES.LAST_FM_PROFILE)
 	async handleLastFMProfile() {
-		if (!this.client.isConnected()) return;
+		if (!this.client || !this.client.isConnected()) return;
 		const username = this.client.getName() || this.getProvider("settings")?.instance.lastfm.name;
 		return await shell.openExternal(`https://www.last.fm/user/${escapeHTML(username)}/`);
 	}
 	@IpcHandle(IPC_EVENT_NAMES.LAST_FM_AUTHORIZE)
 	async handleLastFMAuth() {
+		if (!this.client) return false;
 		return await this.authorizeSession()
 			.then(() => true)
 			.catch((err) => {
@@ -160,20 +161,22 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		const settings = this.getProvider("settings");
 		settings.set("lastfm.enabled", !!state);
 		settings.saveToDrive();
-		if (state) {
-			this.client.setAuthorize({ token: null, session: null });
-			await this.handleLastFMAuth();
-		} else {
-			this.client.setAuthorize({ token: null, session: null });
-			settings.set("lastfm.name", null);
-			await Promise.all([secureStore.delete(LASTFM_KEYTAR_SESSION), secureStore.delete(LASTFM_KEYTAR_TOKEN)]);
+		if (this.client) {
+			if (state) {
+				this.client.setAuthorize({ token: null, session: null });
+				await this.handleLastFMAuth();
+			} else {
+				this.client.setAuthorize({ token: null, session: null });
+				settings.set("lastfm.name", null);
+				await Promise.all([secureStore.delete(LASTFM_KEYTAR_SESSION), secureStore.delete(LASTFM_KEYTAR_TOKEN)]);
+			}
 		}
 		this.sendState();
 		return this.getState();
 	}
 
 	async handleTrackStart(track: TrackData) {
-		if (!this.client.isConnected()) {
+		if (!this.client || !this.client.isConnected()) {
 			this.logger.debug("lastfm.handleTrackStart", track.video.videoId, "not connected");
 			return;
 		}
@@ -198,7 +201,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	}
 
 	async handleTrackChange(track: TrackData) {
-		if (!this.client.isConnected()) {
+		if (!this.client || !this.client.isConnected()) {
 			this.logger.debug("lastfm.handleTrackChange", track.video.videoId, "not connected");
 			return;
 		}

@@ -21,3 +21,6 @@ declare global {
 	}
 	type StringLiteral<KnownValues extends string> = (string & {}) | KnownValues;
 }
+
+declare module "mpris-service";
+

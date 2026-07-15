@@ -55,14 +55,21 @@
           <span class="opacity-80">(shows a progress bar in the taskbar when playing music.)</span>
         </div>
       </settings-checkbox>
+
+      <settings-checkbox config-key="player.mpris.enabled">
+        <div class="flex flex-col">
+          <span>Enable System Media Controls (MPRIS)</span>
+          <span class="opacity-80">Allow the system to show track info and control playback via media keys.</span>
+        </div>
+      </settings-checkbox>
     </div>
   </div>
 </template>
 <script lang="ts" setup>
 import SettingsCheckbox from "@renderer/components/SettingsCheckbox.vue";
 import SettingsSelect from "@renderer/components/SettingsSelect.vue";
-import { VideoResSetting } from "@shared/utils/ISettings";
 import { refIpcSetting } from "@shared/utils/Ipc";
+import { VideoResSetting } from "@shared/utils/ISettings";
 
 const [resEnabled] = refIpcSetting<VideoResSetting>("player.res.enabled");
 </script>
