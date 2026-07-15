@@ -8,6 +8,7 @@ import type eventProvider from "@main/services/event.service";
 import type lastfmProvider from "@main/services/lastfm.service";
 import type mediaControlProvider from "@main/services/mediaControl.service";
 import type miniPlayerProvider from "@main/services/miniPlayer.service";
+import type mprisProvider from "@main/services/mpris.service";
 import type navigationProvider from "@main/services/navigation.service";
 import type settingsProvider from "@main/services/settings.service";
 import type shortcutProvider from "@main/services/shortcut.service";
@@ -30,6 +31,7 @@ export interface ServiceTypeMap {
   "lastfm": lastfmProvider;
   "mediaControl": mediaControlProvider;
   "miniPlayer": miniPlayerProvider;
+  "mpris": mprisProvider;
   "navigation": navigationProvider;
   "settings": settingsProvider;
   "shortcut": shortcutProvider;
@@ -47,4 +49,5 @@ declare module "ytmd" {
 	export interface BaseProviderNames extends ServiceTypeMap {}
   export type ServiceName = keyof ServiceTypeMap;
 }
+
 export { };

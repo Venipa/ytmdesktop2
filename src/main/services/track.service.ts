@@ -234,6 +234,15 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			this.logger.error("Failed to update media controls:", error);
 		}
 
+		try {
+			const mpris = this.getProvider("mpris");
+			if (mpris) {
+				await mpris.updateTrackMetadata(track);
+			}
+		} catch (error) {
+			this.logger.error("Failed to update mpris:", error);
+		}
+
 		const api = this.getProvider("api") as ApiProvider;
 		api.sendMessage("track:change", track);
 
@@ -294,6 +303,15 @@ export default class TrackProvider extends BaseProvider implements AfterInit {
 			}
 		} catch (error) {
 			this.logger.error("Failed to update media timeline:", error);
+		}
+		try {
+			const mpris = this.getProvider("mpris");
+			if (mpris) {
+				mpris.updatePlaybackStatus(isPlaying);
+				mpris.updatePosition(progressSeconds);
+			}
+		} catch (error) {
+			this.logger.error("Failed to update mpris timeline:", error);
 		}
 	}
 	// Synchronize track state with the media timeline of Mini Player and other views

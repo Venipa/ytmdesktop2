@@ -41,6 +41,9 @@ const defaultSettings = {
 			enabled: false,
 			prefer: "auto",
 		} as VideoResSetting,
+		mpris: {
+			enabled: true,
+		},
 	},
 	discord: {
 		enabled: true,
