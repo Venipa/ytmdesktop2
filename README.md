@@ -1,17 +1,12 @@
-## Star History
-
-<div align="center">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=venipa/ytmdesktop2&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=venipa/ytmdesktop2&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=venipa/ytmdesktop2&type=Date" />
- </picture>
-</div>
-
+> [!NOTE]
+> <b>We hit 1000 Stars, thanks for your continued support ♥️</b>
+>
+> I've never imagined that a personal project for my one use would become that large :)
 
 <h2 align="center">
     Youtube Music for Desktop (ytmdesktop2)
 </h2>
+
 
 <p align="center">
 Beautiful Youtube Music desktop app that includes several customizations for users and developers.
@@ -77,3 +72,12 @@ pnpm dev
 <a href="https://github.com/Venipa/ytmdesktop2/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=Venipa/ytmdesktop2" />
 </a>
+
+
+<div align="center">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=venipa/ytmdesktop2&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=venipa/ytmdesktop2&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=venipa/ytmdesktop2&type=Date" />
+ </picture>
+</div>
