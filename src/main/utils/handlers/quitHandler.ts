@@ -1,5 +1,5 @@
 import { platform } from "@electron-toolkit/utils";
-import { app, IpcMainEvent, ipcMain } from "electron";
+import { app, IpcMainEvent, ipcMain, powerMonitor } from "electron";
 import { isDevelopment } from "../devUtils";
 import { BrowserWindowViews } from "../mappedWindow";
 import { ServiceCollection } from "../providerCollection";
@@ -7,6 +7,7 @@ import { setTrayState } from "./trayState";
 
 let isQuitRequested = false;
 let isForceQuitRequested = false;
+let isSystemShutdownRequested = false;
 let isCleanupRunning = false;
 let cleanupPromise: Promise<void> | null = null;
 
@@ -24,7 +25,8 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 		}
 	};
 
-	const shouldMinimizeToTray = (forceQuit: boolean) => isMinimizeToTrayEnabled() && !forceQuit && !isUpdaterQuitRequested();
+	const shouldMinimizeToTray = (forceQuit: boolean) =>
+		isMinimizeToTrayEnabled() && !forceQuit && !isUpdaterQuitRequested() && !isSystemShutdownRequested;
 
 	const ensureCleanup = async () => {
 		if (!cleanupPromise) {
@@ -43,7 +45,7 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 			hideToTray();
 			return;
 		}
-		isForceQuitRequested = isForceQuitRequested || forceQuit || isUpdaterQuitRequested();
+		isForceQuitRequested = isForceQuitRequested || forceQuit || isUpdaterQuitRequested() || isSystemShutdownRequested;
 		if (isCleanupRunning || isQuitRequested) return;
 		isCleanupRunning = true;
 		await ensureCleanup();
@@ -60,7 +62,7 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 			ev.preventDefault();
 			return;
 		}
-		if (isQuitRequested || isForceQuitRequested || isUpdaterQuitRequested()) return;
+		if (isQuitRequested || isForceQuitRequested || isUpdaterQuitRequested() || isSystemShutdownRequested) return;
 		if (shouldMinimizeToTray(false)) {
 			ev.preventDefault();
 			hideToTray();
@@ -71,7 +73,7 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 	});
 
 	app.on("before-quit", (ev) => {
-		if (isQuitRequested || isForceQuitRequested || isUpdaterQuitRequested()) return;
+		if (isQuitRequested || isForceQuitRequested || isUpdaterQuitRequested() || isSystemShutdownRequested) return;
 		if (shouldMinimizeToTray(false)) {
 			ev.preventDefault();
 			hideToTray();
@@ -85,6 +87,14 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 		if (!platform.isMacOS || isUpdaterQuitRequested()) {
 			void requestQuit(true);
 		}
+	});
+
+	// macOS/Linux emit this before sending before-quit on OS shutdown/logout.
+	// Flag it so before-quit skips preventDefault() — otherwise the OS treats
+	// the app as refusing to quit and halts the shutdown.
+	powerMonitor.on("shutdown", () => {
+		isSystemShutdownRequested = true;
+		void requestQuit(true);
 	});
 
 	// Exit cleanly on request from parent process in development mode.
