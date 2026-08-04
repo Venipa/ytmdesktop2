@@ -1,10 +1,8 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
-import { IpcContext } from "@main/ipc/onIpcEvent";
 import { getWindowFromContents } from "@main/windows/webContentUtils";
 import { createAppWindow, wrapWindowHandler } from "@main/windows/windowUtils";
 import { App, IpcMainInvokeEvent } from "electron";
 
-@IpcContext
 export default class MiniPlayerProvider extends BaseProvider implements AfterInit {
 	constructor(private _app: App) {
 		super("mp");

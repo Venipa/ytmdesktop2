@@ -1,62 +1,39 @@
-import type { TrackData } from "@shared/track/trackData";
-import type { ProgressInfo, UpdateInfo } from "@shared/utils/updater";
+import { cn } from "@renderer/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowLeftIcon, MaximizeIcon, Minimize2, XIcon } from "lucide-react";
-import { useState } from "react";
+import { useMemo } from "react";
 import { ToolbarOptions } from "@/components/toolbar-options";
 import { Spinner } from "@/components/ui/spinner";
+import { useNavigation } from "@/hooks/use-navigation";
 import { useMainWindowState } from "@/hooks/use-settings";
-import { trpc } from "@/lib/trpc";
+import { useTrack } from "@/hooks/use-track";
+import { useUpdater } from "@/hooks/use-updater";
+import { useWindowControls } from "@/hooks/use-window-controls";
 
 export const Route = createFileRoute("/youtube/toolbar")({
 	component: YoutubeToolbarPage,
 });
 
 function YoutubeToolbarPage() {
-	const appVersion = window.api.version;
-	const isDarwin = window.process.platform === "darwin";
+	const appVersion = useMemo(() => window.api.version, []);
+	const isDarwin = useMemo(() => window.app.platform === "darwin", []);
 	const [state] = useMainWindowState();
-	const utils = trpc.useUtils();
-	const { data: updateInfo = null } = trpc.update.get.useQuery();
-	const { data: updateDownloaded = false } = trpc.update.downloaded.useQuery();
-	const [title, setTitle] = useState<string | null>(null);
-	const [updateInfoProgress, setUpdateInfoProgress] = useState<ProgressInfo | null>(null);
-	const [isInstalling, setIsInstalling] = useState(false);
+	const track = useTrack();
+	const { updateInfo, downloaded, progress, isPending: updatePending, runUpdate } = useUpdater();
+	const { minimize, maximize, quit } = useWindowControls();
+	const { goback } = useNavigation();
 
-	const goBack = trpc.navigation.goback.useMutation();
-	const minimize = trpc.app.minimize.useMutation();
-	const maximize = trpc.app.maximize.useMutation();
-	const checkUpdate = trpc.update.check.useMutation({
-		onSettled: () => setIsInstalling(false),
-	});
-
-	trpc.track.onTrack.useSubscription(undefined, {
-		onData: (track) => setTitle((track as TrackData | null)?.video?.title ?? null),
-	});
-	trpc.update.onUpdate.useSubscription(undefined, {
-		onData: (info) => utils.update.get.setData(undefined, info as UpdateInfo | null),
-	});
-	trpc.update.onProgress.useSubscription(undefined, {
-		onData: (progress) => setUpdateInfoProgress(progress as ProgressInfo),
-	});
-	trpc.update.onDownloaded.useSubscription(undefined, {
-		onData: () => utils.update.downloaded.setData(undefined, true),
-	});
-
-	function runUpdate() {
-		if (isInstalling || checkUpdate.isPending) return;
-		setIsInstalling(true);
-		checkUpdate.mutate();
-	}
+	const title = useMemo(() => track?.video?.title ?? null, [track]);
+  const canGoBack = useMemo(() => state?.navigation?.canGoBack ?? false, [state?.navigation]);
 
 	return (
 		<div className="h-full overflow-hidden">
-			<div className={`flex h-10 items-stretch justify-between gap-2 border-b border-gray-600 bg-black px-2 select-none ${isDarwin ? "pl-20" : ""}`}>
+			<div className={`flex h-10 items-stretch justify-between gap-2 border-b border-gray-800 bg-black px-2 select-none ${isDarwin ? "pl-20" : ""}`}>
 				<button
 					type="button"
-					className={`control-button self-center cursor-pointer ${!state?.navigation?.canGoBack ? "disabled" : ""}`}
-					disabled={!state?.navigation?.canGoBack}
-					onClick={() => goBack.mutate()}
+					className={cn("control-button self-center cursor-pointer", !canGoBack && "disabled")}
+					disabled={!canGoBack}
+					onClick={() => void goback()}
 				>
 					<ArrowLeftIcon />
 				</button>
@@ -68,8 +45,8 @@ function YoutubeToolbarPage() {
 						</div>
 					)}
 					{title && (
-						<div className="flex h-7 items-center truncate rounded bg-primary/50 px-3 text-xs">
-							<span className="truncate overflow-ellipsis">{title}</span>
+						<div className="flex h-7 items-center truncate rounded bg-blue-500/50 px-3 text-xs">
+							<span className="truncate text-ellipsis">{title}</span>
 						</div>
 					)}
 				</div>
@@ -84,19 +61,20 @@ function YoutubeToolbarPage() {
 						<button
 							type="button"
 							className={`flex h-7 cursor-pointer items-center gap-2 truncate rounded px-3 text-xs transition duration-100 ease-out ${
-								updateInfo && !updateInfoProgress && !updateDownloaded ? "bg-green-500 text-white" : updateDownloaded ? "text-green-500" : ""
+								updateInfo && !progress && !downloaded ? "bg-green-500 text-white" : downloaded ? "text-green-500" : ""
 							}`}
-							onClick={runUpdate}
+							disabled={updatePending}
+							onClick={() => void runUpdate()}
 						>
-							{updateInfoProgress?.percent ? (
+							{progress?.percent ? (
 								<>
-									<Spinner className="size-3" />
+									<Spinner size="sm" />
 									<span>
-										Downloading Update v{updateInfo.version}... {updateInfoProgress.percent.toFixed(0).padStart(5)}%
+										Downloading Update v{updateInfo.version}... {progress.percent.toFixed(0).padStart(5)}%
 									</span>
 								</>
 							) : (
-								<span className="truncate overflow-ellipsis">New Update v{updateInfo.version}</span>
+								<span className="truncate text-ellipsis">New Update v{updateInfo.version}</span>
 							)}
 						</button>
 					)}
@@ -105,13 +83,13 @@ function YoutubeToolbarPage() {
 						<>
 							<div className="h-6 w-px bg-gray-600" />
 							<div className="flex items-center gap-1">
-								<button type="button" className="control-button" onClick={() => minimize.mutate()}>
+								<button type="button" className="control-button" onClick={() => void minimize()}>
 									<Minimize2 />
 								</button>
-								<button type="button" className="control-button" onClick={() => maximize.mutate()}>
+								<button type="button" className="control-button" onClick={() => void maximize()}>
 									<MaximizeIcon />
 								</button>
-								<button type="button" className="control-button control-button-danger" onClick={() => window.api.quit()}>
+								<button type="button" className="control-button control-button-danger" onClick={() => void quit()}>
 									<XIcon />
 								</button>
 							</div>

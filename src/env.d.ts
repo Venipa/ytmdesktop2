@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="styled-jsx" />
 /// <reference types="@modyfi/vite-plugin-yaml/modules" />
 /// <reference types="electron-vite/node" />
 /// <reference path="../node_modules/electron/electron.d.ts" />

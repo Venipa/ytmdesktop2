@@ -6,6 +6,7 @@ import { createLogger } from "@shared/utils/console";
 import { BrowserWindow, screen, shell, WebContentsView } from "electron";
 import { join } from "path";
 import appIconPath from "~/build/favicon.ico?asset";
+import { registerWindowDialogResponse } from "./dialogResponse";
 import { loadUrlOfWindow, syncWindowStateToWebContents } from "./webContentUtils";
 
 type WindowOptions = {
@@ -76,6 +77,10 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 export async function createAppDialogWindow<Action extends "close" | "ok">(appOptions?: Partial<WindowOptions> & { onResponse?: (action: Action) => void }) {
 	const win = await createAppWindow(appOptions);
 	const onResponse = appOptions?.onResponse;
+	if (onResponse) {
+		const unregister = registerWindowDialogResponse(win.webContents.id, (action) => onResponse(action as Action));
+		win.on("closed", unregister);
+	}
 	win.webContents.on("ipc-message", (ev, channel, data) => {
 		if (channel === "window.response" && typeof data === "object" && typeof data.action === "string") {
 			ev.reply("window.response", "ok");

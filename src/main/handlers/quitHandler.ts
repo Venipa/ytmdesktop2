@@ -1,9 +1,10 @@
 import { platform } from "@electron-toolkit/utils";
 import { ServiceCollection } from "@main/core/providerCollection";
 import { isDevelopment } from "@main/infra/devUtils";
+import { serverMain } from "@main/ipc/serverEvents";
 import { runLifecycle } from "@main/lifecycle";
 import { BrowserWindowViews } from "@main/windows/mappedWindow";
-import { app, IpcMainEvent, ipcMain } from "electron";
+import { app } from "electron";
 import { setTrayState } from "./trayState";
 
 let isQuitRequested = false;
@@ -53,7 +54,8 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 		app.quit();
 	};
 
-	ipcMain.on("app.quit", (ev: IpcMainEvent, forceQuit: boolean = false) => {
+	// Use serverMain (not raw ipcMain) so main-side emit + renderer IPC share one path
+	serverMain.on("app.quit", (_ev, forceQuit: boolean = false) => {
 		void requestQuit(!!forceQuit);
 	});
 

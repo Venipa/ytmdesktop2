@@ -227,30 +227,39 @@ export function getWindowFromContentsId(contentId: number) {
 	return BrowserWindow.getAllWindows().find((x) => x && !x.isDestroyed() && x.webContents.id === contentId);
 }
 export const loadUrlOfWindow = (win: BrowserWindow, page?: string) => {
-	const hashPath = page?.replace(/^(\#?\/?)/, "#/") || "#/";
+	const hash = normalizeHash(page);
 	if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-		return win.loadURL(process.env["ELECTRON_RENDERER_URL"].replace(/\/?$/, hashPath));
+		return win.loadURL(process.env["ELECTRON_RENDERER_URL"].replace(/\/?$/, `#${hash}`));
 	} else {
 		const indexPath = join(__dirname, "../renderer/index.html");
-		return win.loadFile(indexPath, { hash: hashPath });
+		// Electron `hash` must NOT include leading `#`
+		return win.loadFile(indexPath, { hash });
 	}
 };
 export const parseWindowUrl = (page?: string) => {
-	const hashPath = page?.replace(/^(\#?\/?)/, "#/") || "#/";
+	const hash = normalizeHash(page);
 	if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-		return process.env["ELECTRON_RENDERER_URL"].replace(/\/?$/, hashPath);
+		return process.env["ELECTRON_RENDERER_URL"].replace(/\/?$/, `#${hash}`);
 	} else {
 		const indexPath = join(__dirname, "../renderer/index.html");
-		return indexPath + hashPath;
+		return `${indexPath}#${hash}`;
 	}
 };
 export const loadUrlOfWebContents = (win: WebContents, path?: string) => {
-	const hashPath = path?.replace(/^(\#?\/?)/, "#/") || "#/";
+	const hash = normalizeHash(path);
 	if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-		return win.loadURL(process.env["ELECTRON_RENDERER_URL"].replace(/\/?$/, hashPath));
+		return win.loadURL(process.env["ELECTRON_RENDERER_URL"].replace(/\/?$/, `#${hash}`));
 	} else {
 		const indexPath = join(__dirname, "../renderer/index.html");
-		return win.loadFile(indexPath, { hash: hashPath });
+		return win.loadFile(indexPath, { hash });
 	}
 };
+
+/** Return hash path without `#` (e.g. `/`, `/player`). */
+function normalizeHash(page?: string): string {
+	const raw = (page ?? "/").trim() || "/";
+	const withoutHash = raw.replace(/^#/, "");
+	return withoutHash.startsWith("/") ? withoutHash : `/${withoutHash}`;
+}
+
 export {};

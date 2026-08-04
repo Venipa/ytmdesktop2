@@ -12,6 +12,8 @@ function TaskViewPage() {
 	const [showWinBorder, setShowWinBorder] = useState(false);
 	const accentColor = "#a0a0a0";
 	const { data: isWin11 } = trpc.app.isWin11.useQuery();
+	const { mutateAsync: openWindow } = trpc.app.openWindow.useMutation();
+	const { mutateAsync: quit } = trpc.app.quit.useMutation();
 
 	useEffect(() => {
 		document.title = "YouTube Music - Task View";
@@ -19,7 +21,7 @@ function TaskViewPage() {
 
 	useEffect(() => {
 		if (isWin11 === undefined) return;
-		setShowWinBorder(window.process.platform === "win32" ? !isWin11 : false);
+		setShowWinBorder(window.app.platform === "win32" ? !isWin11 : false);
 	}, [isWin11]);
 
 	return (
@@ -33,7 +35,7 @@ function TaskViewPage() {
 				</div>
 				<div className="flex flex-shrink-0 items-center gap-2">
 					<div className="h-6 w-px bg-gray-600" />
-					<button type="button" className="control-button" onClick={() => window.api.openWindow("settingsWindow")}>
+					<button type="button" className="control-button" onClick={() => void openWindow("settingsWindow")}>
 						<SettingsIcon />
 					</button>
 				</div>
@@ -49,7 +51,7 @@ function TaskViewPage() {
 					<button type="button" className="task-menu-item">
 						Test
 					</button>
-					<button type="button" className="task-menu-item flex items-center gap-2" onClick={() => window.api.quit(true)}>
+					<button type="button" className="task-menu-item flex items-center gap-2" onClick={() => void quit(true)}>
 						<ExitIcon className="size-4" />
 						<span>Exit App</span>
 					</button>

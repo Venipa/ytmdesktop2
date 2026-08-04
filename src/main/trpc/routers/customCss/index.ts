@@ -1,1 +1,1 @@
-export { customCssRouter as default, customCssRouter } from "./router";
+export { customCssRouter } from "./router";

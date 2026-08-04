@@ -7,7 +7,7 @@ type TrackControlFn = <T extends { type: TrackControlTypes } = any>(type: TrackC
 export interface BrowserWindowViews<T, TView extends WebContentsView = WebContentsView> {
 	main: BrowserWindow;
 	views: { [key: string]: TView } & T;
-	/** Global bus emit for tRPC subscriptions / @IpcOn — no webContents.send. */
+	/** Global bus emit for tRPC subscriptions / serverMain listeners — no webContents.send. */
 	sendToAllViews(ev: string, ...args: any[]): void;
 	sendTrackControl: TrackControlFn;
 }

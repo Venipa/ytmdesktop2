@@ -4,7 +4,7 @@ declare const __dirname: string;
 interface PreloadContext {
 	api: typeof pd.api;
 	ipcRenderer: typeof pd.ipcRenderer;
-	process: typeof pd.process;
+	app: typeof pd.app;
 }
 declare global {
 	declare const __dirname: string;

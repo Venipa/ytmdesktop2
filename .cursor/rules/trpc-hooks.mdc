@@ -1,0 +1,47 @@
+---
+description: tRPC React Query hook destructuring naming in renderer
+globs: src/renderer/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# tRPC hook destructuring
+
+Name hooks after the **procedure** (last segment of the path), not the mutation/query object.
+
+## useMutation
+
+Always destructure `mutateAsync` as the procedure name. Pull `error` / `isPending` (or `isLoading`) only when used.
+
+```tsx
+// ✅
+const { mutateAsync: minimize } = trpc.app.minimize.useMutation();
+const { mutateAsync: check, isPending: checkPending, error: checkError } = trpc.update.check.useMutation();
+
+await minimize();
+
+// ❌
+const minimize = trpc.app.minimize.useMutation();
+minimize.mutateAsync();
+const minimizeMutation = trpc.app.minimize.useMutation();
+```
+
+## useQuery
+
+Destructure `data` as the procedure name. Pull `error` / `isPending` / `isLoading` only when used.
+
+```tsx
+// ✅
+const { data: isWin11 } = trpc.app.isWin11.useQuery();
+const { data: updateInfo = null, isPending: updatePending } = trpc.update.get.useQuery();
+
+// ❌
+const updateQuery = trpc.update.get.useQuery();
+updateQuery.data;
+const { data } = trpc.update.get.useQuery(); // unnamed / generic
+```
+
+## Notes
+
+- Alias = procedure key: `trpc.track.togglePlay` → `mutateAsync: togglePlay`
+- Defaults on `data` OK: `data: updateDownloaded = false`
+- Subscriptions stay `useSubscription`; this rule is for query/mutation only

@@ -1,9 +1,9 @@
-import { clamp, debounce } from "lodash-es";
-import { type InputHTMLAttributes, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { clamp } from "lodash-es";
+import { type InputHTMLAttributes, type ReactNode, useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useSetting } from "@/hooks/use-settings";
+import { useSettingsState } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
 
 export interface SettingsInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "onChange" | "value" | "defaultValue"> {
@@ -16,66 +16,68 @@ export interface SettingsInputProps extends Omit<InputHTMLAttributes<HTMLInputEl
 	className?: string;
 }
 
-export function SettingsInput({ configKey, defaultValue, min, max, label, hint, className, type = "text", ...attrs }: SettingsInputProps) {
-	const [storedValue, setStoredValue] = useSetting(configKey, defaultValue ?? "");
-	const [value, setValue] = useState<any>(storedValue ?? defaultValue ?? "");
+export function SettingsInput({ configKey, defaultValue = "", min, max, label, hint, className, type = "text", ...attrs }: SettingsInputProps) {
+	const id = useId();
+	const [value, setValue, { isPending }] = useSettingsState(configKey, defaultValue, { debounce: 500 });
 	const fileInputRef = useRef<HTMLInputElement>(null);
-
-	useEffect(() => {
-		setValue(storedValue ?? defaultValue ?? "");
-	}, [storedValue, defaultValue]);
-
-	const updateSetting = useMemo(
-		() =>
-			debounce((ev: HTMLInputElement) => {
-				if (ev.type === "file" && (!ev.files || ev.files.length === 0)) return;
-				let inputValue: unknown;
-				if (ev.type === "number" && (min !== undefined || max !== undefined)) {
-					const minValue = min ?? ev.valueAsNumber;
-					const maxValue = max ?? ev.valueAsNumber;
-					inputValue = clamp(Number(ev.value), minValue, maxValue);
-				} else {
-					inputValue = ev.type === "file" ? window.api.getPathFromFile(ev.files![0]) : ev.value;
-				}
-				setStoredValue(inputValue as typeof storedValue);
-			}, 500),
-		[setStoredValue, min, max],
-	);
 
 	if (type === "file") {
 		return (
-			<div className={cn("flex flex-col gap-2", className)}>
-				{label && <Label>{label}</Label>}
-				<div className="flex items-center gap-2">
-					<div className="flex h-12 flex-1 items-center rounded-lg bg-white/5 px-3 text-sm text-muted-foreground">{value}</div>
-					<Button type="button" onClick={() => fileInputRef.current?.click()}>
-						Browse
-					</Button>
-				</div>
-				<input
-					ref={fileInputRef}
-					type="file"
-					className="hidden"
-					accept={attrs.accept}
-					onChange={(ev) => updateSetting(ev.target)}
-				/>
-				{hint}
-			</div>
+			<Field data-disabled={isPending || undefined} className={cn(className)}>
+				{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
+				<FieldContent>
+					<div className="flex items-center gap-2">
+						<div className="flex h-8 min-w-0 flex-1 items-center truncate rounded-lg border border-input bg-transparent px-2.5 text-xs text-muted-foreground">
+							{String(value || "No file selected")}
+						</div>
+						<Button type="button" variant="outline" size="sm" disabled={isPending} onClick={() => fileInputRef.current?.click()}>
+							Browse
+						</Button>
+					</div>
+					<input
+						ref={fileInputRef}
+						id={id}
+						type="file"
+						className="hidden"
+						accept={attrs.accept}
+						disabled={isPending}
+						onChange={(ev) => {
+							const file = ev.target.files?.[0];
+							if (!file) return;
+							setValue(window.api.getPathFromFile(file));
+						}}
+					/>
+					{hint}
+				</FieldContent>
+			</Field>
 		);
 	}
 
 	return (
-		<div className={cn("flex flex-col gap-2", className)}>
-			{label && <Label>{label}</Label>}
+		<Field data-disabled={isPending || undefined} className={cn(className)}>
+			{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
 			<Input
+				id={id}
 				type={type}
 				placeholder={attrs.placeholder}
-				value={value ?? ""}
+				value={String(value ?? "")}
 				min={min}
 				max={max}
-				onChange={(ev) => updateSetting(ev.target)}
+				disabled={isPending}
+				onChange={(ev) => {
+					if (type === "number" && (min !== undefined || max !== undefined)) {
+						const n = Number(ev.target.value);
+						if (!Number.isFinite(n)) {
+							setValue(ev.target.value);
+							return;
+						}
+						setValue(clamp(n, min ?? n, max ?? n));
+						return;
+					}
+					setValue(ev.target.value);
+				}}
 			/>
-			{hint}
-		</div>
+			{hint ? <FieldDescription>{hint}</FieldDescription> : null}
+		</Field>
 	);
 }

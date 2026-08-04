@@ -1,12 +1,11 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
-import { IpcContext, IpcOn } from "@main/ipc/onIpcEvent";
+import { serverMain } from "@main/ipc/serverEvents";
 import CSSHandler from "@main/lib/css/handler";
 import playerThumbnailStyle from "@main/trpc/routers/customCss/resources/basic-style/player-thumbnail-background.scss?raw";
 import basicScrollStyle from "@main/trpc/routers/customCss/resources/basic-style/thumb.scss?raw";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import { rootWindowClearCustomCss, rootWindowInjectCustomCss } from "@main/windows/webContentUtils";
 import customDefaultCss from "@renderer/assets/default-custom.scss?raw";
-import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import type { App } from "electron";
 import fs from "fs";
 import { debounce } from "lodash-es";
@@ -26,7 +25,6 @@ export interface CustomCssConfig {
 	thumbnailBackground?: boolean;
 }
 
-@IpcContext
 export default class CustomCSSProvider extends BaseProvider implements AfterInit {
 	private scssWatcher?: fs.FSWatcher | null;
 	private cssCache: Map<string, CompiledCSS> = new Map();
@@ -38,10 +36,12 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 		return this.getProvider("settings");
 	}
 	constructor(private app: App) {
-		super("customcss");
+		super("customCss");
+		// Preload `api.reloadCustomCss` still sends this; React uses tRPC `customCss.reload`.
+		serverMain.on("customcss.update", () => void this.requestUpdate());
 	}
-	private getScssPath() {
-		return this.settingsInstance.get("customcss.scssFile") ?? path.resolve(this.app.getPath("documents"), "ytmdesktop", "custom.scss");
+	private getScssPath(): string {
+		return this.settingsInstance.get<string | null>("customcss.scssFile") ?? path.resolve(this.app.getPath("documents"), "ytmdesktop", "custom.scss");
 	}
 	private clearCache() {
 		this.cssCache.clear();
@@ -139,18 +139,10 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 		const after = performance.now();
 		this.logger.debug(`CSS injected in ${(after - before).toFixed(2)}ms`);
 	}
-	requestUpdate() {
-		return this.updateCSS();
-	}
-
-	@IpcOn("customcss.update")
-	private async _event_customCssUpdate() {
+	async requestUpdate() {
 		await this.updateCSS();
 	}
-	@IpcOn(IPC_EVENT_NAMES.SERVER_SETTINGS_CHANGE, {
-		filter: (key: string) => ["customcss.enabled", "customcss.scssFile", "customcss.watching"].includes(key),
-		debounce: 1000,
-	})
+
 	private async _event_settingsChange(_key: string, value: any) {
 		const config = this.settingsInstance.get<CustomCssConfig>("customcss");
 		this.logger.debug(`Settings changed: ${_key}`, value);
@@ -169,10 +161,6 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 			await rootWindowClearCustomCss(this.views.youtubeView);
 		}
 	}
-	@IpcOn(IPC_EVENT_NAMES.SERVER_SETTINGS_CHANGE, {
-		filter: (key: string) => ["customcss.thumbnailBackground"].includes(key),
-		debounce: 1000,
-	})
 	private async _event_settingsChangeThumbnailBackground(_key: string, thumbnailBackgroundEnabled: boolean) {
 		if (!this.thumbnailBackgroundStyle) this.thumbnailBackgroundStyle = new CSSHandler(this.windowContext.views.youtubeView.webContents, { translateSass: true });
 		if (thumbnailBackgroundEnabled && !this.thumbnailBackgroundStyle.isCreated) await this.thumbnailBackgroundStyle.createOrUpdate(playerThumbnailStyle);
@@ -187,6 +175,16 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 		return false;
 	}
 	async AfterInit() {
+		this.settingsInstance.onSettingChange(
+			["customcss.enabled", "customcss.scssFile", "customcss.watching"],
+			(value, _prev, key) => void this._event_settingsChange(key, value),
+			{ debounce: 1000 },
+		);
+		this.settingsInstance.onSettingChange(
+			"customcss.thumbnailBackground",
+			(value) => void this._event_settingsChangeThumbnailBackground("customcss.thumbnailBackground", value as boolean),
+			{ debounce: 1000 },
+		);
 		this.attachBasicStyle();
 		await this._initializeSCSS();
 		const config = this.settingsInstance.get<CustomCssConfig>("customcss");

@@ -1,13 +1,15 @@
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "electron-vite";
 import fs from "fs";
 import { camelCase } from "lodash-es";
+import { createRequire } from "module";
 import path, { basename, resolve } from "path";
 import { type AliasOptions, type Plugin, type UserConfigExport } from "vite";
 import svgr from "vite-plugin-svgr";
 
+const require = createRequire(import.meta.url);
 const glob = (await import("fast-glob")).default;
 
 /**
@@ -16,6 +18,7 @@ const glob = (await import("fast-glob")).default;
  */
 const sharedAliases: AliasOptions = {
 	"@main": resolve("src/main"),
+  "@renderer": resolve("src/renderer/src"),
 	"@routers": resolve("src/main/trpc/routers"),
 	"@preload": resolve("src/preload"),
 	"@shared": resolve("src/shared"),
@@ -40,7 +43,6 @@ const rendererResolve: UserConfigExport = {
 	resolve: {
 		alias: {
 			...sharedAliases,
-			"@renderer": resolve("src/renderer/src"),
 			"@": resolve("src/renderer/src"),
 		},
 	},
@@ -161,7 +163,9 @@ export default defineConfig({
 				routesDirectory: "./src/routes",
 				generatedRouteTree: "./src/routeTree.gen.ts",
 			}),
-			react(),
+			react({
+				plugins: [[require.resolve("@swc/plugin-styled-jsx"), {}]],
+			}),
 			svgr(),
 			tailwindcss(),
 		],

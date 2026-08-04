@@ -8,6 +8,7 @@ onlyBuiltDependencies:
 
 allowBuilds:
   '@parcel/watcher': true
+  '@swc/core': set this to true or false
   bufferutil: true
   core-js: true
   electron: true

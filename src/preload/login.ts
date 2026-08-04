@@ -1,5 +1,5 @@
 import preloadRoot from "./base";
-import { YOUTUBE_HOST_PREFIX, createContextExposer, createHostDetector, createIpcReporter, initializeWithDomLoaded } from "./utils";
+import { createContextExposer, createHostDetector, createIpcReporter, initializeWithDomLoaded, YOUTUBE_HOST_PREFIX } from "./utils";
 
 // Initialize utilities
 const contextExposer = createContextExposer();
@@ -15,5 +15,5 @@ initializeWithDomLoaded(() => {
 contextExposer.expose("ytdapi", {
 	isYoutubeWindow: isYoutubeWindow(),
 	api: preloadRoot.api,
-	process: preloadRoot.process,
+	process: preloadRoot.app,
 });

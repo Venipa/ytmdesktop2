@@ -1,14 +1,12 @@
 import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { isDevelopment, isProduction } from "@main/infra/devUtils";
-import { IpcContext, IpcOn } from "@main/ipc/onIpcEvent";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import { App, powerSaveBlocker } from "electron";
 import { basename } from "path";
 
 const GTK_VERSION = /^[2-4]+$/.test(process.env.GTK_VERSION ?? "") ? process.env.GTK_VERSION : "3";
 
-@IpcContext
 export default class StartupProvider extends BaseProvider implements AfterInit, BeforeStart {
 	get settingsInstance(): SettingsProvider {
 		return this.getProvider("settings");
@@ -65,6 +63,9 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 		return !!process.argv.find((arg) => arg === "--minimized");
 	}
 	async AfterInit() {
+		this.settingsInstance.onSettingChange("app.autostart", (enabled) => void this.onAutoStartToggle("app.autostart", enabled as boolean), {
+			debounce: 1000,
+		});
 		const app = this.settingsInstance.instance.app;
 		if (isProduction) {
 			if (app.autostart) {
@@ -81,10 +82,6 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 			}
 		}
 	}
-	@IpcOn("settingsProvider.change", {
-		debounce: 1000,
-		filter: (key: string) => key === "app.autostart",
-	})
 	private async onAutoStartToggle(key: string, enabled: boolean) {
 		if (enabled) {
 			this.app.setLoginItemSettings({

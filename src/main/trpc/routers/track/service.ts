@@ -1,8 +1,6 @@
 import { createSendHandler } from "@main/ipc/ipc";
 import { serverMain } from "@main/ipc/serverEvents";
 import { getLifecycleContext, onAfterInit } from "@main/lifecycle";
-import type ApiProvider from "@main/trpc/routers/api/service";
-import type DiscordProvider from "@main/trpc/routers/discord/service";
 import type { BrowserWindowViews } from "@main/windows/mappedWindow";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import type { TrackData } from "@shared/track/trackData";
@@ -14,7 +12,7 @@ import { clamp, clone, debounce } from "lodash-es";
 import Vibrant from "node-vibrant";
 import { firstBy } from "thenby";
 
-type TrackState = {
+export type TrackState = {
 	id: string;
 	playing: boolean;
 	progress: number;
@@ -77,6 +75,7 @@ export class TrackService {
 	private _trackDataCache: TrackEntry | null = null;
 	private _currentPallete: { id: string; color: string } | null = null;
 	private trackChangeTimeout: NodeJS.Timeout | null = null;
+	private lastLastFmTrackId: string | null = null;
 	private _ipcBound = false;
 	private _styleBound = false;
 
@@ -139,42 +138,43 @@ export class TrackService {
 	}
 
 	async executeCommand<T = unknown>(command: string, ...args: unknown[]): Promise<T> {
-		return await createSendHandler<T>(this.views.youtubeView, `plugins:track:cmd:${command}`)(...args);
+		// track-api-controls plugin registers under service "api" → plugins:api:cmd:*
+		return await createSendHandler<T>(this.views.youtubeView, `plugins:api:cmd:${command}`)(...args);
 	}
 
-	getTrackInformation() {
+	getTrackInformation(): TrackEntry | null {
 		return this.trackData;
 	}
 
-	getTrackState() {
+	getTrackState(): TrackState | null {
 		return this.trackState;
 	}
 
-	async postTrackLike(_ev: unknown, like: boolean) {
+	async postTrackLike(_ev: unknown, like: boolean): Promise<boolean | null> {
 		return await this.executeCommand<boolean>("like", like);
 	}
 
-	async postTrackDisLike(_ev: unknown, dislike: boolean) {
+	async postTrackDisLike(_ev: unknown, dislike: boolean): Promise<boolean | null> {
 		return await this.executeCommand<boolean>("dislike", dislike);
 	}
 
-	async nextTrack() {
+	async nextTrack(): Promise<TrackControlResponse> {
 		return await this.executeCommand<TrackControlResponse>("next");
 	}
 
-	async prevTrack() {
+	async prevTrack(): Promise<TrackControlResponse> {
 		return await this.executeCommand<TrackControlResponse>("prev");
 	}
 
-	async repeatTrack() {
+	async repeatTrack(): Promise<TrackControlResponse> {
 		return await this.executeCommand<TrackControlResponse>("repeat");
 	}
 
-	async shuffleTrack() {
+	async shuffleTrack(): Promise<TrackControlResponse> {
 		return await this.executeCommand<TrackControlResponse>("shuffle");
 	}
 
-	async forwardTrack(_ev: unknown, data?: { time?: number }) {
+	async forwardTrack(_ev: unknown, data?: { time?: number }): Promise<TrackControlResponse> {
 		const { time } = data ?? {};
 		if (typeof time === "number" && time !== 0) {
 			return await this.executeCommand<TrackControlResponse>("seek", { time });
@@ -182,7 +182,7 @@ export class TrackService {
 		throw new Error("Time is not a number");
 	}
 
-	async backwardTrack(_ev: unknown, data?: { time?: number }) {
+	async backwardTrack(_ev: unknown, data?: { time?: number }): Promise<TrackControlResponse> {
 		const { time } = data ?? {};
 		if (typeof time === "number" && time !== 0) {
 			return await this.executeCommand<TrackControlResponse>("seek", { time: -time });
@@ -190,27 +190,27 @@ export class TrackService {
 		throw new Error("Time is not a number");
 	}
 
-	async seekTrack(_ev: unknown, data?: Partial<{ time: number; type?: "seek" }>) {
+	async seekTrack(_ev: unknown, data?: Partial<{ time: number; type?: "seek" }>): Promise<TrackControlResponse> {
 		const { time, type } = data || {};
 		if (typeof time !== "number") throw new Error("Time is not a number");
 		return await this.executeCommand<TrackControlResponse>("seek", { time, type });
 	}
 
-	async playTrack() {
+	async playTrack(): Promise<TrackControlResponse> {
 		return await this.executeCommand<TrackControlResponse>("play").then(({ isPlaying, time }) => {
 			ipcMain.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, null, isPlaying, time);
 			return { isPlaying, time };
 		});
 	}
 
-	async pauseTrack() {
+	async pauseTrack(): Promise<TrackControlResponse> {
 		return await this.executeCommand<TrackControlResponse>("pause").then(({ isPlaying, time }) => {
 			ipcMain.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, null, isPlaying, time);
 			return { isPlaying, time };
 		});
 	}
 
-	async toggleTrackPlayback() {
+	async toggleTrackPlayback(): Promise<TrackControlResponse> {
 		return await this.executeCommand<TrackControlResponse>("toggle").then(({ isPlaying, time }) => {
 			ipcMain.emit(IPC_EVENT_NAMES.TRACK_PLAYSTATE, null, isPlaying, time);
 			return { isPlaying, time };
@@ -220,7 +220,7 @@ export class TrackService {
 	setTrackState(fn: TrackState | ((d: TrackState) => void | TrackState)) {
 		if (!this._trackState) {
 			this._trackState = {
-				id: this._activeTrackId,
+				id: this._activeTrackId ?? "",
 				playing: false,
 				progress: 0,
 				duration: 0,
@@ -232,23 +232,22 @@ export class TrackService {
 				accent: null,
 			};
 		}
-		const prevId = this._trackState.id;
+		const state = this._trackState;
+		const prevId = state.id;
 		const isFunc = typeof fn === "function";
-		const ret = isFunc ? fn(this._trackState) : fn;
+		const ret = isFunc ? fn(state) : fn;
 		const isVoid = ret === void 0 || ret === undefined;
 
 		if (!isVoid) {
 			this._trackState = ret as TrackState;
 		}
-		if (typeof this.trackState?.percentage === "number") this.trackState.percentage = clamp(this.trackState.percentage, 0, 100);
-		if (prevId !== this.trackState.id) {
-			this.logger.debug("title id change", prevId, "=>", this.trackState.id);
-			(this.getProvider("discord") as DiscordProvider).updateTrackProgress(true, 0, true);
+		if (typeof this._trackState.percentage === "number") this._trackState.percentage = clamp(this._trackState.percentage, 0, 100);
+		if (prevId !== this._trackState.id) {
+			this.logger.debug("title id change", prevId, "=>", this._trackState.id);
+			(this.getProvider("discord") as { updateTrackProgress?: (a: boolean, b: number, c: boolean) => void })?.updateTrackProgress?.(true, 0, true);
 		}
-		this.windowContext.sendToAllViews("track:play-state", {
-			...this._trackState,
-		});
-		events.emit("track:state-change", this._trackState);
+		// Shallow clone — in-place mutation keeps same ref; React setState skips via Object.is.
+		events.emit("track:state-change", { ...this._trackState });
 	}
 
 	async getActiveTrackByDOM(): Promise<string | null> {
@@ -317,27 +316,26 @@ export class TrackService {
 
 		this.log(`active track:`, trackId);
 		this._activeTrackId = trackId;
-		if (this.trackData) {
-			const td = this.trackData;
-			const [isLiked, isDLiked] = await this.currentSongLikeState();
-			await this.pushTrackToViews(td);
+		const td = this.trackData;
+		// Wait for onTrackInfo when payload not ready — never clear pending id
+		if (!td || td.video?.videoId !== trackId) return;
 
-			this.setTrackState({
-				id: trackId,
-				playing: this.playing,
-				duration: this.getTrackDuration() ?? 0,
-				liked: isLiked,
-				disliked: isDLiked,
-				progress: 0,
-				uiProgress: 0,
-				startedAt: Date.now() / 1000,
-				percentage: 0,
-				eventType: "state",
-				accent: null,
-			});
-		} else {
-			this._activeTrackId = null;
-		}
+		const [isLiked, isDLiked] = await this.currentSongLikeState();
+		await this.pushTrackToViews(td);
+
+		this.setTrackState({
+			id: trackId,
+			playing: this.playing,
+			duration: this.getTrackDuration() ?? 0,
+			liked: isLiked,
+			disliked: isDLiked,
+			progress: 0,
+			uiProgress: 0,
+			startedAt: Date.now() / 1000,
+			percentage: 0,
+			eventType: "state",
+			accent: null,
+		});
 	}
 
 	async pushTrackToViews(trackRef: TrackData, updateLastFm: boolean = true) {
@@ -357,7 +355,7 @@ export class TrackService {
 			this.logger.error("Failed to update media controls:", error);
 		}
 
-		const api = this.getProvider("api") as ApiProvider;
+		const api = this.getProvider("api") as any;
 		api.sendMessage("track:change", track);
 
 		const lastfm = this.getProvider("lastfm") as {
@@ -366,17 +364,20 @@ export class TrackService {
 			handleTrackChange: (track: TrackData) => void;
 		};
 		const lastfmState = lastfm.getState();
+		const videoId = track.video.videoId;
+		const shouldUpdateLastFm = updateLastFm && !!videoId && videoId !== this.lastLastFmTrackId;
 		try {
-			if (updateLastFm && lastfm && lastfmState.connected && !lastfmState.processing && track.video.videoId) {
+			if (shouldUpdateLastFm && lastfm && lastfmState.connected && !lastfmState.processing) {
+				this.lastLastFmTrackId = videoId;
 				await lastfm.handleTrackStart(track);
-				this.logger.debug("lastfm.handleTrackStart", track.video.videoId, { lastfmState });
+				this.logger.debug("lastfm.handleTrackStart", videoId, { lastfmState });
 				if (this.trackChangeTimeout) {
 					clearTimeout(this.trackChangeTimeout);
 				}
 
 				this.trackChangeTimeout = setTimeout(
 					() => {
-						this.logger.debug("lastfm.handleTrackChange", track.video.videoId, { lastfmState });
+						this.logger.debug("lastfm.handleTrackChange", videoId, { lastfmState });
 						lastfm.handleTrackChange(track);
 						if (this.trackChangeTimeout) {
 							clearTimeout(this.trackChangeTimeout);
@@ -412,7 +413,7 @@ export class TrackService {
 	}
 
 	private async updateMediaTimeline(duration: number, progressSeconds: number, isPlaying: boolean) {
-		const discordProvider = this.getProvider("discord") as DiscordProvider;
+		const discordProvider = this.getProvider("discord") as any;
 		await discordProvider.updateTrackProgress(isPlaying, progressSeconds);
 		try {
 			const mediaController = this.getProvider("mediaControl") as { instance?: { setTimeline: (duration: number, progress: number) => void } };
@@ -432,6 +433,7 @@ export class TrackService {
 			state.uiProgress = progressSeconds;
 			state.percentage = (progressSeconds / duration) * 100;
 			state.playing = isPlaying;
+			state.duration = duration;
 			state.eventType = "progress";
 		});
 	}
@@ -442,7 +444,8 @@ export class TrackService {
 		await this.updateMediaTimeline(duration, progressSeconds, isPlaying);
 	}
 
-	async getTrackAccent(track: TrackData = this.trackData!) {
+	async getTrackAccent(track: TrackData | null = this.trackData): Promise<string | null> {
+		if (!track) return null;
 		const thumbnailUrl = track?.video?.thumbnail?.thumbnails?.[0]?.url;
 		if (!thumbnailUrl) return null;
 
@@ -453,7 +456,7 @@ export class TrackService {
 			.then((th) => th.arrayBuffer())
 			.then((file) => Vibrant.from(Buffer.from(file)))
 			.then((clr) => clr.getPalette())
-			.then((clr) => clr.Vibrant?.hex)
+			.then((clr) => clr.Vibrant?.hex ?? null)
 			.catch((err) => {
 				this.logger.error("Error extracting accent color:", err);
 				return null;
@@ -465,7 +468,7 @@ export class TrackService {
 
 	onTrackStateChange(callback: (state: TrackState) => void, options: { debounce?: number; immediate?: boolean } = { immediate: false }) {
 		const handler = debounce(callback, options?.debounce);
-		if (options.immediate) handler(this.trackState);
+		if (options.immediate && this._trackState) handler(this._trackState);
 		events.on("track:state-change", handler);
 		this.app.on("before-quit", () => events.off("track:state-change", handler));
 		return () => events.off("track:state-change", handler);
@@ -473,7 +476,7 @@ export class TrackService {
 
 	onTrackChange(callback: (track: TrackData) => void, options: { debounce?: number; immediate?: boolean } = { debounce: 1000, immediate: false }) {
 		const handler = debounce(callback, options?.debounce);
-		if (options.immediate) handler(this.trackData);
+		if (options.immediate && this.trackData) handler(this.trackData);
 		events.on("track:change", handler);
 		this.app.on("before-quit", () => events.off("track:change", handler));
 		return () => events.off("track:change", handler);
@@ -494,9 +497,9 @@ export class TrackService {
 	/** tRPC subscription — service EventEmitter, not ipcMain. */
 	subscribePlayState() {
 		return observable<TrackState | null>((emit) => {
-			const handler = (state: TrackState) => emit.next(state);
+			const handler = (state: TrackState) => emit.next({ ...state });
 			events.on("track:state-change", handler);
-			if (this._trackState) emit.next(this._trackState);
+			if (this._trackState) emit.next({ ...this._trackState });
 			return () => {
 				events.off("track:state-change", handler);
 			};

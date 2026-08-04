@@ -1,10 +1,10 @@
 import type { TrackData } from "@shared/track/trackData";
-import { logger } from "@shared/utils/console";
 import { createFileRoute } from "@tanstack/react-router";
+import { cva, type VariantProps } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
 import { clamp } from "lodash-es";
 import { AlertCircleIcon, CheckIcon } from "lucide-react";
-import { type CSSProperties, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ButtonHTMLAttributes, type CSSProperties, type MouseEvent, useCallback, useMemo, useRef, useState } from "react";
 import BackwardIcon from "@/assets/icons/backward10.svg?react";
 import ForwardIcon from "@/assets/icons/forward10.svg?react";
 import LastFMIcon from "@/assets/icons/lastfm.svg?react";
@@ -18,6 +18,7 @@ import PrevIcon from "@/assets/icons/prev.svg?react";
 import UnLockIcon from "@/assets/icons/unlock.svg?react";
 import { ControlBar } from "@/components/control-bar";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLastFm } from "@/hooks/use-lastfm";
 import { useWindowState } from "@/hooks/use-settings";
 import { trpc } from "@/lib/trpc";
@@ -33,6 +34,50 @@ interface PlayState {
 	duration: number;
 	liked: boolean;
 	disliked: boolean;
+}
+
+const playerButtonVariants = cva(
+	[
+		"inline-flex shrink-0 cursor-pointer items-center justify-center text-zinc-200 transition-all duration-100 ease-in-out",
+		"disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 disabled:transform-none",
+		"[&_svg]:pointer-events-none [&_svg]:shrink-0",
+	].join(" "),
+	{
+		variants: {
+			variant: {
+				default: [
+					"size-10 rounded-lg p-2",
+					"enabled:hover:bg-zinc-50/5",
+					"enabled:active:scale-95 enabled:active:bg-zinc-50/10",
+					"data-[active=true]:[&_svg]:fill-current data-[active=true]:[&_svg_path]:stroke-inherit",
+				].join(" "),
+				hero: [
+					"mx-auto size-10 shrink-0 rounded-full border border-zinc-600 shadow-sm",
+					"enabled:active:scale-95 enabled:active:border-zinc-50/90",
+					"[&_svg]:size-6",
+				].join(" "),
+			},
+		},
+		defaultVariants: {
+			variant: "default",
+		},
+	},
+);
+
+type PlayerButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
+	VariantProps<typeof playerButtonVariants> & {
+		active?: boolean;
+	};
+
+function PlayerButton({ className, variant, active, type = "button", ...props }: PlayerButtonProps) {
+	return (
+		<button
+			type={type}
+			data-active={active ? "true" : undefined}
+			className={cn(playerButtonVariants({ variant }), className)}
+			{...props}
+		/>
+	);
 }
 
 const zeroPad = (num: number | undefined): string => String(num ?? 0).padStart(2, "0");
@@ -53,58 +98,55 @@ function MiniPlayerPage() {
 	const { lastFM, lastFMLoading, lastFMState, authorizeLastFM } = useLastFm();
 
 	const [accentColor, setAccentColor] = useState<string | null>(null);
-	const [showWinBorder, setShowWinBorder] = useState<boolean | "win11">(false);
 	const [trackBusy, setTrackBusy] = useState(false);
-	const [isTop, setIsTop] = useState(false);
+	const [stayOnTopLocal, setStayOnTopLocal] = useState<boolean | undefined>();
 
 	const progressHandleRef = useRef<HTMLDivElement>(null);
 	const accentHandleRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const playStateRef = useRef(playState);
 	playStateRef.current = playState;
 
-	const { data: isWin11 } = trpc.app.isWin11.useQuery();
-	const { data: stayTop } = trpc.window.isStayOnTop.useQuery();
+	document.title = "YouTube Music - Mini Player";
 
-	const nextMutation = trpc.track.next.useMutation();
-	const prevMutation = trpc.track.prev.useMutation();
-	const forwardMutation = trpc.track.forward.useMutation();
-	const backwardMutation = trpc.track.backward.useMutation();
-	const pauseMutation = trpc.track.pause.useMutation();
-	const playMutation = trpc.track.play.useMutation();
-	const dislikeMutation = trpc.track.dislike.useMutation();
-	const likeMutation = trpc.track.like.useMutation();
-	const seekMutation = trpc.track.seek.useMutation();
-	const stayOnTopMutation = trpc.window.stayOnTop.useMutation();
+	const { data: isWin11 } = trpc.app.isWin11.useQuery();
+	const { data: isStayOnTop } = trpc.window.isStayOnTop.useQuery();
+
+	const { mutateAsync: next } = trpc.track.next.useMutation();
+	const { mutateAsync: prev } = trpc.track.prev.useMutation();
+	const { mutateAsync: forward } = trpc.track.forward.useMutation();
+	const { mutateAsync: backward } = trpc.track.backward.useMutation();
+	const { mutateAsync: pause } = trpc.track.pause.useMutation();
+	const { mutateAsync: play } = trpc.track.play.useMutation();
+	const { mutateAsync: dislike } = trpc.track.dislike.useMutation();
+	const { mutateAsync: like } = trpc.track.like.useMutation();
+	const { mutateAsync: seek } = trpc.track.seek.useMutation();
+	const { mutateAsync: stayOnTop } = trpc.window.stayOnTop.useMutation();
 
 	trpc.track.current.useQuery(undefined, {
-		onSuccess: (trackData) => setTrack(trackData as TrackData | null),
+		onSuccess: (trackData) => setTrack((trackData as TrackData | null) ?? null),
 	});
 	trpc.track.onTrack.useSubscription(undefined, {
 		onData: (trackData) => setTrack((trackData as TrackData | null) ?? null),
 	});
 	trpc.track.state.useQuery(undefined, {
-		onSuccess: (playStateData) => setPlayState(playStateData as PlayState),
+		onSuccess: (playStateData) => {
+			if (playStateData) setPlayState(playStateData as PlayState);
+		},
 	});
 	trpc.track.onPlayState.useSubscription(undefined, {
-		onData: (playStateData) => setPlayState(playStateData as PlayState),
+		onData: (playStateData) => {
+			if (playStateData) setPlayState(playStateData as PlayState);
+		},
 	});
 
-	useEffect(() => {
-		document.title = "YouTube Music - Mini Player";
-	}, []);
-
-	useEffect(() => {
-		if (isWin11 === undefined) return;
-		setShowWinBorder(window.process.platform === "win32" ? (isWin11 ? "win11" : true) : !!state?.platform?.isMacOS);
+	const isTop = stayOnTopLocal ?? !!isStayOnTop;
+	const showWinBorder = useMemo((): boolean | "win11" => {
+		if (window.app.platform === "win32") {
+			if (isWin11 === undefined) return false;
+			return isWin11 ? "win11" : true;
+		}
+		return !!state?.platform?.isMacOS;
 	}, [isWin11, state?.platform?.isMacOS]);
-
-	useEffect(() => {
-		if (stayTop !== undefined) setIsTop(stayTop);
-	}, [stayTop]);
-
-	useEffect(() => {
-		logger.debug(state && { ...state });
-	}, [state]);
 
 	const getCurrentAccent = useCallback(
 		(retry = 0) => {
@@ -118,69 +160,54 @@ function MiniPlayerPage() {
 		[utils],
 	);
 
-	const next = useCallback(() => {
+	function handleNext() {
 		setTrackBusy(true);
-		return nextMutation
-			.mutateAsync()
+		return next()
 			.finally(() => {
 				setTrackBusy(false);
 			})
 			.then(() => {
 				if (playStateRef.current) setPlayState({ ...playStateRef.current, progress: 0 });
 			});
-	}, [nextMutation]);
+	}
 
-	const prev = useCallback(() => {
+	function handlePrev() {
 		setTrackBusy(true);
-		return prevMutation.mutateAsync().finally(() => {
+		return prev().finally(() => {
 			setTrackBusy(false);
 			if (playStateRef.current) setPlayState({ ...playStateRef.current, progress: 0 });
 		});
-	}, [prevMutation]);
+	}
 
-	const forward = useCallback(
-		(time = 10000) => {
-			setTrackBusy(true);
-			return forwardMutation.mutateAsync({ time }).finally(() => {
-				setTrackBusy(false);
-			});
-		},
-		[forwardMutation],
-	);
+	function handleForward(time = 10000) {
+		setTrackBusy(true);
+		return forward({ time }).finally(() => {
+			setTrackBusy(false);
+		});
+	}
 
-	const backward = useCallback(
-		(time = 10000) => {
-			setTrackBusy(true);
-			return backwardMutation.mutateAsync({ time }).finally(() => {
-				setTrackBusy(false);
-			});
-		},
-		[backwardMutation],
-	);
+	function handleBackward(time = 10000) {
+		setTrackBusy(true);
+		return backward({ time }).finally(() => {
+			setTrackBusy(false);
+		});
+	}
 
-	const pause = useCallback(() => {
-		return pauseMutation.mutateAsync();
-	}, [pauseMutation]);
-
-	const play = useCallback(() => {
-		return playMutation.mutateAsync();
-	}, [playMutation]);
-
-	const dislikeToggle = useCallback(() => {
+	function dislikeToggle() {
 		if (typeof playStateRef.current?.disliked !== "boolean") return;
 		setTrackBusy(true);
-		return dislikeMutation.mutateAsync(!playStateRef.current.disliked).finally(() => {
+		return dislike(!playStateRef.current.disliked).finally(() => {
 			setTrackBusy(false);
 		});
-	}, [dislikeMutation]);
+	}
 
-	const likeToggle = useCallback(() => {
+	function likeToggle() {
 		if (typeof playStateRef.current?.liked !== "boolean") return;
 		setTrackBusy(true);
-		return likeMutation.mutateAsync(!playStateRef.current.liked).finally(() => {
+		return like(!playStateRef.current.liked).finally(() => {
 			setTrackBusy(false);
 		});
-	}, [likeMutation]);
+	}
 
 	const handleAccent = useCallback(
 		(ev: React.SyntheticEvent<HTMLImageElement>) => {
@@ -190,52 +217,48 @@ function MiniPlayerPage() {
 		[getCurrentAccent],
 	);
 
-	const setCurrentTime = useCallback(
-		(ev: MouseEvent<HTMLDivElement>) => {
-			if (trackBusy) return;
-			const current = playStateRef.current;
-			if (!current) return;
-			const el = ev.currentTarget;
-			const percSelected = ev.clientX / el.clientWidth;
-			const { duration } = current;
-			const seekTime = clamp(duration * percSelected, 0, duration) * 1000;
-			console.log({
-				percentage: percSelected,
-				value: seekTime / 1000,
-				duration,
-			});
-			setTrackBusy(true);
-			return seekMutation.mutateAsync({ time: seekTime, type: "seek" }).finally(() => {
+	function setCurrentTime(ev: MouseEvent<HTMLDivElement>) {
+		if (trackBusy) return;
+		const current = playStateRef.current;
+		if (!current) return;
+		const el = ev.currentTarget;
+		const percSelected = ev.clientX / el.clientWidth;
+		const duration = current.duration || Number(track?.meta?.duration) || 0;
+		if (duration <= 0) return;
+		const seekTime = clamp(duration * percSelected, 0, duration) * 1000;
+		setTrackBusy(true);
+		void seek({ time: seekTime, type: "seek" })
+			.then(() => {
+				setPlayState({ ...current, progress: seekTime / 1000, duration });
+			})
+			.finally(() => {
 				setTrackBusy(false);
 			});
-		},
-		[trackBusy, seekMutation],
-	);
+	}
 
-	const toggleStayTop = useCallback(async () => {
-		const result = await stayOnTopMutation.mutateAsync();
-		setIsTop(result);
-	}, [stayOnTopMutation]);
+	async function toggleStayTop() {
+		const result = await stayOnTop();
+		setStayOnTopLocal(result);
+	}
 
 	const thumbnail = track?.meta?.thumbnail;
 	const playing = !!playState?.playing;
 
 	const time = useMemo((): [string, string, number] | null => {
-		const { duration, progress } = playState ?? {};
-		if (typeof duration !== "number" || typeof progress !== "number") return null;
+		const progress = playState?.progress;
+		const duration = playState?.duration || Number(track?.meta?.duration) || 0;
+		if (typeof progress !== "number" || duration <= 0) return null;
+		const elapsed = Math.max(0, Math.min(Math.floor(progress), Math.floor(duration)));
 		const [current] = (({ hours, minutes, seconds }) => createInterval([hours, minutes, seconds]))(
-			intervalToDuration({
-				start: duration * 1000 - (progress > duration ? duration : Math.floor(progress)) * 1000,
-				end: duration * 1000,
-			}),
+			intervalToDuration({ start: 0, end: elapsed * 1000 }),
 		);
 		const [end, endPad] = (({ hours, minutes, seconds }) => createInterval([hours, minutes, seconds]))(
 			intervalToDuration({ start: 0, end: duration * 1000 }),
 		) as [string, number];
 		const timePad = endPad * 2;
-		const percentage = ((progress > duration ? duration : progress) / duration) * 100;
+		const percentage = (elapsed / duration) * 100;
 		return [current.padEnd(timePad), end.padStart(timePad), percentage];
-	}, [playState]);
+	}, [playState, track?.meta?.duration]);
 
 	const rootStyle = useMemo((): CSSProperties => {
 		const style: CSSProperties = {};
@@ -263,24 +286,6 @@ function MiniPlayerPage() {
 		<div className="absolute inset-0 flex h-full flex-col overflow-hidden bg-black" style={rootStyle}>
 			<style>{`
 				.track-status-time { min-width: 40px; }
-				.player-btn {
-					height: 2.5rem; width: 2.5rem; color: rgb(228 228 231); padding: 0.5rem; cursor: pointer;
-					display: flex; align-items: center; justify-content: center; border-radius: 0.5rem;
-					transition: all 100ms ease-in-out;
-				}
-				.player-btn:hover { background-color: rgb(250 250 250 / 0.05); }
-				.player-btn:active { transform: scale(0.95); background-color: rgb(250 250 250 / 0.1); }
-				.player-btn:disabled, .player-btn.disabled { opacity: 0.6; transform: scale(1); }
-				.player-btn.active svg { fill: currentColor; }
-				.player-btn.active svg path { stroke: inherit; }
-				.player-btn-hero {
-					border: 1px solid rgb(82 82 91); color: rgb(228 228 231); flex: none; margin-left: auto; margin-right: auto;
-					width: 2.5rem; height: 2.5rem; border-radius: 9999px; box-shadow: 0 0 0 1px rgb(24 24 27 / 0.05), 0 4px 6px -1px rgb(0 0 0 / 0.1);
-					display: flex; align-items: center; justify-content: center; transition: all 100ms ease-in-out;
-				}
-				.player-btn-hero svg { height: 1.5rem; width: 1.5rem; }
-				.player-btn-hero:disabled, .player-btn-hero.disabled { opacity: 0.6; transform: scale(1); }
-				.player-btn-hero:active { transform: scale(0.95); border-color: rgb(250 250 250 / 0.9); }
 				.fill-icon svg { fill: currentColor; }
 				.fill-icon svg path { stroke: transparent; }
 				.track-thumbnail {
@@ -290,24 +295,6 @@ function MiniPlayerPage() {
 				}
 				.track-thumbnail img { object-fit: cover; object-position: center; }
 			`}</style>
-
-			<div className="group relative z-20">
-				<ControlBar
-					title="Mini Player"
-					icon={<MiniPlayerIcon className="antialiased" />}
-					divider={
-						<button
-							type="button"
-							className="control-button relative h-4 w-4 hover:bg-white/5 group-hover:w-auto group-hover:space-x-2 group-hover:px-2"
-							onClick={() => toggleStayTop()}
-						>
-							{isTop ? <LockIcon className="group-hover:opacity-100" /> : <UnLockIcon className="opacity-60" />}
-							<span className="hidden text-sm group-hover:flex">Stay on Top</span>
-						</button>
-					}
-				/>
-				<div className="absolute inset-x-0 -top-32 z-10 h-48 bg-gradient-to-b from-black to-black/0" />
-			</div>
 
 			<div className="absolute inset-0">
 				{thumbnail && accentColor && (
@@ -321,7 +308,33 @@ function MiniPlayerPage() {
 				)}
 			</div>
 
-			<div className="relative z-10 flex flex-1 flex-col">
+			<div className="absolute inset-x-0 top-0 z-30">
+				<ControlBar
+					title="Mini Player"
+					icon={<MiniPlayerIcon className="antialiased" />}
+					className="border-b-0 bg-transparent pl-4 text-zinc-50 [&_.drag]:text-zinc-50 [&>div>div]:text-zinc-50"
+					divider={
+						<Tooltip>
+							<TooltipTrigger
+								render={
+									<button
+										type="button"
+										className="control-button"
+										aria-label={isTop ? "Disable stay on top" : "Stay on top"}
+										onClick={() => void toggleStayTop()}
+									>
+										{isTop ? <LockIcon /> : <UnLockIcon className="opacity-70" />}
+									</button>
+								}
+							/>
+							<TooltipContent side="bottom">{isTop ? "Disable stay on top" : "Stay on top"}</TooltipContent>
+						</Tooltip>
+					}
+				/>
+				<div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-24 bg-linear-to-b from-black/60 to-transparent" />
+			</div>
+
+			<div className="relative z-10 flex min-h-0 flex-1 flex-col pt-10">
 				<div className="centeronscreen relative z-10 flex flex-1 flex-col justify-center px-6">
 					<div className="flex items-start space-x-6">
 						<div className="track-thumbnail relative flex flex-shrink-0 items-center justify-center shadow">
@@ -398,9 +411,8 @@ function MiniPlayerPage() {
 							)}
 							<div className="mt-auto flex flex-shrink-0 items-center space-x-2">
 								{playState?.disliked !== undefined && (
-									<button
-										type="button"
-										className={cn("player-btn", !!playState?.disliked && "active")}
+									<PlayerButton
+										active={!!playState?.disliked}
 										disabled={trackBusy}
 										aria-label="Dislike"
 										style={
@@ -411,12 +423,11 @@ function MiniPlayerPage() {
 										onClick={dislikeToggle}
 									>
 										<LikeIcon className="rotate-180" />
-									</button>
+									</PlayerButton>
 								)}
 								{playState?.liked !== undefined && (
-									<button
-										type="button"
-										className={cn("player-btn", !!playState?.liked && "active")}
+									<PlayerButton
+										active={!!playState?.liked}
 										disabled={trackBusy}
 										aria-label="Like"
 										style={
@@ -427,12 +438,13 @@ function MiniPlayerPage() {
 										onClick={likeToggle}
 									>
 										<LikeIcon />
-									</button>
+									</PlayerButton>
 								)}
 								{lastFM.connected && (
-									<button
-										type="button"
-										className={cn("player-btn relative size-8 p-1", lastFMLoading && "btn-disabled opacity-70")}
+									<PlayerButton
+										className="relative size-8 p-1"
+										disabled={lastFMLoading || trackBusy}
+										aria-label="Last.fm"
 										onClick={authorizeLastFM}
 									>
 										{lastFM.connected && !lastFM.error && lastFMState !== null ? (
@@ -451,7 +463,7 @@ function MiniPlayerPage() {
 												)}
 											/>
 										)}
-									</button>
+									</PlayerButton>
 								)}
 							</div>
 						</div>
@@ -474,42 +486,29 @@ function MiniPlayerPage() {
 					)}
 					<div className="mt-auto flex h-16 items-center bg-zinc-50/5 text-zinc-200">
 						<div className="flex flex-auto items-center justify-evenly">
-							<button type="button" className="player-btn" disabled={trackBusy} aria-label="Previous" onClick={prev}>
+							<PlayerButton disabled={trackBusy} aria-label="Previous" onClick={handlePrev}>
 								<PrevIcon />
-							</button>
-							<button
-								type="button"
-								className="player-btn"
-								disabled={trackBusy}
-								aria-label="Rewind 10 seconds"
-								onClick={() => backward()}
-							>
+							</PlayerButton>
+							<PlayerButton disabled={trackBusy} aria-label="Rewind 10 seconds" onClick={() => void handleBackward()}>
 								<BackwardIcon />
-							</button>
+							</PlayerButton>
 						</div>
-						<button
-							type="button"
-							className="player-btn-hero"
+						<PlayerButton
+							variant="hero"
 							style={accentColor ? { borderColor: accentColor } : undefined}
-							aria-label="Pause"
+							aria-label={playing ? "Pause" : "Play"}
 							disabled={trackBusy}
-							onClick={() => (!playing ? play() : pause())}
+							onClick={() => void (!playing ? play() : pause())}
 						>
 							<div className="fill-icon fill-zinc-700">{playing ? <PauseIcon /> : <PlayIcon />}</div>
-						</button>
+						</PlayerButton>
 						<div className="flex flex-auto items-center justify-evenly">
-							<button
-								type="button"
-								className="player-btn"
-								disabled={trackBusy}
-								aria-label="Skip 10 seconds"
-								onClick={() => forward()}
-							>
+							<PlayerButton disabled={trackBusy} aria-label="Skip 10 seconds" onClick={() => void handleForward()}>
 								<ForwardIcon />
-							</button>
-							<button type="button" className="player-btn" disabled={trackBusy} aria-label="Next" onClick={next}>
+							</PlayerButton>
+							<PlayerButton disabled={trackBusy} aria-label="Next" onClick={handleNext}>
 								<NextIcon />
-							</button>
+							</PlayerButton>
 						</div>
 					</div>
 				</div>

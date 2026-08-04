@@ -1,17 +1,19 @@
+import type { AppRouter } from "@main/trpc/router";
 import { logger } from "@shared/utils/console";
+import type { inferRouterOutputs } from "@trpc/server";
 import { useCallback, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 
-type LastFmStatus = { connected: boolean; name: string | null; error: string | null };
+type LastFmStatus = NonNullable<inferRouterOutputs<AppRouter>["lastfm"]["status"]>;
 
 export function useLastFm() {
 	const stateHandle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const [lastFMLoading, setLastFMLoading] = useState(false);
-	const [lastFM, setLastFM] = useState<LastFmStatus>({ connected: false, name: null, error: null });
+	const [lastFM, setLastFM] = useState<LastFmStatus>({ connected: false, name: null, error: false, processing: false });
 	const [lastFMState, setFmState] = useState<"start" | "change" | boolean | null>(null);
 
 	trpc.lastfm.status.useQuery(undefined, {
-		onSuccess: (status) => setLastFM(status as LastFmStatus),
+		onSuccess: (status) => setLastFM(status),
 	});
 
 	trpc.lastfm.onStatus.useSubscription(undefined, {
@@ -33,20 +35,20 @@ export function useLastFm() {
 		},
 	});
 
-	const profile = trpc.lastfm.profile.useMutation({
+	const { mutateAsync: profile } = trpc.lastfm.profile.useMutation({
 		onSettled: () => setLastFMLoading(false),
 	});
-	const authorize = trpc.lastfm.authorize.useMutation({
+	const { mutateAsync: authorize } = trpc.lastfm.authorize.useMutation({
 		onSettled: () => setLastFMLoading(false),
 	});
 
 	const authorizeLastFM = useCallback(() => {
 		if (lastFM?.connected) {
-			profile.mutate();
+			void profile();
 			return;
 		}
 		setLastFMLoading(true);
-		authorize.mutate();
+		void authorize();
 	}, [lastFM?.connected, profile, authorize]);
 
 	return { lastFMState, setFmState, lastFM, lastFMLoading, authorizeLastFM };

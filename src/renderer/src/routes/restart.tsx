@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangleIcon, CheckCircleIcon, InfoIcon, XCircleIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
 
 export const Route = createFileRoute("/restart")({
 	component: RestartPage,
@@ -17,18 +18,17 @@ const IconMap = {
 
 function RestartPage() {
 	const [isBusy, setIsBusy] = useState(false);
-	const meta = useMemo(() => {
-		const params = new URLSearchParams(location.href.slice(location.href.indexOf("?")));
-		return {
-			message: params.get("message") ?? "Please restart the application to apply pending changes.",
-			icon: params.get("icon") ?? "info",
-		};
-	}, []);
+	const params = new URLSearchParams(location.href.slice(location.href.indexOf("?")));
+	const meta = {
+		message: params.get("message") ?? "Please restart the application to apply pending changes.",
+		icon: params.get("icon") ?? "info",
+	};
 	const IconComponent = IconMap[meta.icon as keyof typeof IconMap] ?? null;
+	const { mutateAsync: dialogResponse } = trpc.window.dialogResponse.useMutation();
 
 	function action(next: "close" | "ok") {
 		setIsBusy(true);
-		window.api.send("window.response", { action: next });
+		void dialogResponse(next);
 		setTimeout(() => setIsBusy(false), 1000);
 	}
 

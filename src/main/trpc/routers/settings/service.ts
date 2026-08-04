@@ -1,6 +1,5 @@
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/core/baseProvider";
 import { defaultUri, defaultUrl, isDevelopment } from "@main/infra/devUtils";
-import { IpcContext, IpcHandle, IpcOn } from "@main/ipc/onIpcEvent";
 import { serverMain } from "@main/ipc/serverEvents";
 import { stringifyJson } from "@main/lib/json";
 import { createYmlStore } from "@main/lib/store/createYmlStore";
@@ -61,7 +60,12 @@ const defaultSettings = {
 	} as LastFMSettings,
 };
 
-export type SettingsStore = typeof defaultSettings & { [key: string]: any };
+export type SettingsStore = typeof defaultSettings & {
+	__meta?: { migratedFromJson?: boolean };
+	plugins?: {
+		bypass_age_restrictions?: { enabled: boolean };
+	};
+};
 
 const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
 	defaults: defaultSettings as SettingsStore,
@@ -74,9 +78,9 @@ const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
 	),
 });
 
-@IpcContext
 export default class SettingsProvider extends BaseProvider implements OnDestroy, BeforeStart, AfterInit {
 	readonly onChange = new Subject<SettingsStore>();
+	readonly settingChanged = new Subject<{ key: string; value: unknown; prevValue: unknown }>();
 
 	onChangeProp(key: string) {
 		const settings = this.instance;
@@ -87,8 +91,33 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 		);
 	}
 
+	/** Main-process side effects when a setting key changes. Prefer this over serverMain.on. */
+	onSettingChange(
+		keys: string | string[],
+		handler: (value: unknown, prevValue: unknown, key: string) => void,
+		options?: { debounce?: number },
+	): { unsubscribe(): void } {
+		const keyList = Array.isArray(keys) ? keys : [keys];
+		let fn = (ev: { key: string; value: unknown; prevValue: unknown }) => {
+			if (!keyList.includes(ev.key)) return;
+			handler(ev.value, ev.prevValue, ev.key);
+		};
+		if (options?.debounce) fn = debounce(fn, options.debounce) as typeof fn;
+		const sub = this.settingChanged.subscribe(fn);
+		return { unsubscribe: () => sub.unsubscribe() };
+	}
+
 	constructor(private app: App) {
 		super("settings");
+		this.bindIpc();
+	}
+
+	private bindIpc() {
+		serverMain.on("settingsProvider.save", debounce(() => this.saveToDrive(), 5000));
+		serverMain.handle("settingsProvider.get", (ev, ...args) => this._onEventGet(ev, ...args));
+		serverMain.handle("settingsProvider.getAll", (ev, ...args) => this._onEventGetAll(ev, ...args));
+		serverMain.on("settingsProvider.set", (ev, ...args) => this._onEventSet(ev, ...args));
+		serverMain.handle("settingsProvider.update", (ev, ...args) => this._onEventUpdate(ev, ...args));
 	}
 
 	async BeforeStart() {}
@@ -97,32 +126,31 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 		return _settingsStore.store;
 	}
 
-	get<T = any>(key: string, defaultValue?: any): T {
-		return _get(_settingsStore.store, key, defaultValue);
+	get<T = unknown>(key: string, defaultValue?: T): T {
+		return _get(_settingsStore.store, key, defaultValue) as T;
 	}
 
-	set(key: string, value: any) {
+	set(key: string, value: unknown) {
 		const prevValue = this.get(key);
 		_settingsStore.set(key, value ?? null);
 		this.onChange.next(_settingsStore.store);
+		this.settingChanged.next({ key, value, prevValue });
 		try {
-			// global bus → @IpcOn + tRPC settings.onChange
-			serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value, prevValue);
-			// youtube plugins still listen via webContents
+			// Youtube preload plugins still listen via webContents IPC.
 			this.views.youtubeView?.webContents.send(eventNames.SERVER_SETTINGS_CHANGE, key, value, prevValue);
+			// BaseEvent / debug listeners on main bus (no renderer round-trip).
+			serverMain.emitServer(eventNames.SERVER_SETTINGS_CHANGE, key, value, prevValue);
 		} catch (ex) {
 			this.logger.error(ex);
 		}
 		return this;
 	}
 
-	@IpcOn("settingsProvider.save", {
-		debounce: 5000,
-	})
 	saveToDrive() {}
 
 	async OnDestroy() {
 		this.onChange.complete();
+		this.settingChanged.complete();
 		this.saveToDrive();
 	}
 
@@ -144,7 +172,7 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 				const url = new URL(location);
 				if (url) {
 					if (url.hostname === defaultUri.hostname && previousHostname !== url.hostname) {
-						serverMain.emit("customcss.update");
+						void this.getProvider("customCss").requestUpdate();
 					}
 					previousHostname = url.hostname;
 					if (url.hostname !== defaultUri.hostname) {
@@ -156,21 +184,18 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 		);
 	}
 
-	@IpcHandle("settingsProvider.get")
 	private _onEventGet(ev: IpcMainInvokeEvent, ...args: any[]) {
 		const [key, value] = args;
 		const returnValue = this.get(key);
 		return returnValue === undefined || returnValue === null ? value : returnValue;
 	}
 
-	@IpcHandle("settingsProvider.getAll")
 	private _onEventGetAll(ev: IpcMainInvokeEvent, ...args: any[]) {
 		const [value] = args;
 		const returnValue = _settingsStore.store;
 		return returnValue === undefined || returnValue === null ? value : returnValue;
 	}
 
-	@IpcOn("settingsProvider.set")
 	private _onEventSet(ev: IpcMainEvent, ...args: any[]) {
 		const [key, value] = args;
 		this.set(key, value);
@@ -178,7 +203,6 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 		this.saveToDrive();
 	}
 
-	@IpcHandle("settingsProvider.update")
 	private async _onEventUpdate(ev: IpcMainInvokeEvent, ...args: any[]) {
 		const [key, value] = args;
 		this.logger.debug(key, value);

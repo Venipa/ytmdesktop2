@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { debounce } from "lodash-es";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 
 export type WindowState = {
@@ -28,35 +29,86 @@ export type WindowState = {
 	navigation: { canGoBack: boolean; index: number };
 };
 
-export function useSetting<T = unknown>(key: string, defaultValue?: T): [T, (val: T) => void] {
-	const [value, setValue] = useState<T>((defaultValue ?? null) as T);
-	const utils = trpc.useUtils();
-	const update = trpc.settings.update.useMutation();
+export type UseSettingsStateOptions<T> = {
+	debounce?: number;
+	filter?: (value: unknown, prevValue: unknown) => boolean;
+	map?: (value: unknown) => T;
+};
 
-	trpc.settings.get.useQuery(
-		{ key, defaultValue: defaultValue ?? null },
-		{
-			onSuccess: (v) => setValue((v ?? defaultValue ?? null) as T),
+type SettingsSetter<T> = (value: T | ((prev: T) => T)) => void;
+
+export type UseSettingsStateMeta = {
+	isPending: boolean;
+};
+
+export type UseSettingsStateResult<T> = [T, SettingsSetter<T>, UseSettingsStateMeta];
+
+function resolveSettingValue<T>(raw: unknown, defaultValue: T, map?: (value: unknown) => T): T {
+	if (map) return map(raw);
+	if (raw === undefined || raw === null) return defaultValue;
+	return raw as T;
+}
+
+/**
+ * Subscribe to a settings key. `setValue` updates UI immediately, then persists
+ * (optionally debounced). Remote `onChange` events sync back in.
+ */
+export function useSettingsState<T>(key: string, defaultValue: T, options: UseSettingsStateOptions<T> = {}): UseSettingsStateResult<T> {
+	const { debounce: debounceMs, filter, map } = options;
+	const utils = trpc.useUtils();
+	const queryInput = useMemo(() => ({ key, defaultValue: defaultValue ?? null }), [key, defaultValue]);
+	const [value, setLocal] = useState<T>(() => resolveSettingValue(undefined, defaultValue, map));
+
+	const mapRef = useRef(map);
+	mapRef.current = map;
+	const filterRef = useRef(filter);
+	filterRef.current = filter;
+	const defaultRef = useRef(defaultValue);
+	defaultRef.current = defaultValue;
+
+	const { mutateAsync: update, isLoading: isMutating } = trpc.settings.update.useMutation();
+
+	const persist = useMemo(() => {
+		const write = (next: T) => {
+			void update({ key, value: next });
+		};
+		return typeof debounceMs === "number" && debounceMs > 0 ? debounce(write, debounceMs) : write;
+	}, [key, update, debounceMs]);
+
+	const { isLoading: isQueryLoading } = trpc.settings.get.useQuery(queryInput, {
+		onSuccess: (raw) => {
+			setLocal(resolveSettingValue(raw, defaultRef.current, mapRef.current));
 		},
-	);
+	});
 
 	trpc.settings.onChange.useSubscription(undefined, {
 		onData: (ev) => {
 			if (ev.key !== key) return;
-			setValue((ev.value ?? defaultValue ?? null) as T);
-			utils.settings.get.setData({ key, defaultValue: defaultValue ?? null }, ev.value);
+			if (filterRef.current && !filterRef.current(ev.value, ev.prevValue)) return;
+			const next = resolveSettingValue(ev.value, defaultRef.current, mapRef.current);
+			setLocal(next);
+			utils.settings.get.setData(queryInput, ev.value);
 		},
 	});
 
-	const set = useCallback(
-		(next: T) => {
-			setValue(next);
-			update.mutate({ key, value: next });
+	const setValue = useCallback<SettingsSetter<T>>(
+		(next) => {
+			setLocal((prev) => {
+				const resolved = typeof next === "function" ? (next as (prev: T) => T)(prev) : next;
+				utils.settings.get.setData(queryInput, resolved);
+				persist(resolved);
+				return resolved;
+			});
 		},
-		[key, update],
+		[persist, queryInput, utils.settings.get],
 	);
 
-	return [value, set];
+	return [value, setValue, { isPending: isQueryLoading || isMutating }];
+}
+
+/** @deprecated Prefer `useSettingsState`. */
+export function useSetting<T = unknown>(key: string, defaultValue?: T): UseSettingsStateResult<T> {
+	return useSettingsState<T>(key, (defaultValue ?? null) as T);
 }
 
 export function useWindowState() {

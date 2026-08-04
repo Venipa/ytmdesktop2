@@ -1,5 +1,4 @@
 import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
-import { IpcContext, IpcOn } from "@main/ipc/onIpcEvent";
 import DiscordClient from "@main/lib/discord-rpc";
 import { type DiscordActivity, DiscordActivityStatusDisplayType, DiscordActivityType } from "@main/lib/discord-rpc/discord-rpc";
 import { discordEmbedFromTrack } from "@main/lib/discord-rpc/embedFromTrack";
@@ -21,7 +20,6 @@ const DEFAULT_PRESENCE: DiscordActivity = {
 };
 const CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
 const DISCORD_SERVICE_ENABLED = !!CLIENT_ID;
-@IpcContext
 export default class DiscordProvider extends BaseProvider implements AfterInit, OnDestroy {
 	private rpcManager: DiscordClient;
 	private _enabled = !!DISCORD_SERVICE_ENABLED;
@@ -172,6 +170,13 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 	}
 
 	async AfterInit() {
+		trackService.onTrackChange((track) => void this.__onTrackInfo(track), { debounce: 1000 });
+		this.settingsInstance.onSettingChange("discord.enabled", (value) => void this.__onToggleEnabled("discord.enabled", value as boolean), {
+			debounce: 1000,
+		});
+		this.settingsInstance.onSettingChange("discord.buttons", (value) => void this.__onToggleButtons("discord.buttons", value as boolean), {
+			debounce: 1000,
+		});
 		const settings = this.settingsInstance.instance;
 		if (!settings.discord.enabled || !this._enabled) return;
 		await this.enable();
@@ -184,10 +189,6 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		}
 	}
 
-	@IpcOn("settingsProvider.change", {
-		filter: (key: string) => key === "discord.enabled",
-		debounce: 1000,
-	})
 	private async __onToggleEnabled(key: string, enabled: boolean) {
 		if (enabled) {
 			await this.enable();
@@ -196,10 +197,6 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		}
 	}
 
-	@IpcOn("settingsProvider.change", {
-		filter: (key: string) => key === "discord.buttons",
-		debounce: 1000,
-	})
 	private async __onToggleButtons(key: string, buttons: boolean) {
 		if (trackService.trackData) {
 			const { trackData: track, playing, trackState } = trackService;
@@ -219,9 +216,6 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		return this.getConnectedState();
 	}
 
-	@IpcOn("track:change", {
-		debounce: 1000,
-	})
 	private async __onTrackInfo(track: TrackData) {
 		if (!track?.video) return;
 		this.updateActivity(discordEmbedFromTrack(track));

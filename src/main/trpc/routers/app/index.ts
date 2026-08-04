@@ -1,1 +1,1 @@
-export { appServiceRouter as default, appServiceRouter } from "./router";
+export { appServiceRouter } from "./router";

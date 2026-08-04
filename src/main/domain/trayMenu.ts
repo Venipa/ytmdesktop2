@@ -8,7 +8,8 @@ import { Menu, shell } from "electron";
 export const createTrayMenu = (provider: BaseProvider) => {
 	const settings = provider.getProvider("settings") as SettingsProvider;
 	const { instance: sp } = settings;
-	const { app } = provider.getProvider("app") as AppProvider;
+	const appProvider = provider.getProvider("app") as AppProvider;
+	const { app } = appProvider;
 	const { updateAvailable, onCheckUpdate: checkUpdate, onAutoUpdateRun: applyUpdate, updateInfo } = provider.getProvider("update");
 	const menu = Menu.buildFromTemplate([
 		{
@@ -53,7 +54,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
 		{
 			label: "Settings",
 			click: () => {
-				serverMain.emit("subwindow.show", null, "settingsWindow");
+				void appProvider.openSettingsWindow();
 			},
 		},
 		{
@@ -107,7 +108,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
 					label: "Change CSS File",
 					enabled: sp.customcss.enabled,
 					click: (item) => {
-						if (item.enabled) serverMain.emit("subwindow.show", null, "settingsWindow");
+						if (item.enabled) void appProvider.openSettingsWindow();
 					},
 				},
 			],

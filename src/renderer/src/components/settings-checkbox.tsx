@@ -1,8 +1,7 @@
-import { debounce } from "lodash-es";
-import { type ReactNode, useMemo } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { useSetting } from "@/hooks/use-settings";
+import { type ReactNode, useId } from "react";
+import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Switch } from "@/components/ui/switch";
+import { useSettingsState } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
 
 export interface SettingsCheckboxProps {
@@ -10,25 +9,29 @@ export interface SettingsCheckboxProps {
 	defaultValue?: boolean;
 	className?: string;
 	children?: ReactNode;
+	description?: ReactNode;
 	onChange?: (value: boolean) => void;
 }
 
-export function SettingsCheckbox({ configKey, defaultValue, className, children, onChange }: SettingsCheckboxProps) {
-	const [value, setValue] = useSetting<boolean>(configKey, defaultValue ?? false);
-
-	const updateSetting = useMemo(
-		() =>
-			debounce((next: boolean) => {
-				setValue(next);
-				onChange?.(next);
-			}, 200),
-		[setValue, onChange],
-	);
+export function SettingsCheckbox({ configKey, defaultValue = false, className, children, description, onChange }: SettingsCheckboxProps) {
+	const id = useId();
+	const [value, setValue, { isPending }] = useSettingsState<boolean>(configKey, defaultValue, { debounce: 200 });
 
 	return (
-		<div className={cn("flex items-center justify-between gap-4 py-1", className)}>
-			<Label className="flex-1 text-sm text-muted-foreground">{children}</Label>
-			<Checkbox checked={value} onCheckedChange={(checked) => updateSetting(checked === true)} />
-		</div>
+		<Field orientation="horizontal" data-disabled={isPending || undefined} className={cn("items-start", className)}>
+			<FieldContent>
+				<FieldLabel htmlFor={id}>{children}</FieldLabel>
+				{description ? <FieldDescription>{description}</FieldDescription> : null}
+			</FieldContent>
+			<Switch
+				id={id}
+				checked={value}
+				disabled={isPending}
+				onCheckedChange={(checked) => {
+					setValue(checked);
+					onChange?.(checked);
+				}}
+			/>
+		</Field>
 	);
 }

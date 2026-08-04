@@ -1,4 +1,5 @@
-// @ts-nocheck — tRPC 10 + TS 5.9 rejects nested CreateRouterInner assignability; runtime/types still correct.
+// @ts-nocheck — tRPC 10 + TS 5.x nested CreateRouterInner assignability false positive.
+// `export type AppRouter = typeof appRouter` still infers full procedure I/O (not any).
 
 import { appServiceRouter } from "@main/trpc/routers/app";
 import { customCssRouter } from "@main/trpc/routers/customCss";

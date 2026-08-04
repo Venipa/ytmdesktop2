@@ -12,13 +12,16 @@ export interface SectionCardProps {
 
 export function SectionCard({ loading, className, children, onClick }: SectionCardProps) {
 	return (
-		<Card className={cn("relative mt-4 overflow-hidden bg-white/5", className)} onClick={onClick}>
+		<Card
+			className={cn("relative cursor-default overflow-hidden transition-colors", onClick && "cursor-pointer hover:bg-accent/40", className)}
+			onClick={onClick}
+		>
 			{loading && (
-				<div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-600/70 text-sm text-gray-200">
+				<div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70">
 					<Spinner />
 				</div>
 			)}
-			<CardContent className="p-6">{children}</CardContent>
+			<CardContent>{children}</CardContent>
 		</Card>
 	);
 }

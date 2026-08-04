@@ -1,6 +1,5 @@
 import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
-import { IpcContext } from "@main/ipc/onIpcEvent";
 import { createMainCaller } from "@main/trpc/caller";
 import { trackService } from "@main/trpc/routers/track";
 import { NativeImage, nativeImage, TouchBar } from "electron";
@@ -39,7 +38,6 @@ const emoteColorsOff = {
 	shuffle: null,
 	volume: null,
 };
-@IpcContext
 export default class TouchbarProvider extends BaseProvider implements AfterInit {
 	constructor() {
 		super("touchbar");

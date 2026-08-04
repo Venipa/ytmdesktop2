@@ -1,6 +1,4 @@
-import type { UpdateInfo } from "@shared/utils/updater";
 import { AlertCircleIcon, CheckIcon, DownloadIcon } from "lucide-react";
-import { useState } from "react";
 import DevIcon from "@/assets/icons/chip.svg?react";
 import RPCIcon from "@/assets/icons/discord-rpc.svg?react";
 import HomeIcon from "@/assets/icons/home.svg?react";
@@ -8,83 +6,24 @@ import LastFMIcon from "@/assets/icons/lastfm.svg?react";
 import MiniPlayerIcon from "@/assets/icons/mini-player.svg?react";
 import RefreshIcon from "@/assets/icons/refresh.svg?react";
 import { Spinner } from "@/components/ui/spinner";
+import { useDiscord } from "@/hooks/use-discord";
 import { useLastFm } from "@/hooks/use-lastfm";
-import { useSetting } from "@/hooks/use-settings";
+import { useMiniPlayer } from "@/hooks/use-miniplayer";
+import { useNavigation } from "@/hooks/use-navigation";
+import { useSettingsState } from "@/hooks/use-settings";
+import { useTrackState } from "@/hooks/use-track";
+import { useUpdater } from "@/hooks/use-updater";
 import { trpc } from "@/lib/trpc";
 
 export function ToolbarOptions() {
-	const utils = trpc.useUtils();
-	const [discordConnected, setDiscordConnected] = useState(false);
-	const [discordLoading, setDiscordLoading] = useState(false);
-	const [discordConnectionError, setDiscordConnectionError] = useState<string | null>(null);
-	const [miniPlayer, setMiniPlayer] = useState<{ active?: boolean } | null>(null);
-	const [playState, setPlayState] = useState<unknown>(null);
-	const [isHome, setIsHome] = useState(true);
-	const [updateChecking, setUpdateChecking] = useState(false);
-	const { data: updateInfo = null } = trpc.update.get.useQuery();
-	const { data: updateDownloaded = false } = trpc.update.downloaded.useQuery();
 	const { lastFM, lastFMState, lastFMLoading, authorizeLastFM } = useLastFm();
-	const [discordEnabled, setDiscordEnabled] = useSetting<boolean>("discord.enabled", false);
-	const [isDev] = useSetting<boolean>("app.enableDev", false);
-
-	const checkUpdate = trpc.update.check.useMutation({
-		onSettled: () => setUpdateChecking(false),
-	});
-	const homeNav = trpc.navigation.home.useMutation();
-	const devTools = trpc.navigation.devTools.useMutation();
-	const openMiniplayer = trpc.miniplayer.open.useMutation();
-
-	trpc.discord.connected.useQuery(undefined, {
-		onSuccess: (connected) => setDiscordConnected(!!connected),
-	});
-	trpc.discord.onConnected.useSubscription(undefined, {
-		onData: () => {
-			setDiscordConnected(true);
-			setDiscordConnectionError(null);
-			setDiscordLoading(false);
-		},
-	});
-	trpc.discord.onDisconnected.useSubscription(undefined, {
-		onData: () => setDiscordConnected(false),
-	});
-	trpc.discord.onLoading.useSubscription(undefined, {
-		onData: () => setDiscordLoading(true),
-	});
-	trpc.discord.onError.useSubscription(undefined, {
-		onData: (err) => setDiscordConnectionError(err),
-	});
-	trpc.miniplayer.onState.useSubscription(undefined, {
-		onData: setMiniPlayer,
-	});
-	trpc.track.state.useQuery(undefined, {
-		onSuccess: setPlayState,
-	});
-	trpc.track.onPlayState.useSubscription(undefined, {
-		onData: setPlayState,
-	});
-	trpc.navigation.onSameOrigin.useSubscription(undefined, {
-		onData: (sameOrigin) => setIsHome(!!sameOrigin),
-	});
-	trpc.update.onUpdate.useSubscription(undefined, {
-		onData: (info) => utils.update.get.setData(undefined, info as UpdateInfo | null),
-	});
-	trpc.update.onChecking.useSubscription(undefined, {
-		onData: (checking) => setUpdateChecking(!!checking),
-	});
-	trpc.update.onDownloaded.useSubscription(undefined, {
-		onData: () => utils.update.downloaded.setData(undefined, true),
-	});
-
-	function handleCheckUpdate() {
-		if (updateChecking || checkUpdate.isPending) return;
-		setUpdateChecking(true);
-		checkUpdate.mutate();
-	}
-
-	function toggleDiscord() {
-		setDiscordConnectionError(null);
-		setDiscordEnabled(!discordEnabled);
-	}
+	const { connected: discordConnected, loading: discordLoading, error: discordConnectionError, enabled: discordEnabled, toggle: toggleDiscord } = useDiscord();
+	const { isHome, home, devTools } = useNavigation();
+	const { state: miniPlayer, open: openMiniPlayer } = useMiniPlayer();
+	const playState = useTrackState();
+	const { updateInfo, downloaded: updateDownloaded, checking: updateChecking, check } = useUpdater();
+	const [isDev] = useSettingsState<boolean>("app.enableDev", false);
+	const { mutateAsync: openWindow } = trpc.app.openWindow.useMutation();
 
 	return (
 		<div className="flex flex-row items-center gap-2">
@@ -107,11 +46,11 @@ export function ToolbarOptions() {
 				{lastFM?.name && <span className="text-sm text-gray-100">{lastFM.name}</span>}
 			</button>
 			{!isHome && (
-				<button type="button" className="control-button relative size-4" onClick={() => homeNav.mutate()}>
+				<button type="button" className="control-button relative size-4" onClick={() => void home()}>
 					<HomeIcon />
 				</button>
 			)}
-			<button type="button" className="control-button relative size-4" disabled={!!updateChecking} onClick={handleCheckUpdate}>
+			<button type="button" className="control-button relative size-4" disabled={!!updateChecking} onClick={() => void check()}>
 				{updateChecking && !updateInfo ? (
 					<Spinner className="size-3" />
 				) : updateInfo ? (
@@ -121,7 +60,7 @@ export function ToolbarOptions() {
 				)}
 			</button>
 			{isDev && (
-				<button type="button" className="control-button relative size-4" onClick={() => devTools.mutate()}>
+				<button type="button" className="control-button relative size-4" onClick={() => void devTools()}>
 					<DevIcon />
 				</button>
 			)}
@@ -129,7 +68,7 @@ export function ToolbarOptions() {
 				type="button"
 				className={`control-button relative size-4 ${miniPlayer ? (miniPlayer.active ? "opacity-100" : "opacity-70") : ""}`}
 				disabled={!playState}
-				onClick={() => openMiniplayer.mutate()}
+				onClick={() => void openMiniPlayer()}
 			>
 				<MiniPlayerIcon />
 			</button>
@@ -156,7 +95,7 @@ export function ToolbarOptions() {
 					</div>
 				)}
 			</button>
-			<button type="button" className="control-button" onClick={() => window.api.openWindow("settingsWindow")}>
+			<button type="button" className="control-button" onClick={() => void openWindow("settingsWindow")}>
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
 					<path
 						fillRule="evenodd"

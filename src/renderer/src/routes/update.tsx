@@ -24,10 +24,10 @@ function UpdatePage() {
 	const [isInstalling, setIsInstalling] = useState(false);
 	const isMacOS = window.api.platform.isMacOS;
 
-	const checkUpdate = trpc.update.check.useMutation({
+	const { mutateAsync: check, isPending: checkPending } = trpc.update.check.useMutation({
 		onSettled: () => setUpdateChecking(false),
 	});
-	const installUpdateMutation = trpc.update.install.useMutation();
+	const { mutateAsync: install } = trpc.update.install.useMutation();
 
 	trpc.update.onUpdate.useSubscription(undefined, {
 		onData: (info) => utils.update.get.setData(undefined, info as UpdateInfo | null),
@@ -48,8 +48,7 @@ function UpdatePage() {
 		if (!updateDownloaded) {
 			setUpdateInfoProgress({ total: 0, delta: 0, transferred: 0, percent: 0, bytesPerSecond: 0 });
 		}
-		return installUpdateMutation
-			.mutateAsync(quitAndInstall)
+		return install(quitAndInstall)
 			.then((downloaded) => {
 				if (!updateDownloaded) {
 					setIsComplete(!!downloaded);
@@ -57,7 +56,7 @@ function UpdatePage() {
 				} else {
 					setTimeout(() => {
 						setIsInstalling(false);
-						installUpdate(true);
+						void installUpdate(true);
 					}, 20000);
 				}
 				setUpdateInfoProgress(null);
@@ -72,9 +71,9 @@ function UpdatePage() {
 	}
 
 	function handleCheckUpdate() {
-		if (updateChecking || checkUpdate.isPending) return;
+		if (updateChecking || checkPending) return;
 		setUpdateChecking(true);
-		checkUpdate.mutate();
+		void check();
 	}
 
 	if (updateChecking) {

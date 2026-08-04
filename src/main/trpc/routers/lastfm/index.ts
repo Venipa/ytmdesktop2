@@ -1,1 +1,1 @@
-export { lastfmRouter as default, lastfmRouter } from "./router";
+export { lastfmRouter } from "./router";

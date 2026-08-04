@@ -22,7 +22,6 @@ function buildContext(getBrowserWindow: AppTrpcContext["getBrowserWindow"], even
 		event,
 		getBrowserWindow,
 		getProvider: (name) => collection.getProvider(name),
-		getProviderByKey: (name) => collection.getProvider(name),
 	};
 }
 

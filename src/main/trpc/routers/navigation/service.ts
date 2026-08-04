@@ -1,9 +1,7 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
 import { defaultUrl } from "@main/infra/devUtils";
-import { IpcContext } from "@main/ipc/onIpcEvent";
 import { App } from "electron";
 
-@IpcContext
 export default class NavigationProvider extends BaseProvider implements AfterInit {
 	private lastNavigationIsSameOrigin = true;
 

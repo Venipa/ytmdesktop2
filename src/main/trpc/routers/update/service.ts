@@ -1,6 +1,5 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { isDevelopment, isProduction } from "@main/infra/devUtils";
-import { IpcContext, IpcOn } from "@main/ipc/onIpcEvent";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import { createAppWindow } from "@main/windows/windowUtils";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
@@ -39,7 +38,6 @@ function getContent(content: string) {
 	});
 	return newContext.join("\n");
 }
-@IpcContext
 export default class UpdateProvider extends BaseProvider implements BeforeStart, AfterInit {
 	private _update: UpdateInfo | null = null;
 	private _updateAvailable: boolean = false;
@@ -193,7 +191,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		if (devShowUpdateDialog) autoUpdater.forceDevUpdateConfig = true;
 		autoUpdater.autoDownload = false;
 		autoUpdater.autoInstallOnAppQuit = isProduction;
-		autoUpdater.allowPrerelease = betaEnabled;
+		autoUpdater.allowPrerelease = !!betaEnabled;
 
 		this.logger.debug(autoUpdater.updateConfigPath);
 		this.logger.debug("Updater Cache: " + autoUpdater["app"].baseCachePath);
@@ -224,6 +222,11 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	}
 
 	async AfterInit() {
+		this.settingsInstance.onSettingChange("app.beta", (enabled) => this.onBetaToggled("app.beta", enabled as boolean), { debounce: 250 });
+		this.settingsInstance.onSettingChange("app.autoupdate", (autoUpdateEnabled) => this.onAutoUpdateToggled("app.autoupdate", autoUpdateEnabled as boolean), {
+			debounce: 250,
+		});
+
 		if (this._update) {
 			this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, this._update);
 		}
@@ -247,7 +250,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		autoUpdater.quitAndInstall(false, true);
 	}
 
-	@IpcOn("app.installUpdate", { debounce: 1000 })
 	async onAutoUpdateRun(__ev: any, quitAndInstall: boolean = true) {
 		if (this._downloadToken) throw new Error("Download already in progress [E002]");
 		if (!this.updateDownloaded && !this.updateQueuedForInstall) {
@@ -278,7 +280,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		}
 	}
 
-	@IpcOn("app.downloadUpdate")
 	onDownloadUpdate(): [Promise<string[]>, () => void] {
 		if (!this.updateAvailable || this.updateDownloaded || this.updateQueuedForInstall) {
 			return [] as any;
@@ -307,7 +308,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		];
 	}
 
-	@IpcOn("app.downloadUpdateCancel")
 	onDownloadUpdateCancel() {
 		if (this._downloadToken) {
 			this._downloadToken.cancel();
@@ -328,19 +328,11 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		}
 	}
 
-	@IpcOn("settingsProvider.change", {
-		debounce: 250,
-		filter: (key: string) => key === "app.beta",
-	})
 	onBetaToggled(key: string, enabled: boolean) {
 		autoUpdater.allowPrerelease = !!enabled;
 		this.onCheckUpdate();
 	}
 
-	@IpcOn("settingsProvider.change", {
-		debounce: 250,
-		filter: (key: string) => key === "app.autoupdate",
-	})
 	onAutoUpdateToggled(key: string, autoUpdateEnabled: boolean) {
 		if (isDevelopment) return;
 

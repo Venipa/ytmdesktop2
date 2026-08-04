@@ -1,18 +1,24 @@
 import { ApiWorker, createApiWorker } from "@main/api/createApiWorker";
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
-import { IpcContext, IpcOn } from "@main/ipc/onIpcEvent";
 import { API_ROUTES } from "@shared/constants/eventNames";
 import { type App } from "electron";
 
-@IpcContext
 export default class ApiProvider extends BaseProvider implements AfterInit {
 	private _thread?: ApiWorker;
+	private _settingsBound = false;
 
 	constructor(private _app: App) {
 		super("api");
 	}
 
 	async AfterInit() {
+		if (!this._settingsBound) {
+			this._settingsBound = true;
+			this.settingsProvider.onSettingChange("api.enabled", (value) => void this.__onApiEnabled("api.enabled", value as boolean), {
+				debounce: 1000,
+			});
+		}
+
 		if (this._thread) {
 			await this._thread.destroy();
 			this._thread = undefined;
@@ -45,10 +51,6 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 		return this.getProvider("settings");
 	}
 
-	@IpcOn("settingsProvider.change", {
-		filter: (key: string) => key === "api.enabled",
-		debounce: 1000,
-	})
 	private async __onApiEnabled(key: string, value: boolean) {
 		if (!value) {
 			if (this._thread) {

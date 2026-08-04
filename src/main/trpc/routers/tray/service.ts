@@ -2,12 +2,10 @@ import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
 import { createTrayMenu } from "@main/domain/trayMenu";
 import { setTrayState } from "@main/handlers/trayState";
 import { isDevelopment } from "@main/infra/devUtils";
-import { IpcContext, IpcOn } from "@main/ipc/onIpcEvent";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import { createAppWindow } from "@main/windows/windowUtils";
 import { App, BrowserWindow, Tray } from "electron";
 import TracIconPath from "~/build/favicon.ico?asset";
-@IpcContext
 export default class TrayProvider extends BaseProvider implements AfterInit, OnDestroy {
 	get settingsInstance(): SettingsProvider {
 		return this.getProvider("settings");
@@ -20,6 +18,11 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 		super("tray");
 	}
 	async AfterInit() {
+		this.settingsInstance.onSettingChange(
+			["app.autostart", "app.autoupdate", "app.minimizeTrayOverride", "discord.enabled", "discord.buttons", "customcss.enabled", "customcss.scssFile"],
+			() => this.onSettingsChange(),
+			{ debounce: 50 },
+		);
 		await this.initializeTray();
 	}
 
@@ -42,9 +45,6 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 		});
 		return this._tray;
 	}
-	@IpcOn("settingsProvider.change", {
-		debounce: 50,
-	})
 	private onSettingsChange() {
 		if (this._tray) this._tray.setContextMenu(this.buildMenu());
 	}

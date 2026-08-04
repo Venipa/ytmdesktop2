@@ -1,1 +1,1 @@
-export { trayRouter as default, trayRouter } from "./router";
+export { trayRouter } from "./router";

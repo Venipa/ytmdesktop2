@@ -1,1 +1,1 @@
-export { miniplayerRouter as default, miniplayerRouter } from "./router";
+export { miniplayerRouter } from "./router";

@@ -9,7 +9,14 @@ import "./styles/globals.css";
 if (import.meta.env.PROD) Logger.enableProductionMode();
 
 const history = createHashHistory();
-const router = createRouter({ routeTree, history });
+const router = createRouter({
+	routeTree,
+	history,
+	// Instant hash nav — no pending UI flash between settings tabs
+	defaultPreload: false,
+	defaultPendingMs: Number.POSITIVE_INFINITY,
+	defaultPendingMinMs: 0,
+});
 
 declare module "@tanstack/react-router" {
 	interface Register {

@@ -1,1 +1,1 @@
-export { windowRouter as default, windowRouter } from "./router";
+export { windowRouter } from "./router";

@@ -18,15 +18,16 @@ export interface ControlBarProps {
 
 export function ControlBar({ title, controls, icon, divider, className }: ControlBarProps) {
 	const [state] = useWindowState();
-	const minimize = trpc.app.minimize.useMutation();
-	const maximize = trpc.app.maximize.useMutation();
-	const isMac = window.process.platform === "darwin";
+	const { mutateAsync: minimize } = trpc.app.minimize.useMutation();
+	const { mutateAsync: maximize } = trpc.app.maximize.useMutation();
+	const { mutateAsync: closeWindow } = trpc.app.closeWindow.useMutation();
+	const isMac = window.app.platform === "darwin";
 	const showClose = !controls || controls.includes("close");
 
 	return (
-		<div className={cn("flex h-10 items-stretch justify-between border-b border-gray-600 bg-black px-2 select-none", className)}>
+		<div className={cn("flex h-10 items-stretch justify-between border-b border-border bg-card px-2 text-card-foreground select-none", className)}>
 			<div className="drag flex flex-1 items-center">
-				<div className="mr-2 size-4 text-gray-50">
+				<div className="mr-2 size-4 text-card-foreground">
 					{icon ?? (
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
 							<path
@@ -37,7 +38,7 @@ export function ControlBar({ title, controls, icon, divider, className }: Contro
 						</svg>
 					)}
 				</div>
-				<p className="text-xs">{title}</p>
+				<p className="text-xs text-card-foreground">{title}</p>
 			</div>
 			<div className="flex items-center gap-2">
 				{divider ?? <div className="h-6 w-px bg-gray-50/10" />}
@@ -45,19 +46,19 @@ export function ControlBar({ title, controls, icon, divider, className }: Contro
 					{!isMac && (
 						<>
 							{state?.minimizable && (
-								<button type="button" className="control-button" onClick={() => minimize.mutate()}>
+								<button type="button" className="control-button" onClick={() => void minimize()}>
 									<MinIcon />
 								</button>
 							)}
 							{state?.maximizable && (
-								<button type="button" className="control-button" onClick={() => maximize.mutate()}>
+								<button type="button" className="control-button" onClick={() => void maximize()}>
 									<MaxIcon />
 								</button>
 							)}
 						</>
 					)}
 					{showClose && (
-						<button type="button" className="control-button control-button-danger" onClick={() => window.api.closeWindow()}>
+						<button type="button" className="control-button control-button-danger" onClick={() => void closeWindow()}>
 							<CloseIcon />
 						</button>
 					)}

@@ -19,5 +19,3 @@ export function initElectronTrpc(collection: ServiceCollection): void {
 export function attachTrpcWindow(win: BrowserWindow): void {
 	handler?.attachWindow(win);
 }
-
-export type { AppRouter } from "@main/trpc/router";

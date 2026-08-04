@@ -1,8 +1,7 @@
-import { debounce } from "lodash-es";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Label } from "@/components/ui/label";
+import { type ReactNode, useId } from "react";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useSetting } from "@/hooks/use-settings";
+import { useSettingsState } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
 
 export interface SettingsSelectOption {
@@ -14,34 +13,30 @@ export interface SettingsSelectProps {
 	configKey: string;
 	defaultValue?: string;
 	label?: ReactNode;
+	description?: ReactNode;
 	options: SettingsSelectOption[];
 	className?: string;
 	onChange?: (value: string) => void;
 }
 
-export function SettingsSelect({ configKey, defaultValue, label, options, className, onChange }: SettingsSelectProps) {
-	const [storedValue, setStoredValue] = useSetting<string>(configKey, defaultValue ?? "");
-	const [value, setValue] = useState<string>((storedValue as string) ?? defaultValue ?? "");
-
-	useEffect(() => {
-		setValue((storedValue as string) ?? defaultValue ?? "");
-	}, [storedValue, defaultValue]);
-
-	const updateSetting = useMemo(
-		() =>
-			debounce((next: string | null) => {
-				if (next == null) return;
-				setStoredValue(next);
-				onChange?.(next);
-			}, 200),
-		[setStoredValue, onChange],
-	);
+export function SettingsSelect({ configKey, defaultValue = "", label, description, options, className, onChange }: SettingsSelectProps) {
+	const id = useId();
+	const [value, setValue, { isPending }] = useSettingsState<string>(configKey, defaultValue, { debounce: 200 });
 
 	return (
-		<div className={cn("flex flex-col gap-2", className)}>
-			{label && <Label>{label}</Label>}
-			<Select value={value} onValueChange={updateSetting}>
-				<SelectTrigger className="w-full">
+		<Field data-disabled={isPending || undefined} className={cn(className)}>
+			{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
+			{description ? <FieldDescription>{description}</FieldDescription> : null}
+			<Select
+				value={value}
+				disabled={isPending}
+				onValueChange={(next) => {
+					if (next == null) return;
+					setValue(next);
+					onChange?.(next);
+				}}
+			>
+				<SelectTrigger id={id} className="w-full" disabled={isPending}>
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
@@ -54,6 +49,6 @@ export function SettingsSelect({ configKey, defaultValue, label, options, classN
 					</SelectGroup>
 				</SelectContent>
 			</Select>
-		</div>
+		</Field>
 	);
 }

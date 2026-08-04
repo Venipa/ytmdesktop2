@@ -1,1 +1,1 @@
-export { discordRouter as default, discordRouter } from "./router";
+export { discordRouter } from "./router";

@@ -1,5 +1,5 @@
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/core/baseProvider";
-import { IpcContext, IpcOn } from "@main/ipc/onIpcEvent";
+import { serverMain } from "@main/ipc/serverEvents";
 import { createMainCaller } from "@main/trpc/caller";
 import { trackService } from "@main/trpc/routers/track";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
@@ -8,13 +8,17 @@ import { MediaPlayerMediaType, MediaPlayerPlaybackStatus, MediaPlayerThumbnail, 
 import { type App, app } from "electron";
 import { clamp } from "lodash-es";
 
-@IpcContext
 export default class MediaControlProvider extends BaseProvider implements AfterInit, BeforeStart, OnDestroy {
 	private _mediaProvider: MediaServiceProvider | null = null;
 	private xosmsLog = this.logger.child("xosms");
 
 	constructor(private app: App) {
 		super("mediaController");
+		this.bindIpc();
+	}
+
+	private bindIpc() {
+		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE, (...args: unknown[]) => this.__handleTrackMediaOSControl(...args));
 	}
 
 	async BeforeStart() {
@@ -111,7 +115,6 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 		return trackService.trackData;
 	}
 
-	@IpcOn(IPC_EVENT_NAMES.TRACK_PLAYSTATE)
 	private __handleTrackMediaOSControl(...args: unknown[]) {
 		if (!this.mediaProviderEnabled()) return;
 

@@ -1,5 +1,4 @@
 import { AfterInit, BaseProvider, OnInit } from "@main/core/baseProvider";
-import { IpcContext } from "@main/ipc/onIpcEvent";
 import { parseJson, stringifyJson } from "@main/lib/json";
 import { LASTFM_KEYTAR_SESSION, LASTFM_KEYTAR_TOKEN } from "@main/lib/keytar";
 import { LastFMClient } from "@main/lib/lastfm";
@@ -28,8 +27,10 @@ const lastFmClient =
 		})) ||
 	null;
 
-@IpcContext
 export default class LastFMProvider extends BaseProvider implements AfterInit, OnInit {
+	private lastNowPlayingId: string | null = null;
+	private lastScrobbledId: string | null = null;
+
 	constructor(private app: App) {
 		super("lastfm");
 	}
@@ -173,6 +174,12 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			this.logger.debug("lastfm.handleTrackStart", track.video.videoId, "not connected");
 			return;
 		}
+		const videoId = track.video.videoId;
+		if (this.lastNowPlayingId === videoId) {
+			this.logger.debug("lastfm.handleTrackStart skip duplicate", videoId);
+			return;
+		}
+		this.lastNowPlayingId = videoId;
 		this.logger.debug("isAlbum", !!track.music?.album);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "start");
 		await this.client
@@ -198,6 +205,12 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			this.logger.debug("lastfm.handleTrackChange", track.video.videoId, "not connected");
 			return;
 		}
+		const videoId = track.video.videoId;
+		if (this.lastScrobbledId === videoId) {
+			this.logger.debug("lastfm.handleTrackChange skip duplicate", videoId);
+			return;
+		}
+		this.lastScrobbledId = videoId;
 		this.logger.debug("isAlbum", !!track.music?.album);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "change");
 		await this.client

@@ -1,0 +1,50 @@
+---
+description: Renderer render hygiene — useMemo only for expensive work, stable props
+globs: src/renderer/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Render + memo
+
+Goal: right state/props change → right render. No blanket memo.
+
+## useMemo — when
+
+Use only for **expensive** derived work (loops over lists, sorting, formatting heavy structures, style objects rebuilt from many inputs) or when a **stable reference** is required by a child that depends on referential equality.
+
+```tsx
+// ✅ expensive / referential
+const time = useMemo(() => formatTrackTime(progress, duration), [progress, duration]);
+const rootStyle = useMemo((): CSSProperties => ({ backgroundImage: accent }), [accent]);
+
+// ❌ cheap / noise
+const label = useMemo(() => title ?? "Unknown", [title]);
+const isPlaying = useMemo(() => !!state?.playing, [state?.playing]);
+```
+
+## useCallback — when
+
+Use when passing a function to a memoized child, or as a dependency of `useEffect` / another memo that would otherwise churn. Do **not** wrap every handler by default.
+
+## Prefer fixing data flow first
+
+1. Narrow state — don't put unrelated fields in one object that re-renders everything
+2. Derive cheap values inline during render
+3. Keep list keys stable; avoid inline `{}` / `[]` / lambdas in hot JSX props when the child is memoized
+4. Colocate state near the consumer; lift only when shared
+
+```tsx
+// ❌ new object every render into memoized child
+<Panel style={{ opacity }} onClick={() => doThing(id)} />
+
+// ✅ stable when it matters
+const style = useMemo(() => ({ opacity }), [opacity]);
+const onClick = useCallback(() => doThing(id), [id]);
+<Panel style={style} onClick={onClick} />
+```
+
+## Don't
+
+- Memo "just in case"
+- `useMemo` around tRPC hook results (hooks already own caching)
+- Duplicate server/cache state into local `useState` without a sync need

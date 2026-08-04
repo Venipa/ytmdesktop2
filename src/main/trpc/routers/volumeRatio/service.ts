@@ -1,7 +1,5 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
-import { IpcContext, IpcOn } from "@main/ipc/onIpcEvent";
 
-@IpcContext
 export default class VolumeRatioProvider extends BaseProvider implements AfterInit {
 	constructor() {
 		super("player-volume-ratio");
@@ -9,13 +7,11 @@ export default class VolumeRatioProvider extends BaseProvider implements AfterIn
 	get settingsInstance() {
 		return this.getProvider("settings");
 	}
-	async AfterInit() {}
-	@IpcOn("settingsProvider.change", {
-		filter(key: string) {
-			return key === "volumeRatio.enabled";
-		},
-		debounce: 1000,
-	})
+	async AfterInit() {
+		this.settingsInstance.onSettingChange("volumeRatio.enabled", (value) => void this.__onToggle("volumeRatio.enabled", value), {
+			debounce: 1000,
+		});
+	}
 	private async __onToggle(key: string, value: any) {
 		if (value) await this.enable();
 		else await this.disable();

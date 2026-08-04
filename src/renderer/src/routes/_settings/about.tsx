@@ -3,7 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc";
 
@@ -18,10 +19,10 @@ function AboutSettingsPage() {
 	const { data: updateDownloaded = false } = trpc.update.downloaded.useQuery();
 	const [updateInfoProgress, setUpdateInfoProgress] = useState<ProgressInfo | null>(null);
 	const [updateChecking, setUpdateChecking] = useState(false);
-	const checkUpdate = trpc.update.check.useMutation({
+	const { mutateAsync: check, isPending: checkPending } = trpc.update.check.useMutation({
 		onSettled: () => setUpdateChecking(false),
 	});
-	const installUpdate = trpc.update.install.useMutation({
+	const { mutateAsync: install, isPending: installPending } = trpc.update.install.useMutation({
 		onSuccess: () => utils.update.get.setData(undefined, null),
 	});
 
@@ -39,53 +40,67 @@ function AboutSettingsPage() {
 	});
 
 	function handleCheckUpdate() {
-		if (updateChecking || checkUpdate.isPending) return;
+		if (updateChecking || checkPending) return;
 		setUpdateChecking(true);
-		checkUpdate.mutate();
+		void check();
 	}
 
 	function runUpdate() {
-		if (installUpdate.isPending) return;
-		installUpdate.mutate(true);
+		if (installPending) return;
+		void install(true);
 	}
 
 	return (
-		<div className="container mx-auto my-8">
-			<div className="flex flex-col">
-				<div className="mx-4 gap-1 sm:mx-6">
-					<h3 className="text-lg font-medium leading-6 text-foreground">About</h3>
-					<p className="text-sm text-muted-foreground">Shows information about your YouTube Desktop Instance</p>
-				</div>
-				<Separator className="my-4" />
-				<div className="mx-4 flex flex-row sm:mx-6">
-					<div className="flex flex-1 flex-col">
-						<span className="font-semibold">Version</span>
-						<span className="text-sm text-green-500">{appVersion}</span>
+		<>
+			<Card>
+				<CardHeader>
+					<CardTitle>About</CardTitle>
+					<CardDescription>Information about your YouTube Music Desktop instance.</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="flex items-center justify-between gap-4">
+						<div className="flex flex-col gap-1">
+							<span className="text-xs font-medium">Version</span>
+							<span className="text-xs text-muted-foreground">{appVersion}</span>
+						</div>
+						{updateInfo && updateDownloaded ? (
+							<Button variant="outline" onClick={runUpdate} disabled={installPending}>
+								Install {updateInfo.version}
+							</Button>
+						) : updateInfo && updateInfoProgress?.percent ? (
+							<Button variant="outline" disabled>
+								Downloading… {updateInfoProgress.percent.toFixed(0)}%
+								<span data-icon="inline-end">
+									<Spinner />
+								</span>
+							</Button>
+						) : (
+							<Button variant="outline" onClick={handleCheckUpdate} disabled={updateChecking || checkPending}>
+								{updateChecking ? "Checking…" : "Check for Update"}
+								{updateChecking ? (
+									<span data-icon="inline-end">
+										<Spinner />
+									</span>
+								) : null}
+							</Button>
+						)}
 					</div>
-					{updateInfo && updateDownloaded ? (
-						<Button variant="ghost" onClick={runUpdate} disabled={installUpdate.isPending}>
-							<div className="flex flex-col items-center justify-center gap-1 leading-none">
-								<div>Install Update</div>
-								<div className="text-green-500">{updateInfo.version}</div>
-							</div>
-						</Button>
-					) : updateInfo && updateInfoProgress?.percent ? (
-						<Button variant="ghost" disabled className="gap-4">
-							<span>Downloading...{updateInfoProgress.percent.toFixed(0).padStart(5)}%</span>
-							<Spinner />
-						</Button>
-					) : (
-						<Button variant="ghost" className="gap-4" onClick={handleCheckUpdate}>
-							<span>{updateChecking ? "Checking for Updates..." : "Check for Update"}</span>
-							{updateChecking && <Spinner />}
-						</Button>
-					)}
-				</div>
-				<Separator className="my-4" />
-				<div className="flex flex-col gap-4 px-5">
-					<SettingsCheckbox configKey="app.beta">Include Pre Releases / Beta</SettingsCheckbox>
-				</div>
-			</div>
-		</div>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Channels</CardTitle>
+					<CardDescription>Choose which release channel to follow.</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<FieldGroup>
+						<SettingsCheckbox configKey="app.beta" description="Include pre-release builds when checking for updates.">
+							Include Pre Releases / Beta
+						</SettingsCheckbox>
+					</FieldGroup>
+				</CardContent>
+			</Card>
+		</>
 	);
 }

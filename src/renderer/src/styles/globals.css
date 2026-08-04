@@ -37,7 +37,8 @@
 	--chart-3: oklch(0.435 0.029 321.78);
 	--chart-4: oklch(0.364 0.029 323.89);
 	--chart-5: oklch(0.263 0.024 320.12);
-	--radius: 0.625rem;
+	/* Matches `.control-button` (`rounded-lg` → `--radius-lg`) */
+	--radius: 0.5rem;
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.145 0.008 326);
 	--sidebar-primary: oklch(0.212 0.019 322.12);
