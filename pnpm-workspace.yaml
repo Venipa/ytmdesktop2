@@ -8,7 +8,7 @@ onlyBuiltDependencies:
 
 allowBuilds:
   '@parcel/watcher': true
-  '@swc/core': set this to true or false
+  '@swc/core': true
   bufferutil: true
   core-js: true
   electron: true
@@ -16,3 +16,8 @@ allowBuilds:
   esbuild: true
   lefthook: true
   utf-8-validate: true
+
+# @electron/rebuild@4 pulls node-gyp@11 which cannot detect VS 2026 (18.x).
+# node-gyp >=12.1 required on windows-2025-vs2026 runners.
+overrides:
+  node-gyp: ^13.0.1

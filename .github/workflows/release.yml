@@ -56,6 +56,12 @@ jobs:
         with:
           sdk-version: 19041
 
+      # windows-2025-vs2026 ships VS 2026 (18.x). node-gyp <12.1 cannot detect it
+      # (@electron/rebuild used to pull node-gyp@11 → install-app-deps fails on @parcel/watcher).
+      - if: startsWith(matrix.os, 'windows')
+        name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
       - if: github.ref_type == 'tag'
         id: getVersion
         uses: actions/github-script@v7.0.1
@@ -76,20 +82,26 @@ jobs:
           file: package.json
           field: version
           value: ${{ steps.getVersion.outputs.value }}
-      - name: Prepare .npmrc
+      - name: Prepare pnpm / auth
         shell: pwsh
         run: |
+          # Auth/registry still live in .npmrc (pnpm 11+). Hoist settings must be in pnpm-workspace.yaml.
           Remove-Item -Path .npmrc -ErrorAction Ignore
-          Add-Content -Path .npmrc -Value "shamefully-hoist=true"
-          Add-Content -Path .npmrc -Value "node-linker=hoisted"
           Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
           Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
           Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+
+          # electron-builder expects a flat node_modules tree
+          Add-Content -Path pnpm-workspace.yaml -Value ""
+          Add-Content -Path pnpm-workspace.yaml -Value "shamefullyHoist: true"
+          Add-Content -Path pnpm-workspace.yaml -Value "nodeLinker: hoisted"
       - name: Install dependencies
         run: |
           pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Hint for node-gyp 12.1+ / 13.x on windows-2025-vs2026 (VS 18.x)
+          npm_config_msvs_version: "2026"
       - if: matrix.os == 'macos-latest'
         name: Setup Apple keychain
         run: |
