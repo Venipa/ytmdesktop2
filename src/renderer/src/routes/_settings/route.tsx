@@ -118,7 +118,7 @@ function SettingsLayout() {
 					<SidebarFooter className="gap-y-2 border-t border-sidebar-border py-3 px-0">
 						<div className="flex flex-col gap-1 px-3 text-[10px] text-muted-foreground">
 							<span>
-								v{window.api.version} ({window.app.environment === "production" ? !updater.beta ? "stable" : "beta" : "dev"})
+								v{window.api.version} ({window.app.environment})
 							</span>
               <span>{window.app.platform}</span>
               </div>

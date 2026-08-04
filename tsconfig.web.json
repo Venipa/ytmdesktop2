@@ -5,7 +5,6 @@
 		"src/renderer/src/**/*",
 		"src/preload/*.d.ts",
 		"src/shared/**/*.ts",
-		"src/main/lib/discord-rpc/discord-rpc.ts",
 		"src/translations/**/*.ts",
 		"src/renderer/src/typings.d.ts"
 	],
@@ -26,6 +25,7 @@
 		"paths": {
 			"@shared/*": ["src/shared/*"],
 			"@translations/*": ["src/translations/*"],
+			"@main/trpc/router": ["src/shared/trpc/app-router.web.ts"],
 			"@main/*": ["src/main/*"],
 			"@routers/*": ["src/main/trpc/routers/*"],
 			"@preload/*": ["src/preload/*"],

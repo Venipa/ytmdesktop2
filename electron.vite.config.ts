@@ -101,6 +101,7 @@ ${exports.map((l) => "  " + l).join("\n")}
 declare module "ytmd" {
 	export interface BaseProviderNames extends ServiceTypeMap {}
   export type ServiceName = keyof ServiceTypeMap;
+  export type ProviderNameKey = keyof BaseProviderNames | ({} & string);
 }
 export { };
 `;

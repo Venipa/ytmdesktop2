@@ -3,6 +3,7 @@ import { BrowserWindowViews } from "@main/windows/mappedWindow";
 import { createLogger, Logger } from "@shared/utils/console";
 import { waitMs } from "@shared/utils/promises";
 import { App, BrowserWindow, WebContentsView } from "electron";
+import type { ProviderNameKey } from "ytmd";
 import { BaseProviderNames } from "ytmd";
 import { stringifyJson } from "../lib/json";
 
@@ -23,7 +24,6 @@ export interface AfterInit {
 export interface OnDestroy {
 	OnDestroy(app: App): void | Promise<void>;
 }
-export type ProviderNameKey = keyof BaseProviderNames | ({} & string);
 export class BaseProvider<TView extends WebContentsView = WebContentsView> {
 	__type = "service_provider";
 	private _providers: { [key: string]: BaseProvider & any } = {};
