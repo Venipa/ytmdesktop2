@@ -5,7 +5,7 @@ import { App, IpcMainInvokeEvent } from "electron";
 
 export default class MiniPlayerProvider extends BaseProvider implements AfterInit {
 	constructor(private _app: App) {
-		super("mp");
+		super("miniPlayer");
 	}
 	get app() {
 		return this._app;

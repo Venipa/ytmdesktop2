@@ -1,18 +1,20 @@
+name: Release
+
 on:
   push:
-    # Sequence of patterns matched against refs/tags
     tags:
-      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    # Platforms to build on/for
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest] # macos-latest is disabled due to Apple Developer Program issues for now
         node-version: [24.14.0]
-
 
     steps:
       - uses: pnpm/action-setup@v5
@@ -20,6 +22,8 @@ jobs:
           version: 10
       - name: Check out Git repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
@@ -182,3 +186,76 @@ jobs:
     #       token: ${{ secrets.GITHUB_TOKEN }}
     # # GitHub username where the fork of winget-pkgs is present.
     #       fork-user: ${{ github.repository_owner }}
+
+  finalize-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Parse version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = if ($tag.StartsWith("v")) { $tag.Substring(1) } else { $tag }
+          Write-Host "Tag=$tag Version=$version"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build release notes from commits
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $prev = ""
+          try {
+            $releases = gh release list --exclude-drafts --limit 20 --json tagName | ConvertFrom-Json
+            $prev = ($releases | Where-Object { $_.tagName -ne $tag } | Select-Object -First 1).tagName
+          } catch {
+            $prev = ""
+          }
+
+          if ([string]::IsNullOrWhiteSpace($prev)) {
+            $prev = (git describe --tags --abbrev=0 "$($tag)^" 2>$null | Out-String).Trim()
+            if ($LASTEXITCODE -ne 0) { $prev = "" }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($prev)) {
+            Write-Host "No previous published release — listing all commits reachable from $tag"
+            $lines = @(git log --pretty=tformat:"- %s (%h)" $tag)
+          }
+          else {
+            Write-Host "Commits: $prev..$tag"
+            $lines = @(git log --pretty=tformat:"- %s (%h)" "$prev..$tag")
+          }
+
+          if ($lines.Count -eq 0 -or ($lines.Count -eq 1 -and [string]::IsNullOrWhiteSpace($lines[0]))) {
+            $lines = @("- No commits listed for this range.")
+          }
+
+          # git log as string[] must be joined explicitly — "$array" uses spaces, not newlines.
+          $commits = ($lines | ForEach-Object { $_.TrimEnd() }) -join "`n"
+          $body = "## Changes`n`n$commits`n"
+          [System.IO.File]::WriteAllText(
+            (Join-Path (Get-Location) "release-notes.md"),
+            $body,
+            [System.Text.UTF8Encoding]::new($false))
+          Get-Content release-notes.md -Raw
+
+      - name: Set draft release title and notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $version = "${{ steps.version.outputs.version }}"
+          gh release edit $tag `
+            --draft `
+            --title "v$version - " `
+            --notes-file release-notes.md

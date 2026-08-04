@@ -4,14 +4,9 @@ import { resolveWindowDialogResponse } from "@main/windows/dialogResponse";
 import { publicProcedure, router } from "@shared/trpc/trpc";
 import { z } from "zod";
 
-type WindowSvc = {
-	getWindowStateForSender(sender: unknown): Promise<unknown>;
-	getMainWindowState(): Promise<unknown>;
-};
-
 export const windowRouter = router({
-	state: publicProcedure.query(({ ctx }): Promise<unknown> => provider<WindowSvc>(ctx, "window").getWindowStateForSender(ctx.event.sender)),
-	mainState: publicProcedure.query(({ ctx }): Promise<unknown> => provider<WindowSvc>(ctx, "window").getMainWindowState()),
+	state: publicProcedure.query(({ ctx }) => provider(ctx, "window").getWindowStateForSender(ctx.event.sender as Electron.WebContents)),
+	mainState: publicProcedure.query(({ ctx }) => provider(ctx, "window").getMainWindowState()),
 	stayOnTop: publicProcedure.mutation(({ ctx }): boolean => {
 		const window = ctx.getBrowserWindow();
 		if (!window || window.isDestroyed?.()) return false;

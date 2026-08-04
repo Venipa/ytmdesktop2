@@ -4,20 +4,10 @@ import { publicProcedure, router } from "@shared/trpc/trpc";
 import { BrowserWindow } from "electron";
 import { z } from "zod";
 
-type AppSvc = {
-	handleIsWin11(): Promise<boolean>;
-	app: { getVersion(): string };
-	handleOpenFile(ev: unknown, path: string): Promise<unknown>;
-	openSubWindow(windowName: string): Promise<void>;
-	openSettingsWindow(): Promise<unknown>;
-	closeSubWindow(ev: unknown, windowName?: string): void;
-	handleRestartNeeded(ev: unknown, opts?: { message?: string; icon?: string }): Promise<void>;
-};
-
 export const appServiceRouter = router({
-	isWin11: publicProcedure.query(({ ctx }): Promise<boolean> => provider<AppSvc>(ctx, "app").handleIsWin11()),
-	version: publicProcedure.query(({ ctx }): string => provider<AppSvc>(ctx, "app").app.getVersion()),
-	openFile: publicProcedure.input(z.string()).mutation(({ ctx, input }): Promise<unknown> => provider<AppSvc>(ctx, "app").handleOpenFile(null, input)),
+	isWin11: publicProcedure.query(({ ctx }): Promise<boolean> => provider(ctx, "app").handleIsWin11()),
+	version: publicProcedure.query(({ ctx }): string => provider(ctx, "app").app.getVersion()),
+	openFile: publicProcedure.input(z.string()).mutation(({ ctx, input }) => provider(ctx, "app").handleOpenFile(null as unknown as Electron.IpcMainInvokeEvent, input)),
 	minimize: publicProcedure.mutation(({ ctx }): void => {
 		const window = ctx.getBrowserWindow();
 		if (window?.isMinimizable?.()) window.minimize?.();
@@ -29,16 +19,16 @@ export const appServiceRouter = router({
 	quit: publicProcedure.input(z.boolean().optional()).mutation(({ input }): void => {
 		serverMain.emit("app.quit", null, input ?? false);
 	}),
-	openWindow: publicProcedure.input(z.string()).mutation(({ ctx, input }): Promise<void> => provider<AppSvc>(ctx, "app").openSubWindow(input)),
-	openSettings: publicProcedure.mutation(({ ctx }): Promise<unknown> => provider<AppSvc>(ctx, "app").openSettingsWindow()),
+	openWindow: publicProcedure.input(z.string()).mutation(({ ctx, input }): Promise<void> => provider(ctx, "app").openSubWindow(input)),
+	openSettings: publicProcedure.mutation(({ ctx }): Promise<unknown> => provider(ctx, "app").openSettingsWindow()),
 	closeWindow: publicProcedure.input(z.string().optional()).mutation(({ ctx, input }): void => {
 		if (input) {
-			provider<AppSvc>(ctx, "app").closeSubWindow(ctx.event, input);
+			provider(ctx, "app").closeSubWindow(ctx.event as Electron.IpcMainEvent, input);
 			return;
 		}
 		BrowserWindow.fromWebContents(ctx.event.sender as Electron.WebContents)?.close();
 	}),
 	restartNeeded: publicProcedure
 		.input(z.object({ message: z.string().optional(), icon: z.string().optional() }).optional())
-		.mutation(({ ctx, input }): Promise<void> => provider<AppSvc>(ctx, "app").handleRestartNeeded(null, input ?? {})),
+		.mutation(({ ctx, input }): Promise<void> => provider(ctx, "app").handleRestartNeeded(null, input ?? {})),
 });

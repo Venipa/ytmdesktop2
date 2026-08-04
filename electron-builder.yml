@@ -83,3 +83,4 @@ afterPack: ./scripts/afterPack.js
 npmRebuild: false
 publish:
   - provider: github
+    releaseType: draft
