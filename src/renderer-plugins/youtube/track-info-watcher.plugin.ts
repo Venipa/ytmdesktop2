@@ -1,5 +1,9 @@
 import definePlugin from "@plugins/utils";
 
+const VIDEO_DATA_LOADED_TYPES = new Set(["dataupdated", "dataloaded", "newdata"]);
+const FIRST_TRACK_POLL_MS = 50;
+const FIRST_TRACK_POLL_MAX_MS = 8_000;
+
 export default definePlugin(
 	"track-info-watcher",
 	{
@@ -7,19 +11,24 @@ export default definePlugin(
 		displayName: "Track Info Watcher",
 	},
 	{
-		afterInit({ domUtils, playerApi, playerUiService, api }) {
-			const videoDataChangeLoadedType = ["dataupdated", "dataloaded", "newdata"];
+		afterInit({ domUtils, playerApi, api, log }) {
 			domUtils.ensureDomLoaded(() => {
-				const handleVideoDataChange = (ev: any) => {
-					console.log("onVideoDataChange", ev);
-					if (ev.playertype !== 1 || !videoDataChangeLoadedType.includes(ev.type)) return;
-					const videoData = playerApi.getPlayerResponse();
-					if (!videoData) return; // check if newdata has fetched
+				const getPlayer = () => domUtils.playerApi() ?? playerApi;
+
+				const pushTrackInfo = (): boolean => {
+					const player = getPlayer();
+					if (!player) return false;
+
+					const videoData = player.getPlayerResponse?.();
+					if (!videoData?.videoDetails?.videoId) return false;
+
 					let album: { id: string; title: string } | undefined;
-					let currentItem = document.querySelector<any>("ytmusic-app-layout>ytmusic-player-bar")?.currentItem;
-					if (currentItem !== null && currentItem !== undefined) {
-						const albumRef = currentItem.longBylineText.runs.find(
-							(v: any) => v.navigationEndpoint?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType === "MUSIC_PAGE_TYPE_ALBUM",
+					const currentItem = document.querySelector<any>("ytmusic-app-layout>ytmusic-player-bar")?.currentItem;
+					if (currentItem != null) {
+						const albumRef = currentItem.longBylineText?.runs?.find(
+							(v: any) =>
+								v.navigationEndpoint?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig
+									?.pageType === "MUSIC_PAGE_TYPE_ALBUM",
 						);
 						if (albumRef) {
 							album = {
@@ -31,7 +40,7 @@ export default definePlugin(
 
 					const requestData = {
 						video: videoData.videoDetails,
-						context: (videoData.microformat ? videoData.microformat.microformatDataRenderer : null) || null,
+						context: videoData.microformat?.microformatDataRenderer ?? null,
 						music:
 							videoData.videoDetails.musicVideoType === "MUSIC_VIDEO_TYPE_ATV" && album
 								? {
@@ -40,9 +49,31 @@ export default definePlugin(
 									}
 								: null,
 					};
-					api.emit("track:info-req", requestData);
+
+					try {
+						api.emit("track:info-req", requestData);
+						return true;
+					} catch (err) {
+						log.error("Failed to emit track:info-req", err);
+						return false;
+					}
 				};
-				playerApi.addEventListener("onVideoDataChange", handleVideoDataChange, { passive: true });
+
+				const handleVideoDataChange = (ev: { playertype?: number | string; type?: string }) => {
+					if (Number(ev?.playertype) !== 1 || !VIDEO_DATA_LOADED_TYPES.has(ev?.type ?? "")) return;
+					pushTrackInfo();
+				};
+
+				getPlayer()?.addEventListener("onVideoDataChange", handleVideoDataChange);
+
+				// Poll for first track — videoDetails can lag a tick after isReady()
+				const startedAt = Date.now();
+				const pollFirst = () => {
+					if (pushTrackInfo()) return;
+					if (Date.now() - startedAt >= FIRST_TRACK_POLL_MAX_MS) return;
+					setTimeout(pollFirst, FIRST_TRACK_POLL_MS);
+				};
+				pollFirst();
 			});
 		},
 	},

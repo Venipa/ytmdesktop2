@@ -201,12 +201,12 @@ export class PluginManager {
           if (isYoutubeMusicHost()) {
             await this.initializePlugins();
             await this.waitForPlayerReady();
-            this.log.debug("ytplayer loaded");
-  
+            this.log.debug("ytplayer ready");
+
             await this.runAfterInitHooks();
             await this.initializePluginCommands();
           }
-  
+
           window.api.emit("app.loadEnd");
           this.isLoaded = true;
           window.postMessage("ytmd-ready", "*");

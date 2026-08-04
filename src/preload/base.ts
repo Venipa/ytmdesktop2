@@ -93,15 +93,23 @@ const appMethods = {
   quit: createIpcSender("app.quit") as (force?: boolean) => void,
 };
 
-// Player API cache
+// Player API cache — refresh from DOM until ready so we don't stick on a cold stub
 const createPlayerApi = () => {
   let playerApiCache: any;
-  return () => playerApiCache || (playerApiCache = (document.querySelector("body>ytmusic-app") as any)?.playerApi);
+  return () => {
+    const fresh = (document.querySelector("body>ytmusic-app") as any)?.playerApi;
+    if (fresh) playerApiCache = fresh;
+    return playerApiCache ?? fresh ?? null;
+  };
 };
 
 const createPlayerUiService = () => {
   let playerUiServiceCache: any;
-  return () => playerUiServiceCache || (playerUiServiceCache = (document.querySelector("body>ytmusic-app") as any)?.playerUiService);
+  return () => {
+    const fresh = (document.querySelector("body>ytmusic-app") as any)?.playerUiService;
+    if (fresh) playerUiServiceCache = fresh;
+    return playerUiServiceCache ?? fresh ?? null;
+  };
 };
 
 // Interactive elements management

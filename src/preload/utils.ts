@@ -40,6 +40,130 @@ export const YTMD_READY_MESSAGE = "ytmd-ready";
 export const YOUTUBE_MUSIC_HOST = "music.youtube.com";
 export const DEFAULT_PLAYER_TIMEOUT = 30 * 1000;
 
+type YtPlayerLike = {
+	isReady?: (() => boolean) | boolean;
+	addEventListener?: (event: string, handler: (...args: any[]) => void, ...rest: any[]) => void;
+	removeEventListener?: (event: string, handler: (...args: any[]) => void, ...rest: any[]) => void;
+	getPlayerStateObject?: () => unknown;
+	getPlayerState?: () => unknown;
+};
+
+function readPlayerApi(): YtPlayerLike | null {
+	return (window.domUtils?.playerApi?.() as YtPlayerLike | null | undefined) ?? null;
+}
+
+/** True when YTM playerApi is safe for afterInit hooks. */
+export function isYoutubePlayerReady(player: YtPlayerLike | null | undefined): boolean {
+	if (!player) return false;
+	try {
+		const readyFlag = typeof player.isReady === "function" ? player.isReady() : player.isReady;
+		if (readyFlag) return true;
+	} catch {
+		/* ignore */
+	}
+	return false;
+}
+
+/**
+ * Wait until ytmusic-app.playerApi exists and isReady().
+ * Uses MutationObserver for API attach + event/rAF for ready — faster than fixed-interval poll only.
+ */
+export function waitForYoutubePlayerReady(timeoutMs: number = DEFAULT_PLAYER_TIMEOUT): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		let settled = false;
+		let mo: MutationObserver | null = null;
+		let rafId = 0;
+		let pollId: ReturnType<typeof setTimeout> | undefined;
+		let timeoutId: ReturnType<typeof setTimeout> | undefined;
+		const readyHandlers: Array<{ event: string; fn: (...args: any[]) => void }> = [];
+
+		const cleanup = () => {
+			if (timeoutId) clearTimeout(timeoutId);
+			if (pollId) clearTimeout(pollId);
+			if (rafId) cancelAnimationFrame(rafId);
+			mo?.disconnect();
+			mo = null;
+			const player = readPlayerApi();
+			for (const { event, fn } of readyHandlers) {
+				try {
+					player?.removeEventListener?.(event, fn);
+				} catch {
+					/* ignore */
+				}
+			}
+			readyHandlers.length = 0;
+		};
+
+		const finish = (err?: Error) => {
+			if (settled) return;
+			settled = true;
+			cleanup();
+			if (err) reject(err);
+			else resolve();
+		};
+
+		timeoutId = setTimeout(() => finish(new Error("Unable to hook yt player")), timeoutMs);
+
+		const tryReady = () => {
+			const player = readPlayerApi();
+			if (!isYoutubePlayerReady(player)) return false;
+			finish();
+			return true;
+		};
+
+		const bindReadySignals = (player: YtPlayerLike) => {
+			if (!player.addEventListener || readyHandlers.length > 0) return;
+			// Any of these means player internals are live; still gate on isReady() in tick
+			const onSignal = () => {
+				tryReady();
+			};
+			for (const event of ["onReady", "onStateChange", "onVideoDataChange", "onApiChange"]) {
+				try {
+					player.addEventListener(event, onSignal);
+					readyHandlers.push({ event, fn: onSignal });
+				} catch {
+					/* ignore */
+				}
+			}
+		};
+
+		const tick = () => {
+			if (settled) return;
+			const player = readPlayerApi();
+			if (player) {
+				bindReadySignals(player);
+				if (tryReady()) return;
+			}
+			rafId = requestAnimationFrame(tick);
+		};
+
+		// Catch late DOM upgrades (ytmusic-app / playerApi assignment)
+		mo = new MutationObserver(() => {
+			if (settled) return;
+			const player = readPlayerApi();
+			if (player) {
+				bindReadySignals(player);
+				tryReady();
+			}
+		});
+		mo.observe(document.documentElement, { childList: true, subtree: true });
+
+		// Kick immediately + rAF loop (isReady often flips between frames)
+		if (!tryReady()) {
+			const player = readPlayerApi();
+			if (player) bindReadySignals(player);
+			rafId = requestAnimationFrame(tick);
+			// Low-frequency fallback if rAF throttled (background / minimized)
+			const slowPoll = () => {
+				if (settled) return;
+				tryReady();
+				pollId = setTimeout(slowPoll, 100);
+			};
+			pollId = setTimeout(slowPoll, 100);
+		}
+	});
+}
+
 // Logger
 export const createPreloadLogger = (name: string) => createLogger(name);
 
@@ -124,31 +248,8 @@ export const createPluginUtils = (): PluginUtils => ({
 
 	createPluginLogger: (baseLogger: any, pluginName: string) => baseLogger.child(`Client Plugin, ${pluginName}`),
 
-	createPlayerReadyWaiter: (timeoutMs: number = DEFAULT_PLAYER_TIMEOUT) =>
-		new Promise<void>((resolve, reject) => {
-			let timeoutHandle: any;
-			let checkHandle: any;
+	createPlayerReadyWaiter: (timeoutMs: number = DEFAULT_PLAYER_TIMEOUT) => waitForYoutubePlayerReady(timeoutMs),
 
-			const checkYTRoot = () => {
-				if (!timeoutHandle) {
-					timeoutHandle = setTimeout(() => {
-						clearTimeout(checkHandle);
-						reject(new Error("Unable to hook yt player"));
-					}, timeoutMs);
-				}
-
-				const ready = !!window.domUtils.playerApi()?.isReady();
-				if (!ready) {
-					checkHandle = setTimeout(checkYTRoot, 100);
-				} else {
-					clearTimeout(checkHandle);
-					clearTimeout(timeoutHandle);
-					return resolve();
-				}
-			};
-
-			checkYTRoot();
-		}),
 	createPluginContext: (name: string, settings: any, playerApi: any, playerUiService: any, api: any, domUtils: any, log: any) => {
 		const pluginKey = parsePluginSettingKey(name);
 		return {

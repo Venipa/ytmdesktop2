@@ -305,8 +305,34 @@ export class TrackService {
 		if (!isActive) return;
 
 		const lastTrackId = this._activeTrackId;
+		const isTrackChange = lastTrackId !== videoId;
 		this._activeTrackId = videoId;
-		this.pushTrackToViews(track as TrackData, lastTrackId !== videoId);
+		this.pushTrackToViews(track as TrackData, isTrackChange);
+
+		// Seed UI state immediately — don't wait for title-change / play-state
+		if (isTrackChange || !this._trackState) {
+			const duration = Number(track.meta.duration ?? 0);
+			this.setTrackState({
+				id: videoId,
+				playing: this.playing,
+				duration,
+				liked: false,
+				disliked: false,
+				progress: this._trackState?.id === videoId ? (this._trackState.progress ?? 0) : 0,
+				uiProgress: this._trackState?.id === videoId ? (this._trackState.uiProgress ?? 0) : 0,
+				startedAt: Date.now() / 1000,
+				percentage: 0,
+				eventType: "state",
+				accent: this._trackState?.id === videoId ? (this._trackState.accent ?? null) : null,
+			});
+			void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
+				this.setTrackState((state) => {
+					if (state.id !== videoId) return;
+					state.liked = isLiked;
+					state.disliked = isDLiked;
+				});
+			});
+		}
 	}
 
 	async setActiveTrack(trackId: string) {
@@ -581,8 +607,10 @@ export class TrackService {
 
 export const trackService = new TrackService();
 
+// Bind IPC before youtube view loads — avoids dropping early track:info-req / play-state.
+trackService.bindIpcListeners();
+
 onAfterInit(({ windows }) => {
 	if (windows) trackService.attach(windows);
-	trackService.bindIpcListeners();
 	trackService.afterInit();
 });
