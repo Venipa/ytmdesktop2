@@ -1,0 +1,189 @@
+import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/core/baseProvider";
+import { defaultUri, defaultUrl, isDevelopment } from "@main/infra/devUtils";
+import { IpcContext, IpcHandle, IpcOn } from "@main/ipc/onIpcEvent";
+import { serverMain } from "@main/ipc/serverEvents";
+import { stringifyJson } from "@main/lib/json";
+import { createYmlStore } from "@main/lib/store/createYmlStore";
+import { CustomCssConfig } from "@main/trpc/routers/customCss/service";
+import { trackService } from "@main/trpc/routers/track";
+import eventNames from "@shared/constants/eventNames";
+import { VideoResSetting } from "@shared/utils/ISettings";
+import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import { Migration } from "electron-conf";
+import { get as _get, debounce } from "lodash-es";
+import { distinctUntilChanged, filter, map, Subject, startWith, takeUntil } from "rxjs";
+import { LastFMSettings } from "ytmd";
+import migrations from "./migrations";
+
+const defaultSettings = {
+	api: {
+		enabled: isDevelopment ? true : false,
+		port: 13091,
+	},
+	app: {
+		beta: false,
+		autoupdate: true,
+		autostart: true,
+		autostartMinimized: true,
+		getstarted: true,
+		enableDev: false,
+		minimizeTrayOverride: false,
+		enableStatisticsAndErrorTracing: true,
+		disableHardwareAccel: false,
+		enableTaskbarProgress: true,
+	},
+	volumeRatio: {
+		enabled: true,
+		volume: 0.05,
+	},
+	player: {
+		skipDisliked: false,
+		res: {
+			enabled: false,
+			prefer: "auto",
+		} as VideoResSetting,
+	},
+	discord: {
+		enabled: true,
+		buttons: false,
+	},
+	customcss: {
+		enabled: true,
+		scssFile: null,
+		watching: false,
+		thumbnailBackground: true,
+	} as CustomCssConfig,
+	state: {
+		currentUrl: null,
+	},
+	lastfm: {
+		enabled: false,
+	} as LastFMSettings,
+};
+
+export type SettingsStore = typeof defaultSettings & { [key: string]: any };
+
+const _settingsStore = createYmlStore<SettingsStore>("app-settings", {
+	defaults: defaultSettings as SettingsStore,
+	migrations: migrations.map(
+		(migration, version) =>
+			({
+				version,
+				...migration,
+			}) as Migration<SettingsStore>,
+	),
+});
+
+@IpcContext
+export default class SettingsProvider extends BaseProvider implements OnDestroy, BeforeStart, AfterInit {
+	readonly onChange = new Subject<SettingsStore>();
+
+	onChangeProp(key: string) {
+		const settings = this.instance;
+		return this.onChange.pipe(takeUntil(this.onChange), startWith(settings)).pipe(
+			map((value) => _get(value, key, null)),
+			filter(Boolean),
+			distinctUntilChanged((l, r) => stringifyJson(l) === stringifyJson(r)),
+		);
+	}
+
+	constructor(private app: App) {
+		super("settings");
+	}
+
+	async BeforeStart() {}
+
+	get instance() {
+		return _settingsStore.store;
+	}
+
+	get<T = any>(key: string, defaultValue?: any): T {
+		return _get(_settingsStore.store, key, defaultValue);
+	}
+
+	set(key: string, value: any) {
+		const prevValue = this.get(key);
+		_settingsStore.set(key, value ?? null);
+		this.onChange.next(_settingsStore.store);
+		try {
+			// global bus → @IpcOn + tRPC settings.onChange
+			serverMain.emit(eventNames.SERVER_SETTINGS_CHANGE, key, value, prevValue);
+			// youtube plugins still listen via webContents
+			this.views.youtubeView?.webContents.send(eventNames.SERVER_SETTINGS_CHANGE, key, value, prevValue);
+		} catch (ex) {
+			this.logger.error(ex);
+		}
+		return this;
+	}
+
+	@IpcOn("settingsProvider.save", {
+		debounce: 5000,
+	})
+	saveToDrive() {}
+
+	async OnDestroy() {
+		this.onChange.complete();
+		this.saveToDrive();
+	}
+
+	AfterInit() {
+		this.views.youtubeView.webContents.on("did-navigate-in-page", (ev, location) => {
+			this.logger.debug(`navigate-in-page :: ${location}`);
+			const url = new URLSearchParams(location.split("?")[1]);
+			if (url?.has("v")) {
+				const videoId = url.get("v");
+				if (videoId) trackService.setActiveTrack(videoId);
+			}
+		});
+
+		let previousHostname: string = defaultUrl;
+		this.views.youtubeView.webContents.on(
+			"did-navigate",
+			debounce((ev: Electron.Event, location: string) => {
+				this.logger.debug("navigate", location);
+				const url = new URL(location);
+				if (url) {
+					if (url.hostname === defaultUri.hostname && previousHostname !== url.hostname) {
+						serverMain.emit("customcss.update");
+					}
+					previousHostname = url.hostname;
+					if (url.hostname !== defaultUri.hostname) {
+						// clear track UI via same onTrack stream
+						serverMain.emit(eventNames.TRACK_CHANGE, null);
+					}
+				}
+			}, 500),
+		);
+	}
+
+	@IpcHandle("settingsProvider.get")
+	private _onEventGet(ev: IpcMainInvokeEvent, ...args: any[]) {
+		const [key, value] = args;
+		const returnValue = this.get(key);
+		return returnValue === undefined || returnValue === null ? value : returnValue;
+	}
+
+	@IpcHandle("settingsProvider.getAll")
+	private _onEventGetAll(ev: IpcMainInvokeEvent, ...args: any[]) {
+		const [value] = args;
+		const returnValue = _settingsStore.store;
+		return returnValue === undefined || returnValue === null ? value : returnValue;
+	}
+
+	@IpcOn("settingsProvider.set")
+	private _onEventSet(ev: IpcMainEvent, ...args: any[]) {
+		const [key, value] = args;
+		this.set(key, value);
+		this.logger.debug(key, value);
+		this.saveToDrive();
+	}
+
+	@IpcHandle("settingsProvider.update")
+	private async _onEventUpdate(ev: IpcMainInvokeEvent, ...args: any[]) {
+		const [key, value] = args;
+		this.logger.debug(key, value);
+		this.set(key, value);
+		this.saveToDrive();
+		return value;
+	}
+}

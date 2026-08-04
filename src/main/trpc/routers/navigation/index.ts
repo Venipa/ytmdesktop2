@@ -1,0 +1,1 @@
+export { navigationRouter as default, navigationRouter } from "./router";

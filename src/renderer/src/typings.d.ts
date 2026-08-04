@@ -12,19 +12,15 @@ declare global {
 		[key: string]: any;
 	}
 	declare module "*.svg" {
-		import type { FunctionalComponent } from "vue";
-		const content: FunctionalComponent;
+		import type { FC, SVGProps } from "react";
+		const content: FC<SVGProps<SVGSVGElement>>;
+		export default content;
+	}
+	declare module "*.svg?react" {
+		import type { FC, SVGProps } from "react";
+		const content: FC<SVGProps<SVGSVGElement>>;
 		export default content;
 	}
 }
 
-declare module "vue" {
-	interface ComponentCustomProperties {
-		window: typeof window;
-		console: typeof console;
-		api: typeof window.api;
-		translations: Record<string, string>;
-	}
-}
-
-export {}; // Important!
+export {};

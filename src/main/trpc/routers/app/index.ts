@@ -1,0 +1,1 @@
+export { appServiceRouter as default, appServiceRouter } from "./router";

@@ -1,14 +1,14 @@
-import { isDevelopment } from "@main/utils/devUtils";
-import { TrackData } from "@main/utils/trackData";
+import { isDevelopment } from "@main/infra/devUtils";
+import type { SettingsStore } from "@main/trpc/routers/settings/service";
 import { createId as cuid } from "@paralleldrive/cuid2";
-import createApp, { json, Router } from "express";
-import expressWs from "express-ws";
+import { TrackData } from "@shared/track/trackData";import { createLogger } from "@shared/utils/console";
 
 import EventEmitter from "events";
+import createApp, { json, Router } from "express";
+import expressWs from "express-ws";
 import { Server } from "http";
-import type { SettingsStore } from "@main/services/settings.service";
-import { createLogger } from "@shared/utils/console";
 import { parentPort } from "worker_threads";
+
 if (!parentPort) throw new Error("This module has been run as parent");
 const { app, getWss } = expressWs(createApp());
 let appConfig: SettingsStore;

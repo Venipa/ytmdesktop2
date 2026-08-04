@@ -1,5 +1,5 @@
-import IPC_EVENT_NAMES from "@main/utils/eventNames";
 import definePlugin from "@plugins/utils";
+import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 
 export default definePlugin(
 	"track-play-state",

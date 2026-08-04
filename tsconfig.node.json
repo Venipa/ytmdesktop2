@@ -3,6 +3,7 @@
 	"include": [
 		"src/env.d.ts",
 		"electron.vite.config.*",
+		"vite.config.*",
 		"src/vite-plugins/*.ts",
 		"src/main/**/*",
 		"src/preload/**/*",
@@ -10,6 +11,7 @@
 		"src/translations/**/*.ts",
 		"src/renderer-plugins/**/*.ts"
 	],
+	"exclude": ["src/shared/trpc/app-router.web.ts"],
 	"compilerOptions": {
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
@@ -29,6 +31,7 @@
 			"@shared/*": ["src/shared/*"],
 			"@translations/*": ["src/translations/*"],
 			"@main/*": ["src/main/*"],
+			"@routers/*": ["src/main/trpc/routers/*"],
 			"@/*": ["src/main/*"],
 			"@preload/*": ["src/preload/*"],
 			"@plugins/*": ["src/renderer-plugins/*"],

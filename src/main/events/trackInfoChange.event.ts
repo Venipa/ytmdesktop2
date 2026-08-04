@@ -1,5 +1,6 @@
-import { BaseEvent, OnEventExecute } from "@main/utils/baseEvent";
-import { TrackData } from "@main/utils/trackData";
+import { BaseEvent, OnEventExecute } from "@main/core/baseEvent";
+import { trackService } from "@main/trpc/routers/track";
+import { TrackData } from "@shared/track/trackData";
 
 // todo: remove nested server event calls
 export default class TrackInfoChange extends BaseEvent implements OnEventExecute {
@@ -7,7 +8,6 @@ export default class TrackInfoChange extends BaseEvent implements OnEventExecute
 		super("track:change");
 	}
 	execute(track: TrackData) {
-		const trackProvider = this.getProvider("track");
-		trackProvider.pushTrackToViews(track);
+		trackService.pushTrackToViews(track);
 	}
 }

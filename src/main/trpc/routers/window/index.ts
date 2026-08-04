@@ -1,0 +1,1 @@
+export { windowRouter as default, windowRouter } from "./router";

@@ -1,13 +1,18 @@
-import { onWindowLoad } from "@main/utils/windowUtils";
+import { createEventCollection, createServiceCollection } from "@main/core/serviceCollection";
+import { attachQuitHandler } from "@main/handlers/quitHandler";
+import { attachTrayState } from "@main/handlers/trayState";
+import { initializeCustomElectronEnvironment } from "@main/infra/electron";
+import { serverMain } from "@main/ipc/serverEvents";
+import { runLifecycle, setLifecycleContext } from "@main/lifecycle";
+import { attachTrpcWindow, initElectronTrpc } from "@main/trpc/handler";
+import { WindowManager } from "@main/windows/windowManager";
+import { onWindowLoad } from "@main/windows/windowUtils";
 import logger from "@shared/utils/Logger";
 import { waitMs } from "@shared/utils/promises";
 import { app, BrowserWindow, protocol } from "electron";
-import { initializeCustomElectronEnvironment } from "./utils/electron";
-import { attachQuitHandler } from "./utils/handlers/quitHandler";
-import { attachTrayState } from "./utils/handlers/trayState";
-import { serverMain } from "./utils/serverEvents";
-import { createEventCollection, createServiceCollection } from "./utils/serviceCollection";
-import { WindowManager } from "./utils/windowManager";
+
+// Side-effect: register track router lifecycle handlers
+import "@main/trpc/routers/track";
 
 initializeCustomElectronEnvironment();
 const log = logger.child("main");
@@ -19,8 +24,16 @@ const runApp = async function () {
 	log.debug(`Loaded Providers: ${serviceCollection.getProviderNames().join(", ")}`);
 	log.debug(`Loaded Events: ${eventCollection.getProviderNames().join(", ")}`);
 
+	setLifecycleContext({
+		app,
+		getProvider: (name) => serviceCollection.getProvider(name),
+	});
+
+	initElectronTrpc(serviceCollection);
+
 	try {
 		await serviceCollection.exec("BeforeStart");
+		await runLifecycle("beforeInit");
 		await eventCollection.prepare();
 	} catch (ex) {
 		log.error(ex); // before start can be ignored, experimental
@@ -61,11 +74,18 @@ const runApp = async function () {
 		if (BrowserWindow.getAllWindows().length === 0) {
 			mainWindow = await windowManager.createRootWindow();
 			await waitMs(); // next tick
+			attachTrpcWindow(mainWindow.main);
 			mainWindow.main.show();
 
 			if (serviceCollection) {
 				serviceCollection.registerWindows(mainWindow);
+				setLifecycleContext({
+					app,
+					windows: mainWindow,
+					getProvider: (name) => serviceCollection.getProvider(name),
+				});
 				await serviceCollection.exec("AfterInit");
+				await runLifecycle("afterInit");
 			}
 		}
 	};
@@ -74,10 +94,17 @@ const runApp = async function () {
 	app.on("ready", async () => {
 		await waitMs(); // next tick
 		mainWindow = await windowManager.createRootWindow();
+		attachTrpcWindow(mainWindow.main);
 		serviceCollection.registerWindows(mainWindow);
+		setLifecycleContext({
+			app,
+			windows: mainWindow,
+			getProvider: (name) => serviceCollection.getProvider(name),
+		});
 
 		await waitMs(); // next tick
 		await serviceCollection.exec("OnInit");
+		await runLifecycle("init");
 
 		const startupService = serviceCollection.getTypedProvider("startup");
 		log.debug({ isStartupContext: startupService.isStartupContext });
@@ -87,8 +114,12 @@ const runApp = async function () {
 		if (startupService.isStartupContext ? !startupService.isEnabled || !startupService.isInitialMinimized : !startupService.isMinimizedArg) {
 			mainWindow.main.show();
 		}
-		await onWindowLoad(mainWindow.main, () => serviceCollection.exec("AfterInit"), { once: true });
-		mainWindow.main.webContents.on("did-finish-load", () => serviceCollection.exec("AfterInit")); // if reloaded run afterInit again
+		const runAfterInit = async () => {
+			await serviceCollection.exec("AfterInit");
+			await runLifecycle("afterInit");
+		};
+		await onWindowLoad(mainWindow.main, () => runAfterInit(), { once: true });
+		mainWindow.main.webContents.on("did-finish-load", () => void runAfterInit()); // if reloaded run afterInit again
 	});
 
 	// Window control events

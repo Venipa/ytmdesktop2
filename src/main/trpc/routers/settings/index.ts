@@ -1,0 +1,1 @@
+export { settingsRouter as default, settingsRouter } from "./router";

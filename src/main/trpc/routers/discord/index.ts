@@ -1,0 +1,1 @@
+export { discordRouter as default, discordRouter } from "./router";

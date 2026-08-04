@@ -1,6 +1,3 @@
-shamefullyHoist: true
-nodeLinker: hoisted
-
 onlyBuiltDependencies:
   - '@biomejs/biome'
   - '@parcel/watcher'
@@ -8,3 +5,13 @@ onlyBuiltDependencies:
   - electron
   - esbuild
   - lefthook
+
+allowBuilds:
+  '@parcel/watcher': true
+  bufferutil: true
+  core-js: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  lefthook: true
+  utf-8-validate: true

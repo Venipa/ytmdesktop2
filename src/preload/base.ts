@@ -1,8 +1,11 @@
 import { contextBridge, ipcRenderer, webFrame } from "electron";
 import { webUtils } from "electron/renderer";
+import { exposeElectronTRPC } from "electron-trpc/main";
 import pkg from "../../package.json";
 import translations from "../translations";
 import { createRendererCSSHandler } from "./webFrameUtils";
+
+exposeElectronTRPC();
 
 const appVersion = import.meta.env.APP_VERSION || pkg.version;
 
@@ -66,9 +69,6 @@ const appMethods = {
 	maximize: createIpcSender("app.maximize"),
 	goback: createIpcSender("app.goback"),
 	quit: createIpcSender("app.quit") as (force?: boolean) => void,
-	installUpdate: createIpcSender("app.installUpdate"),
-	checkUpdate: createIpcInvoker("app.checkUpdate"),
-	isWin11: () => ipcRenderer.invoke("app.isWin11").catch(() => false),
 };
 
 // Player API cache
@@ -116,7 +116,6 @@ export default {
 		version: appVersion,
 		environment: import.meta.env.MODE,
 		platform: process.platform,
-		isWin11: appMethods.isWin11,
 	},
 	api: {
 		version: appVersion,
@@ -129,10 +128,7 @@ export default {
 		settingsProvider,
 		...ipc,
 		reloadCustomCss: () => ipcRenderer.send("customcss.update"),
-		mainWindowState: createIpcInvoker("mainWindowState"),
-		windowState: createIpcInvoker("windowState"),
 		getPathFromFile: (file: File) => webUtils.getPathForFile(file),
-		openFile: (path: string) => ipcRenderer.invoke("app.openFile", path),
 	},
 	translations,
 	domUtils: {
