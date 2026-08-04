@@ -242,6 +242,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	async getUpdate() {
 		await this._readyPromise;
 		this.logger.debug("getUpdate", this._update);
+    if (!this._update) return null;
 		return this._update;
 	}
 

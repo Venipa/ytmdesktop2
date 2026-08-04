@@ -1,12 +1,10 @@
-import type { ProgressInfo, UpdateInfo } from "@shared/utils/updater";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
-import { trpc } from "@/lib/trpc";
+import { useUpdater } from "@/hooks/use-updater";
 
 export const Route = createFileRoute("/_settings/about")({
 	component: AboutSettingsPage,
@@ -14,39 +12,15 @@ export const Route = createFileRoute("/_settings/about")({
 
 function AboutSettingsPage() {
 	const appVersion = window.api.version;
-	const utils = trpc.useUtils();
-	const { data: updateInfo = null } = trpc.update.get.useQuery();
-	const { data: updateDownloaded = false } = trpc.update.downloaded.useQuery();
-	const [updateInfoProgress, setUpdateInfoProgress] = useState<ProgressInfo | null>(null);
-	const [updateChecking, setUpdateChecking] = useState(false);
-	const { mutateAsync: check, isPending: checkPending } = trpc.update.check.useMutation({
-		onSettled: () => setUpdateChecking(false),
-	});
-	const { mutateAsync: install, isPending: installPending } = trpc.update.install.useMutation({
-		onSuccess: () => utils.update.get.setData(undefined, null),
-	});
-
-	trpc.update.onUpdate.useSubscription(undefined, {
-		onData: (info) => utils.update.get.setData(undefined, info as UpdateInfo | null),
-	});
-	trpc.update.onChecking.useSubscription(undefined, {
-		onData: (checking) => setUpdateChecking(!!checking),
-	});
-	trpc.update.onProgress.useSubscription(undefined, {
-		onData: (progress) => setUpdateInfoProgress(progress as ProgressInfo),
-	});
-	trpc.update.onDownloaded.useSubscription(undefined, {
-		onData: () => utils.update.downloaded.setData(undefined, true),
-	});
+	const { updateInfo, downloaded, progress, checking, installing, check, install } = useUpdater();
 
 	function handleCheckUpdate() {
-		if (updateChecking || checkPending) return;
-		setUpdateChecking(true);
+		if (checking) return;
 		void check();
 	}
 
 	function runUpdate() {
-		if (installPending) return;
+		if (installing) return;
 		void install(true);
 	}
 
@@ -63,21 +37,21 @@ function AboutSettingsPage() {
 							<span className="text-xs font-medium">Version</span>
 							<span className="text-xs text-muted-foreground">{appVersion}</span>
 						</div>
-						{updateInfo && updateDownloaded ? (
-							<Button variant="outline" onClick={runUpdate} disabled={installPending}>
+						{updateInfo && downloaded ? (
+							<Button variant="outline" onClick={runUpdate} disabled={installing}>
 								Install {updateInfo.version}
 							</Button>
-						) : updateInfo && updateInfoProgress?.percent ? (
+						) : updateInfo && progress?.percent ? (
 							<Button variant="outline" disabled>
-								Downloading… {updateInfoProgress.percent.toFixed(0)}%
+								Downloading… {progress.percent.toFixed(0)}%
 								<span data-icon="inline-end">
 									<Spinner />
 								</span>
 							</Button>
 						) : (
-							<Button variant="outline" onClick={handleCheckUpdate} disabled={updateChecking || checkPending}>
-								{updateChecking ? "Checking…" : "Check for Update"}
-								{updateChecking ? (
+							<Button variant="outline" onClick={handleCheckUpdate} disabled={checking}>
+								{checking ? "Checking…" : "Check for Update"}
+								{checking ? (
 									<span data-icon="inline-end">
 										<Spinner />
 									</span>

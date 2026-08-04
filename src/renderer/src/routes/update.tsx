@@ -1,10 +1,11 @@
-import type { ProgressInfo, UpdateInfo } from "@shared/utils/updater";
+import type { ProgressInfo } from "@shared/utils/updater";
 import { createFileRoute } from "@tanstack/react-router";
 import { CheckCircleIcon, DownloadIcon } from "lucide-react";
 import _prettyBytes from "pretty-bytes";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useUpdater } from "@/hooks/use-updater";
 import { trpc } from "@/lib/trpc";
 
 export const Route = createFileRoute("/update")({
@@ -15,54 +16,35 @@ const prettyBytes = (bytes: number) => _prettyBytes(bytes, { binary: true, space
 
 function UpdatePage() {
 	const [isComplete, setIsComplete] = useState(false);
-	const currentVersion = "v" + window.api.version;
-	const utils = trpc.useUtils();
-	const { data: updateInfo = null } = trpc.update.get.useQuery();
-	const { data: updateDownloaded = false } = trpc.update.downloaded.useQuery();
-	const [updateInfoProgress, setUpdateInfoProgress] = useState<ProgressInfo | null>(null);
-	const [updateChecking, setUpdateChecking] = useState(false);
 	const [isInstalling, setIsInstalling] = useState(false);
+	const currentVersion = "v" + window.api.version;
 	const isMacOS = window.api.platform.isMacOS;
-
-	const { mutateAsync: check, isPending: checkPending } = trpc.update.check.useMutation({
-		onSettled: () => setUpdateChecking(false),
-	});
-	const { mutateAsync: install } = trpc.update.install.useMutation();
-
-	trpc.update.onUpdate.useSubscription(undefined, {
-		onData: (info) => utils.update.get.setData(undefined, info as UpdateInfo | null),
-	});
-	trpc.update.onChecking.useSubscription(undefined, {
-		onData: (checking) => setUpdateChecking(!!checking),
-	});
-	trpc.update.onProgress.useSubscription(undefined, {
-		onData: (progress) => setUpdateInfoProgress(progress as ProgressInfo),
-	});
-	trpc.update.onDownloaded.useSubscription(undefined, {
-		onData: () => utils.update.downloaded.setData(undefined, true),
-	});
+	const utils = trpc.useUtils();
+	const { updateInfo, downloaded, progress, checking, check, install } = useUpdater();
+	const [localProgress, setLocalProgress] = useState<ProgressInfo | null>(null);
+	const updateInfoProgress = progress ?? localProgress;
 
 	function installUpdate(quitAndInstall = true) {
 		if (isInstalling) return Promise.resolve(null);
 		setIsInstalling(true);
-		if (!updateDownloaded) {
-			setUpdateInfoProgress({ total: 0, delta: 0, transferred: 0, percent: 0, bytesPerSecond: 0 });
+		if (!downloaded) {
+			setLocalProgress({ total: 0, delta: 0, transferred: 0, percent: 0, bytesPerSecond: 0 });
 		}
 		return install(quitAndInstall)
-			.then((downloaded) => {
-				if (!updateDownloaded) {
-					setIsComplete(!!downloaded);
-					utils.update.downloaded.setData(undefined, !!downloaded);
+			.then((nextDownloaded) => {
+				if (!downloaded) {
+					setIsComplete(!!nextDownloaded);
+					utils.update.downloaded.setData(undefined, !!nextDownloaded);
 				} else {
 					setTimeout(() => {
 						setIsInstalling(false);
 						void installUpdate(true);
 					}, 20000);
 				}
-				setUpdateInfoProgress(null);
+				setLocalProgress(null);
 			})
 			.catch((err) => {
-				setUpdateInfoProgress(null);
+				setLocalProgress(null);
 				if (err instanceof Error && err.message.endsWith("[E002]")) {
 					setIsInstalling(true);
 				} else throw err;
@@ -71,15 +53,14 @@ function UpdatePage() {
 	}
 
 	function handleCheckUpdate() {
-		if (updateChecking || checkPending) return;
-		setUpdateChecking(true);
+		if (checking) return;
 		void check();
 	}
 
-	if (updateChecking) {
+	if (checking) {
 		return (
 			<div className="flex h-full min-h-screen flex-col overflow-x-hidden overflow-y-auto bg-black p-4">
-				<div className="flex flex-grow flex-col items-center justify-center px-6 py-12 text-center">
+				<div className="flex grow flex-col items-center justify-center px-6 py-12 text-center">
 					<h2 className="mb-2 text-xl font-semibold text-white">Checking for Updates</h2>
 					<p className="mb-6 text-sm text-gray-400">Please wait while we check for available updates...</p>
 					<Spinner className="size-8" />
@@ -139,11 +120,11 @@ function UpdatePage() {
 						</div>
 					)}
 					<div className="flex gap-3 pt-2">
-						{updateInfoProgress && !updateDownloaded ? (
+						{updateInfoProgress && !downloaded ? (
 							<Button className="w-full" disabled>
 								Downloading...
 							</Button>
-						) : updateDownloaded && !isInstalling && !isMacOS ? (
+						) : downloaded && !isInstalling && !isMacOS ? (
 							<>
 								<Button variant="outline" className="flex-1" onClick={() => window.close()}>
 									Later
@@ -152,12 +133,12 @@ function UpdatePage() {
 									<CheckCircleIcon size={16} /> Install Now
 								</Button>
 							</>
-						) : isInstalling && updateDownloaded ? (
+						) : isInstalling && downloaded ? (
 							<div className="flex h-20 items-center justify-center gap-2">
 								<Spinner />
 								<span className="text-xs text-gray-400">Installing...</span>
 							</div>
-						) : !updateDownloaded ? (
+						) : !downloaded ? (
 							<>
 								<Button variant="outline" className="flex-1" onClick={() => window.close()}>
 									Later
@@ -180,7 +161,7 @@ function UpdatePage() {
 
 	return (
 		<div className="flex h-full min-h-screen flex-col overflow-x-hidden overflow-y-auto bg-black p-4">
-			<div className="flex flex-grow flex-col items-center justify-center px-6 py-12 text-center">
+			<div className="flex grow flex-col items-center justify-center px-6 py-12 text-center">
 				<div className="mx-auto mb-4 w-fit rounded-full bg-gray-900 p-3">
 					<CheckCircleIcon size={32} className="text-green-400" />
 				</div>

@@ -79,6 +79,9 @@ export class TrackService {
 	private _ipcBound = false;
 	private _styleBound = false;
 
+	/** Settle window before notifying Last.fm / socket API — UI stays instant. */
+	private static readonly EXTERNAL_TRACK_DEBOUNCE_MS = 1200;
+
 	private readonly logger = createLogger("services").child("track");
 
 	private get app() {
@@ -120,9 +123,9 @@ export class TrackService {
 		if (this._ipcBound) return;
 		this._ipcBound = true;
 		serverMain.on("track:info-req", debounce(this.onTrackInfo.bind(this), 10));
-		serverMain.on("track:title-change", debounce(this.onTitleChange.bind(this), 100));
-		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE, debounce(this.onPlayStateChange.bind(this), 100));
-		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, debounce(this.onPlayStateProgress.bind(this), 100));
+		serverMain.on("track:title-change", debounce(this.onTitleChange.bind(this), 25));
+		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE, debounce(this.onPlayStateChange.bind(this), 50));
+		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, debounce(this.onPlayStateProgress.bind(this), 50));
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, debounce(this.onProgressHandler.bind(this), 1000));
 	}
 
@@ -293,14 +296,17 @@ export class TrackService {
 			music: musicObject,
 		};
 
-		trackCollection.addOrUpdate(ytTrack.video.videoId, track as TrackData);
+		const videoId = ytTrack.video.videoId;
+		trackCollection.addOrUpdate(videoId, track as TrackData);
 
-		const currentTrackId = await this.getActiveTrackByDOM();
-		if (!this._activeTrackId || track.video.videoId === this._activeTrackId || currentTrackId === track.video.videoId) {
-			const lastTrackId = this._activeTrackId;
-			this._activeTrackId = track.video.videoId;
-			await this.pushTrackToViews(track as TrackData, lastTrackId !== track.video.videoId);
-		}
+		// Skip DOM round-trip when we already know this is the active track
+		const knownActive = !this._activeTrackId || this._activeTrackId === videoId;
+		const isActive = knownActive || (await this.getActiveTrackByDOM()) === videoId;
+		if (!isActive) return;
+
+		const lastTrackId = this._activeTrackId;
+		this._activeTrackId = videoId;
+		this.pushTrackToViews(track as TrackData, lastTrackId !== videoId);
 	}
 
 	async setActiveTrack(trackId: string) {
@@ -308,7 +314,7 @@ export class TrackService {
 	}
 
 	onTitleChange(_ev: unknown, trackId: string) {
-		if (trackId) this.onActiveTrack(trackId);
+		if (trackId) void this.onActiveTrack(trackId);
 	}
 
 	private async onActiveTrack(trackId: string) {
@@ -320,15 +326,14 @@ export class TrackService {
 		// Wait for onTrackInfo when payload not ready — never clear pending id
 		if (!td || td.video?.videoId !== trackId) return;
 
-		const [isLiked, isDLiked] = await this.currentSongLikeState();
-		await this.pushTrackToViews(td);
-
+		// UI first — like-state DOM query must not delay track fanout
+		this.pushTrackToViews(td);
 		this.setTrackState({
 			id: trackId,
 			playing: this.playing,
 			duration: this.getTrackDuration() ?? 0,
-			liked: isLiked,
-			disliked: isDLiked,
+			liked: false,
+			disliked: false,
 			progress: 0,
 			uiProgress: 0,
 			startedAt: Date.now() / 1000,
@@ -336,9 +341,20 @@ export class TrackService {
 			eventType: "state",
 			accent: null,
 		});
+
+		const [isLiked, isDLiked] = await this.currentSongLikeState();
+		this.setTrackState((state) => {
+			if (state.id !== trackId) return;
+			state.liked = isLiked;
+			state.disliked = isDLiked;
+		});
 	}
 
-	async pushTrackToViews(trackRef: TrackData, updateLastFm: boolean = true) {
+	/**
+	 * Instant UI fanout. Last.fm / API socket / OS media settle separately so
+	 * skipping tracks does not block toolbar/miniplayer and does not spam 3rd parties.
+	 */
+	pushTrackToViews(trackRef: TrackData, updateLastFm: boolean = true) {
 		const track = clone(trackRef);
 		track.meta.startedAt = Date.now() / 1000;
 
@@ -346,47 +362,76 @@ export class TrackService {
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
 		events.emit("track:change", track);
 
+		void this.updateMediaOsControls(track);
+		this.queueExternalTrackPush(track, updateLastFm);
+	}
+
+	private async updateMediaOsControls(track: TrackData) {
 		try {
-			const media = this.getProvider("mediaControl") as { instance?: { setTimeline: (duration: number, progress: number) => void }; handleTrackMediaOSControlChange?: (track: TrackData) => Promise<void> };
+			const media = this.getProvider("mediaController") as {
+				instance?: { setTimeline: (duration: number, progress: number) => void };
+				handleTrackMediaOSControlChange?: (track: TrackData) => Promise<void>;
+			};
 			if (media?.instance) {
 				await media.handleTrackMediaOSControlChange?.(track);
 			}
 		} catch (error) {
 			this.logger.error("Failed to update media controls:", error);
 		}
+	}
 
-		const api = this.getProvider("api") as any;
-		api.sendMessage("track:change", track);
+	private pendingExternal: { track: TrackData; updateLastFm: boolean } | null = null;
 
+	private queueExternalTrackPush(track: TrackData, updateLastFm: boolean) {
+		const prev = this.pendingExternal;
+		this.pendingExternal = {
+			track,
+			// Keep Last.fm intent if any queued push for this settle window asked for it
+			updateLastFm: updateLastFm || (!!prev?.updateLastFm && prev.track.video.videoId === track.video.videoId),
+		};
+		this.flushExternalTrackPush();
+	}
+
+	private flushExternalTrackPush = debounce(async () => {
+		const pending = this.pendingExternal;
+		this.pendingExternal = null;
+		if (!pending) return;
+
+		const { track, updateLastFm } = pending;
+		const api = this.getProvider("api") as { sendMessage?: (...args: unknown[]) => void } | undefined;
+		api?.sendMessage?.("track:change", track);
+
+		if (!updateLastFm) return;
+		await this.pushLastFm(track);
+	}, TrackService.EXTERNAL_TRACK_DEBOUNCE_MS);
+
+	private async pushLastFm(track: TrackData) {
 		const lastfm = this.getProvider("lastfm") as {
 			getState: () => { connected: boolean; processing: boolean };
 			handleTrackStart: (track: TrackData) => Promise<void>;
 			handleTrackChange: (track: TrackData) => void;
 		};
+		if (!lastfm) return;
+
 		const lastfmState = lastfm.getState();
 		const videoId = track.video.videoId;
-		const shouldUpdateLastFm = updateLastFm && !!videoId && videoId !== this.lastLastFmTrackId;
-		try {
-			if (shouldUpdateLastFm && lastfm && lastfmState.connected && !lastfmState.processing) {
-				this.lastLastFmTrackId = videoId;
-				await lastfm.handleTrackStart(track);
-				this.logger.debug("lastfm.handleTrackStart", videoId, { lastfmState });
-				if (this.trackChangeTimeout) {
-					clearTimeout(this.trackChangeTimeout);
-				}
+		if (!videoId || videoId === this.lastLastFmTrackId) return;
+		if (!lastfmState.connected || lastfmState.processing) return;
 
-				this.trackChangeTimeout = setTimeout(
-					() => {
-						this.logger.debug("lastfm.handleTrackChange", videoId, { lastfmState });
-						lastfm.handleTrackChange(track);
-						if (this.trackChangeTimeout) {
-							clearTimeout(this.trackChangeTimeout);
-							this.trackChangeTimeout = null;
-						}
-					},
-					clamp(track.meta.duration * 0.65, 30, 90) * 1000,
-				);
-			}
+		try {
+			this.lastLastFmTrackId = videoId;
+			await lastfm.handleTrackStart(track);
+			this.logger.debug("lastfm.handleTrackStart", videoId, { lastfmState });
+
+			if (this.trackChangeTimeout) clearTimeout(this.trackChangeTimeout);
+			this.trackChangeTimeout = setTimeout(
+				() => {
+					this.logger.debug("lastfm.handleTrackChange", videoId, { lastfmState });
+					lastfm.handleTrackChange(track);
+					this.trackChangeTimeout = null;
+				},
+				clamp(track.meta.duration * 0.65, 30, 90) * 1000,
+			);
 		} catch (error) {
 			this.logger.error("Failed to update lastfm:", error);
 		}
@@ -395,9 +440,8 @@ export class TrackService {
 	async onPlayStateChange(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
-		await this.updateMediaTimeline(duration, progressSeconds, isPlaying);
-		const [isLiked, isDLiked] = await this.currentSongLikeState();
 
+		// UI play-state first — Discord / OS timeline settle after
 		this.setTrackState((state) => {
 			state.playing = isPlaying;
 			if (state.progress !== progressSeconds) {
@@ -405,18 +449,24 @@ export class TrackService {
 				state.uiProgress = progressSeconds;
 				state.percentage = (progressSeconds / duration) * 100;
 			}
-			state.liked = isLiked;
-			state.disliked = isDLiked;
 			state.duration = duration;
 			state.eventType = "state";
+		});
+
+		void this.updateMediaTimeline(duration, progressSeconds, isPlaying);
+		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
+			this.setTrackState((state) => {
+				state.liked = isLiked;
+				state.disliked = isDLiked;
+			});
 		});
 	}
 
 	private async updateMediaTimeline(duration: number, progressSeconds: number, isPlaying: boolean) {
-		const discordProvider = this.getProvider("discord") as any;
-		await discordProvider.updateTrackProgress(isPlaying, progressSeconds);
+		const discordProvider = this.getProvider("discord") as { updateTrackProgress?: (a: boolean, b: number, c?: boolean) => Promise<void> | void };
+		await discordProvider?.updateTrackProgress?.(isPlaying, progressSeconds);
 		try {
-			const mediaController = this.getProvider("mediaControl") as { instance?: { setTimeline: (duration: number, progress: number) => void } };
+			const mediaController = this.getProvider("mediaController") as { instance?: { setTimeline: (duration: number, progress: number) => void } };
 			if (mediaController?.instance) {
 				mediaController.instance.setTimeline(duration, progressSeconds);
 			}
@@ -467,15 +517,16 @@ export class TrackService {
 	}
 
 	onTrackStateChange(callback: (state: TrackState) => void, options: { debounce?: number; immediate?: boolean } = { immediate: false }) {
-		const handler = debounce(callback, options?.debounce);
+		const handler = options?.debounce ? debounce(callback, options.debounce) : callback;
 		if (options.immediate && this._trackState) handler(this._trackState);
 		events.on("track:state-change", handler);
 		this.app.on("before-quit", () => events.off("track:state-change", handler));
 		return () => events.off("track:state-change", handler);
 	}
 
-	onTrackChange(callback: (track: TrackData) => void, options: { debounce?: number; immediate?: boolean } = { debounce: 1000, immediate: false }) {
-		const handler = debounce(callback, options?.debounce);
+	/** Instant by default. Pass `debounce` for 3rd-party sinks (Discord, etc.). */
+	onTrackChange(callback: (track: TrackData) => void, options: { debounce?: number; immediate?: boolean } = { immediate: false }) {
+		const handler = options?.debounce ? debounce(callback, options.debounce) : callback;
 		if (options.immediate && this.trackData) handler(this.trackData);
 		events.on("track:change", handler);
 		this.app.on("before-quit", () => events.off("track:change", handler));

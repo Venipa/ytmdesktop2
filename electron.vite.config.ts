@@ -156,6 +156,11 @@ export default defineConfig({
 	},
 	renderer: {
 		...rendererResolve,
+		server: {
+			hmr: {
+				overlay: true,
+			},
+		},
 		plugins: [
 			tanstackRouter({
 				target: "react",

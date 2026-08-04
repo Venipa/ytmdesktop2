@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangleIcon, CheckCircleIcon, InfoIcon, XCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { trpc } from "@/lib/trpc";
+import { useWindowControls } from "@/hooks/use-window-controls";
 
 export const Route = createFileRoute("/restart")({
 	component: RestartPage,
@@ -24,7 +24,7 @@ function RestartPage() {
 		icon: params.get("icon") ?? "info",
 	};
 	const IconComponent = IconMap[meta.icon as keyof typeof IconMap] ?? null;
-	const { mutateAsync: dialogResponse } = trpc.window.dialogResponse.useMutation();
+	const { dialogResponse } = useWindowControls();
 
 	function action(next: "close" | "ok") {
 		setIsBusy(true);

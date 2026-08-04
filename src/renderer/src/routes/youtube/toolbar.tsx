@@ -28,7 +28,7 @@ function YoutubeToolbarPage() {
 
 	return (
 		<div className="h-full overflow-hidden">
-			<div className={`flex h-10 items-stretch justify-between gap-2 border-b border-gray-800 bg-black px-2 select-none ${isDarwin ? "pl-20" : ""}`}>
+			<div className={`flex h-10 items-stretch justify-between gap-2 border-b border-neutral-800 bg-black px-2 select-none ${isDarwin ? "pl-20" : ""}`}>
 				<button
 					type="button"
 					className={cn("control-button self-center cursor-pointer", !canGoBack && "disabled")}

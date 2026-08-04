@@ -41,6 +41,9 @@ export function useLastFm() {
 	const { mutateAsync: authorize } = trpc.lastfm.authorize.useMutation({
 		onSettled: () => setLastFMLoading(false),
 	});
+	const { mutateAsync: toggle, isLoading: togglePending } = trpc.lastfm.toggle.useMutation({
+		onSuccess: (status) => setLastFM(status as LastFmStatus),
+	});
 
 	const authorizeLastFM = useCallback(() => {
 		if (lastFM?.connected) {
@@ -51,5 +54,22 @@ export function useLastFm() {
 		void authorize();
 	}, [lastFM?.connected, profile, authorize]);
 
-	return { lastFMState, setFmState, lastFM, lastFMLoading, authorizeLastFM };
+	const toggleLastFM = useCallback(
+		(next: boolean) => {
+			if (togglePending || lastFM.processing) return Promise.resolve(lastFM);
+			return toggle(next);
+		},
+		[toggle, togglePending, lastFM],
+	);
+
+	return {
+		lastFMState,
+		setFmState,
+		lastFM,
+		lastFMLoading,
+		authorizeLastFM,
+		toggleLastFM,
+		togglePending,
+		isBusy: togglePending || lastFMLoading || !!lastFM.processing,
+	};
 }

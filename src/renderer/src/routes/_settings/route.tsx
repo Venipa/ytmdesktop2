@@ -1,11 +1,14 @@
 import {
   RiCodeSSlashLine,
   RiDiscordLine,
+  RiGithubFill,
+  RiGlobalLine,
   RiInformationLine,
   RiMusic2Line,
   RiPlugLine,
   RiSettings3Line,
 } from "@remixicon/react";
+import { useUpdater } from "@renderer/hooks/use-updater";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ComponentType, type CSSProperties, memo, useEffect } from "react";
 import LogoIcon from "@/assets/logo.svg?react";
@@ -26,6 +29,7 @@ import {
   SidebarProvider,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_settings")({
 	component: SettingsLayout,
@@ -38,6 +42,11 @@ const tabs = [
 	{ to: "/custom-css", label: "Custom CSS", icon: RiCodeSSlashLine },
 	{ to: "/integrations", label: "Integrations", icon: RiPlugLine },
 	{ to: "/about", label: "About", icon: RiInformationLine },
+] as const;
+
+const socials = [
+	{ href: "https://github.com/Venipa/ytmdesktop2", label: "GitHub", icon: RiGithubFill },
+	{ href: "https://youtube-music.app", label: "Website", icon: RiGlobalLine },
 ] as const;
 
 type SettingsTabTo = (typeof tabs)[number]["to"];
@@ -78,6 +87,8 @@ function SettingsLayout() {
 		document.title = "YouTube Music - Settings";
 	}, []);
 
+  const updater = useUpdater();
+
 	return (
 		<div className="absolute inset-0 flex h-full flex-col overflow-hidden bg-background">
 			<ControlBar title="Settings" />
@@ -107,28 +118,30 @@ function SettingsLayout() {
 					<SidebarFooter className="gap-y-2 border-t border-sidebar-border py-3 px-0">
 						<div className="flex flex-col gap-1 px-3 text-[10px] text-muted-foreground">
 							<span>
-								v{window.api.version}@{window.app.environment}
+								v{window.api.version} ({window.app.environment === "production" ? !updater.beta ? "stable" : "beta" : "dev"})
 							</span>
-							<span>{window.app.platform}</span>
-						</div>
+              <span>{window.app.platform}</span>
+              </div>
 						<SidebarSeparator className="p-0 m-0" />
-						<div className="flex flex-col gap-1 px-3">
-							<a
-								href="https://github.com/Venipa/ytmdesktop2"
-								className="text-xs text-muted-foreground hover:text-sidebar-foreground"
-								target="_blank"
-								rel="noreferrer"
-							>
-								Github
-							</a>
-							<a
-								href="https://youtube-music.app"
-								className="text-xs text-muted-foreground hover:text-sidebar-foreground"
-								target="_blank"
-								rel="noreferrer"
-							>
-								Website
-							</a>
+						<div className="flex items-center gap-1 px-3">
+							{socials.map(({ href, label, icon: Icon }) => (
+								<a
+									key={href}
+									href={href}
+									target="_blank"
+									rel="noreferrer"
+									aria-label={label}
+									title={label}
+									className={cn(
+										"inline-flex size-8 items-center justify-center rounded-md text-muted-foreground",
+										"transition-colors duration-150 ease-out hover:bg-sidebar-accent hover:text-sidebar-foreground",
+										"active:scale-[0.97]",
+									)}
+								>
+									<Icon className="size-4" />
+									<span className="sr-only">{label}</span>
+								</a>
+							))}
 						</div>
 					</SidebarFooter>
 				</Sidebar>
