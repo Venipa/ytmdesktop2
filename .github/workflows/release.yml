@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest] # macos-latest is disabled due to Apple Developer Program issues for now
+        os: [windows-2025-vs2026, ubuntu-latest] # macos-latest is disabled due to Apple Developer Program issues for now
         node-version: [24.14.0]
 
     steps:
@@ -50,7 +50,7 @@ jobs:
           sudo apt install flatpak flatpak-builder
           sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-      - if: matrix.os == 'windows-latest'
+      - if: matrix.os == 'windows-2025-vs2026'
         name: install windows deps
         uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
         with:
@@ -166,27 +166,6 @@ jobs:
 
           # Create new deploy for this Sentry release
           sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_DEPLOY_ENVIRONMENT
-
-    #   - if: matrix.os == 'windows-latest' && steps.getVersion.outputs.releaseType == 'stable'
-    #     name: Upload new winget release
-    #     uses: vedantmgoyal9/winget-releaser@v2
-    #     with:
-    # # The PackageIdentifier of the package (case-sensitive).
-    #       identifier: venipa.ytmdesktop
-    # # The PackageVersion of the package you want to release.
-    #       version: ${{steps.getVersion.outputs.value}}
-    # # The regex to match the installers.
-    #       installers-regex: dist\\.*-setup.(exe|msi|msix|appx)(bundle){0,1}$
-    # # The maximum number of versions to keep in WinGet Community Repository (Default: 0 - no limit)
-    #       max-versions-to-keep: 10
-    # # The repository where the release is present (should be present under same user/organization).
-    #       release-repository: ${{ github.event.repository.name }}
-    # # The release tag to be used for creating manifests.
-    #       release-tag: v${{steps.getVersion.outputs.value}}
-    # # GitHub token to create pull request on Windows Package Manager Community Repository.
-    #       token: ${{ secrets.GITHUB_TOKEN }}
-    # # GitHub username where the fork of winget-pkgs is present.
-    #       fork-user: ${{ github.repository_owner }}
 
   finalize-release:
     needs: build
