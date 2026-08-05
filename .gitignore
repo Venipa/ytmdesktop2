@@ -36,3 +36,5 @@ apps/ytmdesktop2/dist_electron*
 
 /*.node
 /*.tgz
+
+routeTree.gen.ts

@@ -2,7 +2,6 @@ import type { ProgressInfo } from "@shared/utils/updater";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRightIcon, CheckCircle2Icon, DownloadIcon, RefreshCwIcon } from "lucide-react";
 import _prettyBytes from "pretty-bytes";
-import { useState } from "react";
 import { ReleaseTimeline } from "@/components/release-notes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,25 +21,26 @@ function UpdateActions(props: {
 	isDownloading: boolean;
 	downloaded: boolean;
 	installing: boolean;
-	activeProgress: ProgressInfo | null;
+	progress: ProgressInfo | null;
 	onInstall: (quitAndInstall: boolean) => void;
 }) {
-	const { isMacOS, isDownloading, downloaded, installing, activeProgress, onInstall } = props;
+	const { isMacOS, isDownloading, downloaded, installing, progress, onInstall } = props;
+	const showDownloadProgress = !!progress && !downloaded && !installing;
 
 	return (
 		<div className="flex flex-col gap-3">
-			{activeProgress ? (
+			{showDownloadProgress ? (
 				<div className="flex flex-col gap-2">
-					<Progress value={Math.round(activeProgress.percent)}>
-						<ProgressLabel>{downloaded || activeProgress.percent >= 100 ? "Download complete" : "Downloading"}</ProgressLabel>
+					<Progress value={Math.round(progress.percent)}>
+						<ProgressLabel>{progress.percent >= 100 ? "Download complete" : "Downloading"}</ProgressLabel>
 						<ProgressValue />
 					</Progress>
 					<div className="flex items-center justify-between text-xs text-muted-foreground tabular-nums">
-						<span>{prettyBytes(activeProgress.total)}</span>
+						<span>{prettyBytes(progress.total)}</span>
 						<span>
-							{downloaded || activeProgress.percent >= 100
-								? prettyBytes(activeProgress.total)
-								: `${prettyBytes(activeProgress.transferred)} / ${prettyBytes(activeProgress.total)}`}
+							{progress.percent >= 100
+								? prettyBytes(progress.total)
+								: `${prettyBytes(progress.transferred)} / ${prettyBytes(progress.total)}`}
 						</span>
 					</div>
 				</div>
@@ -68,9 +68,9 @@ function UpdateActions(props: {
 					) : null}
 				</div>
 			) : installing ? (
-				<div className="flex w-full items-center justify-center gap-2 py-1">
+				<div className="flex w-full flex-col items-center gap-2 py-1">
 					<Spinner />
-					<span className="text-xs text-muted-foreground">Installing…</span>
+					<span className="text-xs text-muted-foreground">Installing… app will restart</span>
 				</div>
 			) : (
 				<div className="flex w-full flex-col gap-2">
@@ -93,22 +93,15 @@ function UpdatePage() {
 	const currentVersion = window.api.version;
 	const isMacOS = window.api.platform.isMacOS;
 	const { updateInfo, downloaded, progress, checking, installing, status, check, install } = useUpdater();
-	const [localProgress, setLocalProgress] = useState<ProgressInfo | null>(null);
-	const activeProgress = progress ?? localProgress;
-	const isDownloading = status === "downloading" || (!!activeProgress && !downloaded);
+	const isDownloading = status === "downloading" || (!!progress && !downloaded);
 
 	async function installUpdate(quitAndInstall = true) {
 		if (installing) return;
-		if (!downloaded) {
-			setLocalProgress({ total: 0, delta: 0, transferred: 0, percent: 0, bytesPerSecond: 0 });
-		}
 		try {
 			await install(quitAndInstall);
 		} catch (err) {
 			if (err instanceof Error && err.message.endsWith("[E002]")) return;
 			throw err;
-		} finally {
-			setLocalProgress(null);
 		}
 	}
 
@@ -161,7 +154,7 @@ function UpdatePage() {
 							isDownloading={isDownloading}
 							downloaded={downloaded}
 							installing={installing}
-							activeProgress={activeProgress}
+							progress={progress}
 							onInstall={(quit) => void installUpdate(quit)}
 						/>
 					</div>
