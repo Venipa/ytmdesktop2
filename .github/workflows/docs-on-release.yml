@@ -19,6 +19,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh workflow run "Deploy docs" \
+          gh workflow run "Deploy docs to GitHub Pages" \
             --repo "${{ github.repository }}" \
             --ref "${{ github.event.repository.default_branch }}"

@@ -95,12 +95,18 @@ const appMethods = {
 
 // Player API cache — refresh from DOM until ready so we don't stick on a cold stub
 const createPlayerApi = () => {
-  let playerApiCache: any;
-  return () => {
-    const fresh = (document.querySelector("body>ytmusic-app") as any)?.playerApi;
-    if (fresh) playerApiCache = fresh;
-    return playerApiCache ?? fresh ?? null;
-  };
+	let playerApiCache: any;
+	const selectors = ["body>ytmusic-app", "ytmusic-app-layout>ytmusic-player-bar"] as const;
+	return () => {
+		for (const selector of selectors) {
+			const fresh = (document.querySelector(selector) as any)?.playerApi;
+			if (fresh) {
+				playerApiCache = fresh;
+				return fresh;
+			}
+		}
+		return playerApiCache ?? null;
+	};
 };
 
 const createPlayerUiService = () => {

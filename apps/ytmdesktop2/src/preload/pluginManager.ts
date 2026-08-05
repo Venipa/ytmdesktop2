@@ -193,7 +193,11 @@ export class PluginManager {
 
 		this.setupSettingsListener();
 		this.log.debug("dom init...");
-
+    const markReady = () => {
+      window.api.emit("app.loadEnd");
+      this.isLoaded = true;
+      window.postMessage("ytmd-ready", "*");
+    }
 		await this.removeChromecastIcon().catch((ex) => this.log.error("removeChromecastIcon failed", ex));
 		await new Promise<void>((resolve, reject) =>
 			window.domUtils.ensureDomLoaded(async () => {
@@ -210,15 +214,11 @@ export class PluginManager {
 						await this.initializePluginCommands();
 					}
 
-					window.api.emit("app.loadEnd");
-					this.isLoaded = true;
-					window.postMessage("ytmd-ready", "*");
+					markReady();
 					resolve();
 				} catch (ex) {
 					this.log.error("Failed to initialize plugins", ex);
-					window.api.emit("app.loadEnd");
-					this.isLoaded = true;
-					window.postMessage("ytmd-ready", "*");
+					if (!this.isLoaded) markReady();
 					reject(ex);
 				}
 			}),
