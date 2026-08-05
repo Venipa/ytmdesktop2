@@ -1,6 +1,6 @@
 import { type InputHTMLAttributes, type ReactNode, useEffect, useId, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
@@ -89,7 +89,7 @@ export function SettingsInlineEditor({
 	}, [open, value]);
 
 	const handleOpenChange = (next: boolean) => {
-		if (isSaving) return;
+		if (isSaving && next) return;
 		setOpen(next);
 		if (!next) setError(null);
 	};
@@ -106,71 +106,74 @@ export function SettingsInlineEditor({
 	};
 
 	return (
-		<Field data-disabled={isPending || undefined} className={cn(className)}>
-			{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
+		<Field orientation="horizontal" data-disabled={isPending || undefined} className={cn("items-start", className)}>
 			<FieldContent>
-				<Popover open={open} onOpenChange={handleOpenChange}>
-					<PopoverTrigger
-						render={
-							<button
-								id={id}
-								type="button"
-								disabled={isPending}
-								className={cn(
-									"flex h-8 w-full min-w-0 items-center rounded-lg border border-input bg-transparent px-2.5 text-left text-xs outline-none",
-									"hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50",
-									"disabled:pointer-events-none disabled:opacity-50",
-								)}
-								onFocus={() => handleOpenChange(true)}
-							/>
-						}
-					>
-						<span className={cn("truncate font-mono", !display && "text-muted-foreground")}>
-							{display || placeholder || "Edit"}
-						</span>
-					</PopoverTrigger>
-					<PopoverContent align="start" className="w-72 gap-3 rounded-xl p-3">
-						<PopoverHeader>
-							<PopoverTitle>{label ?? "Edit"}</PopoverTitle>
-							{hint ? <PopoverDescription>{hint}</PopoverDescription> : null}
-						</PopoverHeader>
-						<Field data-invalid={error ? true : undefined}>
-							<Input
-								id={inputId}
-								type={type}
-								value={draft}
-								placeholder={placeholder}
-								autoFocus
-								aria-invalid={!!error}
-								disabled={isSaving}
-								min={attrs.min}
-								max={attrs.max}
-								onChange={(e) => {
-									setDraft(e.target.value);
-									if (error) setError(null);
-								}}
-								onKeyDown={(e) => {
-									if (e.key === "Enter") {
-										e.preventDefault();
-										handleSubmit();
-									}
-									if (e.key === "Escape") handleOpenChange(false);
-								}}
-							/>
-							{error ? <FieldError>{error}</FieldError> : null}
-						</Field>
-						<div className="flex justify-end gap-2">
-							<Button type="button" size="sm" variant="outline" disabled={isSaving} onClick={() => handleOpenChange(false)}>
-								Cancel
-							</Button>
-							<Button type="button" size="sm" disabled={isSaving} onClick={handleSubmit}>
-								{isSaving ? "Saving…" : "Save"}
-							</Button>
-						</div>
-					</PopoverContent>
-				</Popover>
-				{hint && !open ? <FieldDescription>{hint}</FieldDescription> : null}
+				{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
+				{hint ? <FieldDescription>{hint}</FieldDescription> : null}
 			</FieldContent>
+			<Popover open={open} onOpenChange={handleOpenChange}>
+				<PopoverTrigger
+					render={
+						<button
+							id={id}
+							type="button"
+							disabled={isPending}
+							className={cn(
+								buttonVariants({ variant: "link", size: "sm" }),
+								"h-auto shrink-0 px-0 py-0 font-mono underline underline-offset-4",
+								"hover:text-primary/80",
+								!display && "text-muted-foreground",
+							)}
+						/>
+					}
+				>
+					{display || placeholder || "Edit"}
+				</PopoverTrigger>
+				<PopoverContent
+					align="end"
+					sideOffset={6}
+					className="w-64 gap-3 rounded-xl p-3 duration-0 data-open:animate-none data-closed:animate-none"
+				>
+					<PopoverHeader>
+						<PopoverTitle>{label ?? "Edit"}</PopoverTitle>
+						{hint ? <PopoverDescription className="sr-only">{hint}</PopoverDescription> : null}
+					</PopoverHeader>
+					<div className="flex flex-col gap-1.5">
+						<Input
+							id={inputId}
+							type={type}
+							value={draft}
+							placeholder={placeholder}
+							autoFocus
+							aria-invalid={!!error}
+							disabled={isSaving}
+							min={attrs.min}
+							max={attrs.max}
+							onChange={(e) => {
+								setDraft(e.target.value);
+								if (error) setError(null);
+							}}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									e.preventDefault();
+									handleSubmit();
+								}
+								if (e.key === "Escape") handleOpenChange(false);
+							}}
+						/>
+						{/* Reserve space so error text does not resize the popover */}
+						<div className="min-h-4">{error ? <FieldError>{error}</FieldError> : null}</div>
+					</div>
+					<div className="flex justify-end gap-2">
+						<Button type="button" size="sm" variant="outline" disabled={isSaving} onClick={() => handleOpenChange(false)}>
+							Cancel
+						</Button>
+						<Button type="button" size="sm" disabled={isSaving} onClick={handleSubmit}>
+							{isSaving ? "Saving…" : "Save"}
+						</Button>
+					</div>
+				</PopoverContent>
+			</Popover>
 		</Field>
 	);
 }
