@@ -23,9 +23,14 @@ export default class CSSHandler {
 		return this.cssId;
 	}
 	async remove() {
-		if (!this.cssId) throw new Error("CSS not found");
+		if (!this.cssId) return;
+		const cssId = this.cssId;
 		this.css = null;
-		await this.webContents.removeInsertedCSS(this.cssId);
 		this.cssId = null;
+		try {
+			await this.webContents.removeInsertedCSS(cssId);
+		} catch {
+			// Stale after document reload — ignore
+		}
 	}
 }

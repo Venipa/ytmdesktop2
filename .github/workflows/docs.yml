@@ -1,4 +1,4 @@
-name: Deploy docs
+name: Deploy docs to GitHub Pages
 
 on:
   # Docs/workflow changes on default branch, or manual run.

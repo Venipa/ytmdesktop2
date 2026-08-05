@@ -102,9 +102,6 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
 	});
 	popup.contentView.addChildView(loginView, 0);
 	loginView.setBounds({ height: height - noticeHeight, width, x: 0, y: noticeHeight });
-	await loginView.webContents.loadURL(authUrl, {
-		httpReferrer: defaultUrl,
-	});
 	loginView.webContents.setWindowOpenHandler(({ url }) => {
 		if (!url.startsWith("http")) {
 			return { action: "deny" };
@@ -128,6 +125,13 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
 		popup.close();
 		clearGC();
 	});
+	const isMusicYoutubeUrl = (url: string) => {
+		try {
+			return new URL(url).hostname.indexOf("music.youtube") === 0;
+		} catch {
+			return false;
+		}
+	};
 	return await new Promise<boolean>((resolve, reject) => {
 		timeoutHandler = setTimeout(
 			() => {
@@ -136,16 +140,40 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
 			10 * 60 * 1000,
 		);
 		let isAuthenticated = false;
+		const markAuthenticated = () => {
+			if (isAuthenticated) return;
+			isAuthenticated = true;
+			popup.close();
+		};
 		popup.on("close", () => {
 			resolve(isAuthenticated);
 			clearGC();
 		});
-		loginView.webContents.on("ipc-message", (ev, eventName) => {
+		// Already logged in → Google lands on music.youtube during/after load.
+		// Attach before loadURL so we don't miss the redirect race.
+		const onMusicRedirect = (_ev: Electron.Event, url: string) => {
+			if (isMusicYoutubeUrl(url)) markAuthenticated();
+		};
+		loginView.webContents.on("will-redirect", onMusicRedirect);
+		loginView.webContents.on("will-navigate", onMusicRedirect);
+		loginView.webContents.on("did-navigate", onMusicRedirect);
+		loginView.webContents.on("did-navigate-in-page", onMusicRedirect);
+		loginView.webContents.on("ipc-message", (_ev, eventName) => {
 			console.log("login event", eventName);
 			if (eventName === "g-login-success") {
-				isAuthenticated = true;
-				popup.close();
+				markAuthenticated();
 			}
 		});
+
+		void loginView.webContents
+			.loadURL(authUrl, {
+				httpReferrer: defaultUrl,
+			})
+			.then(() => {
+				if (isMusicYoutubeUrl(loginView.webContents.getURL())) markAuthenticated();
+			})
+			.catch(() => {
+				/* popup close / abort */
+			});
 	});
 };

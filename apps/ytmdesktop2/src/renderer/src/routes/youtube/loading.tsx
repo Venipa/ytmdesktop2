@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import LogoIcon from "@/assets/logo.svg?react";
 
 export const Route = createFileRoute("/youtube/loading")({
 	component: YoutubeLoadingPage,
@@ -8,7 +9,9 @@ function YoutubeLoadingPage() {
 	return (
 		<div className="flex h-full items-center justify-center overflow-hidden">
 			<div className="loader-wrapper">
-				<div className="loader-logo" />
+				<div className="loader-logo">
+					<LogoIcon className="size-20" />
+				</div>
 				<div className="loader">
 					<span />
 					<span />
@@ -36,13 +39,11 @@ function YoutubeLoadingPage() {
 }
 .loader-logo {
   position: absolute;
-  width: 100%;
-  height: 100%;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
-  background-image: url(/src/assets/logo.svg);
-  background-size: 80px 80px;
-  background-position: center;
-  background-repeat: no-repeat;
   z-index: 999;
 }
 .loader span {

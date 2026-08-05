@@ -28,12 +28,14 @@ export async function rootWindowClearCustomCss({ webContents }: WebContentsView)
 
 	try {
 		await webContents.removeInsertedCSS(cssWindowIdMap[wid]);
-		delete cssWindowIdMap[wid];
 		cssLogger.debug(`CSS cleared for ${wid}`);
 		return true;
 	} catch (error: any) {
+		// Stale after document reload — key still must drop so next inject works
 		cssLogger.error(`Failed to clear CSS: ${error?.message || "Unknown error"}`);
 		return false;
+	} finally {
+		delete cssWindowIdMap[wid];
 	}
 }
 export type LockSizeOptions = { resize: "both" | "width" | "height" };

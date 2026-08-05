@@ -1,4 +1,4 @@
-name: Deploy docs on release
+name: Trigger docs workflow on release
 
 # Release events run on tag refs (e.g. v1.0.2). The github-pages environment
 # rejects those tags via deployment branch/tag protection. Dispatch Deploy docs

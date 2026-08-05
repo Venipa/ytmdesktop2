@@ -198,24 +198,30 @@ export class PluginManager {
 		await new Promise<void>((resolve, reject) =>
 			window.domUtils.ensureDomLoaded(async () => {
 				try {
-          if (isYoutubeMusicHost()) {
-            await this.initializePlugins();
-            await this.waitForPlayerReady();
-            this.log.debug("ytplayer ready");
+					if (isYoutubeMusicHost()) {
+						await this.initializePlugins();
+						// Signed-out shells often never flip isReady() — soft-fail so loadEnd still fires.
+						await this.waitForPlayerReady().catch((err) => {
+							this.log.warn("ytplayer not ready, continuing", err);
+						});
+						this.log.debug("ytplayer ready");
 
-            await this.runAfterInitHooks();
-            await this.initializePluginCommands();
-          }
+						await this.runAfterInitHooks();
+						await this.initializePluginCommands();
+					}
 
-          window.api.emit("app.loadEnd");
-          this.isLoaded = true;
-          window.postMessage("ytmd-ready", "*");
-          resolve();
-        } catch (ex) {
-          this.log.error("Failed to initialize plugins", ex);
-          throw ex;
-        }
-      }),
+					window.api.emit("app.loadEnd");
+					this.isLoaded = true;
+					window.postMessage("ytmd-ready", "*");
+					resolve();
+				} catch (ex) {
+					this.log.error("Failed to initialize plugins", ex);
+					window.api.emit("app.loadEnd");
+					this.isLoaded = true;
+					window.postMessage("ytmd-ready", "*");
+					reject(ex);
+				}
+			}),
 		);
 	}
 

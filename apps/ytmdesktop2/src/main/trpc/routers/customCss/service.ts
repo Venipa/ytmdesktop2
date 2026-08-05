@@ -1,6 +1,7 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
 import { serverMain } from "@main/ipc/serverEvents";
 import CSSHandler from "@main/lib/css/handler";
+import { onMusicReload } from "@main/lifecycle";
 import playerThumbnailStyle from "@main/trpc/routers/customCss/resources/basic-style/player-thumbnail-background.scss?raw";
 import basicScrollStyle from "@main/trpc/routers/customCss/resources/basic-style/thumb.scss?raw";
 import SettingsProvider from "@main/trpc/routers/settings/service";
@@ -185,18 +186,22 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 			(value) => void this._event_settingsChangeThumbnailBackground("customcss.thumbnailBackground", value as boolean),
 			{ debounce: 1000 },
 		);
-		this.attachBasicStyle();
 		await this._initializeSCSS();
 		const config = this.settingsInstance.get<CustomCssConfig>("customcss");
-		if (config?.enabled) {
-			await this.updateCSS();
-			if (config?.watching && config?.scssFile) {
-				this.setupFileWatcher(config.scssFile);
-			}
+		if (config?.enabled && config?.watching && config?.scssFile) {
+			this.setupFileWatcher(config.scssFile);
 		}
 	}
 	private basicStyleHandler?: CSSHandler;
 	private thumbnailBackgroundStyle?: CSSHandler;
+	/** Re-inject basic + custom CSS after youtube document load/reload. */
+	async reapplyAllStyles() {
+		this.basicStyleHandler = undefined;
+		this.thumbnailBackgroundStyle = undefined;
+		this.attachBasicStyle();
+		const config = this.settingsInstance.get<CustomCssConfig>("customcss");
+		if (config?.enabled) await this.updateCSS();
+	}
 	private attachBasicStyle() {
 		const youtubeView = this.windowContext.views.youtubeView.webContents;
 		if (!youtubeView) {
@@ -250,3 +255,8 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 	}
 	readonly initializeSCSS = () => this._initializeSCSS();
 }
+
+onMusicReload(async (ctx) => {
+	const customCss = ctx.getProvider("customCss") as CustomCSSProvider | undefined;
+	if (customCss) await customCss.reapplyAllStyles();
+});

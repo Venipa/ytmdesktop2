@@ -1,4 +1,4 @@
-name: Stream Deck
+name: Release Stream Deck Plugin
 
 on:
   push:
