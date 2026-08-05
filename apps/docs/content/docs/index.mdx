@@ -1,0 +1,30 @@
+---
+title: Overview
+description: Beautiful YouTube Music desktop app with integrations
+---
+
+**YTMDesktop2** is an Electron desktop client for YouTube Music with Last.fm scrobbling, Discord Rich Presence, custom CSS, mini player, OBS overlays, local API, and Stream Deck support.
+
+![App screenshot](/images/player-full.png)
+
+## Quick links
+
+<Cards>
+  <Card title="Install" href="/docs/install" />
+  <Card title="Features" href="/docs/features" />
+  <Card title="API" href="/docs/api" />
+  <Card title="Integrations" href="/docs/integrations" />
+  <Card title="Build from source" href="/docs/build" />
+  <Card title="Changelog" href="/changelog" />
+</Cards>
+
+## Stack
+
+- Electron + React (renderer)
+- tRPC for main ↔ renderer IPC
+- Local HTTP API for integrations
+- Stream Deck plugin in `packages/streamdeck`
+
+## License
+
+MIT — see `LICENSE` in the repository root.

@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/*
+  Mapped from apps/ytmdesktop2 renderer theme (oklch, hue ~322).
+  Brand accent from app logo (#8B1CC3).
+*/
+@theme {
+  --color-fd-background: oklch(1 0 0);
+  --color-fd-foreground: oklch(0.145 0.008 326);
+  --color-fd-muted: oklch(0.96 0.003 325.6);
+  --color-fd-muted-foreground: oklch(0.542 0.034 322.5);
+  --color-fd-popover: oklch(1 0 0);
+  --color-fd-popover-foreground: oklch(0.145 0.008 326);
+  --color-fd-card: oklch(0.985 0 0);
+  --color-fd-card-foreground: oklch(0.145 0.008 326);
+  --color-fd-border: oklch(0.922 0.005 325.62);
+  --color-fd-primary: #8b1cc3;
+  --color-fd-primary-foreground: oklch(0.985 0 0);
+  --color-fd-secondary: oklch(0.96 0.003 325.6);
+  --color-fd-secondary-foreground: oklch(0.212 0.019 322.12);
+  --color-fd-accent: oklch(0.96 0.003 325.6);
+  --color-fd-accent-foreground: oklch(0.212 0.019 322.12);
+  --color-fd-ring: #8b1cc3;
+}
+
+.dark {
+  --color-fd-background: oklch(0.145 0.008 326);
+  --color-fd-foreground: oklch(0.985 0 0);
+  --color-fd-muted: oklch(0.243 0.024 320.12);
+  --color-fd-muted-foreground: oklch(0.711 0.019 323.02);
+  --color-fd-popover: oklch(0.212 0.019 322.12);
+  --color-fd-popover-foreground: oklch(0.985 0 0);
+  --color-fd-card: oklch(0.182 0.019 322.12);
+  --color-fd-card-foreground: oklch(0.985 0 0);
+  --color-fd-border: oklch(1 0 0 / 10%);
+  --color-fd-primary: #a855d4;
+  --color-fd-primary-foreground: oklch(0.985 0 0);
+  --color-fd-secondary: oklch(0.263 0.024 320.12);
+  --color-fd-secondary-foreground: oklch(0.985 0 0);
+  --color-fd-accent: oklch(0.263 0.024 320.12);
+  --color-fd-accent-foreground: oklch(0.985 0 0);
+  --color-fd-ring: #c084e0;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}

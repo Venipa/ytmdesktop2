@@ -2,13 +2,16 @@ name: Stream Deck
 
 on:
   push:
+    branches:
+      - master
+      - main
     paths:
       - "packages/streamdeck/**"
       - ".github/workflows/streamdeck.yml"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: read # @venipa/* on GitHub Packages (if resolved via lockfile)
 
 concurrency:
@@ -58,3 +61,22 @@ jobs:
           path: dist/streamdeck/*.streamDeckPlugin
           if-no-files-found: error
           retention-days: 30
+
+      # Actions artifacts need auth + expire — publish a dedicated release for public downloads.
+      - name: Publish streamdeck-plugin release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: streamdeck-plugin
+          name: Stream Deck Plugin
+          body: |
+            Latest Stream Deck plugin build (`.streamDeckPlugin`).
+
+            Download the file, then double-click / import it in Stream Deck software.
+
+            Docs: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/docs/integrations/streamdeck/
+          files: dist/streamdeck/*.streamDeckPlugin
+          fail_on_unmatched_files: true
+          make_latest: false
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

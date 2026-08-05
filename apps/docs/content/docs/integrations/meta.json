@@ -1,0 +1,5 @@
+{
+  "title": "Integrations",
+  "pages": ["index", "remote", "streamdeck"],
+  "defaultOpen": true
+}

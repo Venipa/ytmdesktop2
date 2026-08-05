@@ -1,0 +1,33 @@
+---
+title: Local API
+description: Enable the HTTP server for playback and integrations
+---
+
+The local HTTP API powers Stream Deck, Remote, OBS overlays, and custom tools.
+
+## Enable
+
+Settings → **API & Integrations** → **API** → enable.
+
+Default port: `13091` (range `9999`–`39999`). Changing the port may require a restart if the API is already running.
+
+Endpoint example: `http://127.0.0.1:13091`
+
+## Status
+
+When enabled, Settings → API shows whether the server is **Running** or **Stopped**, plus the current endpoint.
+
+## Usage notes
+
+- Bind only to localhost unless you know what you are doing.
+- Prefer [Authentication](/docs/api/authentication) for anything beyond personal scripts on your machine.
+- Stream Deck, Remote, and OBS sources talk to this API.
+- Full HTTP/WS reference: [Routes](/docs/api/routes).
+
+## Next
+
+<Cards>
+  <Card title="Authentication" href="/docs/api/authentication" />
+  <Card title="Routes" href="/docs/api/routes" />
+  <Card title="Integrations" href="/docs/integrations" />
+</Cards>

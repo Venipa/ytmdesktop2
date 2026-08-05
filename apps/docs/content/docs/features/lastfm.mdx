@@ -1,0 +1,29 @@
+---
+title: Last.fm
+description: Scrobble tracks and update Now Playing
+---
+
+Connect your Last.fm account so YTMDesktop2 can update **Now Playing** and scrobble tracks that meet Last.fm’s listening rules (half the track duration or four minutes, whichever is shorter; tracks under 30 seconds are skipped).
+
+![Last.fm settings](/images/feature-lastfm.jpg)
+
+## Setup
+
+1. Open **Settings → Last.fm**.
+2. Authorize the app with your Last.fm account.
+3. Keep the app running while you listen — scrobbles settle after the track threshold.
+
+![Last.fm connected](/images/feature-lastfm2.jpg)
+
+## Notes
+
+- Switching tracks mid-listen abandons a pending scrobble unless the threshold was already crossed.
+- Last.fm updates are debounced so rapid skipping does not spam the API.
+- Disconnect or toggle Last.fm anytime from the same settings page.
+
+## Related
+
+<Cards>
+  <Card title="All features" href="/docs/features" />
+  <Card title="Discord Rich Presence" href="/docs/features/discord" />
+</Cards>

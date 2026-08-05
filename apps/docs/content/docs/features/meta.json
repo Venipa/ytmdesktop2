@@ -1,0 +1,5 @@
+{
+  "title": "Features",
+  "pages": ["index", "lastfm", "discord", "mini-player", "custom-css", "obs"],
+  "defaultOpen": true
+}

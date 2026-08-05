@@ -1,0 +1,36 @@
+---
+title: Stream Deck
+description: Control playback from an Elgato Stream Deck
+---
+
+Control playback from an Elgato Stream Deck via the local API.
+
+## Setup
+
+1. Settings → **API & Integrations** → **API** → enable API.
+2. Settings → **API & Integrations** → **Authentication** → require authorization.
+3. Download the `.streamDeckPlugin` from the GitHub release tagged `streamdeck-plugin` (also linked from the app Settings page), then double-click it (or import it in the Stream Deck software).
+4. In Stream Deck, add a YTMDesktop2 action → host `127.0.0.1`, port `13091` (or your custom API port) → **Authorize**.
+5. Approve the code under Authentication in the app.
+
+The desktop app Settings → Stream Deck page opens this docs site and resolves the newest plugin file automatically (`VITE_STREAMDECK_PLUGIN_FILE` when set, otherwise the `streamdeck-plugin` GitHub release).
+
+## Developers
+
+Plugin sources live in `packages/streamdeck`. To pack locally:
+
+```bash
+pnpm streamdeck:pack
+```
+
+Output: `dist/streamdeck/*.streamDeckPlugin`
+
+CI publishes that file to the `streamdeck-plugin` release on pushes to `packages/streamdeck/**`.
+
+## Related
+
+<Cards>
+  <Card title="Integrations" href="/docs/integrations" />
+  <Card title="Local API" href="/docs/api" />
+  <Card title="Authentication" href="/docs/api/authentication" />
+</Cards>

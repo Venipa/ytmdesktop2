@@ -1,0 +1,88 @@
+name: Deploy docs
+
+on:
+  # Docs/workflow changes on default branch, or a published GitHub Release.
+  # branches: required so tag pushes (which ignore path filters) do not run this job.
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "apps/docs/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 11
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.14.0
+          cache: "pnpm"
+
+      - name: Prepare pnpm / auth
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build static site
+        working-directory: apps/docs
+        run: pnpm run build:pages
+        env:
+          GITHUB_PAGES: "true"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT_PUBLIC_URL: ${{ steps.pages.outputs.base_url }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          REPO_TITLE: YTMDesktop2
+          REPO_BRANCH: ${{ github.event.repository.default_branch }}
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/docs/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

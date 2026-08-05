@@ -1,0 +1,43 @@
+---
+title: Build from source
+description: Develop and package ytmdesktop2
+---
+
+## Requirements
+
+- Node.js (see CI: Node 24.x)
+- [pnpm](https://pnpm.io/) 11+
+- GitHub CLI (`gh`) for `@venipa` packages (`xosms`)
+
+```bash
+gh auth refresh -s read:packages
+pnpm install
+pnpm dev
+```
+
+## Workspace layout
+
+| Path | Package |
+| --- | --- |
+| `apps/ytmdesktop2` | Electron app |
+| `apps/docs` | This documentation site |
+| `packages/streamdeck` | Stream Deck plugin |
+
+## Useful scripts
+
+```bash
+pnpm dev              # Electron app
+pnpm --filter ytmdesktop2-docs dev
+pnpm build            # typecheck + electron-vite build
+pnpm streamdeck:pack  # optional: pack .streamDeckPlugin locally
+```
+
+## Packaging
+
+```bash
+pnpm build:win
+pnpm build:mac
+pnpm build:linux
+# or full release via electron-builder:
+pnpm release
+```

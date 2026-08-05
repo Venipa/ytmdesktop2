@@ -21,7 +21,10 @@
 		"biome:check:apply": "pnpm --filter ytmdesktop2 biome:check:apply",
 		"streamdeck:build": "pnpm --filter ytmdesktop2-streamdeck build",
 		"streamdeck:icons": "pnpm --filter ytmdesktop2-streamdeck icons",
-		"streamdeck:pack": "pnpm --filter ytmdesktop2-streamdeck run pack"
+		"streamdeck:pack": "pnpm --filter ytmdesktop2-streamdeck run pack",
+		"docs:dev": "pnpm --filter ytmdesktop2-docs dev",
+		"docs:build": "pnpm --filter ytmdesktop2-docs build",
+		"docs:build:pages": "pnpm --filter ytmdesktop2-docs build:pages"
 	},
 	"license": "MIT",
 	"repository": "https://github.com/Venipa/ytmdesktop2"

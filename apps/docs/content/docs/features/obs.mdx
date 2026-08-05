@@ -1,0 +1,28 @@
+---
+title: OBS overlays
+description: Now-playing overlays via the local API
+---
+
+Drive OBS (or other) browser sources from the [local API](/docs/api) so stream overlays stay in sync with playback.
+
+## Setup
+
+1. Enable the API under **Settings → API & Integrations → API**.
+2. Prefer [Authentication](/docs/api/authentication) for anything beyond a locked-down localhost setup.
+3. Point your OBS browser source at an overlay that reads the API (community packs or your own HTML).
+4. If you changed the API port, append `?port=<port>` to the source URL (default is `13091`).
+
+Community reference: [Zyphen's Now Playing](https://obsproject.com/forum/threads/zyphens-now-playing-overlay.125383/post-557409).
+
+## Tips
+
+- Confirm `GET /track` and `GET /track/state` before wiring overlays — see [Routes](/docs/api/routes).
+- WebSocket `/socket` can push `track:change` events for live updates.
+
+## Related
+
+<Cards>
+  <Card title="Local API" href="/docs/api" />
+  <Card title="API routes" href="/docs/api/routes" />
+  <Card title="All features" href="/docs/features" />
+</Cards>

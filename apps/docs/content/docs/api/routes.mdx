@@ -1,0 +1,379 @@
+---
+title: Routes
+description: Local HTTP and WebSocket API reference
+---
+
+Base URL (default): `http://127.0.0.1:13091`
+
+When **Require authorization** is on, protected routes need:
+
+```http
+Authorization: Bearer <token>
+```
+
+(Token alone without `Bearer` is also accepted.)
+
+Auth endpoints (`/auth/*`) never require a token. `GET /` is always public.
+
+## Quick reference
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `GET` | `/` | No | API info + route list |
+| `POST` | `/auth/requestcode` | No | Start pairing — get a code |
+| `POST` | `/auth/request` | No | Exchange code for token (blocks until approved) |
+| `GET` | `/track` | Yes | Current track payload |
+| `GET` | `/track/state` | Yes | Playback state |
+| `POST` | `/track/play` | Yes | Play |
+| `POST` | `/track/pause` | Yes | Pause |
+| `POST` | `/track/toggle-play-state` | Yes | Toggle play/pause |
+| `POST` | `/track/next` | Yes | Next track |
+| `POST` | `/track/prev` | Yes | Previous track |
+| `POST` | `/track/seek` | Yes | Seek to absolute time |
+| `POST` | `/track/forward` | Yes | Seek forward by seconds |
+| `POST` | `/track/backward` | Yes | Seek backward by seconds |
+| `POST` | `/track/repeat` | Yes | Cycle repeat mode |
+| `POST` | `/track/shuffle` | Yes | Toggle shuffle |
+| `POST` | `/track/like` | Yes | Set like |
+| `POST` | `/track/dislike` | Yes | Set dislike |
+| `POST` | `/track/volume` | Yes | Set / read volume |
+| `POST` | `/track/volume-up` | Yes | Raise volume |
+| `POST` | `/track/volume-down` | Yes | Lower volume |
+| `POST` | `/track/accent` | Yes | Dominant color from artwork |
+| `GET` | `/socket` | Yes* | WebSocket track events |
+| `GET` | `/socket/ping` | No | WebSocket ping/pong |
+
+\* Auth via `Authorization` header or `?token=` query when required.
+
+---
+
+## Info
+
+### `GET /`
+
+Returns server metadata and registered internal route keys.
+
+```bash
+curl http://127.0.0.1:13091/
+```
+
+```json
+{
+  "name": "YTMDesktop2 Api",
+  "beta": false,
+  "player": { "...": "player settings object" },
+  "authRequired": true,
+  "routes": [
+    "api/routes",
+    "api/track",
+    "api/track/state",
+    "api/track/next",
+    "api/auth/requestcode",
+    "api/auth/request"
+  ]
+}
+```
+
+---
+
+## Authentication
+
+See also [Authentication settings](/docs/api/authentication).
+
+### `POST /auth/requestcode`
+
+Create a pairing code for a client. `appId` must be **2–32** lowercase alphanumeric characters.
+
+```bash
+curl -X POST http://127.0.0.1:13091/auth/requestcode \
+  -H "Content-Type: application/json" \
+  -d '{"appId":"myapp","appName":"My App","appVersion":"1.0.0"}'
+```
+
+```json
+{ "code": "AB12CD" }
+```
+
+Error (`400`):
+
+```json
+{ "error": "appId must be 2-32 lowercase alphanumeric characters" }
+```
+
+### `POST /auth/request`
+
+Exchange the code for a token. **Blocks** until the user approves (or denies / times out) in Settings → Authentication.
+
+```bash
+curl -X POST http://127.0.0.1:13091/auth/request \
+  -H "Content-Type: application/json" \
+  -d '{"appId":"myapp","code":"AB12CD"}'
+```
+
+```json
+{ "token": "eyJ…" }
+```
+
+Error (`400`):
+
+```json
+{ "error": "Invalid or expired auth code" }
+```
+
+```json
+{ "error": "Authorization timed out — user did not approve in time" }
+```
+
+Use the token on later requests:
+
+```bash
+curl http://127.0.0.1:13091/track \
+  -H "Authorization: Bearer eyJ…"
+```
+
+Unauthorized (`401`):
+
+```json
+{ "error": "unauthorized" }
+```
+
+---
+
+## Track — read
+
+### `GET /track`
+
+Current track, or `null` if nothing is loaded.
+
+```bash
+curl http://127.0.0.1:13091/track \
+  -H "Authorization: Bearer <token>"
+```
+
+```json
+{
+  "id": "dQw4w9WgXcQ",
+  "video": {
+    "videoId": "dQw4w9WgXcQ",
+    "title": "Never Gonna Give You Up",
+    "lengthSeconds": "213",
+    "channelId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+    "author": "Rick Astley",
+    "thumbnail": {
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", "width": 480, "height": 360 }
+      ]
+    },
+    "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"
+  },
+  "context": {
+    "title": "Never Gonna Give You Up",
+    "urlCanonical": "https://music.youtube.com/watch?v=dQw4w9WgXcQ",
+    "videoDetails": {
+      "externalVideoId": "dQw4w9WgXcQ",
+      "durationSeconds": "213"
+    },
+    "thumbnail": { "thumbnails": [] }
+  },
+  "meta": {
+    "thumbnail": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+    "isAudioExclusive": true,
+    "startedAt": 1710000000.123,
+    "duration": 213,
+    "isAlbum": true
+  },
+  "music": { "album": "Whenever You Need Somebody" }
+}
+```
+
+### `GET /track/state`
+
+Playback / progress snapshot.
+
+```bash
+curl http://127.0.0.1:13091/track/state \
+  -H "Authorization: Bearer <token>"
+```
+
+```json
+{
+  "id": "dQw4w9WgXcQ",
+  "playing": true,
+  "progress": 42.5,
+  "uiProgress": 42.5,
+  "duration": 213,
+  "liked": false,
+  "disliked": false,
+  "startedAt": 1710000000.123,
+  "percentage": 19.95,
+  "eventType": "progress",
+  "accent": "#c41e3a"
+}
+```
+
+`null` when no active track state exists yet.
+
+---
+
+## Track — controls
+
+All control routes: `POST`, JSON body optional unless noted. Auth required when enabled.
+
+Shared playback control response:
+
+```json
+{ "isPlaying": true, "time": 12.4 }
+```
+
+### `POST /track/play`
+
+```bash
+curl -X POST http://127.0.0.1:13091/track/play \
+  -H "Authorization: Bearer <token>"
+```
+
+### `POST /track/pause`
+
+```bash
+curl -X POST http://127.0.0.1:13091/track/pause \
+  -H "Authorization: Bearer <token>"
+```
+
+### `POST /track/toggle-play-state`
+
+```bash
+curl -X POST http://127.0.0.1:13091/track/toggle-play-state \
+  -H "Authorization: Bearer <token>"
+```
+
+### `POST /track/next` / `POST /track/prev`
+
+```bash
+curl -X POST http://127.0.0.1:13091/track/next \
+  -H "Authorization: Bearer <token>"
+```
+
+### `POST /track/repeat` / `POST /track/shuffle`
+
+Cycles / toggles YouTube Music UI controls. Same `{ isPlaying, time }` shape.
+
+### `POST /track/seek`
+
+Absolute seek. Body:
+
+```json
+{ "time": 90, "type": "seek" }
+```
+
+`time` is required (seconds). `type` optional (`"seek"`).
+
+```bash
+curl -X POST http://127.0.0.1:13091/track/seek \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"time":90}'
+```
+
+### `POST /track/forward` / `POST /track/backward`
+
+Relative seek. Body:
+
+```json
+{ "time": 10 }
+```
+
+`time` must be a non-zero number (seconds). Forward adds; backward subtracts.
+
+```bash
+curl -X POST http://127.0.0.1:13091/track/forward \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"time":15}'
+```
+
+### `POST /track/like` / `POST /track/dislike`
+
+Body is a JSON **boolean** (`true` / `false`).
+
+```bash
+curl -X POST http://127.0.0.1:13091/track/like \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d 'true'
+```
+
+Response: `true` / `false` / `null` (current like/dislike result from the player).
+
+### Volume
+
+#### `POST /track/volume`
+
+```json
+{ "volume": 50 }
+```
+
+```json
+{ "volume": 50 }
+```
+
+Omit `volume` to read/update via player defaults.
+
+#### `POST /track/volume-up` / `POST /track/volume-down`
+
+```json
+{ "amount": 5 }
+```
+
+```json
+{ "volume": 55 }
+```
+
+### `POST /track/accent`
+
+Extracts a dominant color from the current track artwork (hex string or `null`).
+
+```bash
+curl -X POST http://127.0.0.1:13091/track/accent \
+  -H "Authorization: Bearer <token>"
+```
+
+```json
+"#c41e3a"
+```
+
+---
+
+## WebSocket
+
+### `GET /socket`
+
+Upgrade to WebSocket. When auth is required, pass `Authorization: Bearer <token>` or `?token=<token>`.
+
+On connect, the server pushes the current track (or `"null"`). Later broadcasts use:
+
+```json
+{
+  "event": "track:change",
+  "data": [{ "video": { "videoId": "…" }, "meta": { "…" }, "…" }]
+}
+```
+
+Unauthorized sockets close with code `1008`.
+
+### `GET /socket/ping`
+
+Simple ping socket — any message gets `Pong!` (no auth).
+
+---
+
+## Errors
+
+| Status | Body | When |
+| --- | --- | --- |
+| `401` | `{ "error": "unauthorized" }` | Missing/invalid token on protected route |
+| `400` | `{ "error": "…" }` | Auth validation / pairing failures |
+| `404` | `{ "error": "not found" }` | Unknown path |
+| `500` | `{ "error": "failed to do requested operation (…)" }` | Track command threw |
+| `500` | `{ "error": "internal error" }` | Unhandled server error |
+
+CORS allows `GET` / `POST` / `OPTIONS` with `Authorization` and `Content-Type` from any origin (local tools / overlays).
