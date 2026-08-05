@@ -473,13 +473,12 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		const showDialog = options.showDialog ?? true;
 		try {
 			const result = await this._checkUpdate();
-			if (showDialog) await this.showUpdateDialog(result.updateInfo);
+			if (showDialog && result.updateInfo) await this.showUpdateDialog(result.updateInfo);
 			return result.updateInfo;
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			this.logger.error(message);
-			if (showDialog) await this.showUpdateDialog(this._update);
-			return this._update;
+			return null;
 		}
 	}
 
