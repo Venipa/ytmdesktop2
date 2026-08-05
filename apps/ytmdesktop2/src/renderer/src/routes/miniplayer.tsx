@@ -1,4 +1,3 @@
-import type { TrackData } from "@shared/track/trackData";
 import { createFileRoute } from "@tanstack/react-router";
 import { cva, type VariantProps } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
@@ -21,6 +20,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLastFm } from "@/hooks/use-lastfm";
 import { useWindowState } from "@/hooks/use-settings";
+import { useTrack, useTrackState } from "@/hooks/use-track";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +34,13 @@ interface PlayState {
 	duration: number;
 	liked: boolean;
 	disliked: boolean;
+}
+
+function patchPlayState(utils: ReturnType<typeof trpc.useUtils>, patch: Partial<PlayState>) {
+	utils.track.state.setData(undefined, (prev) => {
+		if (!prev) return prev;
+		return { ...prev, ...patch };
+	});
 }
 
 const playerButtonVariants = cva(
@@ -92,8 +99,8 @@ const createInterval = (dts: (number | undefined)[]): [string, number] => [
 
 function MiniPlayerPage() {
 	const utils = trpc.useUtils();
-	const [track, setTrack] = useState<TrackData | null>(null);
-	const [playState, setPlayState] = useState<PlayState | undefined>();
+	const track = useTrack();
+	const playState = useTrackState();
 	const [state] = useWindowState();
 	const { lastFM, lastFMLoading, lastFMState, authorizeLastFM } = useLastFm();
 
@@ -121,23 +128,6 @@ function MiniPlayerPage() {
 	const { mutateAsync: like } = trpc.track.like.useMutation();
 	const { mutateAsync: seek } = trpc.track.seek.useMutation();
 	const { mutateAsync: stayOnTop } = trpc.window.stayOnTop.useMutation();
-
-	trpc.track.current.useQuery(undefined, {
-		onSuccess: (trackData) => setTrack((trackData as TrackData | null) ?? null),
-	});
-	trpc.track.onTrack.useSubscription(undefined, {
-		onData: (trackData) => setTrack((trackData as TrackData | null) ?? null),
-	});
-	trpc.track.state.useQuery(undefined, {
-		onSuccess: (playStateData) => {
-			if (playStateData) setPlayState(playStateData as PlayState);
-		},
-	});
-	trpc.track.onPlayState.useSubscription(undefined, {
-		onData: (playStateData) => {
-			if (playStateData) setPlayState(playStateData as PlayState);
-		},
-	});
 
 	const isTop = stayOnTopLocal ?? !!isStayOnTop;
 	const showWinBorder = useMemo((): boolean | "win11" => {
@@ -167,7 +157,7 @@ function MiniPlayerPage() {
 				setTrackBusy(false);
 			})
 			.then(() => {
-				if (playStateRef.current) setPlayState({ ...playStateRef.current, progress: 0 });
+				if (playStateRef.current) patchPlayState(utils, { progress: 0 });
 			});
 	}
 
@@ -175,7 +165,7 @@ function MiniPlayerPage() {
 		setTrackBusy(true);
 		return prev().finally(() => {
 			setTrackBusy(false);
-			if (playStateRef.current) setPlayState({ ...playStateRef.current, progress: 0 });
+			if (playStateRef.current) patchPlayState(utils, { progress: 0 });
 		});
 	}
 
@@ -229,7 +219,7 @@ function MiniPlayerPage() {
 		setTrackBusy(true);
 		void seek({ time: seekTime, type: "seek" })
 			.then(() => {
-				setPlayState({ ...current, progress: seekTime / 1000, duration });
+				patchPlayState(utils, { progress: seekTime / 1000, duration });
 			})
 			.finally(() => {
 				setTrackBusy(false);

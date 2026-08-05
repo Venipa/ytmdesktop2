@@ -1,5 +1,5 @@
 import { debounce } from "lodash-es";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 
 export type WindowState = {
@@ -62,7 +62,6 @@ export function useSettingsState<T>(key: string, defaultValue: T, options: UseSe
 	const { debounce: debounceMs, filter, map, onPersisted } = options;
 	const utils = trpc.useUtils();
 	const queryInput = useMemo(() => ({ key, defaultValue: defaultValue ?? null }), [key, defaultValue]);
-	const [value, setLocal] = useState<T>(() => resolveSettingValue(undefined, defaultValue, map));
 
 	const mapRef = useRef(map);
 	mapRef.current = map;
@@ -84,30 +83,23 @@ export function useSettingsState<T>(key: string, defaultValue: T, options: UseSe
 		return typeof debounceMs === "number" && debounceMs > 0 ? debounce(write, debounceMs) : write;
 	}, [key, update, debounceMs]);
 
-	const { isLoading: isQueryLoading } = trpc.settings.get.useQuery(queryInput, {
-		onSuccess: (raw) => {
-			setLocal(resolveSettingValue(raw, defaultRef.current, mapRef.current));
-		},
-	});
+	const { data, isLoading: isQueryLoading, isSuccess } = trpc.settings.get.useQuery(queryInput);
+	const value = resolveSettingValue(isSuccess ? data : undefined, defaultValue, map);
 
 	trpc.settings.onChange.useSubscription(undefined, {
 		onData: (ev) => {
 			if (ev.key !== key) return;
 			if (filterRef.current && !filterRef.current(ev.value, ev.prevValue)) return;
-			const next = resolveSettingValue(ev.value, defaultRef.current, mapRef.current);
-			setLocal(next);
 			utils.settings.get.setData(queryInput, ev.value);
 		},
 	});
 
 	const setValue = useCallback<SettingsSetter<T>>(
 		(next) => {
-			setLocal((prev) => {
-				const resolved = typeof next === "function" ? (next as (prev: T) => T)(prev) : next;
-				utils.settings.get.setData(queryInput, resolved);
-				persist(resolved);
-				return resolved;
-			});
+			const prev = resolveSettingValue(utils.settings.get.getData(queryInput), defaultRef.current, mapRef.current);
+			const resolved = typeof next === "function" ? (next as (prev: T) => T)(prev) : next;
+			utils.settings.get.setData(queryInput, resolved);
+			persist(resolved);
 		},
 		[persist, queryInput, utils.settings.get],
 	);
@@ -121,31 +113,25 @@ export function useSetting<T = unknown>(key: string, defaultValue?: T): UseSetti
 }
 
 export function useWindowState() {
-	const [state, setState] = useState<WindowState>({} as WindowState);
-	trpc.window.state.useQuery(undefined, {
-		onSuccess: (next) => {
-			if (next) setState(next as WindowState);
-		},
-	});
+	const utils = trpc.useUtils();
+	const { data } = trpc.window.state.useQuery();
 	trpc.window.onState.useSubscription(undefined, {
 		onData: (next) => {
-			if (next) setState(next as WindowState);
+			if (next) utils.window.state.setData(undefined, next);
 		},
 	});
-	return [state, setState] as const;
+	const state = (data as WindowState | undefined) ?? ({} as WindowState);
+	return [state] as const;
 }
 
 export function useMainWindowState() {
-	const [state, setState] = useState<WindowState>({} as WindowState);
-	trpc.window.mainState.useQuery(undefined, {
-		onSuccess: (next) => {
-			if (next) setState(next as WindowState);
-		},
-	});
+	const utils = trpc.useUtils();
+	const { data } = trpc.window.mainState.useQuery();
 	trpc.window.onMainState.useSubscription(undefined, {
 		onData: (next) => {
-			if (next) setState(next as WindowState);
+			if (next) utils.window.mainState.setData(undefined, next);
 		},
 	});
-	return [state, setState] as const;
+	const state = (data as WindowState | undefined) ?? ({} as WindowState);
+	return [state] as const;
 }

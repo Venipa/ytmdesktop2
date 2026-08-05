@@ -6,18 +6,21 @@ import { trpc } from "@/lib/trpc";
 
 type LastFmStatus = NonNullable<inferRouterOutputs<AppRouter>["lastfm"]["status"]>;
 
+const EMPTY_STATUS: LastFmStatus = { connected: false, name: null, error: false, processing: false };
+
 export function useLastFm() {
+	const utils = trpc.useUtils();
 	const stateHandle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const [lastFMLoading, setLastFMLoading] = useState(false);
-	const [lastFM, setLastFM] = useState<LastFmStatus>({ connected: false, name: null, error: false, processing: false });
 	const [lastFMState, setFmState] = useState<"start" | "change" | boolean | null>(null);
 
-	trpc.lastfm.status.useQuery(undefined, {
-		onSuccess: (status) => setLastFM(status),
-	});
+	const { data, isSuccess } = trpc.lastfm.status.useQuery();
+	const lastFM: LastFmStatus = isSuccess ? (data as LastFmStatus) : EMPTY_STATUS;
 
 	trpc.lastfm.onStatus.useSubscription(undefined, {
-		onData: (status) => setLastFM(status as LastFmStatus),
+		onData: (status) => {
+			utils.lastfm.status.setData(undefined, status);
+		},
 	});
 
 	trpc.lastfm.onSubmitState.useSubscription(undefined, {
@@ -42,7 +45,9 @@ export function useLastFm() {
 		onSettled: () => setLastFMLoading(false),
 	});
 	const { mutateAsync: toggle, isLoading: togglePending } = trpc.lastfm.toggle.useMutation({
-		onSuccess: (status) => setLastFM(status as LastFmStatus),
+		onSuccess: (status) => {
+			utils.lastfm.status.setData(undefined, status);
+		},
 	});
 
 	const authorizeLastFM = useCallback(() => {

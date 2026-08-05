@@ -6,23 +6,25 @@ import { trpc } from "@/lib/trpc";
  * Discord Rich Presence connection state + enable toggle.
  */
 export function useDiscord() {
-	const [connected, setConnected] = useState(false);
+	const utils = trpc.useUtils();
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [enabled, setEnabled] = useSettingsState<boolean>("discord.enabled", false);
 
-	trpc.discord.connected.useQuery(undefined, {
-		onSuccess: (next) => setConnected(!!next),
-	});
+	const { data, isSuccess } = trpc.discord.connected.useQuery();
+	const connected = isSuccess ? !!data : false;
+
 	trpc.discord.onConnected.useSubscription(undefined, {
 		onData: () => {
-			setConnected(true);
+			utils.discord.connected.setData(undefined, true);
 			setError(null);
 			setLoading(false);
 		},
 	});
 	trpc.discord.onDisconnected.useSubscription(undefined, {
-		onData: () => setConnected(false),
+		onData: () => {
+			utils.discord.connected.setData(undefined, false);
+		},
 	});
 	trpc.discord.onLoading.useSubscription(undefined, {
 		onData: () => setLoading(true),

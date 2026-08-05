@@ -6,22 +6,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetFooter,
-	SheetHeader,
-	SheetTitle,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet";
 import { useSettingsState } from "@/hooks/use-settings";
 import { trpc } from "@/lib/trpc";
@@ -40,43 +40,42 @@ function slugifyAppId(name: string): string {
 }
 
 function AuthenticationSettingsPage() {
+	const utils = trpc.useUtils();
 	const [, , { isPending: authPending }] = useSettingsState("api.authRequired", false);
-	const [pending, setPending] = useState<{
-		id: string;
-		appId: string;
-		appName: string;
-		appVersion: string;
-		code: string;
-	} | null>(null);
-	const [clients, setClients] = useState<Array<{ appId: string; appName: string; appVersion: string; createdAt: number }>>([]);
 	const [wizardOpen, setWizardOpen] = useState(false);
 	const [revokeTarget, setRevokeTarget] = useState<RevokeTarget | null>(null);
 
 	const statusQuery = trpc.auth.status.useQuery(undefined, {
 		refetchInterval: 5_000,
-		onSuccess: (data) => {
-			setPending(data.pending?.[0] ?? null);
-			setClients(data.clients ?? []);
-		},
 	});
 
 	trpc.auth.onPending.useSubscription(undefined, {
-		onData: (next) => setPending(next),
+		onData: (next) => {
+			utils.auth.status.setData(undefined, (old) => {
+				if (!old) return old;
+				return { ...old, pending: next ? [next] : [] };
+			});
+		},
 	});
 
 	trpc.auth.onClients.useSubscription(undefined, {
-		onData: (next) => setClients(next),
+		onData: (next) => {
+			utils.auth.status.setData(undefined, (old) => {
+				if (!old) return old;
+				return { ...old, clients: next };
+			});
+		},
 	});
 
 	const { mutateAsync: approve, isLoading: approving } = trpc.auth.approve.useMutation({
 		onSuccess: () => {
-			setPending(null);
+			utils.auth.status.setData(undefined, (old) => (old ? { ...old, pending: [] } : old));
 			void statusQuery.refetch();
 		},
 	});
 	const { mutateAsync: deny, isLoading: denying } = trpc.auth.deny.useMutation({
 		onSuccess: () => {
-			setPending(null);
+			utils.auth.status.setData(undefined, (old) => (old ? { ...old, pending: [] } : old));
 			void statusQuery.refetch();
 		},
 	});
@@ -88,13 +87,15 @@ function AuthenticationSettingsPage() {
 	});
 	const { mutateAsync: revokeAll, isLoading: revokingAll } = trpc.auth.revokeAll.useMutation({
 		onSuccess: () => {
-			setClients([]);
+			utils.auth.status.setData(undefined, (old) => (old ? { ...old, clients: [] } : old));
 			setRevokeTarget(null);
 			void statusQuery.refetch();
 		},
 	});
 	const { mutateAsync: revealToken, isLoading: revealing } = trpc.auth.revealToken.useMutation();
 
+	const pending = statusQuery.data?.pending?.[0] ?? null;
+	const clients = statusQuery.data?.clients ?? [];
 	const authRequired = statusQuery.data?.authRequired === true;
 	const busy = approving || denying || revoking || revokingAll || revealing;
 

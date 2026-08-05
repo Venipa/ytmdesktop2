@@ -1,7 +1,7 @@
 import type { AppRouter } from "@main/trpc/router";
 import type { TrackData } from "@shared/track/trackData";
 import type { inferRouterOutputs } from "@trpc/server";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 
 export type TrackState = NonNullable<inferRouterOutputs<AppRouter>["track"]["state"]>;
@@ -39,46 +39,39 @@ function sameState(a: TrackState | null, b: TrackState | null): boolean {
  * Current track metadata (title, artists, thumbnails, …).
  */
 export function useTrack() {
-	const [track, setTrack] = useState<TrackData | null>(null);
+	const utils = trpc.useUtils();
+	const { data } = trpc.track.current.useQuery();
 
-	trpc.track.current.useQuery(undefined, {
-		onSuccess: (next) => {
-			const value = (next as TrackData | null) ?? null;
-			setTrack((prev) => (sameTrack(prev, value) ? prev : value));
-		},
-	});
 	trpc.track.onTrack.useSubscription(undefined, {
 		onData: (next) => {
 			const value = (next as TrackData | null) ?? null;
-			setTrack((prev) => (sameTrack(prev, value) ? prev : value));
+			const prev = (utils.track.current.getData() as TrackData | null) ?? null;
+			if (sameTrack(prev, value)) return;
+			utils.track.current.setData(undefined, value);
 		},
 	});
 
-	return track;
+	return (data as TrackData | null) ?? null;
 }
 
 /**
  * Full playback state (liked, progress, duration, accent, …).
  */
 export function useTrackState() {
-	const [state, setState] = useState<TrackState | null>(null);
+	const utils = trpc.useUtils();
+	const { data } = trpc.track.state.useQuery();
 
-	trpc.track.state.useQuery(undefined, {
-		onSuccess: (next) => {
-			if (!next) return;
-			const value = next as TrackState;
-			setState((prev) => (sameState(prev, value) ? prev : value));
-		},
-	});
 	trpc.track.onPlayState.useSubscription(undefined, {
 		onData: (next) => {
 			if (!next) return;
 			const value = next as TrackState;
-			setState((prev) => (sameState(prev, value) ? prev : value));
+			const prev = (utils.track.state.getData() as TrackState | null) ?? null;
+			if (sameState(prev, value)) return;
+			utils.track.state.setData(undefined, value);
 		},
 	});
 
-	return state;
+	return (data as TrackState | null) ?? null;
 }
 
 /**
