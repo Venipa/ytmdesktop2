@@ -50,8 +50,8 @@ jobs:
           Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
           Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install docs dependencies
+        run: pnpm install --frozen-lockfile --filter ytmdesktop2-docs...
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
