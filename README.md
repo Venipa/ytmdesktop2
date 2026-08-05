@@ -2,6 +2,9 @@
 > <b>We hit 1000 Stars, thanks for your continued support ♥️</b>
 >
 > I've never imagined that a personal project for my one use would become that large :)
+>
+> <b>Additionally v1.0 has been released</b>, completed rewritten services and updated UI.
+> stay tuned for new planned features ♥️
 
 <h2 align="center">
     Youtube Music for Desktop (ytmdesktop2)
