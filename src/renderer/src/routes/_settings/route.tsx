@@ -8,7 +8,6 @@ import {
   RiPlugLine,
   RiSettings3Line,
 } from "@remixicon/react";
-import { useUpdater } from "@renderer/hooks/use-updater";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ComponentType, type CSSProperties, memo, Suspense, useEffect } from "react";
 import LogoIcon from "@/assets/logo.svg?react";
@@ -88,7 +87,7 @@ function SettingsLayout() {
 		document.title = "YouTube Music - Settings";
 	}, []);
 
-  const updater = useUpdater();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
 	return (
 		<div className="absolute inset-0 flex h-full flex-col overflow-hidden bg-background">
@@ -121,8 +120,8 @@ function SettingsLayout() {
 							<span>
 								v{window.api.version} ({window.app.environment})
 							</span>
-              <span>{window.app.platform}</span>
-              </div>
+							<span>{window.app.platform}</span>
+						</div>
 						<SidebarSeparator className="p-0 m-0" />
 						<div className="flex items-center gap-1 px-3">
 							{socials.map(({ href, label, icon: Icon }) => (
@@ -149,7 +148,7 @@ function SettingsLayout() {
 				<SidebarInset className="min-h-0 overflow-hidden">
 					<ScrollArea className="h-full">
 						<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-							<Suspense fallback={<SpinnerPage />}>
+							<Suspense key={pathname} fallback={<SpinnerPage />}>
 								<Outlet />
 							</Suspense>
 						</div>

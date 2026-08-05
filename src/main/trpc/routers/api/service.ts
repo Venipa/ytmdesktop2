@@ -6,6 +6,7 @@ import { type App } from "electron";
 export default class ApiProvider extends BaseProvider implements AfterInit {
 	private _thread?: ApiWorker;
 	private _settingsBound = false;
+	private _initPromise: Promise<void> | null = null;
 
 	constructor(private _app: App) {
 		super("api");
@@ -14,25 +15,14 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 	async AfterInit() {
 		if (!this._settingsBound) {
 			this._settingsBound = true;
-			this.settingsProvider.onSettingChange("api.enabled", (value) => void this.__onApiEnabled("api.enabled", value as boolean), {
-				debounce: 1000,
-			});
+			this.settingsProvider.onSettingChange(
+				["api.enabled", "api.port"],
+				(value, _prev, key) => void this.__onApiSettingChange(key, value),
+				{ debounce: 500 },
+			);
 		}
 
-		if (this._thread) {
-			await this._thread.destroy();
-			this._thread = undefined;
-		}
-
-		const config = this.settingsProvider;
-		if (!config?.instance?.api?.enabled) {
-			this.logger.debug("API is disabled in settings");
-			return;
-		}
-
-		this._thread = await createApiWorker(this, this.windowContext.main);
-		const tpid = await this._thread.initialize(this.settingsProvider.instance);
-		this.logger.debug("API worker initialized with pid:", tpid);
+		await this.startOrStopFromSettings();
 	}
 
 	get app() {
@@ -51,15 +41,57 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 		return this.getProvider("settings");
 	}
 
-	private async __onApiEnabled(key: string, value: boolean) {
-		if (!value) {
-			if (this._thread) {
-				await this._thread.destroy();
-				this._thread = undefined;
+	private async __onApiSettingChange(key: string, value: unknown) {
+		if (key === "api.enabled") {
+			if (!value) {
+				await this.stopWorker();
+				return;
 			}
-		} else {
-			await this.AfterInit();
+			await this.startOrStopFromSettings();
+			return;
 		}
+		if (key === "api.port" && this.settingsProvider.instance?.api?.enabled) {
+			await this.startOrStopFromSettings();
+		}
+	}
+
+	private async startOrStopFromSettings() {
+		if (this._initPromise) await this._initPromise;
+		this._initPromise = this.runStartOrStop();
+		try {
+			await this._initPromise;
+		} finally {
+			this._initPromise = null;
+		}
+	}
+
+	private async runStartOrStop() {
+		await this.stopWorker();
+
+		const config = this.settingsProvider;
+		if (!config?.instance?.api?.enabled) {
+			this.logger.debug("API is disabled in settings");
+			return;
+		}
+
+		try {
+			this._thread = await createApiWorker(this, this.windowContext.main);
+			const tpid = await this._thread.initialize(this.settingsProvider.instance);
+			this.logger.debug("API server initialized", {
+				pid: tpid,
+				port: this.settingsProvider.instance.api.port,
+			});
+		} catch (err) {
+			this._thread = undefined;
+			this.logger.error("API server failed to start", err);
+		}
+	}
+
+	private async stopWorker() {
+		if (!this._thread) return;
+		const thread = this._thread;
+		this._thread = undefined;
+		await thread.destroy();
 	}
 
 	async getRoutes() {

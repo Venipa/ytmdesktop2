@@ -13,10 +13,11 @@ const history = createHashHistory();
 const router = createRouter({
 	routeTree,
 	history,
-	// Instant hash nav — no pending UI flash between settings tabs
 	defaultPreload: false,
-	defaultPendingMs: Number.POSITIVE_INFINITY,
+	// Show pending immediately — Infinity kept previous route painted while lazy chunk loads
+	defaultPendingMs: 0,
 	defaultPendingMinMs: 0,
+	defaultPendingComponent: SpinnerPage,
 });
 
 declare module "@tanstack/react-router" {

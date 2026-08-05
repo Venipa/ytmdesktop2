@@ -5,6 +5,13 @@ type GenericCallback = (...args: any[]) => void;
 
 type WorkerEventSubscriptionMethod = (workerEvent: string, callback: GenericCallback) => void;
 
+/** Prefer asar.unpacked path so worker_threads can open the file in packaged builds. */
+function resolveWorkerPath(modulePath: string): string {
+	if (modulePath.includes("app.asar.unpacked")) return modulePath;
+	if (modulePath.includes("app.asar")) return modulePath.replace("app.asar", "app.asar.unpacked");
+	return modulePath;
+}
+
 export class WorkerAgent<TInput, TOutput> {
 	private readonly worker: Worker;
 	constructor(operationModuleIdOrWorker: string | Worker, logToConsole = false) {
@@ -13,7 +20,7 @@ export class WorkerAgent<TInput, TOutput> {
 			return;
 		}
 		const workerData: WorkerData = {
-			operationModuleId: operationModuleIdOrWorker,
+			operationModuleId: resolveWorkerPath(operationModuleIdOrWorker),
 			logToConsole,
 		};
 
@@ -21,7 +28,7 @@ export class WorkerAgent<TInput, TOutput> {
 			workerData,
 		};
 
-		this.worker = new Worker(workerModuleId, workerOptions);
+		this.worker = new Worker(resolveWorkerPath(workerModuleId), workerOptions);
 	}
 
 	runOperation(input: TInput): void {

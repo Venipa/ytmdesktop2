@@ -91,10 +91,6 @@ jobs:
           Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
           Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
 
-          # electron-builder expects a flat node_modules tree
-          Add-Content -Path pnpm-workspace.yaml -Value ""
-          Add-Content -Path pnpm-workspace.yaml -Value "shamefullyHoist: true"
-          Add-Content -Path pnpm-workspace.yaml -Value "nodeLinker: hoisted"
       - name: Install dependencies
         run: |
           pnpm install --frozen-lockfile

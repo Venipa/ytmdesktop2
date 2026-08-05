@@ -114,12 +114,16 @@ const runApp = async function () {
 		if (startupService.isStartupContext ? !startupService.isEnabled || !startupService.isInitialMinimized : !startupService.isMinimizedArg) {
 			mainWindow.main.show();
 		}
-		const runAfterInit = async () => {
-			await serviceCollection.exec("AfterInit");
-			await runLifecycle("afterInit");
+		let afterInitChain = Promise.resolve();
+		const runAfterInit = () => {
+			afterInitChain = afterInitChain.then(async () => {
+				await serviceCollection.exec("AfterInit");
+				await runLifecycle("afterInit");
+			});
+			return afterInitChain;
 		};
-		await onWindowLoad(mainWindow.main, () => runAfterInit(), { once: true });
-		mainWindow.main.webContents.on("did-finish-load", () => void runAfterInit()); // if reloaded run afterInit again
+		// once only — previous once+on double-fired AfterInit and raced API listen
+		await onWindowLoad(mainWindow.main, () => void runAfterInit(), { once: true });
 	});
 
 	// Window control events

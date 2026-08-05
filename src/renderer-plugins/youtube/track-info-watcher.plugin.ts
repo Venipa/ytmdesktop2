@@ -141,7 +141,10 @@ export default definePlugin(
 				};
 
 				const handleVideoDataChange = (ev: { playertype?: number | string; type?: string }) => {
-					if (Number(ev?.playertype) !== 1 || !VIDEO_DATA_LOADED_TYPES.has(ev?.type ?? "")) return;
+					const type = String(ev?.type ?? "").toLowerCase();
+					if (!VIDEO_DATA_LOADED_TYPES.has(type)) return;
+					// Main player is playertype 1; undefined = still try (YTM sometimes omits)
+					if (ev?.playertype != null && Number(ev.playertype) !== 1) return;
 					pushTrackInfo();
 				};
 

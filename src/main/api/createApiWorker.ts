@@ -1,11 +1,12 @@
+import { type ApiServerHandle, startApiServer } from "@main/api/server";
 import { createMainCaller } from "@main/trpc/caller";
 import type ApiProvider from "@main/trpc/routers/api/service";
 import type SettingsProvider from "@main/trpc/routers/settings/service";
-import { apiWorkerModuleId } from "@main/workerPaths";
-import { WorkerAgent } from "@main/workers";
 import { API_ROUTES } from "@shared/constants/eventNames";
-import logger from "@shared/utils/Logger";
-import { BrowserWindow } from "electron";
+import { createLogger } from "@shared/utils/console";
+import type { BrowserWindow } from "electron";
+
+const log = createLogger("api-worker");
 
 export interface ApiWorker {
 	send(name: string, ...args: any[]): void;
@@ -14,11 +15,8 @@ export interface ApiWorker {
 	destroy(): Promise<void>;
 }
 
-const agent = () => new WorkerAgent(apiWorkerModuleId);
-
 export const createApiWorker = async (api: ApiProvider, parent?: BrowserWindow): Promise<ApiWorker> => {
-	let worker: WorkerAgent<{ name: string; data?: any }, any> | null = agent();
-	if (parent) parent.on("close", () => worker!.requestExit());
+	let handle: ApiServerHandle | null = null;
 
 	const trackCaller = () => createMainCaller().track;
 	const apiMap: Record<string, (...args: any[]) => Promise<unknown> | unknown> = {
@@ -38,39 +36,60 @@ export const createApiWorker = async (api: ApiProvider, parent?: BrowserWindow):
 		[API_ROUTES.TRACK_DISLIKE]: (dislike?: boolean) => trackCaller().dislike(!!dislike),
 	};
 
-	worker.on("result", (err, out) => {
-		if (err) return logger.error(err);
-		if (!out || typeof out !== "object" || !out.name) return;
-		Promise.resolve(apiMap[out.name]?.(...[out.data].flat()) ?? null).then((result) => {
-			return Promise.resolve(worker?.runOperation({ name: "event", data: [out.id, result] }) ?? null);
-		});
-	});
+	const onRequest = async (name: string, data?: unknown) => {
+		const fn = apiMap[name];
+		if (!fn) throw new Error(`Unknown API route: ${name}`);
+		return await Promise.resolve(fn(...[data].flat()));
+	};
 
-	return new (class {
-		constructor() {}
+	const destroy = async () => {
+		if (!handle) return;
+		const active = handle;
+		handle = null;
+		await active.destroy();
+	};
+
+	const initialize = async (settings: SettingsProvider["instance"]) => {
+		if (handle) await destroy();
+		handle = await startApiServer({
+			config: { ...settings },
+			routes: Object.keys(apiMap),
+			onRequest,
+		});
+		log.debug("api server ready", { port: handle.port });
+		return process.pid;
+	};
+
+	if (parent) {
+		parent.on("close", () => {
+			void destroy();
+		});
+	}
+
+	const worker: ApiWorker = {
 		send(name: string, ...args: any[]) {
-			worker!.runOperation({ name, data: args });
-		}
-		async initialize(settings: SettingsProvider["instance"]) {
-			return await this.invoke<number>("initialize", {
-				config: { ...settings },
-				routes: Object.keys(apiMap),
-			});
-		}
+			handle?.send(name, ...args);
+		},
+		initialize,
+		destroy,
 		async invoke<T = any>(name: string, ...args: any[]) {
-			return await new Promise<T>((resolve, reject) => {
-				worker!.once("result", (err, data) => {
-					if (err) reject(err);
-					else resolve(data);
-				});
-				worker!.runOperation({ name, data: args });
-			});
-		}
-		async destroy() {
-			if (!worker) return;
-			worker.runOperation({ name: "destroy" });
-			worker.requestExit();
-			worker = null;
-		}
-	})();
+			if (name === "socket") {
+				handle?.send(String(args[0] ?? ""), ...args.slice(1));
+				return undefined as T;
+			}
+			if (name === "initialize") {
+				const payload = args[0] as { config?: SettingsProvider["instance"] } | SettingsProvider["instance"] | undefined;
+				const settings =
+					payload && typeof payload === "object" && "config" in payload && payload.config ? payload.config : (payload as SettingsProvider["instance"]);
+				return (await initialize(settings)) as T;
+			}
+			if (name === "destroy" || name === "close") {
+				await destroy();
+				return undefined as T;
+			}
+			return (await onRequest(name, args[0])) as T;
+		},
+	};
+
+	return worker;
 };

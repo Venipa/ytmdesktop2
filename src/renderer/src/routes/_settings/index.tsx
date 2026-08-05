@@ -94,7 +94,15 @@ function GenericSettingsPage() {
 					<FieldGroup>
 						<SettingsCheckbox configKey="api.enabled">Enable API</SettingsCheckbox>
 						{apiEnabledSetting && !apiPending && (
-							<SettingsInput configKey="api.port" type="number" min={13000} max={39999} placeholder="13000-39999" label="API Port" />
+							<SettingsInput
+								configKey="api.port"
+								type="number"
+								min={13000}
+								max={39999}
+								defaultValue={13091}
+								placeholder="13000-39999"
+								label="API Port"
+							/>
 						)}
 					</FieldGroup>
 				</CardContent>
