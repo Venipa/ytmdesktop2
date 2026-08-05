@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  packages: read # @venipa/* on GitHub Packages
   pages: write
   id-token: write
 
