@@ -49,6 +49,8 @@ const rendererResolve: UserConfigExport = {
 };
 
 const externalizedEsmDeps = ["lodash-es", "@faker-js/faker", "@trpc-limiter/memory", "got", "encryption.js"];
+/** Bundle into main — avoid asar nested node_modules holes (Express/ee-first class). */
+const bundleIntoMain = ["hono", "@hono/node-server", "ws"];
 const youtubeClientPlugins = glob.globSync("./src/renderer-plugins/youtube/*.plugin.ts").map((file) => {
 	const name = basename(file, ".ts");
 	return [name, file];
@@ -127,7 +129,7 @@ export default defineConfig({
 		...mainResolve,
 		plugins: [generateServiceTypesPlugin()],
 		build: {
-			externalizeDeps: { exclude: [...externalizedEsmDeps] },
+			externalizeDeps: { exclude: [...externalizedEsmDeps, ...bundleIntoMain] },
 			rollupOptions: {
 				input: {
 					index: resolve(__dirname, "src/main/main.ts"),
@@ -144,7 +146,7 @@ export default defineConfig({
 	preload: {
 		...mainResolve,
 		build: {
-			externalizeDeps: { exclude: [...externalizedEsmDeps] },
+			externalizeDeps: { exclude: [...externalizedEsmDeps, ...bundleIntoMain] },
 			rollupOptions: {
 				input: {
 					youtube: resolve(__dirname, "src/preload/youtube.ts"),

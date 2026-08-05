@@ -147,7 +147,7 @@ function SettingsLayout() {
 				</Sidebar>
 				<SidebarInset className="min-h-0 overflow-hidden">
 					<ScrollArea className="h-full">
-						<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
+						<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 pb-32">
 							<Suspense key={pathname} fallback={<SpinnerPage />}>
 								<Outlet />
 							</Suspense>

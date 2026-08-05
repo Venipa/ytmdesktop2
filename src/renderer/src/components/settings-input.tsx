@@ -1,10 +1,13 @@
 import { clamp } from "lodash-es";
 import { type InputHTMLAttributes, type ReactNode, useId, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useSettingsState } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
+
+const DEFAULT_INPUT_DEBOUNCE_MS = 800;
 
 export interface SettingsInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "onChange" | "value" | "defaultValue"> {
 	configKey: string;
@@ -14,11 +17,30 @@ export interface SettingsInputProps extends Omit<InputHTMLAttributes<HTMLInputEl
 	label?: ReactNode;
 	hint?: ReactNode;
 	className?: string;
+	/** Persist debounce in ms (default 800). Keeps field editable while typing. */
+	debounce?: number;
+	/** Shown via sonner after the value is saved. */
+	updateMessage?: string;
 }
 
-export function SettingsInput({ configKey, defaultValue = "", min, max, label, hint, className, type = "text", ...attrs }: SettingsInputProps) {
+export function SettingsInput({
+	configKey,
+	defaultValue = "",
+	min,
+	max,
+	label,
+	hint,
+	className,
+	type = "text",
+	debounce = DEFAULT_INPUT_DEBOUNCE_MS,
+	updateMessage,
+	...attrs
+}: SettingsInputProps) {
 	const id = useId();
-	const [value, setValue, { isPending }] = useSettingsState(configKey, defaultValue, { debounce: 500 });
+	const [value, setValue, { isPending }] = useSettingsState(configKey, defaultValue, {
+		debounce,
+		onPersisted: updateMessage ? () => toast.success(updateMessage) : undefined,
+	});
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	if (type === "file") {

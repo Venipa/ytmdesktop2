@@ -1,4 +1,5 @@
 import { type ReactNode, useId } from "react";
+import { toast } from "sonner";
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { useSettingsState } from "@/hooks/use-settings";
@@ -11,11 +12,24 @@ export interface SettingsCheckboxProps {
 	children?: ReactNode;
 	description?: ReactNode;
 	onChange?: (value: boolean) => void;
+	/** Shown via sonner after the value is saved. */
+	updateMessage?: string;
 }
 
-export function SettingsCheckbox({ configKey, defaultValue = false, className, children, description, onChange }: SettingsCheckboxProps) {
+export function SettingsCheckbox({
+	configKey,
+	defaultValue = false,
+	className,
+	children,
+	description,
+	onChange,
+	updateMessage,
+}: SettingsCheckboxProps) {
 	const id = useId();
-	const [value, setValue, { isPending }] = useSettingsState<boolean>(configKey, defaultValue, { debounce: 200 });
+	const [value, setValue, { isPending }] = useSettingsState<boolean>(configKey, defaultValue, {
+		debounce: 200,
+		onPersisted: updateMessage ? () => toast.success(updateMessage) : undefined,
+	});
 
 	return (
 		<Field orientation="horizontal" data-disabled={isPending || undefined} className={cn("items-start", className)}>

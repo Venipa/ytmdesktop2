@@ -6,7 +6,8 @@ import { type App } from "electron";
 export default class ApiProvider extends BaseProvider implements AfterInit {
 	private _thread?: ApiWorker;
 	private _settingsBound = false;
-	private _initPromise: Promise<void> | null = null;
+	/** Serialize start/stop so disable cannot lose a race to an in-flight start. */
+	private _lifecycleChain: Promise<void> = Promise.resolve();
 
 	constructor(private _app: App) {
 		super("api");
@@ -17,8 +18,8 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 			this._settingsBound = true;
 			this.settingsProvider.onSettingChange(
 				["api.enabled", "api.port"],
-				(value, _prev, key) => void this.__onApiSettingChange(key, value),
-				{ debounce: 500 },
+				(_value, _prev, key) => void this.__onApiSettingChange(key),
+				{ debounce: 200 },
 			);
 		}
 
@@ -41,46 +42,52 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 		return this.getProvider("settings");
 	}
 
-	private async __onApiSettingChange(key: string, value: unknown) {
-		if (key === "api.enabled") {
-			if (!value) {
-				await this.stopWorker();
-				return;
-			}
-			await this.startOrStopFromSettings();
-			return;
-		}
-		if (key === "api.port" && this.settingsProvider.instance?.api?.enabled) {
+	private isApiEnabled(): boolean {
+		return this.settingsProvider?.instance?.api?.enabled === true;
+	}
+
+	private async __onApiSettingChange(key: string) {
+		if (key === "api.enabled" || key === "api.port") {
 			await this.startOrStopFromSettings();
 		}
 	}
 
-	private async startOrStopFromSettings() {
-		if (this._initPromise) await this._initPromise;
-		this._initPromise = this.runStartOrStop();
-		try {
-			await this._initPromise;
-		} finally {
-			this._initPromise = null;
-		}
+	private startOrStopFromSettings(): Promise<void> {
+		this._lifecycleChain = this._lifecycleChain
+			.catch(() => undefined)
+			.then(() => this.runStartOrStop());
+		return this._lifecycleChain;
 	}
 
 	private async runStartOrStop() {
 		await this.stopWorker();
 
-		const config = this.settingsProvider;
-		if (!config?.instance?.api?.enabled) {
+		if (!this.isApiEnabled()) {
 			this.logger.debug("API is disabled in settings");
 			return;
 		}
 
+		const port = this.settingsProvider.instance.api.port;
 		try {
-			this._thread = await createApiWorker(this, this.windowContext.main);
-			const tpid = await this._thread.initialize(this.settingsProvider.instance);
-			this.logger.debug("API server initialized", {
-				pid: tpid,
-				port: this.settingsProvider.instance.api.port,
-			});
+			const worker = await createApiWorker(this, this.windowContext.main);
+			// Disabled while createApiWorker awaited
+			if (!this.isApiEnabled()) {
+				await worker.destroy();
+				this.logger.debug("API disabled before listen — aborted start");
+				return;
+			}
+
+			await worker.initialize(this.settingsProvider.instance);
+
+			// Disabled while listen awaited
+			if (!this.isApiEnabled()) {
+				await worker.destroy();
+				this.logger.debug("API disabled during listen — tore down");
+				return;
+			}
+
+			this._thread = worker;
+			this.logger.debug("API server initialized", { port });
 		} catch (err) {
 			this._thread = undefined;
 			this.logger.error("API server failed to start", err);
@@ -92,6 +99,7 @@ export default class ApiProvider extends BaseProvider implements AfterInit {
 		const thread = this._thread;
 		this._thread = undefined;
 		await thread.destroy();
+		this.logger.debug("API server stopped");
 	}
 
 	async getRoutes() {

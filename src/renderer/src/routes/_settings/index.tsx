@@ -92,7 +92,9 @@ function GenericSettingsPage() {
 				</CardHeader>
 				<CardContent>
 					<FieldGroup>
-						<SettingsCheckbox configKey="api.enabled">Enable API</SettingsCheckbox>
+						<SettingsCheckbox configKey="api.enabled" updateMessage="API setting updated">
+							Enable API
+						</SettingsCheckbox>
 						{apiEnabledSetting && !apiPending && (
 							<SettingsInput
 								configKey="api.port"
@@ -102,6 +104,8 @@ function GenericSettingsPage() {
 								defaultValue={13091}
 								placeholder="13000-39999"
 								label="API Port"
+								debounce={800}
+								updateMessage="API port updated"
 							/>
 						)}
 					</FieldGroup>

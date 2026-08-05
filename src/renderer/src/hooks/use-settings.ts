@@ -33,12 +33,17 @@ export type UseSettingsStateOptions<T> = {
 	debounce?: number;
 	filter?: (value: unknown, prevValue: unknown) => boolean;
 	map?: (value: unknown) => T;
+	/** Fired after a value is successfully persisted (post-debounce). */
+	onPersisted?: (value: T) => void;
 };
 
 type SettingsSetter<T> = (value: T | ((prev: T) => T)) => void;
 
 export type UseSettingsStateMeta = {
+	/** Initial settings fetch in flight */
 	isPending: boolean;
+	/** Persist mutation in flight */
+	isSaving: boolean;
 };
 
 export type UseSettingsStateResult<T> = [T, SettingsSetter<T>, UseSettingsStateMeta];
@@ -54,7 +59,7 @@ function resolveSettingValue<T>(raw: unknown, defaultValue: T, map?: (value: unk
  * (optionally debounced). Remote `onChange` events sync back in.
  */
 export function useSettingsState<T>(key: string, defaultValue: T, options: UseSettingsStateOptions<T> = {}): UseSettingsStateResult<T> {
-	const { debounce: debounceMs, filter, map } = options;
+	const { debounce: debounceMs, filter, map, onPersisted } = options;
 	const utils = trpc.useUtils();
 	const queryInput = useMemo(() => ({ key, defaultValue: defaultValue ?? null }), [key, defaultValue]);
 	const [value, setLocal] = useState<T>(() => resolveSettingValue(undefined, defaultValue, map));
@@ -65,12 +70,16 @@ export function useSettingsState<T>(key: string, defaultValue: T, options: UseSe
 	filterRef.current = filter;
 	const defaultRef = useRef(defaultValue);
 	defaultRef.current = defaultValue;
+	const onPersistedRef = useRef(onPersisted);
+	onPersistedRef.current = onPersisted;
 
 	const { mutateAsync: update, isLoading: isMutating } = trpc.settings.update.useMutation();
 
 	const persist = useMemo(() => {
 		const write = (next: T) => {
-			void update({ key, value: next });
+			void update({ key, value: next }).then(() => {
+				onPersistedRef.current?.(next);
+			});
 		};
 		return typeof debounceMs === "number" && debounceMs > 0 ? debounce(write, debounceMs) : write;
 	}, [key, update, debounceMs]);
@@ -103,7 +112,7 @@ export function useSettingsState<T>(key: string, defaultValue: T, options: UseSe
 		[persist, queryInput, utils.settings.get],
 	);
 
-	return [value, setValue, { isPending: isQueryLoading || isMutating }];
+	return [value, setValue, { isPending: isQueryLoading, isSaving: isMutating }];
 }
 
 /** @deprecated Prefer `useSettingsState`. */
