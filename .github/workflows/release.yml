@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: pnpm/action-setup@v5
         with:
-          version: 10
+          version: 11
       - name: Check out Git repository
         uses: actions/checkout@v6
         with:
@@ -85,11 +85,13 @@ jobs:
       - name: Prepare pnpm / auth
         shell: pwsh
         run: |
-          # Auth/registry still live in .npmrc (pnpm 11+). Hoist settings must be in pnpm-workspace.yaml.
+          # Auth/registry only in .npmrc. Hoist settings live in pnpm-workspace.yaml
+          # (shamefullyHoist + nodeLinker: hoisted) — required for Electron/pnpm CI builds.
           Remove-Item -Path .npmrc -ErrorAction Ignore
           Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
           Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
           Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
 
       - name: Install dependencies
         run: |

@@ -2,6 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# Required for Electron app installs/builds under pnpm (CI + local).
 shamefullyHoist: true
 nodeLinker: hoisted
 onlyBuiltDependencies:
