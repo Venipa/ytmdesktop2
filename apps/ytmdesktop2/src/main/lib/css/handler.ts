@@ -1,6 +1,7 @@
 import { logger } from "@shared/utils/console";
 import { WebContents } from "electron";
 import { compileStringAsync } from "sass";
+
 type CSSHandlerOptions = { translateSass: boolean };
 export default class CSSHandler {
 	private logger = logger.child("CSSHandler");

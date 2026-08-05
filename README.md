@@ -56,7 +56,7 @@ also make sure to set a custom the port (`append ?port=<custom port> to source f
 Control playback from an Elgato Stream Deck via the local API.
 
 1. Settings → **Stream Deck** → enable API (+ Require authorization)
-2. Build / install the plugin in [`packages/streamdeck/`](./packages/streamdeck):
+2. Build / install the plugin ([`packages/streamdeck`](./packages/streamdeck)):
    ```bash
    pnpm streamdeck:build
    # or package: pnpm streamdeck:pack
@@ -73,6 +73,8 @@ Control playback from an Elgato Stream Deck via the local API.
 &nbsp;&nbsp;
 
 ## Project setup
+
+Monorepo (pnpm workspace). Electron app lives in [`apps/ytmdesktop2`](./apps/ytmdesktop2); Stream Deck plugin in [`packages/streamdeck`](./packages/streamdeck).
 
 ```bash
 # gh is required for fetching github packages (Venipa/xosms)

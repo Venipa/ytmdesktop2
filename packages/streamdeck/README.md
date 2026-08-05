@@ -11,13 +11,12 @@ Control [YTMDesktop2](https://github.com/Venipa/ytmdesktop2) from an Elgato Stre
 ## Setup
 
 1. In YTMDesktop2: **Settings → Stream Deck** → enable API + Require authorization
-2. Build / install this plugin:
+2. Build / install this plugin (from repo root):
    ```bash
-   cd packages/streamdeck
-   pnpm install --ignore-workspace
-   pnpm build
+   pnpm install
+   pnpm streamdeck:build
    # optional packaged plugin:
-   pnpm pack
+   pnpm streamdeck:pack
    ```
 3. Link the plugin for development:
    ```bash

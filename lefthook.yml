@@ -3,13 +3,12 @@ pre-commit:
   commands:
     format:
       glob: 
-        - src/**/*.{js,jsx,ts,tsx,json,yaml,yml,html,vue}
-        - tailwind.config.ts
-        - vite.config.ts
-        - electron.vite.config.ts
-        - postcss.config.js
-        - tsconfig.*.json
-        - tsconfig.json
-        - "!src/**/*.generated.d.ts"
+        - apps/ytmdesktop2/src/**/*.{js,jsx,ts,tsx,json,yaml,yml,html,vue}
+        - apps/ytmdesktop2/vite.config.ts
+        - apps/ytmdesktop2/electron.vite.config.ts
+        - apps/ytmdesktop2/postcss.config.js
+        - apps/ytmdesktop2/tsconfig.*.json
+        - apps/ytmdesktop2/tsconfig.json
+        - "!apps/ytmdesktop2/src/**/*.generated.d.ts"
       run: npx @biomejs/biome check --write --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {staged_files}
       stage_fixed: true

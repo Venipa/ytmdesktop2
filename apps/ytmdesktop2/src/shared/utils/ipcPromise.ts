@@ -1,4 +1,4 @@
-import { type WebContentsView, ipcMain } from "electron";
+import { ipcMain, type WebContentsView } from "electron";
 
 /**
  * custom ipc promise handler

@@ -79,7 +79,7 @@ jobs:
         name: set app version
         uses: jossef/action-set-json-field@v2.2
         with:
-          file: package.json
+          file: apps/ytmdesktop2/package.json
           field: version
           value: ${{ steps.getVersion.outputs.value }}
       - name: Prepare pnpm / auth

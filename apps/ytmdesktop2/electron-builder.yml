@@ -80,6 +80,9 @@ flatpak:
 #   addAutoLaunchExtension: true
 afterPack: ./scripts/afterPack.js
 
+# Fixed version required in monorepo: install-app-deps cannot resolve
+# hoisted root node_modules/electron from apps/ytmdesktop2.
+electronVersion: 36.9.5
 npmRebuild: false
 publish:
   - provider: github

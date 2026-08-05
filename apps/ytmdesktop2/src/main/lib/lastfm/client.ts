@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { MD5, enc } from "crypto-js";
+import { enc, MD5 } from "crypto-js";
 import got, { Got, Method } from "got";
 import fetch from "node-fetch";
 export class LastFMClient {
