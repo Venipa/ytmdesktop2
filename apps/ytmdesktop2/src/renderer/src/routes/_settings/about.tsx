@@ -12,17 +12,7 @@ export const Route = createFileRoute("/_settings/about")({
 
 function AboutSettingsPage() {
 	const appVersion = window.api.version;
-	const { updateInfo, downloaded, progress, checking, installing, check, install } = useUpdater();
-
-	function handleCheckUpdate() {
-		if (checking) return;
-		void check();
-	}
-
-	function runUpdate() {
-		if (installing) return;
-		void install(true);
-	}
+	const { updateInfo, progress, status, checking, installing, check, install } = useUpdater();
 
 	return (
 		<>
@@ -37,20 +27,25 @@ function AboutSettingsPage() {
 							<span className="text-xs font-medium">Version</span>
 							<span className="text-xs text-muted-foreground">{appVersion}</span>
 						</div>
-						{updateInfo && downloaded ? (
-							<Button variant="outline" onClick={runUpdate} disabled={installing}>
+						{status === "ready" && updateInfo ? (
+							<Button variant="outline" onClick={() => void install(true)} disabled={installing}>
 								Install {updateInfo.version}
+								{installing ? (
+									<span data-icon="inline-end">
+										<Spinner />
+									</span>
+								) : null}
 							</Button>
-						) : updateInfo && progress?.percent ? (
+						) : status === "downloading" || status === "installing" ? (
 							<Button variant="outline" disabled>
-								Downloading… {progress.percent.toFixed(0)}%
+								{status === "installing" ? "Installing…" : `Downloading… ${(progress?.percent ?? 0).toFixed(0)}%`}
 								<span data-icon="inline-end">
 									<Spinner />
 								</span>
 							</Button>
 						) : (
-							<Button variant="outline" onClick={handleCheckUpdate} disabled={checking}>
-								{checking ? "Checking…" : "Check for Update"}
+							<Button variant="outline" onClick={() => void check()} disabled={checking}>
+								{checking ? "Checking…" : updateInfo ? `Update v${updateInfo.version}` : "Check for Update"}
 								{checking ? (
 									<span data-icon="inline-end">
 										<Spinner />

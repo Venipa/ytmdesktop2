@@ -1,12 +1,15 @@
 import type { ProgressInfo } from "@shared/utils/updater";
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircleIcon, DownloadIcon } from "lucide-react";
+import { ArrowRightIcon, CheckCircle2Icon, DownloadIcon, RefreshCwIcon } from "lucide-react";
 import _prettyBytes from "pretty-bytes";
 import { useState } from "react";
+import { ReleaseTimeline } from "@/components/release-notes";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { useUpdater } from "@/hooks/use-updater";
-import { trpc } from "@/lib/trpc";
 
 export const Route = createFileRoute("/update")({
 	component: UpdatePage,
@@ -14,167 +17,188 @@ export const Route = createFileRoute("/update")({
 
 const prettyBytes = (bytes: number) => _prettyBytes(bytes, { binary: true, space: true });
 
-function UpdatePage() {
-	const [isComplete, setIsComplete] = useState(false);
-	const [isInstalling, setIsInstalling] = useState(false);
-	const currentVersion = "v" + window.api.version;
-	const isMacOS = window.api.platform.isMacOS;
-	const utils = trpc.useUtils();
-	const { updateInfo, downloaded, progress, checking, check, install } = useUpdater();
-	const [localProgress, setLocalProgress] = useState<ProgressInfo | null>(null);
-	const updateInfoProgress = progress ?? localProgress;
+function UpdateActions(props: {
+	isMacOS: boolean;
+	isDownloading: boolean;
+	downloaded: boolean;
+	installing: boolean;
+	activeProgress: ProgressInfo | null;
+	onInstall: (quitAndInstall: boolean) => void;
+}) {
+	const { isMacOS, isDownloading, downloaded, installing, activeProgress, onInstall } = props;
 
-	function installUpdate(quitAndInstall = true) {
-		if (isInstalling) return Promise.resolve(null);
-		setIsInstalling(true);
+	return (
+		<div className="flex flex-col gap-3">
+			{activeProgress ? (
+				<div className="flex flex-col gap-2">
+					<Progress value={Math.round(activeProgress.percent)}>
+						<ProgressLabel>{downloaded || activeProgress.percent >= 100 ? "Download complete" : "Downloading"}</ProgressLabel>
+						<ProgressValue />
+					</Progress>
+					<div className="flex items-center justify-between text-xs text-muted-foreground tabular-nums">
+						<span>{prettyBytes(activeProgress.total)}</span>
+						<span>
+							{downloaded || activeProgress.percent >= 100
+								? prettyBytes(activeProgress.total)
+								: `${prettyBytes(activeProgress.transferred)} / ${prettyBytes(activeProgress.total)}`}
+						</span>
+					</div>
+				</div>
+			) : null}
+
+			{isDownloading ? (
+				<Button className="w-full" disabled>
+					<span data-icon="inline-start">
+						<Spinner />
+					</span>
+					Downloading…
+				</Button>
+			) : downloaded && !installing ? (
+				<div className="flex w-full flex-col gap-2">
+					<Button className="w-full" onClick={() => onInstall(true)}>
+						<span data-icon="inline-start">
+							<CheckCircle2Icon />
+						</span>
+						Install now
+					</Button>
+					{!isMacOS ? (
+						<Button variant="outline" className="w-full" onClick={() => window.close()}>
+							Later
+						</Button>
+					) : null}
+				</div>
+			) : installing ? (
+				<div className="flex w-full items-center justify-center gap-2 py-1">
+					<Spinner />
+					<span className="text-xs text-muted-foreground">Installing…</span>
+				</div>
+			) : (
+				<div className="flex w-full flex-col gap-2">
+					<Button className="w-full" onClick={() => onInstall(isMacOS)}>
+						<span data-icon="inline-start">
+							<DownloadIcon />
+						</span>
+						{isMacOS ? "Download & install" : "Download"}
+					</Button>
+					<Button variant="outline" className="w-full" onClick={() => window.close()}>
+						Later
+					</Button>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function UpdatePage() {
+	const currentVersion = window.api.version;
+	const isMacOS = window.api.platform.isMacOS;
+	const { updateInfo, downloaded, progress, checking, installing, status, check, install } = useUpdater();
+	const [localProgress, setLocalProgress] = useState<ProgressInfo | null>(null);
+	const activeProgress = progress ?? localProgress;
+	const isDownloading = status === "downloading" || (!!activeProgress && !downloaded);
+
+	async function installUpdate(quitAndInstall = true) {
+		if (installing) return;
 		if (!downloaded) {
 			setLocalProgress({ total: 0, delta: 0, transferred: 0, percent: 0, bytesPerSecond: 0 });
 		}
-		return install(quitAndInstall)
-			.then((nextDownloaded) => {
-				if (!downloaded) {
-					setIsComplete(!!nextDownloaded);
-					utils.update.downloaded.setData(undefined, !!nextDownloaded);
-				} else {
-					setTimeout(() => {
-						setIsInstalling(false);
-						void installUpdate(true);
-					}, 20000);
-				}
-				setLocalProgress(null);
-			})
-			.catch((err) => {
-				setLocalProgress(null);
-				if (err instanceof Error && err.message.endsWith("[E002]")) {
-					setIsInstalling(true);
-				} else throw err;
-			})
-			.finally(() => setIsInstalling(false));
+		try {
+			await install(quitAndInstall);
+		} catch (err) {
+			if (err instanceof Error && err.message.endsWith("[E002]")) return;
+			throw err;
+		} finally {
+			setLocalProgress(null);
+		}
 	}
 
-	function handleCheckUpdate() {
-		if (checking) return;
-		void check();
-	}
-
-	if (checking) {
+	if (checking && !updateInfo) {
 		return (
-			<div className="flex h-full min-h-screen flex-col overflow-x-hidden overflow-y-auto bg-black p-4">
-				<div className="flex grow flex-col items-center justify-center px-6 py-12 text-center">
-					<h2 className="mb-2 text-xl font-semibold text-white">Checking for Updates</h2>
-					<p className="mb-6 text-sm text-gray-400">Please wait while we check for available updates...</p>
-					<Spinner className="size-8" />
+			<div className="drag flex h-full min-h-screen flex-col items-center justify-center gap-4 bg-background p-8 text-center">
+				<div className="flex size-12 items-center justify-center rounded-full bg-muted">
+					<Spinner className="size-5" />
 				</div>
+				<div className="flex flex-col gap-1.5">
+					<h2 className="text-sm font-medium">Checking for updates</h2>
+					<p className="text-xs text-muted-foreground">Looking for a newer build…</p>
+				</div>
+				<Badge variant="outline">v{currentVersion}</Badge>
 			</div>
 		);
 	}
 
 	if (updateInfo) {
+		const releases = updateInfo.releases?.length
+			? updateInfo.releases
+			: updateInfo.releaseNotes
+				? [{ version: updateInfo.version, name: updateInfo.releaseName, body: updateInfo.releaseNotes, publishedAt: updateInfo.releaseDate }]
+				: [];
+
 		return (
-			<div className="flex h-full min-h-screen flex-col overflow-x-hidden overflow-y-auto bg-black p-4">
-				<div className="drag px-6 pt-6 pb-4 text-center">
-					<div className="mx-auto mb-4 w-fit rounded-full bg-gray-900 p-3">
-						<DownloadIcon size={32} className="text-blue-400" />
+			<div className="flex h-full min-h-screen bg-background">
+				{/* left — summary + actions */}
+				<aside className="drag flex w-[240px] shrink-0 flex-col border-r border-border p-5">
+					<div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+						<div className="flex size-10 items-center justify-center rounded-full bg-muted">
+							<DownloadIcon className="text-primary" />
+						</div>
+						<div className="flex flex-col gap-1">
+							<h2 className="text-sm font-medium">Update available</h2>
+							<p className="text-xs text-muted-foreground text-balance">
+								{updateInfo.releaseName ?? `Version ${updateInfo.version} is ready`}
+							</p>
+						</div>
+						<div className="flex items-center justify-center gap-2">
+							<Badge variant="outline">v{currentVersion}</Badge>
+							<ArrowRightIcon className="size-3 text-muted-foreground" />
+							<Badge>v{updateInfo.version}</Badge>
+						</div>
 					</div>
-					<h2 className="mb-2 text-xl font-semibold text-white">Update Available</h2>
-					<p className="text-sm text-gray-400">Version {updateInfo.version} is ready to install</p>
-				</div>
-				<div className="flex flex-col gap-6 px-6 pb-6">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-sm font-medium text-white">Current Version</p>
-							<p className="text-xs text-gray-400">{currentVersion}</p>
-						</div>
-						<div className="text-right">
-							<p className="text-sm font-medium text-white">New Version</p>
-							<p className="text-xs text-gray-400">{updateInfo.version}</p>
-						</div>
+
+					<div className="no-drag mt-auto pt-4">
+						<UpdateActions
+							isMacOS={isMacOS}
+							isDownloading={isDownloading}
+							downloaded={downloaded}
+							installing={installing}
+							activeProgress={activeProgress}
+							onInstall={(quit) => void installUpdate(quit)}
+						/>
 					</div>
-					<div className="border-t border-gray-800" />
-					{updateInfo.releaseNotes && (
-						<div className="flex flex-col gap-3">
-							<h4 className="text-sm font-medium text-white">Release Notes</h4>
-							<div className="text-sm text-gray-200" dangerouslySetInnerHTML={{ __html: String(updateInfo.releaseNotes) }} />
+				</aside>
+
+				{/* right — changelog timeline */}
+				<main className="flex min-w-0 flex-1 flex-col">
+					<ScrollArea className="min-h-0 flex-1">
+						<div className="px-5 py-4">
+							<ReleaseTimeline releases={releases} />
 						</div>
-					)}
-					{updateInfoProgress && (
-						<div className="flex flex-col gap-3">
-							<div className="border-t border-gray-800" />
-							<div className="flex flex-col gap-2">
-								<div className="flex items-center justify-between text-xs">
-									<span className="text-gray-400">{isComplete ? "Download Complete" : "Downloading..."}</span>
-									<span className="text-white">{Math.round(updateInfoProgress.percent)}%</span>
-								</div>
-								<div className="h-2 w-full rounded-full bg-gray-800">
-									<div className="h-2 rounded-full bg-blue-600 transition-all duration-300 ease-out" style={{ width: `${updateInfoProgress.percent}%` }} />
-								</div>
-								<div className="flex items-center justify-between text-xs text-gray-300">
-									<span>Size: {prettyBytes(updateInfoProgress.total)}</span>
-									<span>
-										{isComplete
-											? prettyBytes(updateInfoProgress.total)
-											: `${prettyBytes(updateInfoProgress.transferred)} / ${prettyBytes(updateInfoProgress.total)}`}
-									</span>
-								</div>
-							</div>
-						</div>
-					)}
-					<div className="flex gap-3 pt-2">
-						{updateInfoProgress && !downloaded ? (
-							<Button className="w-full" disabled>
-								Downloading...
-							</Button>
-						) : downloaded && !isInstalling && !isMacOS ? (
-							<>
-								<Button variant="outline" className="flex-1" onClick={() => window.close()}>
-									Later
-								</Button>
-								<Button className="w-full gap-2 bg-green-600 hover:bg-green-700" onClick={() => installUpdate(true)}>
-									<CheckCircleIcon size={16} /> Install Now
-								</Button>
-							</>
-						) : isInstalling && downloaded ? (
-							<div className="flex h-20 items-center justify-center gap-2">
-								<Spinner />
-								<span className="text-xs text-gray-400">Installing...</span>
-							</div>
-						) : !downloaded ? (
-							<>
-								<Button variant="outline" className="flex-1" onClick={() => window.close()}>
-									Later
-								</Button>
-								<Button className="flex-1 gap-2" onClick={() => installUpdate(isMacOS)}>
-									<DownloadIcon size={16} /> {isMacOS ? "Download and Install" : "Download"}
-								</Button>
-							</>
-						) : null}
-					</div>
-					{!isMacOS && (
-						<div className="pt-2 text-center">
-							<p className="text-xs text-gray-400">Update will be installed automatically after download</p>
-						</div>
-					)}
-				</div>
+					</ScrollArea>
+				</main>
 			</div>
 		);
 	}
 
 	return (
-		<div className="flex h-full min-h-screen flex-col overflow-x-hidden overflow-y-auto bg-black p-4">
-			<div className="flex grow flex-col items-center justify-center px-6 py-12 text-center">
-				<div className="mx-auto mb-4 w-fit rounded-full bg-gray-900 p-3">
-					<CheckCircleIcon size={32} className="text-green-400" />
-				</div>
-				<h2 className="mb-2 text-xl font-semibold text-white">You're Up to Date</h2>
-				<p className="mb-6 text-sm text-gray-400">Your software is running the latest version ({currentVersion})</p>
-				<div className="flex flex-col items-center gap-2">
-					<Button size="sm" onClick={handleCheckUpdate}>
-						Check Again
-					</Button>
-					<Button size="sm" variant="ghost" onClick={() => window.close()}>
-						Close
-					</Button>
-				</div>
+		<div className="drag flex h-full min-h-screen flex-col items-center justify-center gap-5 bg-background p-8 text-center">
+			<div className="flex size-12 items-center justify-center rounded-full bg-muted">
+				<CheckCircle2Icon className="text-primary" />
+			</div>
+			<div className="flex flex-col gap-1.5">
+				<h2 className="text-sm font-medium">You&apos;re up to date</h2>
+				<p className="text-xs text-muted-foreground">Running the latest version</p>
+			</div>
+			<Badge variant="outline">v{currentVersion}</Badge>
+			<div className="no-drag flex items-center justify-center gap-2 pt-1">
+				<Button size="sm" variant="outline" onClick={() => void check(false)} disabled={checking}>
+					<span data-icon="inline-start">
+						{checking ? <Spinner /> : <RefreshCwIcon />}
+					</span>
+					Check again
+				</Button>
+				<Button size="sm" variant="ghost" onClick={() => window.close()}>
+					Close
+				</Button>
 			</div>
 		</div>
 	);

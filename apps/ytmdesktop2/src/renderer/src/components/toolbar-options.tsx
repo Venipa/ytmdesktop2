@@ -21,7 +21,7 @@ export function ToolbarOptions() {
 	const { isHome, home, devTools } = useNavigation();
 	const { state: miniPlayer, open: openMiniPlayer } = useMiniPlayer();
 	const playState = useTrackState();
-	const { updateInfo, downloaded: updateDownloaded, checking: updateChecking, check } = useUpdater();
+	const { updateInfo, downloaded: updateDownloaded, checking: updateChecking, status, check } = useUpdater();
 	const [isDev] = useSettingsState<boolean>("app.enableDev", false);
 	const { mutateAsync: openWindow } = trpc.app.openWindow.useMutation();
 
@@ -51,10 +51,10 @@ export function ToolbarOptions() {
 				</button>
 			)}
 			<button type="button" className="control-button relative size-4" disabled={!!updateChecking} onClick={() => void check()}>
-				{updateChecking && !updateInfo ? (
+				{status === "checking" && !updateInfo ? (
 					<Spinner className="size-3" />
 				) : updateInfo ? (
-					<DownloadIcon className={!updateDownloaded ? "animate-pulse" : "text-green-500"} />
+					<DownloadIcon className={status === "ready" || updateDownloaded ? "text-green-500" : "animate-pulse"} />
 				) : (
 					<RefreshIcon />
 				)}

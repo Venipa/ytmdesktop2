@@ -83,6 +83,9 @@ importers:
       '@hono/node-server':
         specifier: ^2.0.12
         version: 2.0.12(hono@4.13.0)
+      '@mdx-js/mdx':
+        specifier: ^3.1.1
+        version: 3.1.1(supports-color@8.1.1)
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.3.1

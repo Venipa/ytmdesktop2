@@ -19,7 +19,7 @@ function YoutubeToolbarPage() {
 	const isDarwin = useMemo(() => window.app.platform === "darwin", []);
 	const [state] = useMainWindowState();
 	const track = useTrack();
-	const { updateInfo, downloaded, progress, isPending: updatePending, runUpdate } = useUpdater();
+	const { updateInfo, downloaded, progress, isPending: updatePending, status, runUpdate } = useUpdater();
 	const { minimize, maximize, quit } = useWindowControls();
 	const { goback } = useNavigation();
 
@@ -61,17 +61,22 @@ function YoutubeToolbarPage() {
 						<button
 							type="button"
 							className={`flex h-7 cursor-pointer items-center gap-2 truncate rounded px-3 text-xs transition duration-100 ease-out ${
-								updateInfo && !progress && !downloaded ? "bg-green-500 text-white" : downloaded ? "text-green-500" : ""
+								status === "available" ? "bg-green-500 text-white" : status === "ready" || downloaded ? "text-green-500" : ""
 							}`}
 							disabled={updatePending}
 							onClick={() => void runUpdate()}
 						>
-							{progress?.percent ? (
+							{status === "downloading" && progress?.percent ? (
 								<>
 									<Spinner size="sm" />
 									<span>
 										Downloading Update v{updateInfo.version}... {progress.percent.toFixed(0).padStart(5)}%
 									</span>
+								</>
+							) : status === "installing" ? (
+								<>
+									<Spinner size="sm" />
+									<span>Installing Update v{updateInfo.version}…</span>
 								</>
 							) : (
 								<span className="truncate text-ellipsis">New Update v{updateInfo.version}</span>

@@ -2,52 +2,186 @@ import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { isDevelopment, isProduction } from "@main/infra/devUtils";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import { createAppWindow } from "@main/windows/windowUtils";
-import IPC_EVENT_NAMES from "@shared/constants/eventNames";
-import { authorName, compareUrlParse } from "@shared/utils/github";
+import { cacheWithFile } from "@shared/utils/filecache";
+import { apiRepoUrl } from "@shared/utils/github";
+import type { ProgressInfo, ReleaseNoteEntry, UpdateInfo } from "@shared/utils/updater";
+import { observable } from "@trpc/server/observable";
 import { App, BrowserWindow } from "electron";
-import { autoUpdater, CancellationToken, UpdateInfo } from "electron-updater";
+import { autoUpdater, CancellationToken, type UpdateInfo as ElectronUpdateInfo } from "electron-updater";
+import { EventEmitter } from "events";
 import { clamp } from "lodash-es";
 import semver from "semver";
 
+const UPDATE_CHECK_INTERVAL_MS = 1000 * 60 * 15;
+const GITHUB_FEED = (() => {
+	const [owner, repo] = String(import.meta.env.VITE_GITHUB_REPOSITORY ?? "").split("/", 2);
+	return { owner, repo };
+})();
+
 const devShowUpdateDialog = isDevelopment && process.env.DEV_SHOW_UPDATE_DIALOG === "1";
-if (isDevelopment) import.meta.env.__SKIP_BUILD == null;
-const [GITHUB_AUTHOR, GITHUB_REPOSITORY] = import.meta.env.VITE_GITHUB_REPOSITORY.split("/", 2);
-function getContent(content: string) {
-	const lines = content.split("\n");
-	const newContext = lines.map((line) => {
-		if (line.startsWith("- ")) {
-			const mainContent = line.split(";")[0];
-			const context = line.split(";")[2] ?? "@" + authorName;
-			const mentions = context
-				?.split(" ")
-				.filter((word) => word.startsWith("@"))
-				.map((mention) => {
-					const username = mention.replace("@", "");
-					const avatarUrl = `https://github.com/${username}.png`;
-					return `[![${mention}](${avatarUrl})](https://github.com/${username})`;
-				});
-			if (!mentions) {
-				return line;
-			}
-			// Remove &nbsp
-			return mainContent.replace(/&nbsp/g, "") + " – " + mentions.join(" ");
-		} else if (compareUrlParse.test(line)) {
-			return line.replace(compareUrlParse, `[View on Github]($1)`);
-		}
-		return line;
-	});
-	return newContext.join("\n");
+
+type UpdateEvents = {
+	update: [UpdateInfo | null];
+	checking: [boolean];
+	progress: [ProgressInfo | null];
+	downloaded: [UpdateInfo | null];
+};
+
+const events = new EventEmitter() as EventEmitter & {
+	on<K extends keyof UpdateEvents>(event: K, listener: (...args: UpdateEvents[K]) => void): EventEmitter;
+	off<K extends keyof UpdateEvents>(event: K, listener: (...args: UpdateEvents[K]) => void): EventEmitter;
+	emit<K extends keyof UpdateEvents>(event: K, ...args: UpdateEvents[K]): boolean;
+};
+
+type GithubReleaseJson = {
+	tag_name?: string;
+	name?: string | null;
+	body?: string | null;
+	published_at?: string | null;
+	draft?: boolean;
+	prerelease?: boolean;
+};
+
+function githubHeaders(): Record<string, string> {
+	const headers: Record<string, string> = {
+		Accept: "application/vnd.github+json",
+		"User-Agent": "ytmdesktop2-updater",
+	};
+	const token = process.env.GITHUB_TOKEN;
+	if (token) headers.Authorization = `Bearer ${token}`;
+	return headers;
 }
+
+function cleanVersion(raw: string): string | null {
+	const cleaned = semver.clean(raw.replace(/^v/i, ""), { loose: true });
+	return cleaned;
+}
+
+function stripHtml(value: string): string {
+	return value
+		.replace(/<\/p>/gi, "\n\n")
+		.replace(/<br\s*\/?>/gi, "\n")
+		.replace(/<li>/gi, "- ")
+		.replace(/<\/li>/gi, "\n")
+		.replace(/<[^>]+>/g, "")
+		.replace(/&nbsp;/g, " ")
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.trim();
+}
+
+function noteFromFeed(notes: ElectronUpdateInfo["releaseNotes"], version: string): string | null {
+	if (!notes) return null;
+	if (typeof notes === "string") {
+		const trimmed = notes.trim();
+		if (!trimmed || trimmed === "null" || trimmed === "undefined") return null;
+		return /^\s*</.test(trimmed) ? stripHtml(trimmed) : trimmed;
+	}
+	if (Array.isArray(notes)) {
+		const match = notes.find((entry) => "version" in entry && cleanVersion(String(entry.version)) === cleanVersion(version));
+		const note = match && "note" in match ? match.note : null;
+		if (!note?.trim()) return null;
+		return /^\s*</.test(note) ? stripHtml(note) : note.trim();
+	}
+	return null;
+}
+
+async function fetchGithubReleaseRange(options: {
+	currentVersion: string;
+	targetVersion: string;
+	includePrerelease: boolean;
+}): Promise<ReleaseNoteEntry[]> {
+	const current = cleanVersion(options.currentVersion) ?? options.currentVersion;
+	const target = cleanVersion(options.targetVersion) ?? options.targetVersion;
+
+	try {
+		const raw = await cacheWithFile(async () => {
+			const res = await fetch(`${apiRepoUrl}/releases?per_page=50`, { headers: githubHeaders() });
+			if (!res.ok) throw new Error(`GitHub releases: ${res.status}`);
+			return (await res.json()) as GithubReleaseJson[];
+		}, `releases-${target}-gt-${current}`);
+
+		const entries: ReleaseNoteEntry[] = [];
+		for (const release of raw) {
+			if (release.draft) continue;
+			if (release.prerelease && !options.includePrerelease) continue;
+			const version = cleanVersion(release.tag_name ?? "");
+			if (!version) continue;
+			try {
+				if (!semver.gt(version, current, { loose: true })) continue;
+				if (!semver.lte(version, target, { loose: true })) continue;
+			} catch {
+				continue;
+			}
+			entries.push({
+				version,
+				name: release.name?.replace(new RegExp(`^v?${version}\\s*-?\\s*`, "i"), "").trim() || null,
+				body: release.body?.trim() || null,
+				publishedAt: release.published_at ?? null,
+			});
+		}
+
+		return entries.sort((a, b) => semver.rcompare(a.version, b.version, { loose: true }));
+	} catch {
+		return [];
+	}
+}
+
+async function toAppUpdateInfo(
+	info: ElectronUpdateInfo,
+	options: { currentVersion: string; includePrerelease: boolean },
+): Promise<UpdateInfo> {
+	let releases = await fetchGithubReleaseRange({
+		currentVersion: options.currentVersion,
+		targetVersion: info.version,
+		includePrerelease: options.includePrerelease,
+	});
+
+	// Ensure the target version always appears, even if GitHub list miss it.
+	const target = cleanVersion(info.version) ?? info.version;
+	if (!releases.some((entry) => entry.version === target)) {
+		const body = noteFromFeed(info.releaseNotes, info.version);
+		releases = [
+			{
+				version: target,
+				name: info.releaseName ?? null,
+				body,
+				publishedAt: info.releaseDate ?? null,
+			},
+			...releases,
+		].sort((a, b) => semver.rcompare(a.version, b.version, { loose: true }));
+	} else {
+		// Fill empty bodies from feed note when possible.
+		releases = releases.map((entry) => {
+			if (entry.body) return entry;
+			const body = noteFromFeed(info.releaseNotes, entry.version);
+			return body ? { ...entry, body } : entry;
+		});
+	}
+
+	const latest = releases[0] ?? null;
+
+	return {
+		version: info.version,
+		releaseName: info.releaseName ?? latest?.name ?? null,
+		releaseNotes: latest?.body ?? null,
+		releases,
+		releaseDate: info.releaseDate,
+	};
+}
+
 export default class UpdateProvider extends BaseProvider implements BeforeStart, AfterInit {
 	private _update: UpdateInfo | null = null;
-	private _updateAvailable: boolean = false;
-	private _updateQueuedForInstall: boolean = false;
-	private _updateDownloaded: boolean = false;
+	private _updateAvailable = false;
+	private _updateQueuedForInstall = false;
+	private _updateDownloaded = false;
+	private _checking = false;
+	private _progress: ProgressInfo | null = null;
 	private _downloadToken: CancellationToken | null = null;
 	private _autoUpdateCheckHandle: NodeJS.Timeout | null = null;
-	private _readyPromise: Promise<void> | null = null;
-	private _downloadCachedPromise: Promise<void> | null = null;
-	private _window: BrowserWindow;
+	private _window: BrowserWindow | null = null;
+	private _showUpdateDialogPromise: Promise<void> | null = null;
 
 	constructor(private app: App) {
 		super("update");
@@ -81,7 +215,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		return this.settingsInstance.instance.app.autoupdate && !isDevelopment;
 	}
 
-	// Private helper methods
 	private isUpdateInRange(ver: string): boolean {
 		this.logger.debug("isUpdateInRange", { newVersion: ver, currentVersion: this.app.getVersion() });
 		if (devShowUpdateDialog) return true;
@@ -95,70 +228,79 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			return false;
 		}
 	}
-	private sendToAllViews(ev: string, ...args: any[]) {
-		this.windowContext.sendToAllViews(ev, ...args);
+
+	private setChecking(checking: boolean) {
+		this._checking = checking;
+		events.emit("checking", checking);
 	}
 
-	private sendUpdateStatus(checking: boolean) {
-		this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_CHECKING, checking);
+	private setProgress(progress: ProgressInfo | null) {
+		this._progress = progress;
+		events.emit("progress", progress);
 	}
-	private async parseUpdateInfo(ev: UpdateInfo) {
-		// todo: add release notes
-		// const releaseNotes = await cacheWithFile(async () => {
-		// 	return await fetch(apiRepoUrl + `/releases/tags/v${ev.version}`)
-		// 		.then((res) => res.json())
-		// 		.then((res) => res.body)
-		// 		.then(getContent);
-		// }, `version-${ev.version}`);
 
-		return {
-			...ev,
-			releaseNotes: ev.releaseNotes,
-		};
+	private setUpdate(info: UpdateInfo | null, available = !!info) {
+		this._update = info;
+		this._updateAvailable = available;
+		events.emit("update", info);
 	}
-	private async handleUpdateAvailable(ev: UpdateInfo) {
-		this.logger.debug("handleUpdateAvailable", { ev });
-		this._updateAvailable = ev && this.isUpdateInRange(ev.version);
-		this._update = this._updateAvailable ? await this.parseUpdateInfo(ev) : (null as any);
-		this.logger.debug("handleUpdateAvailable", { updateAvailable: this._updateAvailable, update: this._update });
-		if (this._updateAvailable) {
-			this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, this._update);
+
+	private setDownloaded(info: UpdateInfo | null) {
+		this._updateDownloaded = !!info;
+		if (info) this.setUpdate(info, true);
+		this.setProgress(null);
+		events.emit("downloaded", info);
+	}
+
+	private resolveUpdateInfo(ev: ElectronUpdateInfo) {
+		return toAppUpdateInfo(ev, {
+			currentVersion: this.app.getVersion(),
+			includePrerelease: !!this.settingsInstance.get("app.beta"),
+		});
+	}
+
+	private async handleUpdateAvailable(ev: ElectronUpdateInfo) {
+		this.logger.debug("handleUpdateAvailable", { version: ev.version });
+		const inRange = this.isUpdateInRange(ev.version);
+		if (!inRange) {
+			this.setUpdate(null, false);
+			this.setChecking(false);
+			return;
 		}
-		this.sendUpdateStatus(false);
+		this.setUpdate(await this.resolveUpdateInfo(ev), true);
+		this.setChecking(false);
 	}
 
-	private async handleUpdateDownloaded(ev: UpdateInfo) {
-		this._updateAvailable = true;
-		this._updateDownloaded = true;
-		this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, null);
-		this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_DOWNLOADED, await this.parseUpdateInfo(ev));
-
-		if (this.isAutoUpdate) {
-			this.quitAndInstall();
-		}
+	private async handleUpdateDownloaded(ev: ElectronUpdateInfo) {
+		this.setDownloaded(await this.resolveUpdateInfo(ev));
+		if (this.isAutoUpdate) this.quitAndInstall();
 	}
-	private _showUpdateDialogPromise: Promise<void> | null = null;
-	private async showUpdateDialog(updateInfo: UpdateInfo) {
+
+	private async showUpdateDialog(updateInfo: UpdateInfo | null = this._update) {
 		if (this._showUpdateDialogPromise) {
 			await this._showUpdateDialogPromise;
 			return;
 		}
-		if (this.window?.isDestroyed()) this._window = null;
-		if (this.window && this.window.isVisible()) {
-			this.window.focus();
+		if (this._window?.isDestroyed()) this._window = null;
+		if (this._window?.isVisible()) {
+			this._window.focus();
+			if (updateInfo) this.setUpdate(updateInfo, true);
 			return;
 		}
-		await (this._showUpdateDialogPromise = new Promise(async (resolve) => {
+
+		this._showUpdateDialogPromise = (async () => {
 			const parent = this.windowContext.main;
-			const height = clamp(parent.getBounds().height, 600, clamp(parent.getBounds().height - 48, 600, 800));
+			const { width: parentWidth, height: parentHeight } = parent.getBounds();
+			const width = clamp(parentWidth, 600, 800);
+			const height = clamp(Math.round(parentHeight * 0.45), 400, 480);
 			this._window = await createAppWindow({
 				path: "/update",
 				height,
-				width: 460,
-				minWidth: 460,
-				maxWidth: 460,
-				minHeight: height,
-				maxHeight: height,
+				width,
+				minWidth: 600,
+				maxWidth: 800,
+				minHeight: 400,
+				maxHeight: 480,
 				maximizeable: false,
 				minimizeable: false,
 				showTaskBar: true,
@@ -166,84 +308,91 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 				top: true,
 				show: false,
 			});
-			resolve();
-			this.window.webContents.on("did-finish-load", () => {
-				this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, { ...updateInfo });
+			this._window.webContents.on("did-finish-load", () => {
+				if (updateInfo) this.setUpdate(updateInfo, true);
+				else events.emit("update", this._update);
 			});
-			this.window.on("closed", () => {
+			this._window.on("closed", () => {
 				this._window = null;
 			});
-			this.window.show();
-		})).finally(() => {
+			this._window.show();
+		})().finally(() => {
 			this._showUpdateDialogPromise = null;
 		});
+
+		await this._showUpdateDialogPromise;
 	}
 
-	// Lifecycle methods
 	BeforeStart() {
 		autoUpdater.logger = this.logger;
 		const betaEnabled = this.settingsInstance.get("app.beta");
 		autoUpdater.setFeedURL({
 			provider: "github",
-			owner: GITHUB_AUTHOR,
-			repo: GITHUB_REPOSITORY,
+			owner: GITHUB_FEED.owner,
+			repo: GITHUB_FEED.repo,
 		});
 		if (devShowUpdateDialog) autoUpdater.forceDevUpdateConfig = true;
 		autoUpdater.autoDownload = false;
 		autoUpdater.autoInstallOnAppQuit = isProduction;
 		autoUpdater.allowPrerelease = !!betaEnabled;
+		autoUpdater.fullChangelog = false;
 
 		this.logger.debug(autoUpdater.updateConfigPath);
-		this.logger.debug("Updater Cache: " + autoUpdater["app"].baseCachePath);
+		this.logger.debug("Updater Cache: " + (autoUpdater as unknown as { app: { baseCachePath: string } }).app.baseCachePath);
 
-		// Event handlers
-		autoUpdater.on("update-available", this.handleUpdateAvailable.bind(this));
-		autoUpdater.on("update-not-available", () => this.sendUpdateStatus(false));
-		autoUpdater.on("update-cancelled", () => this.sendUpdateStatus(false));
-		autoUpdater.on("error", () => this.sendUpdateStatus(false));
-		autoUpdater.on("checking-for-update", () => this.sendUpdateStatus(true));
+		autoUpdater.on("update-available", (info) => void this.handleUpdateAvailable(info));
+		autoUpdater.on("update-not-available", () => {
+			this.setUpdate(null, false);
+			this.setChecking(false);
+		});
+		autoUpdater.on("update-cancelled", () => this.setChecking(false));
+		autoUpdater.on("error", (err) => {
+			this.logger.error("Updater error", err);
+			this.setChecking(false);
+			this.setProgress(null);
+		});
+		autoUpdater.on("checking-for-update", () => this.setChecking(true));
 		autoUpdater.on("download-progress", (ev) => {
-			if (!this.updateDownloaded) {
-				this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, ev);
-			}
+			if (!this._updateDownloaded) this.setProgress(ev);
 		});
-
-		autoUpdater.signals.updateDownloaded(this.handleUpdateDownloaded.bind(this));
-		autoUpdater.on("before-quit-for-update" as any, () => {
-			this._updateQueuedForInstall = true;
-		});
-		this._readyPromise = new Promise(async (resolve) => {
-			await Promise.race([new Promise((r1) => autoUpdater.once("update-available", r1)), new Promise((r1) => autoUpdater.once("update-not-available", r1))]);
-			resolve();
-		});
-		this._downloadCachedPromise = new Promise(async (resolve) => {
-			await Promise.allSettled([new Promise((r1) => autoUpdater.once("update-downloaded", r1))]).finally(resolve);
-		});
+		autoUpdater.signals.updateDownloaded((info) => void this.handleUpdateDownloaded(info));
+		(autoUpdater as typeof autoUpdater & { on(event: "before-quit-for-update", listener: () => void): typeof autoUpdater }).on(
+			"before-quit-for-update",
+			() => {
+				this._updateQueuedForInstall = true;
+			},
+		);
 	}
 
 	async AfterInit() {
-		this.settingsInstance.onSettingChange("app.beta", (enabled) => this.onBetaToggled("app.beta", enabled as boolean), { debounce: 250 });
-		this.settingsInstance.onSettingChange("app.autoupdate", (autoUpdateEnabled) => this.onAutoUpdateToggled("app.autoupdate", autoUpdateEnabled as boolean), {
+		this.settingsInstance.onSettingChange("app.beta", (enabled) => this.onBetaToggled(!!enabled), { debounce: 250 });
+		this.settingsInstance.onSettingChange("app.autoupdate", (enabled) => this.onAutoUpdateToggled(!!enabled), {
 			debounce: 250,
 		});
 
-		if (this._update) {
-			this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE, this._update);
+		if (this._update) this.setUpdate(this._update, true);
+
+		if (this.isAutoUpdate || devShowUpdateDialog) {
+			void this.onCheckUpdate().catch((err) => this.logger.error("Error checking for update", err));
 		}
 
-		if (this.isAutoUpdate) {
-			this.onCheckUpdate().catch((err) => this.logger.error("Error checking for update", err));
-		} else if (devShowUpdateDialog) {
-			this.onCheckUpdate().catch((err) => this.logger.error("Error checking for update", err));
-		}
+		if (this.isAutoUpdate) this.onAutoUpdateToggled(true);
 	}
 
-	// Public methods
-	async getUpdate() {
-		await this._readyPromise;
-		this.logger.debug("getUpdate", this._update);
-    if (!this._update) return null;
+	getUpdate() {
 		return this._update;
+	}
+
+	isUpdateDownloaded() {
+		return this._updateDownloaded;
+	}
+
+	getProgress() {
+		return this._progress;
+	}
+
+	isChecking() {
+		return this._checking;
 	}
 
 	private quitAndInstall() {
@@ -251,97 +400,147 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		autoUpdater.quitAndInstall(false, true);
 	}
 
-	async onAutoUpdateRun(__ev: any, quitAndInstall: boolean = true) {
+	async onAutoUpdateRun(_ev: unknown = null, quitAndInstall = true) {
 		if (this._downloadToken) throw new Error("Download already in progress [E002]");
-		if (!this.updateDownloaded && !this.updateQueuedForInstall) {
+		if (!this._updateDownloaded && !this._updateQueuedForInstall) {
 			const [downloadPromise] = this.onDownloadUpdate();
 			if (!downloadPromise) return false;
 			await downloadPromise;
 		}
 		if (!quitAndInstall) return this._updateDownloaded;
-		if (!this.isAutoUpdate || this.updateQueuedForInstall) this.quitAndInstall();
-		else if (this.updateDownloaded) this.quitAndInstall();
+		if (!this.isAutoUpdate || this._updateQueuedForInstall) this.quitAndInstall();
+		else if (this._updateDownloaded) this.quitAndInstall();
 		return this._updateDownloaded;
 	}
 
 	private async _checkUpdate() {
+		this.setChecking(true);
 		try {
-			this.sendUpdateStatus(true);
-			const betaEnabled = !!this.settingsInstance.get("app.beta");
-			autoUpdater.allowPrerelease = betaEnabled;
-
+			autoUpdater.allowPrerelease = !!this.settingsInstance.get("app.beta");
 			const result = await autoUpdater.checkForUpdates();
 			if (!result?.updateInfo || !this.isUpdateInRange(result.updateInfo.version)) {
+				this.setUpdate(null, false);
 				throw new Error("No Update available");
 			}
-
-			return result;
+			const info = await this.resolveUpdateInfo(result.updateInfo);
+			this.setUpdate(info, true);
+			return { ...result, updateInfo: info };
 		} finally {
-			this.sendUpdateStatus(false);
+			this.setChecking(false);
 		}
 	}
 
-	onDownloadUpdate(): [Promise<string[]>, () => void] {
-		if (!this.updateAvailable || this.updateDownloaded || this.updateQueuedForInstall) {
-			return [] as any;
+	onDownloadUpdate(): [Promise<string[]> | null, (() => void) | null] {
+		if (!this._updateAvailable || this._updateDownloaded || this._updateQueuedForInstall) {
+			return [null, null];
 		}
 
 		this._downloadToken = new CancellationToken();
-		return [
-			autoUpdater
-				.downloadUpdate(this._downloadToken)
-				.then((files) => {
-					this._updateDownloaded = !!files.length;
-					return files;
-				})
-				.finally(() => {
-					this._downloadToken?.dispose();
-					this._downloadToken = null;
-				}),
-			() => {
-				if (this._downloadToken) {
-					this._downloadToken.cancel();
-					this._downloadToken.dispose();
-					this._downloadToken = null;
-				}
-				this.sendToAllViews(IPC_EVENT_NAMES.APP_UPDATE_PROGRESS, null);
-			},
-		];
+		this.setProgress({ total: 0, delta: 0, transferred: 0, percent: 0, bytesPerSecond: 0 });
+
+		const promise = autoUpdater
+			.downloadUpdate(this._downloadToken)
+			.then((files) => {
+				this._updateDownloaded = !!files.length;
+				return files;
+			})
+			.finally(() => {
+				this._downloadToken?.dispose();
+				this._downloadToken = null;
+			});
+
+		const cancel = () => {
+			if (!this._downloadToken) return;
+			this._downloadToken.cancel();
+			this._downloadToken.dispose();
+			this._downloadToken = null;
+			this.setProgress(null);
+		};
+
+		return [promise, cancel];
 	}
 
 	onDownloadUpdateCancel() {
-		if (this._downloadToken) {
-			this._downloadToken.cancel();
-		}
+		if (!this._downloadToken) return false;
+		this._downloadToken.cancel();
+		this._downloadToken.dispose();
+		this._downloadToken = null;
+		this.setProgress(null);
+		return true;
 	}
-	async isUpdateDownloaded() {
-		await this._readyPromise;
-		await this._downloadCachedPromise;
-		return this.updateDownloaded;
-	}
-	async onCheckUpdate() {
+
+	async onCheckUpdate(options: { showDialog?: boolean } = {}) {
+		const showDialog = options.showDialog ?? true;
 		try {
 			const result = await this._checkUpdate();
-			await this.showUpdateDialog(result.updateInfo);
-		} catch (err: any) {
-			this.logger.error(err.message);
-		} finally {
+			if (showDialog) await this.showUpdateDialog(result.updateInfo);
+			return result.updateInfo;
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			this.logger.error(message);
+			if (showDialog) await this.showUpdateDialog(this._update);
+			return this._update;
 		}
 	}
 
-	onBetaToggled(key: string, enabled: boolean) {
+	onBetaToggled(enabled: boolean) {
 		autoUpdater.allowPrerelease = !!enabled;
-		this.onCheckUpdate();
+		void this.onCheckUpdate({ showDialog: false });
 	}
 
-	onAutoUpdateToggled(key: string, autoUpdateEnabled: boolean) {
+	onAutoUpdateToggled(autoUpdateEnabled: boolean) {
 		if (isDevelopment) return;
 
 		if (autoUpdateEnabled && !this._autoUpdateCheckHandle) {
-			this._autoUpdateCheckHandle = setInterval(() => this.onCheckUpdate(), 1000 * 60 * 15);
+			this._autoUpdateCheckHandle = setInterval(() => void this.onCheckUpdate({ showDialog: true }), UPDATE_CHECK_INTERVAL_MS);
 		} else if (!autoUpdateEnabled && this._autoUpdateCheckHandle) {
 			clearInterval(this._autoUpdateCheckHandle);
 			this._autoUpdateCheckHandle = null;
 		}
+	}
+
+	/** tRPC subscription — service EventEmitter. */
+	subscribeUpdate() {
+		return observable<UpdateInfo | null>((emit) => {
+			const handler = (info: UpdateInfo | null) => emit.next(info);
+			events.on("update", handler);
+			emit.next(this._update);
+			return () => {
+				events.off("update", handler);
+			};
+		});
+	}
+
+	subscribeChecking() {
+		return observable<boolean>((emit) => {
+			const handler = (checking: boolean) => emit.next(checking);
+			events.on("checking", handler);
+			emit.next(this._checking);
+			return () => {
+				events.off("checking", handler);
+			};
+		});
+	}
+
+	subscribeProgress() {
+		return observable<ProgressInfo | null>((emit) => {
+			const handler = (progress: ProgressInfo | null) => emit.next(progress);
+			events.on("progress", handler);
+			emit.next(this._progress);
+			return () => {
+				events.off("progress", handler);
+			};
+		});
+	}
+
+	subscribeDownloaded() {
+		return observable<UpdateInfo | null>((emit) => {
+			const handler = (info: UpdateInfo | null) => emit.next(info);
+			events.on("downloaded", handler);
+			if (this._updateDownloaded && this._update) emit.next(this._update);
+			return () => {
+				events.off("downloaded", handler);
+			};
+		});
 	}
 }

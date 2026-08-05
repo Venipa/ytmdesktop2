@@ -1,68 +1,79 @@
-import type { AppRouter } from "@main/trpc/router";
-import type { ProgressInfo, UpdateInfo } from "@shared/utils/updater";
-import type { inferRouterOutputs } from "@trpc/server";
-import { useCallback, useState } from "react";
+import type { ProgressInfo, UpdateInfo, UpdateStatus } from "@shared/utils/updater";
+import { useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 
-type RouterUpdateInfo = NonNullable<inferRouterOutputs<AppRouter>["update"]["get"]>;
-
 /**
- * App updater: current update info, download progress, and check/install actions.
+ * App updater via tRPC: update info, progress, check / install / cancel.
  */
 export function useUpdater() {
 	const utils = trpc.useUtils();
 	const { data: updateInfo = null } = trpc.update.get.useQuery();
 	const { data: downloaded = false } = trpc.update.downloaded.useQuery();
-	const [progress, setProgress] = useState<ProgressInfo | null>(null);
-	const [checking, setChecking] = useState(false);
+	const { data: progress = null } = trpc.update.progress.useQuery();
+	const { data: checking = false } = trpc.update.checking.useQuery();
 
-	const checkMutation = trpc.update.check.useMutation({
-		onSettled: () => setChecking(false),
-	});
+	const checkMutation = trpc.update.check.useMutation();
 	const installMutation = trpc.update.install.useMutation();
+	const cancelMutation = trpc.update.cancel.useMutation();
 
 	trpc.update.onUpdate.useSubscription(undefined, {
-		onData: (info) => utils.update.get.setData(undefined, (info as UpdateInfo | RouterUpdateInfo | null) ?? null),
+		onData: (info) => utils.update.get.setData(undefined, (info as UpdateInfo | null) ?? null),
 	});
 	trpc.update.onChecking.useSubscription(undefined, {
-		onData: (isChecking) => setChecking(!!isChecking),
+		onData: (isChecking) => utils.update.checking.setData(undefined, !!isChecking),
 	});
 	trpc.update.onProgress.useSubscription(undefined, {
-		onData: (next) => setProgress(next as ProgressInfo | null),
+		onData: (next) => utils.update.progress.setData(undefined, (next as ProgressInfo | null) ?? null),
 	});
 	trpc.update.onDownloaded.useSubscription(undefined, {
-		onData: () => {
+		onData: (info) => {
 			utils.update.downloaded.setData(undefined, true);
-			setProgress(null);
+			utils.update.progress.setData(undefined, null);
+			if (info) utils.update.get.setData(undefined, info as UpdateInfo);
 		},
 	});
 
-	const check = useCallback(() => {
-		if (checking || checkMutation.isLoading) return Promise.resolve();
-		setChecking(true);
-		return checkMutation.mutateAsync();
-	}, [checking, checkMutation]);
-
-	const install = useCallback(
-		(quitAndInstall = true) => installMutation.mutateAsync(quitAndInstall),
-		[installMutation],
+	const check = useCallback(
+		(showDialog = true) => {
+			if (checking || checkMutation.isLoading) return Promise.resolve(null);
+			return checkMutation.mutateAsync({ showDialog });
+		},
+		[checking, checkMutation],
 	);
+
+	const install = useCallback((quitAndInstall = true) => installMutation.mutateAsync(quitAndInstall), [installMutation]);
+
+	const cancel = useCallback(() => cancelMutation.mutateAsync(), [cancelMutation]);
 
 	/** Check for updates, or install if already downloaded. */
 	const runUpdate = useCallback(() => {
 		if (downloaded) return install(true);
-		return check();
+		return check(true);
 	}, [downloaded, install, check]);
+
+	const installing = installMutation.isLoading;
+	const isPending = checking || checkMutation.isLoading || installing;
+
+	const status = useMemo<UpdateStatus>(() => {
+		if (installing) return "installing";
+		if (checking || checkMutation.isLoading) return "checking";
+		if (progress && !downloaded) return "downloading";
+		if (downloaded && updateInfo) return "ready";
+		if (updateInfo) return "available";
+		return "idle";
+	}, [installing, checking, checkMutation.isLoading, progress, downloaded, updateInfo]);
 
 	return {
 		updateInfo: updateInfo as UpdateInfo | null,
 		downloaded,
-		progress,
+		progress: progress as ProgressInfo | null,
 		checking: checking || checkMutation.isLoading,
-		installing: installMutation.isLoading,
-		isPending: checking || checkMutation.isLoading || installMutation.isLoading,
+		installing,
+		isPending,
+		status,
 		check,
 		install,
+		cancel,
 		runUpdate,
 	};
 }

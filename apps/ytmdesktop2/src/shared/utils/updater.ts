@@ -6,26 +6,21 @@ export type ProgressInfo = {
 	bytesPerSecond: number;
 };
 
+/** One changelog entry for the update timeline. */
+export type ReleaseNoteEntry = {
+	version: string;
+	name: string | null;
+	body: string | null;
+	publishedAt: string | null;
+};
+
+/** Serializable update payload for renderer / tRPC. */
 export type UpdateInfo = {
 	version: string;
-	files: {
-		url: string;
-		size: number;
-		sha512: string;
-	}[];
-	path: string;
-	sha512: string;
-	releaseName: string;
-	releaseNotes: string;
+	releaseName: string | null;
+	releaseNotes: string | null;
+	releases: ReleaseNoteEntry[];
 	releaseDate: string;
-	stagingPercentage: number;
-	minimumSystemVersion: string;
-	packages: {
-		[arch: string]: {
-			path: string;
-			size: number;
-			sha512: string;
-		};
-	} | null;
-	sha2: string;
 };
+
+export type UpdateStatus = "idle" | "checking" | "available" | "downloading" | "ready" | "installing";
