@@ -122,8 +122,9 @@ const runApp = async function () {
 			});
 			return afterInitChain;
 		};
-		// once only — previous once+on double-fired AfterInit and raced API listen
-		await onWindowLoad(mainWindow.main, () => void runAfterInit(), { once: true });
+		// await first load+AfterInit so reload .on does not double-fire
+		await onWindowLoad(mainWindow.main, () => runAfterInit(), { once: true });
+		mainWindow.main.webContents.on("did-finish-load", () => void runAfterInit());
 	});
 
 	// Window control events

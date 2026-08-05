@@ -56,9 +56,9 @@ export function onAfterInit(handler: LifecycleHandler): void {
 }
 
 /**
- * Runs when the youtube view finishes loading music.youtube.com
- * (initial load, reload, post-login refresh). Prefer this over
- * attaching did-finish-load on youtubeView yourself.
+ * Runs when the youtube view document is ready on music.youtube.com
+ * (dom-ready on initial load, reload, post-login refresh). Prefer this
+ * over attaching dom-ready / did-finish-load on youtubeView yourself.
  */
 export function onMusicReload(handler: LifecycleHandler): void {
 	register("musicReload", handler);
@@ -98,17 +98,19 @@ function attachMusicReloadBridge(windows: BrowserWindowViews<any> | null): void 
 	if (attachedMusicWebContentsId === webContentsId) return;
 	attachedMusicWebContentsId = webContentsId;
 
+	let chain = Promise.resolve();
 	const maybeRun = () => {
 		if (view.webContents.isDestroyed()) return;
 		if (!isMusicYoutubeUrl(view.webContents.getURL())) return;
-		void runLifecycle("musicReload");
+		chain = chain.then(() => runLifecycle("musicReload")).catch(() => undefined);
 	};
 
-	view.webContents.on("did-finish-load", maybeRun);
-	if (!view.webContents.isLoading()) maybeRun();
+	// Future navigations only — initial paint handled by CustomCSS AfterInit.
+	// Immediate maybeRun here re-fired after slow sibling AfterInits finished (e.g. discord).
+	view.webContents.on("dom-ready", maybeRun);
 }
 
-// Single did-finish-load → music.youtube.com bridge for all onMusicReload handlers
+// Single dom-ready → music.youtube.com bridge for all onMusicReload handlers
 onAfterInit(({ windows }) => {
 	attachMusicReloadBridge(windows);
 });

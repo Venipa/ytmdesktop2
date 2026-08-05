@@ -32,6 +32,7 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 	private readonly CACHE_DURATION = 30000; // 30 seconds cache duration
 	private readonly DEBOUNCE_DELAY = 1000; // 1 second debounce delay
 	private currentScssPath: string | null = null;
+	private reapplyChain: Promise<void> = Promise.resolve();
 
 	get settingsInstance(): SettingsProvider {
 		return this.getProvider("settings");
@@ -191,29 +192,39 @@ export default class CustomCSSProvider extends BaseProvider implements AfterInit
 		if (config?.enabled && config?.watching && config?.scssFile) {
 			this.setupFileWatcher(config.scssFile);
 		}
+		// Inject ASAP — youtube loadURL already finished in createRootWindow;
+		// do not wait for musicReload bridge (was ~5s late / easy to miss).
+		await this.reapplyAllStyles();
 	}
 	private basicStyleHandler?: CSSHandler;
 	private thumbnailBackgroundStyle?: CSSHandler;
 	/** Re-inject basic + custom CSS after youtube document load/reload. */
 	async reapplyAllStyles() {
-		this.basicStyleHandler = undefined;
-		this.thumbnailBackgroundStyle = undefined;
-		this.attachBasicStyle();
-		const config = this.settingsInstance.get<CustomCssConfig>("customcss");
-		if (config?.enabled) await this.updateCSS();
+		this.reapplyChain = this.reapplyChain
+			.catch(() => undefined)
+			.then(async () => {
+				await this.basicStyleHandler?.remove().catch(() => {});
+				await this.thumbnailBackgroundStyle?.remove().catch(() => {});
+				this.basicStyleHandler = undefined;
+				this.thumbnailBackgroundStyle = undefined;
+				await this.attachBasicStyle();
+				const config = this.settingsInstance.get<CustomCssConfig>("customcss");
+				if (config?.enabled) await this.updateCSS();
+			});
+		return this.reapplyChain;
 	}
-	private attachBasicStyle() {
+	private async attachBasicStyle() {
 		const youtubeView = this.windowContext.views.youtubeView.webContents;
 		if (!youtubeView) {
 			this.logger.error("youtubeView not found");
 			return;
 		}
 		this.basicStyleHandler = new CSSHandler(youtubeView, { translateSass: true });
-		this.basicStyleHandler.createOrUpdate(basicScrollStyle);
+		await this.basicStyleHandler.createOrUpdate(basicScrollStyle);
 
 		this.thumbnailBackgroundStyle = new CSSHandler(youtubeView, { translateSass: true });
 		const thumbnailBackgroundEnabled = this.settingsInstance.instance.customcss?.thumbnailBackground ?? true;
-		if (thumbnailBackgroundEnabled) this.thumbnailBackgroundStyle.createOrUpdate(playerThumbnailStyle);
+		if (thumbnailBackgroundEnabled) await this.thumbnailBackgroundStyle.createOrUpdate(playerThumbnailStyle);
 
 		this.logger.debug("basicStyleContent", { thumbnail: playerThumbnailStyle, basic: basicScrollStyle });
 	}

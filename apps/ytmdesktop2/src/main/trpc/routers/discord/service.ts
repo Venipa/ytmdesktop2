@@ -179,7 +179,8 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		});
 		const settings = this.settingsInstance.instance;
 		if (!settings.discord.enabled || !this._enabled) return;
-		await this.enable();
+		// Do not await — Discord IPC retries block Promise.all AfterInit + lifecycle
+		void this.enable().catch((err) => this.logger.error("Discord enable failed", err));
 	}
 
 	async updateTrackProgress(isPlaying: boolean, mediaProgress: number = 0, updateImmediate: boolean = false) {

@@ -53,12 +53,18 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 				},
 				{} as any as { token: string; session: string },
 			);
-			if (lastFMState.session)
+			if (lastFMState.session) {
 				this.client.setAuthorize({
 					token: lastFMState.token,
 					session: lastFMState.session,
 					name: lastfm.name ? encodeURIComponent(lastfm.name!) : "",
 				});
+				this.logger.debug("restored lastfm session", { name: lastfm.name, hasToken: !!lastFMState.token });
+			} else {
+				this.logger.warn("lastfm.enabled but no session in secureStore — re-auth required", {
+					credentialAccounts: creds.map((c) => c.account),
+				});
+			}
 		}
 	}
 	async AfterInit() {

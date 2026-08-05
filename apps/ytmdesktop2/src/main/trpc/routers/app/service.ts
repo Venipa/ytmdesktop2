@@ -129,6 +129,8 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 			}
 			this.settingsWindowOpenPromise = createAppWindow({
 				parent: this.windowContext.main,
+        height: 800,
+        minHeight: 800,
 				minimizeable: false,
 			}).then((win) => {
 				win.on("close", () => {
