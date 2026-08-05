@@ -11,6 +11,31 @@ import { join } from 'node:path';
 
 type OgLogoFormat = 'svg' | 'png';
 
+const OG_FONT_FAMILY = 'Inter';
+
+type OgFontWeight = 500 | 600 | 700 | 800;
+
+async function loadOgFonts(): Promise<
+  Array<{
+    name: string;
+    data: Buffer;
+    weight: OgFontWeight;
+    style: 'normal';
+  }>
+> {
+  const weights: OgFontWeight[] = [500, 600, 700, 800];
+  const fontsDir = join(process.cwd(), 'assets/fonts');
+
+  return Promise.all(
+    weights.map(async (weight) => ({
+      name: OG_FONT_FAMILY,
+      data: await readFile(join(fontsDir, `inter-latin-${weight}-normal.woff`)),
+      weight,
+      style: 'normal' as const,
+    })),
+  );
+}
+
 async function getLogoDataUrl(format: OgLogoFormat): Promise<string> {
   if (format === 'svg') {
     const svg = await readFile(join(process.cwd(), 'public/logo.svg'), 'utf8');
@@ -46,6 +71,7 @@ function DocsHeroOg({
         height: '100%',
         overflow: 'hidden',
         background: '#1a0f22',
+        fontFamily: OG_FONT_FAMILY,
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -114,11 +140,10 @@ function DocsHeroOg({
           />
           <span
             style={{
-              fontSize: 22,
-              fontWeight: 600,
-              letterSpacing: 3,
-              color: '#a1a1aa',
-              textTransform: 'uppercase',
+              fontSize: 28,
+              fontWeight: 800,
+              letterSpacing: -0.5,
+              color: '#fafafa',
             }}
           >
             {appName}
@@ -136,10 +161,10 @@ function DocsHeroOg({
           <div
             style={{
               fontSize: 68,
-              fontWeight: 700,
+              fontWeight: 800,
               lineHeight: 1.08,
               color: '#fafafa',
-              letterSpacing: -1.5,
+              letterSpacing: -0.8,
             }}
           >
             {title}
@@ -149,8 +174,10 @@ function DocsHeroOg({
               style={{
                 marginTop: 20,
                 fontSize: 30,
+                fontWeight: 500,
                 lineHeight: 1.35,
                 color: '#a1a1aa',
+                letterSpacing: -0.2,
               }}
             >
               {description}
@@ -178,6 +205,7 @@ function AppPresentOg({
         height: '100%',
         overflow: 'hidden',
         background: '#120818',
+        fontFamily: OG_FONT_FAMILY,
       }}
     >
       <div
@@ -235,9 +263,9 @@ function AppPresentOg({
               <div
                 style={{
                   fontSize: 36,
-                  fontWeight: 700,
+                  fontWeight: 800,
                   color: '#fafafa',
-                  letterSpacing: -1,
+                  letterSpacing: -0.6,
                   lineHeight: 1.1,
                 }}
               >
@@ -247,9 +275,9 @@ function AppPresentOg({
                 style={{
                   marginTop: 4,
                   fontSize: 18,
-                  fontWeight: 500,
+                  fontWeight: 600,
                   color: brandColor,
-                  letterSpacing: 1,
+                  letterSpacing: 0,
                 }}
               >
                 {repoName}
@@ -261,10 +289,10 @@ function AppPresentOg({
             style={{
               marginTop: 36,
               fontSize: 44,
-              fontWeight: 700,
+              fontWeight: 800,
               lineHeight: 1.15,
               color: '#fafafa',
-              letterSpacing: -1,
+              letterSpacing: -0.8,
             }}
           >
             {appTagline}
@@ -274,8 +302,10 @@ function AppPresentOg({
             style={{
               marginTop: 18,
               fontSize: 24,
+              fontWeight: 500,
               lineHeight: 1.4,
               color: '#a1a1aa',
+              letterSpacing: -0.2,
             }}
           >
             {appDescription}
@@ -295,7 +325,7 @@ function AppPresentOg({
                   background: 'rgba(255,255,255,0.04)',
                   color: '#e4e4e7',
                   fontSize: 16,
-                  fontWeight: 500,
+                  fontWeight: 600,
                 }}
               >
                 {label}
@@ -344,9 +374,10 @@ export async function createOgImage({
   /** Dynamic OG routes prefer SVG; static opengraph-image uses PNG. */
   logo?: OgLogoFormat;
 }) {
-  const [logoSrc, screenshotSrc] = await Promise.all([
+  const [logoSrc, screenshotSrc, fonts] = await Promise.all([
     getLogoDataUrl(logo),
     getScreenshotDataUrl(),
+    loadOgFonts(),
   ]);
 
   return new ImageResponse(
@@ -361,15 +392,17 @@ export async function createOgImage({
     {
       width: 1200,
       height: 630,
+      fonts,
     },
   );
 }
 
 /** Root / landing OG — presents the app (PNG logo). */
 export async function createHomeOgImage() {
-  const [logoSrc, screenshotSrc] = await Promise.all([
+  const [logoSrc, screenshotSrc, fonts] = await Promise.all([
     getLogoDataUrl('png'),
     getScreenshotDataUrl(),
+    loadOgFonts(),
   ]);
 
   return new ImageResponse(
@@ -377,6 +410,7 @@ export async function createHomeOgImage() {
     {
       width: 1200,
       height: 630,
+      fonts,
     },
   );
 }

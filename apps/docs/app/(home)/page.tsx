@@ -9,6 +9,7 @@ import {
   PaletteIcon,
   RadioIcon,
   ScrollTextIcon,
+  StarIcon,
 } from 'lucide-react';
 import { buttonVariants } from 'fumadocs-ui/components/ui/button';
 import { ReleaseDownloadPanel } from '@/components/release-download-panel';
@@ -16,6 +17,7 @@ import { cn } from '@/lib/cn';
 import {
   getLatestRelease,
   getLatestReleaseUrl,
+  getRepositoryUrl,
   groupDownloadsByPlatform,
   pickPrimaryDownload,
 } from '@/lib/github';
@@ -26,6 +28,8 @@ import {
   appTagline,
   changelogRoute,
   docsRoute,
+  formatStarCount,
+  repoStars,
 } from '@/lib/shared';
 
 const features = [
@@ -119,16 +123,16 @@ export default async function HomePage() {
 
         <div className="relative z-10 grid items-start gap-10 px-6 py-12 md:px-12 md:py-16 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="flex flex-col items-start text-left">
-            <div className="mb-6 inline-flex items-center gap-3">
+            <div className="mb-6 inline-flex items-center gap-3.5">
               <Image
                 src={assetPath('/logo.png')}
                 alt=""
-                width={56}
-                height={56}
-                className="rounded-xl"
+                width={48}
+                height={48}
+                className="size-12 shrink-0 rounded-xl"
                 priority
               />
-              <span className="text-sm font-medium tracking-wide text-fd-muted-foreground uppercase">
+              <span className="text-2xl font-semibold tracking-tight md:text-3xl">
                 {appName}
               </span>
             </div>
@@ -138,34 +142,53 @@ export default async function HomePage() {
             <p className="mt-4 max-w-xl text-base text-fd-muted-foreground text-pretty md:text-lg">
               {appDescription}
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href={docsRoute}
-                className={cn(buttonVariants({ variant: 'primary' }), 'gap-2 px-4 py-2')}
-              >
-                <BookOpenIcon className="size-4" />
-                Read the docs
-              </Link>
-              <a
-                href={downloadUrl}
-                className={cn(
-                  buttonVariants({ variant: 'secondary' }),
-                  'gap-2 border border-fd-border bg-fd-secondary px-4 py-2 text-fd-secondary-foreground',
+            <div className="mt-8 flex flex-col gap-3">
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href={docsRoute}
+                  className={cn(buttonVariants({ variant: 'primary' }), 'gap-2 px-4 py-2')}
+                >
+                  <BookOpenIcon className="size-4" />
+                  Read the docs
+                </Link>
+                <a
+                  href={downloadUrl}
+                  className={cn(
+                    buttonVariants({ variant: 'secondary' }),
+                    'gap-2 border border-fd-border bg-fd-secondary px-4 py-2 text-fd-secondary-foreground',
+                  )}
+                >
+                  <DownloadIcon className="size-4" />
+                  {release ? `Download ${release.tag_name}` : 'Download latest'}
+                </a>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {repoStars != null && (
+                  <a
+                    href={getRepositoryUrl()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={cn(
+                      buttonVariants({ variant: 'secondary' }),
+                      'gap-2 border border-fd-border bg-fd-secondary px-4 py-2 text-fd-secondary-foreground',
+                    )}
+                    aria-label={`${formatStarCount(repoStars)} stars on GitHub`}
+                  >
+                    <StarIcon className="size-4 fill-current" />
+                    <span className="tabular-nums">{formatStarCount(repoStars)}</span>
+                  </a>
                 )}
-              >
-                <DownloadIcon className="size-4" />
-                {release ? `Download ${release.tag_name}` : 'Download latest'}
-              </a>
-              <Link
-                href={changelogRoute}
-                className={cn(
-                  buttonVariants({ variant: 'secondary' }),
-                  'gap-2 border border-fd-border bg-fd-secondary px-4 py-2 text-fd-secondary-foreground',
-                )}
-              >
-                <ScrollTextIcon className="size-4" />
-                Changelog
-              </Link>
+                <Link
+                  href={changelogRoute}
+                  className={cn(
+                    buttonVariants({ variant: 'secondary' }),
+                    'gap-2 border border-fd-border bg-fd-secondary px-4 py-2 text-fd-secondary-foreground',
+                  )}
+                >
+                  <ScrollTextIcon className="size-4" />
+                  Changelog
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -200,7 +223,7 @@ export default async function HomePage() {
               </div>
               <div className="relative p-5 pt-2">
                 <item.icon className="mb-3 size-5 text-fd-primary" />
-                <h3 className="font-medium tracking-tight group-hover:underline">{item.title}</h3>
+                <h3 className="font-medium tracking-tight">{item.title}</h3>
                 <p className="mt-1.5 text-sm text-fd-muted-foreground text-pretty">
                   {item.description}
                 </p>

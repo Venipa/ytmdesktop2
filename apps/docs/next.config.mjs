@@ -49,6 +49,7 @@ const repoName = readEnv('REPO_NAME') ?? parsed?.name ?? githubParts?.name ?? 'a
 const repoTitle = readEnv('REPO_TITLE') ?? repoName;
 const repoUrl = readEnv('REPO_URL') ?? `https://github.com/${repoOwner}/${repoName}`;
 const repoBranch = readEnv('REPO_BRANCH') ?? 'master';
+const repoStars = readEnv('REPO_STARS') ?? '';
 
 const isGithubPages = process.env.GITHUB_PAGES === 'true';
 if (isGithubPages && !process.env.NEXT_PUBLIC_URL) {
@@ -79,11 +80,13 @@ const config = {
     REPO_TITLE: repoTitle,
     REPO_URL: repoUrl,
     REPO_BRANCH: repoBranch,
+    REPO_STARS: repoStars,
     NEXT_PUBLIC_REPO_OWNER: repoOwner,
     NEXT_PUBLIC_REPO_NAME: repoName,
     NEXT_PUBLIC_REPO_TITLE: repoTitle,
     NEXT_PUBLIC_REPO_URL: repoUrl,
     NEXT_PUBLIC_REPO_BRANCH: repoBranch,
+    NEXT_PUBLIC_REPO_STARS: repoStars,
   },
 };
 

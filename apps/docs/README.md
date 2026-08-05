@@ -11,6 +11,7 @@ Fumadocs site for this repository.
 | `REPO_URL` | `https://github.com/owner/repo` | Parsed if owner/name omitted |
 | `REPO_TITLE` | `YTMDesktop2` | Display title |
 | `REPO_BRANCH` | default branch | For blob/edit links |
+| `REPO_STARS` | from Actions | Stargazer count for hero |
 | `NEXT_PUBLIC_URL` | Pages base URL | Sets Next `basePath` |
 | `GITHUB_TOKEN` | Actions token | Higher GitHub API rate limit |
 

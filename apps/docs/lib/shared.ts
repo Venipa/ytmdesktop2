@@ -57,6 +57,22 @@ export const repoBranch =
   readEnv('GITHUB_REF_NAME') ??
   'master';
 
+/** GitHub stargazer count baked in at build time (CI sets `REPO_STARS`). */
+export const repoStars = (() => {
+  const raw = readEnv('REPO_STARS') ?? readEnv('NEXT_PUBLIC_REPO_STARS');
+  if (!raw) return null;
+  const count = Number.parseInt(raw, 10);
+  return Number.isFinite(count) && count >= 0 ? count : null;
+})();
+
+/** Compact star label, e.g. `128` or `1.2k`. */
+export function formatStarCount(count: number): string {
+  if (count < 1000) return String(count);
+  const compact = count / 1000;
+  const rounded = compact >= 10 ? Math.round(compact) : Math.round(compact * 10) / 10;
+  return `${rounded}k`;
+}
+
 /** Display name in nav / metadata (same as REPO_TITLE). */
 export const appName = repoTitle;
 

@@ -59,6 +59,14 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
 
+      - name: Fetch repo stars
+        id: stars
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          count="$(gh api "repos/${{ github.repository }}" --jq '.stargazers_count')"
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+
       - name: Build static site
         working-directory: apps/docs
         run: pnpm run build:pages
@@ -71,6 +79,7 @@ jobs:
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
           REPO_TITLE: YTMDesktop2
           REPO_BRANCH: ${{ github.event.repository.default_branch }}
+          REPO_STARS: ${{ steps.stars.outputs.count }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

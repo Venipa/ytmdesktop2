@@ -9,17 +9,22 @@ export function Footer() {
   return (
     <footer className="mt-auto border-t border-fd-border/60">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-6 text-sm text-fd-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <p>
-          © {year} {socials.github.handle} · {appName} ·{' '}
-          <a
-            href={getBlobUrl('LICENSE')}
-            target="_blank"
-            rel="noreferrer"
-            className="underline-offset-4 hover:text-fd-foreground hover:underline"
-          >
-            MIT
-          </a>
-        </p>
+        <div className="flex flex-col gap-1.5">
+          <p>
+            © {year} {socials.github.handle} · {appName} ·{' '}
+            <a
+              href={getBlobUrl('LICENSE')}
+              target="_blank"
+              rel="noreferrer"
+              className="underline-offset-4 hover:text-fd-foreground hover:underline"
+            >
+              CC0
+            </a>
+          </p>
+          <p className="text-xs">
+            Not affiliated with Google, YouTube, or YouTube Music.
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <a
             href={socials.discord.url}
