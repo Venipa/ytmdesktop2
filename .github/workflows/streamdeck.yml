@@ -1,0 +1,47 @@
+name: Stream Deck
+
+on:
+  push:
+    paths:
+      - "packages/streamdeck/**"
+      - ".github/workflows/streamdeck.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: streamdeck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pack:
+    name: Build & pack plugin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 10
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pack Stream Deck plugin
+        run: pnpm streamdeck:pack
+
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ytmdesktop2-streamdeck
+          path: dist/streamdeck/*.streamDeckPlugin
+          if-no-files-found: error
+          retention-days: 30

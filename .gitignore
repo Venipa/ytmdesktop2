@@ -35,3 +35,4 @@ apps/ytmdesktop2/dist_electron*
 /*config*.mjs
 
 /*.node
+/*.tgz

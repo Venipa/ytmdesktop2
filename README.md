@@ -55,13 +55,14 @@ also make sure to set a custom the port (`append ?port=<custom port> to source f
 
 Control playback from an Elgato Stream Deck via the local API.
 
-1. Settings → **Stream Deck** → enable API (+ Require authorization)
-2. Build / install the plugin ([`packages/streamdeck`](./packages/streamdeck)):
+1. Settings → **API & Integrations** → **API** → enable API
+2. Settings → **Authentication** → Require authorization
+3. Settings → **Stream Deck** for setup steps; build plugin:
    ```bash
    pnpm streamdeck:build
    # or package: pnpm streamdeck:pack
    ```
-3. In Stream Deck, add a YTMDesktop2 action → **Authorize** → approve the code in the app
+4. In Stream Deck, add a YTMDesktop2 action → **Authorize** → approve under Authentication
 
 ---
 

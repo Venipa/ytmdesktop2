@@ -1,16 +1,18 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { createId } from "@paralleldrive/cuid2";
+import { createAuthToken, parseAuthToken } from "./crypto";
 
 const AUTH_CODE_TTL_MS = 60_000;
 const AUTH_REQUEST_TIMEOUT_MS = 30_000;
 
-export interface ApiClientRecord {
+/** Paired client — `token` is encryption.js blob with client state. */
+export interface AuthClientRecord {
 	appId: string;
 	appName: string;
 	appVersion: string;
-	token: string;
 	createdAt: number;
+	token: string;
 }
 
 export interface PendingAuthRequest {
@@ -38,15 +40,16 @@ type WaitingApproval = PendingAuthRequest & {
 };
 
 /**
- * Companion-style pairing for local API clients (Stream Deck, etc.).
- * Codes live in memory; approved tokens persist via SettingsProvider.
+ * Global companion-style pairing for the app.
+ * Bearer = encryption.js token with client state (purpose `ytm.auth.client`).
+ * Paired list persists in encrypted store for revoke / UI; codes are memory-only.
  */
-export class ApiAuthManager extends EventEmitter {
+export class AppAuthManager extends EventEmitter {
 	private codes = new Map<string, IssuedCode>();
 	private waiting = new Map<string, WaitingApproval>();
-	private clients = new Map<string, ApiClientRecord>();
+	private clients = new Map<string, AuthClientRecord>();
 
-	loadClients(clients: ApiClientRecord[] | undefined | null) {
+	loadClients(clients: AuthClientRecord[] | undefined | null) {
 		this.clients.clear();
 		for (const client of clients ?? []) {
 			if (!client?.appId || !client?.token) continue;
@@ -55,7 +58,7 @@ export class ApiAuthManager extends EventEmitter {
 		this.emit("clients", this.listClients());
 	}
 
-	listClients(): ApiClientRecord[] {
+	listClients(): AuthClientRecord[] {
 		return [...this.clients.values()].sort((a, b) => b.createdAt - a.createdAt);
 	}
 
@@ -65,10 +68,10 @@ export class ApiAuthManager extends EventEmitter {
 
 	isValidToken(token: string | null | undefined): boolean {
 		if (!token) return false;
-		for (const client of this.clients.values()) {
-			if (client.token === token) return true;
-		}
-		return false;
+		const state = parseAuthToken(token);
+		if (!state) return false;
+		const client = this.clients.get(state.appId);
+		return client?.token === token;
 	}
 
 	requestCode(input: { appId: string; appName: string; appVersion: string }): { code: string } {
@@ -105,7 +108,6 @@ export class ApiAuthManager extends EventEmitter {
 		clearTimeout(issued.expireTimer);
 		this.codes.delete(appId);
 
-		// Cancel prior waiting approval for same app
 		for (const [id, pending] of this.waiting) {
 			if (pending.appId === appId) {
 				clearTimeout(pending.timer);
@@ -152,17 +154,23 @@ export class ApiAuthManager extends EventEmitter {
 		});
 	}
 
-	approve(id: string): ApiClientRecord | null {
+	approve(id: string): AuthClientRecord | null {
 		const pending = this.waiting.get(id);
 		if (!pending) return null;
 
-		const token = createAuthToken();
-		const client: ApiClientRecord = {
+		const createdAt = Date.now();
+		const token = createAuthToken({
 			appId: pending.appId,
 			appName: pending.appName,
 			appVersion: pending.appVersion,
+			createdAt,
+		});
+		const client: AuthClientRecord = {
+			appId: pending.appId,
+			appName: pending.appName,
+			appVersion: pending.appVersion,
+			createdAt,
 			token,
-			createdAt: Date.now(),
 		};
 		this.clients.set(client.appId, client);
 		pending.resolve(token);
@@ -187,14 +195,28 @@ export class ApiAuthManager extends EventEmitter {
 		this.clients.clear();
 		this.emit("clients", this.listClients());
 	}
+
+	/** Manually create / replace a paired client and return record including token. */
+	createManual(input: { appId: string; appName: string; appVersion?: string }): AuthClientRecord {
+		const appId = normalizeAppId(input.appId);
+		const appName = normalizeAppName(input.appName);
+		const appVersion = normalizeAppVersion(input.appVersion?.trim() ? input.appVersion : "1.0.0");
+		const createdAt = Date.now();
+		const token = createAuthToken({ appId, appName, appVersion, createdAt });
+		const client: AuthClientRecord = { appId, appName, appVersion, createdAt, token };
+		this.clients.set(appId, client);
+		this.emit("clients", this.listClients());
+		return client;
+	}
+
+	/** Return stored token for a paired client (for copy / manual paste). */
+	getClientToken(appId: string): string | null {
+		return this.clients.get(normalizeAppId(appId))?.token ?? null;
+	}
 }
 
 function createAuthCode(): string {
 	return randomBytes(3).toString("hex").toUpperCase().slice(0, 6);
-}
-
-function createAuthToken(): string {
-	return createHash("sha256").update(`${createId()}.${randomBytes(32).toString("hex")}`).digest("hex");
 }
 
 function normalizeAppId(value: string): string {
@@ -223,4 +245,4 @@ function normalizeAppVersion(value: string): string {
 	return appVersion;
 }
 
-export const apiAuth = new ApiAuthManager();
+export const appAuth = new AppAuthManager();

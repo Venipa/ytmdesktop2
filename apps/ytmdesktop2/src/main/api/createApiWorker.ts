@@ -1,5 +1,5 @@
-import { apiAuth } from "@main/api/auth";
 import { type ApiServerHandle, startApiServer } from "@main/api/server";
+import { appAuth, readAuthClients } from "@main/auth";
 import { createMainCaller } from "@main/trpc/caller";
 import type ApiProvider from "@main/trpc/routers/api/service";
 import type SettingsProvider from "@main/trpc/routers/settings/service";
@@ -41,8 +41,8 @@ export const createApiWorker = async (api: ApiProvider, parent?: BrowserWindow):
 		[API_ROUTES.TRACK_LIKE]: (like?: boolean) => trackCaller().like(!!like),
 		[API_ROUTES.TRACK_DISLIKE]: (dislike?: boolean) => trackCaller().dislike(!!dislike),
 		[API_ROUTES.AUTH_REQUEST_CODE]: (data?: { appId: string; appName: string; appVersion: string }) =>
-			apiAuth.requestCode(data as { appId: string; appName: string; appVersion: string }),
-		[API_ROUTES.AUTH_REQUEST]: (data?: { appId: string; code: string }) => apiAuth.requestToken(data as { appId: string; code: string }),
+			appAuth.requestCode(data as { appId: string; appName: string; appVersion: string }),
+		[API_ROUTES.AUTH_REQUEST]: (data?: { appId: string; code: string }) => appAuth.requestToken(data as { appId: string; code: string }),
 	};
 
 	const onRequest = async (name: string, data?: unknown) => {
@@ -60,12 +60,13 @@ export const createApiWorker = async (api: ApiProvider, parent?: BrowserWindow):
 
 	const initialize = async (settings: SettingsProvider["instance"]) => {
 		if (handle) await destroy();
-		apiAuth.loadClients(settings.api?.clients);
+		// Encrypted auth store is source of truth (AuthProvider may migrate legacy settings first).
+		appAuth.loadClients(readAuthClients());
 		handle = await startApiServer({
 			config: { ...settings },
 			routes: Object.keys(apiMap),
 			onRequest,
-			isAuthorized: (token) => apiAuth.isValidToken(token),
+			isAuthorized: (token) => appAuth.isValidToken(token),
 		});
 		log.debug("api server ready", { port: handle.port });
 		return process.pid;

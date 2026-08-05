@@ -52,7 +52,7 @@
 		"electron-threads": "^1.0.2",
 		"electron-trpc": "^0.7.1",
 		"electron-updater": "^6.6.2",
-		"encryption.js": "^1.0.8",
+		"encryption.js": "^2.0.4",
 		"events": "^3.3.0",
 		"got": "^11.8.6",
 		"hono": "^4.13.0",

@@ -23,9 +23,9 @@ export const API_ROUTES = {
 } as const;
 
 export const API_AUTH_EVENTS = {
-	PENDING: "api.auth.pending",
-	RESOLVED: "api.auth.resolved",
-	CLIENTS: "api.auth.clients",
+	PENDING: "auth.pending",
+	RESOLVED: "auth.resolved",
+	CLIENTS: "auth.clients",
 } as const;
 const IPC_EVENT_NAMES = {
 	SERVER_SETTINGS_CHANGE: "settingsProvider.change",

@@ -1,13 +1,17 @@
 import {
-  RiCodeSSlashLine,
-  RiDashboardLine,
-  RiDiscordLine,
-  RiGithubFill,
-  RiGlobalLine,
-  RiInformationLine,
-  RiMusic2Line,
-  RiPlugLine,
-  RiSettings3Line,
+	RiAlbumLine,
+	RiCodeSSlashLine,
+	RiDashboardLine,
+	RiDiscordLine,
+	RiGithubFill,
+	RiGlobalLine,
+	RiInformationLine,
+	RiKey2Line,
+	RiMusic2Line,
+	RiQrCodeLine,
+	RiServerLine,
+	RiSettings3Line,
+	RiShieldKeyholeLine,
 } from "@remixicon/react";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ComponentType, type CSSProperties, memo, Suspense, useEffect } from "react";
@@ -15,19 +19,22 @@ import LogoIcon from "@/assets/logo.svg?react";
 import { ControlBar } from "@/components/control-bar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarSeparator,
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
+	SidebarHeader,
+	SidebarInset,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarMenuSub,
+	SidebarMenuSubButton,
+	SidebarMenuSubItem,
+	SidebarProvider,
+	SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { SpinnerPage } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -40,10 +47,19 @@ const tabs = [
 	{ to: "/", label: "Generic", icon: RiSettings3Line },
 	{ to: "/player", label: "Player", icon: RiMusic2Line },
 	{ to: "/discord", label: "Discord", icon: RiDiscordLine },
-	{ to: "/streamdeck", label: "Stream Deck", icon: RiDashboardLine },
+	{ to: "/lastfm", label: "Last.fm", icon: RiAlbumLine },
 	{ to: "/custom-css", label: "Custom CSS", icon: RiCodeSSlashLine },
-	{ to: "/integrations", label: "Integrations", icon: RiPlugLine },
 	{ to: "/about", label: "About", icon: RiInformationLine },
+] as const;
+
+const apiCoreSubs = [
+	{ to: "/api-integrations/api", label: "API", icon: RiServerLine },
+	{ to: "/api-integrations/authentication", label: "Authentication", icon: RiKey2Line },
+] as const;
+
+const apiIntegrationSubs = [
+	{ to: "/api-integrations/remote", label: "Remote", icon: RiQrCodeLine },
+	{ to: "/api-integrations/streamdeck", label: "Stream Deck", icon: RiDashboardLine },
 ] as const;
 
 const socials = [
@@ -51,7 +67,10 @@ const socials = [
 	{ href: "https://youtube-music.app", label: "Website", icon: RiGlobalLine },
 ] as const;
 
-type SettingsTabTo = (typeof tabs)[number]["to"];
+type SettingsTabTo =
+	| (typeof tabs)[number]["to"]
+	| (typeof apiCoreSubs)[number]["to"]
+	| (typeof apiIntegrationSubs)[number]["to"];
 
 /** Avoid Link+useRender compose — breaks first click with hash history. */
 const SettingsNavItem = memo(function SettingsNavItem({
@@ -84,6 +103,68 @@ const SettingsNavItem = memo(function SettingsNavItem({
 	);
 });
 
+const SettingsNavSubItem = memo(function SettingsNavSubItem({
+	to,
+	label,
+	icon: Icon,
+}: {
+	to: SettingsTabTo;
+	label: string;
+	icon: ComponentType<{ className?: string }>;
+}) {
+	const navigate = useNavigate();
+	const isActive = useRouterState({
+		select: (s) => s.location.pathname === to,
+	});
+
+	return (
+		<SidebarMenuSubItem>
+			<SidebarMenuSubButton
+				isActive={isActive}
+				onClick={() => {
+					if (isActive) return;
+					void navigate({ to });
+				}}
+			>
+				<Icon />
+				<span>{label}</span>
+			</SidebarMenuSubButton>
+		</SidebarMenuSubItem>
+	);
+});
+
+const ApiIntegrationsNav = memo(function ApiIntegrationsNav() {
+	const navigate = useNavigate();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const isSectionActive = pathname.startsWith("/api-integrations");
+
+	return (
+		<SidebarMenuItem>
+			<SidebarMenuButton
+				isActive={isSectionActive}
+				onClick={() => {
+					if (pathname === "/api-integrations/api") return;
+					void navigate({ to: "/api-integrations/api" });
+				}}
+			>
+				<RiShieldKeyholeLine />
+				<span>API & Integrations</span>
+			</SidebarMenuButton>
+			<SidebarMenuSub>
+				{apiCoreSubs.map((item) => (
+					<SettingsNavSubItem key={item.to} {...item} />
+				))}
+				<li className="px-2 pt-2 pb-0.5" aria-hidden>
+					<span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Integrations</span>
+				</li>
+				{apiIntegrationSubs.map((item) => (
+					<SettingsNavSubItem key={item.to} {...item} />
+				))}
+			</SidebarMenuSub>
+		</SidebarMenuItem>
+	);
+});
+
 function SettingsLayout() {
 	useEffect(() => {
 		document.title = "YouTube Music - Settings";
@@ -110,7 +191,11 @@ function SettingsLayout() {
 							<SidebarGroupLabel>Preferences</SidebarGroupLabel>
 							<SidebarGroupContent>
 								<SidebarMenu className="flex flex-col gap-1">
-									{tabs.map((tab) => (
+									{tabs.slice(0, 4).map((tab) => (
+										<SettingsNavItem key={tab.to} to={tab.to} label={tab.label} icon={tab.icon} />
+									))}
+									<ApiIntegrationsNav />
+									{tabs.slice(4).map((tab) => (
 										<SettingsNavItem key={tab.to} to={tab.to} label={tab.label} icon={tab.icon} />
 									))}
 								</SidebarMenu>
@@ -148,13 +233,17 @@ function SettingsLayout() {
 					</SidebarFooter>
 				</Sidebar>
 				<SidebarInset className="min-h-0 overflow-hidden">
-					<ScrollArea className="h-full">
-						<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 pb-32">
-							<Suspense key={pathname} fallback={<SpinnerPage />}>
-								<Outlet />
-							</Suspense>
-						</div>
-					</ScrollArea>
+					{pathname.startsWith("/api-integrations") ? (
+						<Outlet />
+					) : (
+						<ScrollArea className="h-full">
+							<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 pb-32">
+								<Suspense key={pathname} fallback={<SpinnerPage />}>
+									<Outlet />
+								</Suspense>
+							</div>
+						</ScrollArea>
+					)}
 				</SidebarInset>
 			</SidebarProvider>
 		</div>

@@ -11,6 +11,7 @@ onlyBuiltDependencies:
   - electron
   - esbuild
   - lefthook
+  - sharp
 
 allowBuilds:
   '@parcel/watcher': true
@@ -21,6 +22,7 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   lefthook: true
+  sharp: true
   utf-8-validate: true
 
 # @electron/rebuild@4 pulls node-gyp@11 which cannot detect VS 2026 (18.x).

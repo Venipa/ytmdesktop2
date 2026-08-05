@@ -58,12 +58,20 @@ const appServiceRouter = router({
 
 const apiRouter = router({
 	status: publicProcedure.query((): any => null),
+});
+
+const authRouter = router({
+	status: publicProcedure.query((): any => null),
 	pending: publicProcedure.query((): any => []),
 	clients: publicProcedure.query((): any => []),
 	approve: publicProcedure.input(z.object({ id: z.string() })).mutation((): any => null),
 	deny: publicProcedure.input(z.object({ id: z.string() })).mutation((): any => false),
 	revoke: publicProcedure.input(z.object({ appId: z.string() })).mutation((): any => false),
 	revokeAll: publicProcedure.mutation((): any => true),
+	create: publicProcedure
+		.input(z.object({ appId: z.string(), appName: z.string(), appVersion: z.string().optional() }))
+		.mutation((): any => null),
+	revealToken: publicProcedure.input(z.object({ appId: z.string() })).mutation((): any => null),
 	onPending: publicProcedure.subscription(() => emptySub<any>()),
 	onClients: publicProcedure.subscription(() => emptySub<any>()),
 });
@@ -131,6 +139,7 @@ export const appRouter = router({
 	settings: settingsRouter,
 	app: appServiceRouter,
 	api: apiRouter,
+	auth: authRouter,
 	update: updateRouter,
 	navigation: navigationRouter,
 	miniplayer: miniplayerRouter,

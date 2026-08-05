@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
-import { SettingsInput } from "@/components/settings-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +12,6 @@ export const Route = createFileRoute("/_settings/")({
 
 function GenericSettingsPage() {
 	const [getStartedEnabled, setGetStartedEnabled, { isPending: getStartedPending }] = useSettingsState("app.getstarted", false);
-	const [apiEnabledSetting, , { isPending: apiPending }] = useSettingsState("api.enabled", false);
 	const [appAutostartEnabled, , { isPending: autostartPending }] = useSettingsState("app.autostart", false);
 
 	return (
@@ -78,36 +76,6 @@ function GenericSettingsPage() {
 						<SettingsCheckbox configKey="app.enableDev" description="Enables developer tools for testing additional functionality.">
 							Enable Developer Mode
 						</SettingsCheckbox>
-					</FieldGroup>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						API
-						<Badge variant="outline">Experimental</Badge>
-					</CardTitle>
-					<CardDescription>Local HTTP API for extending client functionality.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
-						<SettingsCheckbox configKey="api.enabled" updateMessage="API setting updated">
-							Enable API
-						</SettingsCheckbox>
-						{apiEnabledSetting && !apiPending && (
-							<SettingsInput
-								configKey="api.port"
-								type="number"
-								min={13000}
-								max={39999}
-								defaultValue={13091}
-								placeholder="13000-39999"
-								label="API Port"
-								debounce={800}
-								updateMessage="API port updated"
-							/>
-						)}
 					</FieldGroup>
 				</CardContent>
 			</Card>

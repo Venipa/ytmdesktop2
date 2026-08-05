@@ -24,7 +24,7 @@ export class YtmApiClient {
 	private async headers(): Promise<HeadersInit> {
 		const settings = await this.getSettings();
 		const headers: Record<string, string> = { "Content-Type": "application/json" };
-		if (settings.token) headers.Authorization = String(settings.token);
+		if (settings.token) headers.Authorization = `Bearer ${String(settings.token)}`;
 		return headers;
 	}
 

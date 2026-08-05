@@ -10,10 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsAboutRouteImport } from './routes/_settings/about'
+import { Route as SettingsApiIntegrationsApiRouteImport } from './routes/_settings/api-integrations/api'
+import { Route as SettingsApiIntegrationsAuthenticationRouteImport } from './routes/_settings/api-integrations/authentication'
+import { Route as SettingsApiIntegrationsIndexRouteImport } from './routes/_settings/api-integrations/index'
+import { Route as SettingsApiIntegrationsLastfmRouteImport } from './routes/_settings/api-integrations/lastfm'
+import { Route as SettingsApiIntegrationsRemoteRouteImport } from './routes/_settings/api-integrations/remote'
+import { Route as SettingsApiIntegrationsRouteRouteImport } from './routes/_settings/api-integrations/route'
+import { Route as SettingsApiIntegrationsStreamdeckRouteImport } from './routes/_settings/api-integrations/streamdeck'
 import { Route as SettingsCustomCssRouteImport } from './routes/_settings/custom-css'
 import { Route as SettingsDiscordRouteImport } from './routes/_settings/discord'
 import { Route as SettingsIndexRouteImport } from './routes/_settings/index'
 import { Route as SettingsIntegrationsRouteImport } from './routes/_settings/integrations'
+import { Route as SettingsLastfmRouteImport } from './routes/_settings/lastfm'
 import { Route as SettingsPlayerRouteImport } from './routes/_settings/player'
 import { Route as SettingsRouteRouteImport } from './routes/_settings/route'
 import { Route as SettingsStreamdeckRouteImport } from './routes/_settings/streamdeck'
@@ -59,6 +67,12 @@ const SettingsAboutRoute = SettingsAboutRouteImport.update({
   path: '/about',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsApiIntegrationsRouteRoute =
+  SettingsApiIntegrationsRouteRouteImport.update({
+    id: '/api-integrations',
+    path: '/api-integrations',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
 const SettingsCustomCssRoute = SettingsCustomCssRouteImport.update({
   id: '/custom-css',
   path: '/custom-css',
@@ -72,6 +86,11 @@ const SettingsDiscordRoute = SettingsDiscordRouteImport.update({
 const SettingsIntegrationsRoute = SettingsIntegrationsRouteImport.update({
   id: '/integrations',
   path: '/integrations',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsLastfmRoute = SettingsLastfmRouteImport.update({
+  id: '/lastfm',
+  path: '/lastfm',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
 const SettingsPlayerRoute = SettingsPlayerRouteImport.update({
@@ -99,6 +118,42 @@ const YoutubeToolbarRoute = YoutubeToolbarRouteImport.update({
   path: '/youtube/toolbar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsApiIntegrationsIndexRoute =
+  SettingsApiIntegrationsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => SettingsApiIntegrationsRouteRoute,
+  } as any)
+const SettingsApiIntegrationsApiRoute =
+  SettingsApiIntegrationsApiRouteImport.update({
+    id: '/api',
+    path: '/api',
+    getParentRoute: () => SettingsApiIntegrationsRouteRoute,
+  } as any)
+const SettingsApiIntegrationsAuthenticationRoute =
+  SettingsApiIntegrationsAuthenticationRouteImport.update({
+    id: '/authentication',
+    path: '/authentication',
+    getParentRoute: () => SettingsApiIntegrationsRouteRoute,
+  } as any)
+const SettingsApiIntegrationsLastfmRoute =
+  SettingsApiIntegrationsLastfmRouteImport.update({
+    id: '/lastfm',
+    path: '/lastfm',
+    getParentRoute: () => SettingsApiIntegrationsRouteRoute,
+  } as any)
+const SettingsApiIntegrationsRemoteRoute =
+  SettingsApiIntegrationsRemoteRouteImport.update({
+    id: '/remote',
+    path: '/remote',
+    getParentRoute: () => SettingsApiIntegrationsRouteRoute,
+  } as any)
+const SettingsApiIntegrationsStreamdeckRoute =
+  SettingsApiIntegrationsStreamdeckRouteImport.update({
+    id: '/streamdeck',
+    path: '/streamdeck',
+    getParentRoute: () => SettingsApiIntegrationsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof SettingsIndexRoute
@@ -106,15 +161,23 @@ export interface FileRoutesByFullPath {
   '/restart': typeof RestartRoute
   '/taskview': typeof TaskviewRoute
   '/update': typeof UpdateRoute
+  '/api-integrations': typeof SettingsApiIntegrationsRouteRouteWithChildren
   '/about': typeof SettingsAboutRoute
   '/custom-css': typeof SettingsCustomCssRoute
   '/discord': typeof SettingsDiscordRoute
   '/integrations': typeof SettingsIntegrationsRoute
+  '/lastfm': typeof SettingsLastfmRoute
   '/player': typeof SettingsPlayerRoute
   '/streamdeck': typeof SettingsStreamdeckRoute
   '/youtube/loading': typeof YoutubeLoadingRoute
   '/youtube/login-notice': typeof YoutubeLoginNoticeRoute
   '/youtube/toolbar': typeof YoutubeToolbarRoute
+  '/api-integrations/api': typeof SettingsApiIntegrationsApiRoute
+  '/api-integrations/authentication': typeof SettingsApiIntegrationsAuthenticationRoute
+  '/api-integrations/lastfm': typeof SettingsApiIntegrationsLastfmRoute
+  '/api-integrations/remote': typeof SettingsApiIntegrationsRemoteRoute
+  '/api-integrations/streamdeck': typeof SettingsApiIntegrationsStreamdeckRoute
+  '/api-integrations/': typeof SettingsApiIntegrationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/miniplayer': typeof MiniplayerRoute
@@ -125,12 +188,19 @@ export interface FileRoutesByTo {
   '/custom-css': typeof SettingsCustomCssRoute
   '/discord': typeof SettingsDiscordRoute
   '/integrations': typeof SettingsIntegrationsRoute
+  '/lastfm': typeof SettingsLastfmRoute
   '/player': typeof SettingsPlayerRoute
   '/streamdeck': typeof SettingsStreamdeckRoute
   '/youtube/loading': typeof YoutubeLoadingRoute
   '/youtube/login-notice': typeof YoutubeLoginNoticeRoute
   '/youtube/toolbar': typeof YoutubeToolbarRoute
   '/': typeof SettingsIndexRoute
+  '/api-integrations/api': typeof SettingsApiIntegrationsApiRoute
+  '/api-integrations/authentication': typeof SettingsApiIntegrationsAuthenticationRoute
+  '/api-integrations/lastfm': typeof SettingsApiIntegrationsLastfmRoute
+  '/api-integrations/remote': typeof SettingsApiIntegrationsRemoteRoute
+  '/api-integrations/streamdeck': typeof SettingsApiIntegrationsStreamdeckRoute
+  '/api-integrations': typeof SettingsApiIntegrationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -139,16 +209,24 @@ export interface FileRoutesById {
   '/restart': typeof RestartRoute
   '/taskview': typeof TaskviewRoute
   '/update': typeof UpdateRoute
+  '/_settings/api-integrations': typeof SettingsApiIntegrationsRouteRouteWithChildren
   '/_settings/about': typeof SettingsAboutRoute
   '/_settings/custom-css': typeof SettingsCustomCssRoute
   '/_settings/discord': typeof SettingsDiscordRoute
   '/_settings/integrations': typeof SettingsIntegrationsRoute
+  '/_settings/lastfm': typeof SettingsLastfmRoute
   '/_settings/player': typeof SettingsPlayerRoute
   '/_settings/streamdeck': typeof SettingsStreamdeckRoute
   '/youtube/loading': typeof YoutubeLoadingRoute
   '/youtube/login-notice': typeof YoutubeLoginNoticeRoute
   '/youtube/toolbar': typeof YoutubeToolbarRoute
   '/_settings/': typeof SettingsIndexRoute
+  '/_settings/api-integrations/api': typeof SettingsApiIntegrationsApiRoute
+  '/_settings/api-integrations/authentication': typeof SettingsApiIntegrationsAuthenticationRoute
+  '/_settings/api-integrations/lastfm': typeof SettingsApiIntegrationsLastfmRoute
+  '/_settings/api-integrations/remote': typeof SettingsApiIntegrationsRemoteRoute
+  '/_settings/api-integrations/streamdeck': typeof SettingsApiIntegrationsStreamdeckRoute
+  '/_settings/api-integrations/': typeof SettingsApiIntegrationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -158,15 +236,23 @@ export interface FileRouteTypes {
     | '/restart'
     | '/taskview'
     | '/update'
+    | '/api-integrations'
     | '/about'
     | '/custom-css'
     | '/discord'
     | '/integrations'
+    | '/lastfm'
     | '/player'
     | '/streamdeck'
     | '/youtube/loading'
     | '/youtube/login-notice'
     | '/youtube/toolbar'
+    | '/api-integrations/api'
+    | '/api-integrations/authentication'
+    | '/api-integrations/lastfm'
+    | '/api-integrations/remote'
+    | '/api-integrations/streamdeck'
+    | '/api-integrations/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/miniplayer'
@@ -177,12 +263,19 @@ export interface FileRouteTypes {
     | '/custom-css'
     | '/discord'
     | '/integrations'
+    | '/lastfm'
     | '/player'
     | '/streamdeck'
     | '/youtube/loading'
     | '/youtube/login-notice'
     | '/youtube/toolbar'
     | '/'
+    | '/api-integrations/api'
+    | '/api-integrations/authentication'
+    | '/api-integrations/lastfm'
+    | '/api-integrations/remote'
+    | '/api-integrations/streamdeck'
+    | '/api-integrations'
   id:
     | '__root__'
     | '/_settings'
@@ -190,16 +283,24 @@ export interface FileRouteTypes {
     | '/restart'
     | '/taskview'
     | '/update'
+    | '/_settings/api-integrations'
     | '/_settings/about'
     | '/_settings/custom-css'
     | '/_settings/discord'
     | '/_settings/integrations'
+    | '/_settings/lastfm'
     | '/_settings/player'
     | '/_settings/streamdeck'
     | '/youtube/loading'
     | '/youtube/login-notice'
     | '/youtube/toolbar'
     | '/_settings/'
+    | '/_settings/api-integrations/api'
+    | '/_settings/api-integrations/authentication'
+    | '/_settings/api-integrations/lastfm'
+    | '/_settings/api-integrations/remote'
+    | '/_settings/api-integrations/streamdeck'
+    | '/_settings/api-integrations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -264,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAboutRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/_settings/api-integrations': {
+      id: '/_settings/api-integrations'
+      path: '/api-integrations'
+      fullPath: '/api-integrations'
+      preLoaderRoute: typeof SettingsApiIntegrationsRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/_settings/custom-css': {
       id: '/_settings/custom-css'
       path: '/custom-css'
@@ -283,6 +391,13 @@ declare module '@tanstack/react-router' {
       path: '/integrations'
       fullPath: '/integrations'
       preLoaderRoute: typeof SettingsIntegrationsRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/_settings/lastfm': {
+      id: '/_settings/lastfm'
+      path: '/lastfm'
+      fullPath: '/lastfm'
+      preLoaderRoute: typeof SettingsLastfmRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
     '/_settings/player': {
@@ -320,24 +435,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof YoutubeToolbarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_settings/api-integrations/': {
+      id: '/_settings/api-integrations/'
+      path: '/'
+      fullPath: '/api-integrations/'
+      preLoaderRoute: typeof SettingsApiIntegrationsIndexRouteImport
+      parentRoute: typeof SettingsApiIntegrationsRouteRoute
+    }
+    '/_settings/api-integrations/api': {
+      id: '/_settings/api-integrations/api'
+      path: '/api'
+      fullPath: '/api-integrations/api'
+      preLoaderRoute: typeof SettingsApiIntegrationsApiRouteImport
+      parentRoute: typeof SettingsApiIntegrationsRouteRoute
+    }
+    '/_settings/api-integrations/authentication': {
+      id: '/_settings/api-integrations/authentication'
+      path: '/authentication'
+      fullPath: '/api-integrations/authentication'
+      preLoaderRoute: typeof SettingsApiIntegrationsAuthenticationRouteImport
+      parentRoute: typeof SettingsApiIntegrationsRouteRoute
+    }
+    '/_settings/api-integrations/lastfm': {
+      id: '/_settings/api-integrations/lastfm'
+      path: '/lastfm'
+      fullPath: '/api-integrations/lastfm'
+      preLoaderRoute: typeof SettingsApiIntegrationsLastfmRouteImport
+      parentRoute: typeof SettingsApiIntegrationsRouteRoute
+    }
+    '/_settings/api-integrations/remote': {
+      id: '/_settings/api-integrations/remote'
+      path: '/remote'
+      fullPath: '/api-integrations/remote'
+      preLoaderRoute: typeof SettingsApiIntegrationsRemoteRouteImport
+      parentRoute: typeof SettingsApiIntegrationsRouteRoute
+    }
+    '/_settings/api-integrations/streamdeck': {
+      id: '/_settings/api-integrations/streamdeck'
+      path: '/streamdeck'
+      fullPath: '/api-integrations/streamdeck'
+      preLoaderRoute: typeof SettingsApiIntegrationsStreamdeckRouteImport
+      parentRoute: typeof SettingsApiIntegrationsRouteRoute
+    }
   }
 }
 
+interface SettingsApiIntegrationsRouteRouteChildren {
+  SettingsApiIntegrationsApiRoute: typeof SettingsApiIntegrationsApiRoute
+  SettingsApiIntegrationsAuthenticationRoute: typeof SettingsApiIntegrationsAuthenticationRoute
+  SettingsApiIntegrationsLastfmRoute: typeof SettingsApiIntegrationsLastfmRoute
+  SettingsApiIntegrationsRemoteRoute: typeof SettingsApiIntegrationsRemoteRoute
+  SettingsApiIntegrationsStreamdeckRoute: typeof SettingsApiIntegrationsStreamdeckRoute
+  SettingsApiIntegrationsIndexRoute: typeof SettingsApiIntegrationsIndexRoute
+}
+
+const SettingsApiIntegrationsRouteRouteChildren: SettingsApiIntegrationsRouteRouteChildren =
+  {
+    SettingsApiIntegrationsApiRoute: SettingsApiIntegrationsApiRoute,
+    SettingsApiIntegrationsAuthenticationRoute:
+      SettingsApiIntegrationsAuthenticationRoute,
+    SettingsApiIntegrationsLastfmRoute: SettingsApiIntegrationsLastfmRoute,
+    SettingsApiIntegrationsRemoteRoute: SettingsApiIntegrationsRemoteRoute,
+    SettingsApiIntegrationsStreamdeckRoute:
+      SettingsApiIntegrationsStreamdeckRoute,
+    SettingsApiIntegrationsIndexRoute: SettingsApiIntegrationsIndexRoute,
+  }
+
+const SettingsApiIntegrationsRouteRouteWithChildren =
+  SettingsApiIntegrationsRouteRoute._addFileChildren(
+    SettingsApiIntegrationsRouteRouteChildren,
+  )
+
 interface SettingsRouteRouteChildren {
+  SettingsApiIntegrationsRouteRoute: typeof SettingsApiIntegrationsRouteRouteWithChildren
   SettingsAboutRoute: typeof SettingsAboutRoute
   SettingsCustomCssRoute: typeof SettingsCustomCssRoute
   SettingsDiscordRoute: typeof SettingsDiscordRoute
   SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
+  SettingsLastfmRoute: typeof SettingsLastfmRoute
   SettingsPlayerRoute: typeof SettingsPlayerRoute
   SettingsStreamdeckRoute: typeof SettingsStreamdeckRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
+  SettingsApiIntegrationsRouteRoute:
+    SettingsApiIntegrationsRouteRouteWithChildren,
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsCustomCssRoute: SettingsCustomCssRoute,
   SettingsDiscordRoute: SettingsDiscordRoute,
   SettingsIntegrationsRoute: SettingsIntegrationsRoute,
+  SettingsLastfmRoute: SettingsLastfmRoute,
   SettingsPlayerRoute: SettingsPlayerRoute,
   SettingsStreamdeckRoute: SettingsStreamdeckRoute,
   SettingsIndexRoute: SettingsIndexRoute,

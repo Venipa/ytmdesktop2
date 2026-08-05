@@ -4,7 +4,6 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
 		<title>YTMDesktop2</title>
-		<script src="https://sdpi-components.dev/components/sdpi-components.js"></script>
 		<style>
 			:root {
 				color-scheme: dark;
@@ -41,6 +40,10 @@
 				font-weight: 600;
 				cursor: pointer;
 			}
+			button:disabled {
+				opacity: 0.55;
+				cursor: default;
+			}
 			button.secondary {
 				background: #333;
 			}
@@ -61,50 +64,121 @@
 	</head>
 	<body>
 		<label for="host">Host</label>
-		<input id="host" value="127.0.0.1" />
+		<input id="host" value="127.0.0.1" autocomplete="off" />
 		<label for="port">Port</label>
-		<input id="port" type="number" value="13091" min="13000" max="39999" />
+		<input id="port" type="number" value="13091" min="9999" max="39999" />
 		<button id="save" class="secondary" type="button">Save connection</button>
 		<button id="authorize" type="button">Authorize</button>
 		<div id="code" class="code" hidden></div>
 		<div id="status" class="status">Not connected</div>
-		<script type="module">
+		<script>
 			const $ = (id) => document.getElementById(id);
 			const statusEl = $("status");
 			const codeEl = $("code");
+			const saveBtn = $("save");
+			const authBtn = $("authorize");
+
+			let websocket = null;
+			let uuid = null;
+			let actionUUID = null;
+			let busy = false;
+
+			function setBusy(next) {
+				busy = next;
+				saveBtn.disabled = next;
+				authBtn.disabled = next;
+			}
 
 			function applySettings(settings) {
-				if (!settings) return;
-				if (settings.host) $("host").value = settings.host;
-				if (settings.port) $("port").value = settings.port;
-				statusEl.textContent = settings.status || (settings.token ? "Authorized" : "Not authorized");
+				if (!settings || typeof settings !== "object") return;
+				if (settings.host) $("host").value = String(settings.host);
+				if (settings.port != null && settings.port !== "") $("port").value = String(settings.port);
+				statusEl.textContent =
+					settings.status || (settings.token ? "Authorized" : "Not authorized");
 				if (settings.authCode) {
 					codeEl.hidden = false;
-					codeEl.textContent = settings.authCode;
+					codeEl.textContent = String(settings.authCode);
 				} else {
 					codeEl.hidden = true;
+					codeEl.textContent = "";
 				}
 			}
 
-			const { streamDeckClient } = SDPIComponents;
+			function sendToPlugin(payload) {
+				if (!websocket || websocket.readyState !== WebSocket.OPEN || !uuid || !actionUUID) {
+					statusEl.textContent = "Property inspector not connected to plugin";
+					return;
+				}
+				websocket.send(
+					JSON.stringify({
+						event: "sendToPlugin",
+						action: actionUUID,
+						context: uuid,
+						payload,
+					}),
+				);
+			}
 
-			streamDeckClient.onDidReceivePropertyInspectorMessage((ev) => {
-				if (ev?.payload?.event === "settings") applySettings(ev.payload.settings);
-			});
+			function getGlobalSettings() {
+				if (!websocket || websocket.readyState !== WebSocket.OPEN || !uuid) return;
+				websocket.send(JSON.stringify({ event: "getGlobalSettings", context: uuid }));
+			}
 
-			streamDeckClient.send("getSettings");
+			window.connectElgatoStreamDeckSocket = (port, inUUID, registerEvent, _info, actionInfo) => {
+				uuid = inUUID;
+				try {
+					actionUUID = JSON.parse(actionInfo).action;
+				} catch {
+					actionUUID = null;
+				}
 
-			$("save").addEventListener("click", () => {
-				streamDeckClient.send({
+				websocket = new WebSocket(`ws://127.0.0.1:${port}`);
+				websocket.onopen = () => {
+					websocket.send(JSON.stringify({ event: registerEvent, uuid: inUUID }));
+					getGlobalSettings();
+					sendToPlugin({ event: "getSettings" });
+				};
+				websocket.onmessage = (evt) => {
+					let msg;
+					try {
+						msg = JSON.parse(evt.data);
+					} catch {
+						return;
+					}
+					if (msg.event === "didReceiveGlobalSettings") {
+						applySettings(msg.payload?.settings);
+						return;
+					}
+					if (msg.event === "sendToPropertyInspector") {
+						const payload = msg.payload;
+						if (payload?.event === "settings") applySettings(payload.settings);
+						else if (payload?.settings) applySettings(payload.settings);
+					}
+				};
+				websocket.onerror = () => {
+					statusEl.textContent = "WebSocket error talking to Stream Deck";
+				};
+			};
+
+			saveBtn.addEventListener("click", () => {
+				if (busy) return;
+				setBusy(true);
+				statusEl.textContent = "Saving…";
+				sendToPlugin({
 					event: "saveSettings",
-					host: $("host").value,
+					host: $("host").value.trim() || "127.0.0.1",
 					port: Number($("port").value) || 13091,
 				});
+				setTimeout(() => setBusy(false), 800);
 			});
 
-			$("authorize").addEventListener("click", () => {
+			authBtn.addEventListener("click", () => {
+				if (busy) return;
+				setBusy(true);
 				statusEl.textContent = "Waiting for approval in YTMDesktop2…";
-				streamDeckClient.send({ event: "authorize" });
+				sendToPlugin({ event: "authorize" });
+				// Authorize can take up to ~30s while waiting for user approval
+				setTimeout(() => setBusy(false), 35_000);
 			});
 		</script>
 	</body>

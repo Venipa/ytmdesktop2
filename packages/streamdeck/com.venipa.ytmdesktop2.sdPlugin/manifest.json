@@ -6,92 +6,162 @@
 		{
 			"Name": "Play / Pause",
 			"UUID": "com.venipa.ytmdesktop2.play-pause",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/play-pause/icon",
 			"Tooltip": "Toggle play/pause",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "middle" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/play-pause/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		},
 		{
 			"Name": "Next",
 			"UUID": "com.venipa.ytmdesktop2.next",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/next/icon",
 			"Tooltip": "Skip to next track",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "middle" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/next/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		},
 		{
 			"Name": "Previous",
 			"UUID": "com.venipa.ytmdesktop2.prev",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/prev/icon",
 			"Tooltip": "Go to previous track",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "middle" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/prev/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		},
 		{
 			"Name": "Like",
 			"UUID": "com.venipa.ytmdesktop2.like",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/like/icon",
 			"Tooltip": "Like current track",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "middle" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/like/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		},
 		{
 			"Name": "Dislike",
 			"UUID": "com.venipa.ytmdesktop2.dislike",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/dislike/icon",
 			"Tooltip": "Dislike current track",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "middle" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/dislike/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		},
 		{
 			"Name": "Shuffle",
 			"UUID": "com.venipa.ytmdesktop2.shuffle",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/shuffle/icon",
 			"Tooltip": "Toggle shuffle",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "middle" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/shuffle/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		},
 		{
 			"Name": "Repeat",
 			"UUID": "com.venipa.ytmdesktop2.repeat",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/repeat/icon",
 			"Tooltip": "Toggle repeat",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "middle" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/repeat/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		},
 		{
 			"Name": "Volume Up",
 			"UUID": "com.venipa.ytmdesktop2.volume-up",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/volume-up/icon",
 			"Tooltip": "Increase volume",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "middle" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/volume-up/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		},
 		{
 			"Name": "Volume Down",
 			"UUID": "com.venipa.ytmdesktop2.volume-down",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/volume-down/icon",
 			"Tooltip": "Decrease volume",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "middle" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/volume-down/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		},
 		{
 			"Name": "Track Info",
 			"UUID": "com.venipa.ytmdesktop2.track-info",
-			"Icon": "imgs/actions/icon",
+			"Icon": "imgs/actions/track-info/icon",
 			"Tooltip": "Shows the current track title",
 			"PropertyInspectorPath": "ui/settings.html",
-			"Controllers": ["Keypad"],
-			"States": [{ "Image": "imgs/actions/key", "TitleAlignment": "bottom" }]
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/track-info/key",
+					"TitleAlignment": "bottom"
+				}
+			]
 		}
 	],
 	"Category": "YTMDesktop2",
@@ -104,8 +174,14 @@
 		"MinimumVersion": "6.9"
 	},
 	"OS": [
-		{ "Platform": "mac", "MinimumVersion": "12" },
-		{ "Platform": "windows", "MinimumVersion": "10" }
+		{
+			"Platform": "mac",
+			"MinimumVersion": "12"
+		},
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
 	],
 	"Nodejs": {
 		"Version": "20",

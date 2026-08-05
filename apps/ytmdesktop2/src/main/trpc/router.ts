@@ -3,6 +3,7 @@
 
 import { apiRouter } from "@main/trpc/routers/api";
 import { appServiceRouter } from "@main/trpc/routers/app";
+import { authRouter } from "@main/trpc/routers/auth";
 import { customCssRouter } from "@main/trpc/routers/customCss";
 import { discordRouter } from "@main/trpc/routers/discord";
 import { lastfmRouter } from "@main/trpc/routers/lastfm";
@@ -25,6 +26,7 @@ export const appRouter = router({
 	settings: settingsRouter,
 	app: appServiceRouter,
 	api: apiRouter,
+	auth: authRouter,
 	update: updateRouter,
 	navigation: navigationRouter,
 	miniplayer: miniplayerRouter,

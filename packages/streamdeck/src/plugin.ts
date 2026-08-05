@@ -31,12 +31,20 @@ async function getSettings(): Promise<GlobalSettings> {
 	return ((await streamDeck.settings.getGlobalSettings()) as GlobalSettings) ?? {};
 }
 
+async function setSettings(next: GlobalSettings): Promise<void> {
+	await streamDeck.settings.setGlobalSettings(next);
+}
+
 async function pushSettings(): Promise<void> {
 	await streamDeck.ui.sendToPropertyInspector({
 		event: "settings",
 		settings: await getSettings(),
 	});
 }
+
+streamDeck.ui.onDidAppear(() => {
+	void pushSettings();
+});
 
 streamDeck.ui.onSendToPlugin(async (ev) => {
 	const raw = ev.payload;
@@ -55,15 +63,25 @@ streamDeck.ui.onSendToPlugin(async (ev) => {
 		const current = await getSettings();
 		const next: GlobalSettings = {
 			...current,
-			host: payload.host || current.host || "127.0.0.1",
+			host: (payload.host || current.host || "127.0.0.1").trim() || "127.0.0.1",
 			port: Number(payload.port) || current.port || 13091,
+			status: "Checking…",
 		};
-		await streamDeck.settings.setGlobalSettings(next);
+		await setSettings(next);
+		await pushSettings();
+
 		const ping = await api.ping();
-		await streamDeck.settings.setGlobalSettings({
+		const withStatus: GlobalSettings = {
 			...next,
-			status: ping.ok ? (ping.authRequired ? "API online (auth required)" : "API online") : `Offline: ${ping.error ?? "unreachable"}`,
-		});
+			status: ping.ok
+				? ping.authRequired
+					? current.token
+						? "Connected"
+						: "API online (auth required)"
+					: "API online"
+				: `Offline: ${ping.error ?? "unreachable"}`,
+		};
+		await setSettings(withStatus);
 		await pushSettings();
 		return;
 	}
@@ -71,7 +89,7 @@ streamDeck.ui.onSendToPlugin(async (ev) => {
 	if (payload.event === "authorize") {
 		await api.authorize(async (partial) => {
 			const current = await getSettings();
-			await streamDeck.settings.setGlobalSettings({ ...current, ...partial });
+			await setSettings({ ...current, ...partial });
 			await pushSettings();
 		});
 		await pushSettings();

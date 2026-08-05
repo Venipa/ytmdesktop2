@@ -2,6 +2,7 @@
 // biome-ignore-all format: generated file
 import type apiProvider from "@routers/api/service";
 import type appProvider from "@routers/app/service";
+import type authProvider from "@routers/auth/service";
 import type customCssProvider from "@routers/customCss/service";
 import type discordProvider from "@routers/discord/service";
 import type eventProvider from "@routers/event/service";
@@ -24,6 +25,7 @@ import type youtubeProvider from "@routers/youtube/service";
 export interface ServiceTypeMap {
   "api": apiProvider;
   "app": appProvider;
+  "auth": authProvider;
   "customCss": customCssProvider;
   "discord": discordProvider;
   "event": eventProvider;
