@@ -5,7 +5,7 @@ interface AuthStoreShape {
 	clients: AuthClientRecord[];
 }
 
-const authStore = createEncryptedStore<AuthStoreShape>("app-auth", {
+const authStore = createEncryptedStore<AuthStoreShape>("ytm-auth", {
 	defaults: { clients: [] },
 });
 

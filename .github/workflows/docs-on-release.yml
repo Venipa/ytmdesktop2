@@ -1,0 +1,24 @@
+name: Deploy docs on release
+
+# Release events run on tag refs (e.g. v1.0.2). The github-pages environment
+# rejects those tags via deployment branch/tag protection. Dispatch Deploy docs
+# on the default branch instead so the deploy ref is allowed.
+on:
+  release:
+    types: [published]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger docs deploy on default branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run "Deploy docs" \
+            --repo "${{ github.repository }}" \
+            --ref "${{ github.event.repository.default_branch }}"

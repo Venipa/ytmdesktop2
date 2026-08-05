@@ -1,8 +1,10 @@
 name: Deploy docs
 
 on:
-  # Docs/workflow changes on default branch, or a published GitHub Release.
+  # Docs/workflow changes on default branch, or manual run.
   # branches: required so tag pushes (which ignore path filters) do not run this job.
+  # Release publishes use docs-on-release.yml → workflow_dispatch on default branch
+  # (github-pages env protection rejects tag refs like v1.0.2).
   push:
     branches:
       - master
@@ -11,8 +13,6 @@ on:
       - "apps/docs/**"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
-  release:
-    types: [published]
 
 permissions:
   contents: read

@@ -8,7 +8,7 @@ type Credentials = Array<Credential>;
 type CredentialStore = {
 	credentials: Record<string, any | null | undefined>;
 };
-const store = createEncryptedStore<CredentialStore>("credentials", {
+const store = createEncryptedStore<CredentialStore>("ytm-credentials", {
 	defaults: { credentials: {} },
 });
 class SecureStore {
