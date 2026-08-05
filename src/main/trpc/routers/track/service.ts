@@ -68,6 +68,22 @@ const parseTrackDuration = (td: TrackData): number | null => {
 	return ((dur) => (dur ? Number.parseInt(dur) : null))(td.context?.videoDetails?.durationSeconds ?? td.video?.lengthSeconds);
 };
 
+const trackContentKey = (track: TrackData): string =>
+	`${track.video.videoId}|${track.music?.album ?? ""}|${track.video.title}|${track.meta?.duration ?? ""}`;
+
+const stateEmitKey = (state: TrackState): string =>
+	[
+		state.id,
+		state.playing ? 1 : 0,
+		// 250ms buckets — progress updates without flooding
+		Math.floor(state.progress * 4),
+		state.liked ? 1 : 0,
+		state.disliked ? 1 : 0,
+		state.accent ?? "",
+		state.eventType,
+		Math.floor(state.duration),
+	].join("|");
+
 export class TrackService {
 	private _windows: BrowserWindowViews<any> | null = null;
 	private _activeTrackId: string | null = null;
@@ -76,6 +92,8 @@ export class TrackService {
 	private _currentPallete: { id: string; color: string } | null = null;
 	private trackChangeTimeout: NodeJS.Timeout | null = null;
 	private lastLastFmTrackId: string | null = null;
+	private lastTrackContentKey: string | null = null;
+	private lastStateEmitKey: string | null = null;
 	private _ipcBound = false;
 	private _styleBound = false;
 
@@ -122,7 +140,8 @@ export class TrackService {
 	bindIpcListeners(): void {
 		if (this._ipcBound) return;
 		this._ipcBound = true;
-		serverMain.on("track:info-req", debounce(this.onTrackInfo.bind(this), 10));
+		// No debounce on track info — watcher already dedupes; UI must stay instant
+		serverMain.on("track:info-req", (ev, data) => void this.onTrackInfo(ev, data));
 		serverMain.on("track:title-change", debounce(this.onTitleChange.bind(this), 25));
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE, debounce(this.onPlayStateChange.bind(this), 50));
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, debounce(this.onPlayStateProgress.bind(this), 50));
@@ -249,11 +268,16 @@ export class TrackService {
 			this.logger.debug("title id change", prevId, "=>", this._trackState.id);
 			(this.getProvider("discord") as { updateTrackProgress?: (a: boolean, b: number, c: boolean) => void })?.updateTrackProgress?.(true, 0, true);
 		}
+
+		const key = stateEmitKey(this._trackState);
+		if (key === this.lastStateEmitKey) return;
+		this.lastStateEmitKey = key;
 		// Shallow clone — in-place mutation keeps same ref; React setState skips via Object.is.
 		events.emit("track:state-change", { ...this._trackState });
 	}
 
 	async getActiveTrackByDOM(): Promise<string | null> {
+		if (!this._windows?.views?.youtubeView?.webContents) return null;
 		try {
 			const href = await this.views.youtubeView.webContents.executeJavaScript(`document.querySelector("a.ytp-title-link.yt-uix-sessionlink")?.href`);
 			return href ? (new URLSearchParams(href.split("?")[1])?.get("v") ?? null) : null;
@@ -263,6 +287,7 @@ export class TrackService {
 	}
 
 	async currentSongLikeState(): Promise<[boolean, boolean]> {
+		if (!this._windows?.views?.youtubeView?.webContents) return [false, false];
 		try {
 			const values = await this.views.youtubeView.webContents.executeJavaScript(
 				`[
@@ -282,52 +307,62 @@ export class TrackService {
 	}
 
 	async onTrackInfo(_ev: unknown, ytTrack: TrackData) {
-		if (!ytTrack.video) return;
-		const musicObject = ytTrack.music?.album ? { ...ytTrack.music } : undefined;
+		if (!ytTrack?.video?.videoId) return;
+
+		const videoId = String(ytTrack.video.videoId);
+		const musicObject = ytTrack.music?.album ? { album: String(ytTrack.music.album) } : undefined;
+		const duration = parseTrackDuration(ytTrack);
 		const track = {
-			...ytTrack,
+			video: ytTrack.video,
+			context: ytTrack.context,
 			meta: {
 				thumbnail: (ytTrack?.video?.thumbnail?.thumbnails ?? ytTrack?.context?.thumbnail?.thumbnails)?.sort(firstBy((d) => d.height, "desc"))[0]?.url,
 				isAudioExclusive: ytTrack?.video?.musicVideoType === "MUSIC_VIDEO_TYPE_ATV",
 				startedAt: Date.now() / 1000,
-				duration: parseTrackDuration(ytTrack),
+				duration,
 				isAlbum: !!musicObject,
 			},
 			music: musicObject,
-		};
+		} as TrackData;
 
-		const videoId = ytTrack.video.videoId;
-		trackCollection.addOrUpdate(videoId, track as TrackData);
+		trackCollection.addOrUpdate(videoId, track);
+		this._trackDataCache = null;
 
-		// Skip DOM round-trip when we already know this is the active track
 		const knownActive = !this._activeTrackId || this._activeTrackId === videoId;
 		const isActive = knownActive || (await this.getActiveTrackByDOM()) === videoId;
 		if (!isActive) return;
 
-		const lastTrackId = this._activeTrackId;
-		const isTrackChange = lastTrackId !== videoId;
-		this._activeTrackId = videoId;
-		this.pushTrackToViews(track as TrackData, isTrackChange);
+		const key = trackContentKey(track);
+		const isTrackChange = this._activeTrackId !== videoId;
+		const contentChanged = key !== this.lastTrackContentKey;
 
-		// Seed UI state immediately — don't wait for title-change / play-state
+		// Same payload already fanned out — skip (no tRPC / Last.fm spam)
+		if (!isTrackChange && !contentChanged) return;
+
+		this._activeTrackId = videoId;
+		this.lastTrackContentKey = key;
+
+		// Instant tRPC / UI — Last.fm only when video id actually changes
+		this.pushTrackToViews(track, isTrackChange);
+
 		if (isTrackChange || !this._trackState) {
-			const duration = Number(track.meta.duration ?? 0);
 			this.setTrackState({
 				id: videoId,
 				playing: this.playing,
-				duration,
+				duration: Number(duration ?? 0),
 				liked: false,
 				disliked: false,
-				progress: this._trackState?.id === videoId ? (this._trackState.progress ?? 0) : 0,
-				uiProgress: this._trackState?.id === videoId ? (this._trackState.uiProgress ?? 0) : 0,
+				progress: 0,
+				uiProgress: 0,
 				startedAt: Date.now() / 1000,
 				percentage: 0,
 				eventType: "state",
-				accent: this._trackState?.id === videoId ? (this._trackState.accent ?? null) : null,
+				accent: null,
 			});
 			void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
 				this.setTrackState((state) => {
 					if (state.id !== videoId) return;
+					if (state.liked === isLiked && state.disliked === isDLiked) return;
 					state.liked = isLiked;
 					state.disliked = isDLiked;
 				});
@@ -352,8 +387,11 @@ export class TrackService {
 		// Wait for onTrackInfo when payload not ready — never clear pending id
 		if (!td || td.video?.videoId !== trackId) return;
 
-		// UI first — like-state DOM query must not delay track fanout
-		this.pushTrackToViews(td);
+		const key = trackContentKey(td);
+		if (key === this.lastTrackContentKey) return;
+		this.lastTrackContentKey = key;
+
+		this.pushTrackToViews(td, true);
 		this.setTrackState({
 			id: trackId,
 			playing: this.playing,
@@ -371,24 +409,33 @@ export class TrackService {
 		const [isLiked, isDLiked] = await this.currentSongLikeState();
 		this.setTrackState((state) => {
 			if (state.id !== trackId) return;
+			if (state.liked === isLiked && state.disliked === isDLiked) return;
 			state.liked = isLiked;
 			state.disliked = isDLiked;
 		});
 	}
 
 	/**
-	 * Instant UI fanout. Last.fm / API socket / OS media settle separately so
-	 * skipping tracks does not block toolbar/miniplayer and does not spam 3rd parties.
+	 * Instant UI fanout via tRPC EventEmitter.
+	 * Last.fm / API socket settle separately so skipping does not block toolbar.
 	 */
 	pushTrackToViews(trackRef: TrackData, updateLastFm: boolean = true) {
 		const track = clone(trackRef);
 		track.meta.startedAt = Date.now() / 1000;
 
-		this.views.youtubeView?.webContents.send("trackId:change", track.video.videoId);
-		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
+		// Immediate — subscribers (toolbar / miniplayer) get data now
 		events.emit("track:change", track);
 
-		void this.updateMediaOsControls(track);
+		if (this._windows) {
+			try {
+				this.views.youtubeView?.webContents.send("trackId:change", track.video.videoId);
+				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
+			} catch (error) {
+				this.logger.error("Failed to fanout track to views:", error);
+			}
+			void this.updateMediaOsControls(track);
+		}
+
 		this.queueExternalTrackPush(track, updateLastFm);
 	}
 
@@ -433,16 +480,22 @@ export class TrackService {
 
 	private async pushLastFm(track: TrackData) {
 		const lastfm = this.getProvider("lastfm") as {
-			getState: () => { connected: boolean; processing: boolean };
+			getState: () => { connected: boolean; processing: boolean; error?: boolean };
 			handleTrackStart: (track: TrackData) => Promise<void>;
 			handleTrackChange: (track: TrackData) => void;
-		};
-		if (!lastfm) return;
+		} | undefined;
+		if (!lastfm) {
+			this.logger.warn("lastfm provider missing — skip now-playing");
+			return;
+		}
 
 		const lastfmState = lastfm.getState();
 		const videoId = track.video.videoId;
 		if (!videoId || videoId === this.lastLastFmTrackId) return;
-		if (!lastfmState.connected || lastfmState.processing) return;
+		if (!lastfmState.connected || lastfmState.processing) {
+			this.logger.debug("lastfm push skipped", { videoId, lastfmState });
+			return;
+		}
 
 		try {
 			this.lastLastFmTrackId = videoId;
@@ -456,9 +509,10 @@ export class TrackService {
 					lastfm.handleTrackChange(track);
 					this.trackChangeTimeout = null;
 				},
-				clamp(track.meta.duration * 0.65, 30, 90) * 1000,
+				clamp(Number(track.meta.duration) * 0.65, 30, 90) * 1000,
 			);
 		} catch (error) {
+			this.lastLastFmTrackId = null;
 			this.logger.error("Failed to update lastfm:", error);
 		}
 	}
@@ -466,22 +520,21 @@ export class TrackService {
 	async onPlayStateChange(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
+		const progress = Number(progressSeconds) || 0;
 
-		// UI play-state first — Discord / OS timeline settle after
 		this.setTrackState((state) => {
 			state.playing = isPlaying;
-			if (state.progress !== progressSeconds) {
-				state.progress = progressSeconds;
-				state.uiProgress = progressSeconds;
-				state.percentage = (progressSeconds / duration) * 100;
-			}
+			state.progress = progress;
+			state.uiProgress = progress;
+			state.percentage = duration ? (progress / duration) * 100 : 0;
 			state.duration = duration;
 			state.eventType = "state";
 		});
 
-		void this.updateMediaTimeline(duration, progressSeconds, isPlaying);
+		void this.updateMediaTimeline(duration, progress, isPlaying);
 		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
 			this.setTrackState((state) => {
+				if (state.liked === isLiked && state.disliked === isDLiked) return;
 				state.liked = isLiked;
 				state.disliked = isDLiked;
 			});
@@ -504,10 +557,11 @@ export class TrackService {
 	async onPlayStateProgress(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
+		const progress = Number(progressSeconds) || 0;
 		this.setTrackState((state) => {
-			state.progress = progressSeconds;
-			state.uiProgress = progressSeconds;
-			state.percentage = (progressSeconds / duration) * 100;
+			state.progress = progress;
+			state.uiProgress = progress;
+			state.percentage = duration ? (progress / duration) * 100 : 0;
 			state.playing = isPlaying;
 			state.duration = duration;
 			state.eventType = "progress";
@@ -591,6 +645,8 @@ export class TrackService {
 		this.onTrackChange(async (track) => {
 			const trackAccent = await this.getTrackAccent(track);
 			this.setTrackState((state) => {
+				if (state.id !== track.video.videoId) return;
+				if (state.accent === trackAccent) return;
 				state.accent = trackAccent;
 			});
 			this.windowContext.views.youtubeView.webContents.send("css.thumbnail-accent", trackAccent ?? "transparent");

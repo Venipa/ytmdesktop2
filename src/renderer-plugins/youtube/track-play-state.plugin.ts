@@ -13,9 +13,16 @@ export default definePlugin(
 				const getPlayer = () => getPlayerApi() ?? playerApi;
 				const isPlaying = () => getPlayer()?.getPlayerState() === 1;
 
-				const emitPlayState = (channel: string, progress: number) => {
+				let lastPlaying: boolean | null = null;
+				let lastProgressBucket = -1;
+
+				const emitPlayState = (channel: string, playing: boolean, progress: number) => {
+					const progressBucket = Math.floor((Number(progress) || 0) * 4); // 250ms
+					if (playing === lastPlaying && progressBucket === lastProgressBucket) return;
+					lastPlaying = playing;
+					lastProgressBucket = progressBucket;
 					try {
-						api.emit(channel, isPlaying(), progress);
+						api.emit(channel, playing, progress);
 					} catch (err) {
 						log.error(`Failed to emit ${channel}`, err);
 					}
@@ -28,10 +35,10 @@ export default definePlugin(
 				}
 
 				player.addEventListener("onVideoProgress", (progress: number) => {
-					emitPlayState(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, progress);
+					emitPlayState(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, isPlaying(), progress);
 				});
 				player.addEventListener("onStateChange", () => {
-					emitPlayState(IPC_EVENT_NAMES.TRACK_PLAYSTATE, player.getCurrentTime());
+					emitPlayState(IPC_EVENT_NAMES.TRACK_PLAYSTATE, isPlaying(), player.getCurrentTime());
 				});
 			});
 		},

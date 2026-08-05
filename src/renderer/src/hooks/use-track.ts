@@ -14,6 +14,27 @@ export type TrackProgress = {
 	eventType: TrackState["eventType"] | null;
 };
 
+function sameTrack(a: TrackData | null, b: TrackData | null): boolean {
+	if (a === b) return true;
+	if (!a || !b) return false;
+	return a.video.videoId === b.video.videoId && a.video.title === b.video.title && a.music?.album === b.music?.album;
+}
+
+function sameState(a: TrackState | null, b: TrackState | null): boolean {
+	if (a === b) return true;
+	if (!a || !b) return false;
+	return (
+		a.id === b.id &&
+		a.playing === b.playing &&
+		Math.floor(a.progress * 4) === Math.floor(b.progress * 4) &&
+		a.liked === b.liked &&
+		a.disliked === b.disliked &&
+		a.accent === b.accent &&
+		a.eventType === b.eventType &&
+		Math.floor(a.duration) === Math.floor(b.duration)
+	);
+}
+
 /**
  * Current track metadata (title, artists, thumbnails, …).
  */
@@ -21,10 +42,16 @@ export function useTrack() {
 	const [track, setTrack] = useState<TrackData | null>(null);
 
 	trpc.track.current.useQuery(undefined, {
-		onSuccess: (next) => setTrack((next as TrackData | null) ?? null),
+		onSuccess: (next) => {
+			const value = (next as TrackData | null) ?? null;
+			setTrack((prev) => (sameTrack(prev, value) ? prev : value));
+		},
 	});
 	trpc.track.onTrack.useSubscription(undefined, {
-		onData: (next) => setTrack((next as TrackData | null) ?? null),
+		onData: (next) => {
+			const value = (next as TrackData | null) ?? null;
+			setTrack((prev) => (sameTrack(prev, value) ? prev : value));
+		},
 	});
 
 	return track;
@@ -38,12 +65,16 @@ export function useTrackState() {
 
 	trpc.track.state.useQuery(undefined, {
 		onSuccess: (next) => {
-			if (next) setState(next as TrackState);
+			if (!next) return;
+			const value = next as TrackState;
+			setState((prev) => (sameState(prev, value) ? prev : value));
 		},
 	});
 	trpc.track.onPlayState.useSubscription(undefined, {
 		onData: (next) => {
-			if (next) setState(next as TrackState);
+			if (!next) return;
+			const value = next as TrackState;
+			setState((prev) => (sameState(prev, value) ? prev : value));
 		},
 	});
 

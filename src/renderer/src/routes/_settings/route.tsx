@@ -10,7 +10,7 @@ import {
 } from "@remixicon/react";
 import { useUpdater } from "@renderer/hooks/use-updater";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { type ComponentType, type CSSProperties, memo, useEffect } from "react";
+import { type ComponentType, type CSSProperties, memo, Suspense, useEffect } from "react";
 import LogoIcon from "@/assets/logo.svg?react";
 import { ControlBar } from "@/components/control-bar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -29,6 +29,7 @@ import {
   SidebarProvider,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { SpinnerPage } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_settings")({
@@ -148,7 +149,9 @@ function SettingsLayout() {
 				<SidebarInset className="min-h-0 overflow-hidden">
 					<ScrollArea className="h-full">
 						<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-							<Outlet />
+							<Suspense fallback={<SpinnerPage />}>
+								<Outlet />
+							</Suspense>
 						</div>
 					</ScrollArea>
 				</SidebarInset>

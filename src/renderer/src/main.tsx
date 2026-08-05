@@ -1,8 +1,9 @@
 import { Logger } from "@shared/utils/console";
 import { createHashHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import "non.geist";
-import { StrictMode } from "react";
+import { StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
+import { SpinnerPage } from "@/components/ui/spinner";
 import { routeTree } from "./routeTree.gen";
 import "./styles/globals.css";
 
@@ -29,6 +30,8 @@ if (!rootEl) throw new Error("#app root missing");
 
 createRoot(rootEl).render(
 	<StrictMode>
-		<RouterProvider router={router} />
+		<Suspense fallback={<SpinnerPage />}>
+			<RouterProvider router={router} />
+		</Suspense>
 	</StrictMode>,
 );
