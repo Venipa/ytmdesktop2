@@ -74,6 +74,24 @@ const trackControls = {
 		if (btn && pressed !== disliked) btn.click();
 		return document.querySelector<HTMLElement>("#like-button-renderer #button-shape-dislike.dislike button")?.getAttribute("aria-pressed") === "true";
 	},
+	volume: (playerApi: PlayerApi, data?: { volume?: number }) => {
+		if (typeof data?.volume === "number" && Number.isFinite(data.volume)) {
+			playerApi.setVolume(Math.max(0, Math.min(100, data.volume)));
+		}
+		return { volume: playerApi.getVolume() };
+	},
+	volumeUp: (playerApi: PlayerApi, data?: { amount?: number }) => {
+		const amount = typeof data?.amount === "number" && Number.isFinite(data.amount) ? data.amount : 5;
+		const next = Math.min(100, Number(playerApi.getVolume() ?? 0) + Math.abs(amount));
+		playerApi.setVolume(next);
+		return { volume: playerApi.getVolume() };
+	},
+	volumeDown: (playerApi: PlayerApi, data?: { amount?: number }) => {
+		const amount = typeof data?.amount === "number" && Number.isFinite(data.amount) ? data.amount : 5;
+		const next = Math.max(0, Number(playerApi.getVolume() ?? 0) - Math.abs(amount));
+		playerApi.setVolume(next);
+		return { volume: playerApi.getVolume() };
+	},
 };
 
 export default definePlugin(
@@ -98,6 +116,9 @@ export default definePlugin(
 			seek: async ({ playerApi }, data?: SeekPayload) => trackControls.seek(playerApi, data),
 			like: async (_ctx, liked: boolean) => trackControls.like(liked),
 			dislike: async (_ctx, disliked: boolean) => trackControls.dislike(disliked),
+			volume: async ({ playerApi }, data?: { volume?: number }) => trackControls.volume(playerApi, data),
+			volumeUp: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeUp(playerApi, data),
+			volumeDown: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeDown(playerApi, data),
 		},
 	},
 );

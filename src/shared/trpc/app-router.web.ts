@@ -23,6 +23,9 @@ const trackRouter = router({
 	togglePlay: publicProcedure.mutation((): any => null),
 	repeat: publicProcedure.mutation((): any => null),
 	shuffle: publicProcedure.mutation((): any => null),
+	volume: publicProcedure.input(z.object({ volume: z.number().optional() }).optional()).mutation((): any => null),
+	volumeUp: publicProcedure.input(z.object({ amount: z.number().optional() }).optional()).mutation((): any => null),
+	volumeDown: publicProcedure.input(z.object({ amount: z.number().optional() }).optional()).mutation((): any => null),
 	forward: publicProcedure.input(z.object({ time: z.number() })).mutation((): any => null),
 	backward: publicProcedure.input(z.object({ time: z.number() })).mutation((): any => null),
 	seek: publicProcedure.input(z.object({ time: z.number(), type: z.enum(["seek"]).optional() })).mutation((): any => null),
@@ -51,6 +54,18 @@ const appServiceRouter = router({
 	restartNeeded: publicProcedure
 		.input(z.object({ message: z.string().optional(), icon: z.string().optional() }).optional())
 		.mutation((): any => undefined),
+});
+
+const apiRouter = router({
+	status: publicProcedure.query((): any => null),
+	pending: publicProcedure.query((): any => []),
+	clients: publicProcedure.query((): any => []),
+	approve: publicProcedure.input(z.object({ id: z.string() })).mutation((): any => null),
+	deny: publicProcedure.input(z.object({ id: z.string() })).mutation((): any => false),
+	revoke: publicProcedure.input(z.object({ appId: z.string() })).mutation((): any => false),
+	revokeAll: publicProcedure.mutation((): any => true),
+	onPending: publicProcedure.subscription(() => emptySub<any>()),
+	onClients: publicProcedure.subscription(() => emptySub<any>()),
 });
 
 const updateRouter = router({
@@ -115,6 +130,7 @@ export const appRouter = router({
 	track: trackRouter,
 	settings: settingsRouter,
 	app: appServiceRouter,
+	api: apiRouter,
 	update: updateRouter,
 	navigation: navigationRouter,
 	miniplayer: miniplayerRouter,

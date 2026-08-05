@@ -18,6 +18,14 @@ const defaultSettings = {
 	api: {
 		enabled: isDevelopment ? true : false,
 		port: 13091,
+		authRequired: false,
+		clients: [] as Array<{
+			appId: string;
+			appName: string;
+			appVersion: string;
+			token: string;
+			createdAt: number;
+		}>,
 	},
 	app: {
 		beta: false,

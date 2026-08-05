@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>YTMDesktop2</title>
+		<script src="https://sdpi-components.dev/components/sdpi-components.js"></script>
+		<style>
+			:root {
+				color-scheme: dark;
+				font-family: system-ui, sans-serif;
+			}
+			body {
+				margin: 12px;
+				color: #eee;
+				background: transparent;
+			}
+			label {
+				display: block;
+				font-size: 12px;
+				margin-bottom: 4px;
+			}
+			input {
+				width: 100%;
+				box-sizing: border-box;
+				margin-bottom: 10px;
+				padding: 6px 8px;
+				border-radius: 6px;
+				border: 1px solid #444;
+				background: #1c1c1c;
+				color: #fff;
+			}
+			button {
+				width: 100%;
+				margin-top: 6px;
+				padding: 8px;
+				border: 0;
+				border-radius: 6px;
+				background: #e03232;
+				color: #fff;
+				font-weight: 600;
+				cursor: pointer;
+			}
+			button.secondary {
+				background: #333;
+			}
+			.status {
+				margin-top: 10px;
+				font-size: 12px;
+				color: #bbb;
+				word-break: break-word;
+			}
+			.code {
+				font-size: 22px;
+				letter-spacing: 0.25em;
+				font-weight: 700;
+				text-align: center;
+				margin: 8px 0;
+			}
+		</style>
+	</head>
+	<body>
+		<label for="host">Host</label>
+		<input id="host" value="127.0.0.1" />
+		<label for="port">Port</label>
+		<input id="port" type="number" value="13091" min="13000" max="39999" />
+		<button id="save" class="secondary" type="button">Save connection</button>
+		<button id="authorize" type="button">Authorize</button>
+		<div id="code" class="code" hidden></div>
+		<div id="status" class="status">Not connected</div>
+		<script type="module">
+			const $ = (id) => document.getElementById(id);
+			const statusEl = $("status");
+			const codeEl = $("code");
+
+			function applySettings(settings) {
+				if (!settings) return;
+				if (settings.host) $("host").value = settings.host;
+				if (settings.port) $("port").value = settings.port;
+				statusEl.textContent = settings.status || (settings.token ? "Authorized" : "Not authorized");
+				if (settings.authCode) {
+					codeEl.hidden = false;
+					codeEl.textContent = settings.authCode;
+				} else {
+					codeEl.hidden = true;
+				}
+			}
+
+			const { streamDeckClient } = SDPIComponents;
+
+			streamDeckClient.onDidReceivePropertyInspectorMessage((ev) => {
+				if (ev?.payload?.event === "settings") applySettings(ev.payload.settings);
+			});
+
+			streamDeckClient.send("getSettings");
+
+			$("save").addEventListener("click", () => {
+				streamDeckClient.send({
+					event: "saveSettings",
+					host: $("host").value,
+					port: Number($("port").value) || 13091,
+				});
+			});
+
+			$("authorize").addEventListener("click", () => {
+				statusEl.textContent = "Waiting for approval in YTMDesktop2…";
+				streamDeckClient.send({ event: "authorize" });
+			});
+		</script>
+	</body>
+</html>

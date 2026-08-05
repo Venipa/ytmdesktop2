@@ -21,7 +21,7 @@ export interface ApiServerHandle {
 }
 const isValidPort = (port: number): boolean => {
 	return port >= MIN_PORT && port <= MAX_PORT;
-}
+};
 
 function resolveApiPort(config: SettingsStore): number {
 	const raw = config?.api?.port;
@@ -33,6 +33,14 @@ function resolveApiPort(config: SettingsStore): number {
 	return port;
 }
 
+function extractBearerToken(header: string | undefined): string | null {
+	if (!header) return null;
+	const value = header.trim();
+	if (!value) return null;
+	if (/^bearer\s+/i.test(value)) return value.replace(/^bearer\s+/i, "").trim() || null;
+	return value;
+}
+
 /**
  * Local HTTP/WS API — Hono + @hono/node-server (bundled into main; keeps `ws` for Node upgrades).
  */
@@ -40,9 +48,11 @@ export async function startApiServer(options: {
 	config: SettingsStore;
 	routes: string[];
 	onRequest: ApiRequestHandler;
+	isAuthorized: (token: string | null) => boolean;
 }): Promise<ApiServerHandle> {
-	const { config, routes, onRequest } = options;
+	const { config, routes, onRequest, isAuthorized } = options;
 	const serverPort = resolveApiPort(config);
+	const authRequired = config?.api?.authRequired === true;
 	const trackClients = new Set<WSContext>();
 
 	const app = new Hono();
@@ -52,24 +62,54 @@ export async function startApiServer(options: {
 		if (c.req.header("upgrade")?.toLowerCase() === "websocket") return next();
 		return cors({
 			origin: "*",
-			allowHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept"],
+			allowHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"],
 			allowMethods: ["GET", "POST", "OPTIONS"],
 		})(c, next);
 	});
+
+	const requireAuth = async (c: any, next: () => Promise<void>) => {
+		if (!authRequired) return next();
+		const token = extractBearerToken(c.req.header("Authorization"));
+		if (!isAuthorized(token)) {
+			return c.json({ error: "unauthorized" }, 401);
+		}
+		return next();
+	};
 
 	app.get("/", (c) =>
 		c.json({
 			name: "YTMDesktop2 Api",
 			beta: config?.app?.beta,
 			player: config?.player,
+			authRequired,
 			routes,
 		}),
 	);
 
-	app.get("/track", async (c) => c.json((await onRequest("api/track")) ?? null));
-	app.get("/track/state", async (c) => c.json((await onRequest("api/track/state")) ?? null));
+	app.post("/auth/requestcode", async (c) => {
+		try {
+			const body = await c.req.json().catch(() => ({}));
+			return c.json(await onRequest("api/auth/requestcode", body));
+		} catch (err) {
+			log.error(err);
+			return c.json({ error: err instanceof Error ? err.message : "failed to request auth code" }, 400);
+		}
+	});
 
-	app.post("/track/*", async (c) => {
+	app.post("/auth/request", async (c) => {
+		try {
+			const body = await c.req.json().catch(() => ({}));
+			return c.json(await onRequest("api/auth/request", body));
+		} catch (err) {
+			log.error(err);
+			return c.json({ error: err instanceof Error ? err.message : "failed to request auth token" }, 400);
+		}
+	});
+
+	app.get("/track", requireAuth, async (c) => c.json((await onRequest("api/track")) ?? null));
+	app.get("/track/state", requireAuth, async (c) => c.json((await onRequest("api/track/state")) ?? null));
+
+	app.post("/track/*", requireAuth, async (c) => {
 		const operation = `api${c.req.path}`;
 		try {
 			const body = await c.req.json().catch(() => undefined);
@@ -82,30 +122,38 @@ export async function startApiServer(options: {
 
 	app.get(
 		"/socket",
-		upgradeWebSocket(() => ({
-			onOpen(_event, ws) {
-				trackClients.add(ws);
-				log.debug("socket open", trackClients.size);
-				void (async () => {
-					try {
-						const track = (await onRequest("api/track")) as TrackData | null;
-						if (track) {
-							ws.send(JSON.stringify({ event: "track:change", data: [{ ...track }] }));
-						} else {
-							ws.send("null");
-						}
-					} catch (err) {
-						log.error("socket open track push failed", err);
+		upgradeWebSocket((c) => {
+			const token = extractBearerToken(c.req.header("Authorization")) ?? c.req.query("token") ?? null;
+			const allowed = !authRequired || isAuthorized(token);
+			return {
+				onOpen(_event, ws) {
+					if (!allowed) {
+						ws.close(1008, "unauthorized");
+						return;
 					}
-				})();
-			},
-			onClose(_event, ws) {
-				trackClients.delete(ws);
-			},
-			onError(event) {
-				if (isDevelopment) log.error("socket error", event);
-			},
-		})),
+					trackClients.add(ws);
+					log.debug("socket open", trackClients.size);
+					void (async () => {
+						try {
+							const track = (await onRequest("api/track")) as TrackData | null;
+							if (track) {
+								ws.send(JSON.stringify({ event: "track:change", data: [{ ...track }] }));
+							} else {
+								ws.send("null");
+							}
+						} catch (err) {
+							log.error("socket open track push failed", err);
+						}
+					})();
+				},
+				onClose(_event, ws) {
+					trackClients.delete(ws);
+				},
+				onError(event) {
+					if (isDevelopment) log.error("socket error", event);
+				},
+			};
+		}),
 	);
 
 	app.get(

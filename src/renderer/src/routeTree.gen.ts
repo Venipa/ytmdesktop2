@@ -9,17 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsAboutRouteImport } from './routes/_settings/about'
+import { Route as SettingsCustomCssRouteImport } from './routes/_settings/custom-css'
+import { Route as SettingsDiscordRouteImport } from './routes/_settings/discord'
+import { Route as SettingsIndexRouteImport } from './routes/_settings/index'
+import { Route as SettingsIntegrationsRouteImport } from './routes/_settings/integrations'
+import { Route as SettingsPlayerRouteImport } from './routes/_settings/player'
 import { Route as SettingsRouteRouteImport } from './routes/_settings/route'
+import { Route as SettingsStreamdeckRouteImport } from './routes/_settings/streamdeck'
 import { Route as MiniplayerRouteImport } from './routes/miniplayer'
 import { Route as RestartRouteImport } from './routes/restart'
 import { Route as TaskviewRouteImport } from './routes/taskview'
 import { Route as UpdateRouteImport } from './routes/update'
-import { Route as SettingsIndexRouteImport } from './routes/_settings/index'
-import { Route as SettingsAboutRouteImport } from './routes/_settings/about'
-import { Route as SettingsCustomCssRouteImport } from './routes/_settings/custom-css'
-import { Route as SettingsDiscordRouteImport } from './routes/_settings/discord'
-import { Route as SettingsIntegrationsRouteImport } from './routes/_settings/integrations'
-import { Route as SettingsPlayerRouteImport } from './routes/_settings/player'
 import { Route as YoutubeLoadingRouteImport } from './routes/youtube/loading'
 import { Route as YoutubeLoginNoticeRouteImport } from './routes/youtube/login-notice'
 import { Route as YoutubeToolbarRouteImport } from './routes/youtube/toolbar'
@@ -78,6 +79,11 @@ const SettingsPlayerRoute = SettingsPlayerRouteImport.update({
   path: '/player',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsStreamdeckRoute = SettingsStreamdeckRouteImport.update({
+  id: '/streamdeck',
+  path: '/streamdeck',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const YoutubeLoadingRoute = YoutubeLoadingRouteImport.update({
   id: '/youtube/loading',
   path: '/youtube/loading',
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/discord': typeof SettingsDiscordRoute
   '/integrations': typeof SettingsIntegrationsRoute
   '/player': typeof SettingsPlayerRoute
+  '/streamdeck': typeof SettingsStreamdeckRoute
   '/youtube/loading': typeof YoutubeLoadingRoute
   '/youtube/login-notice': typeof YoutubeLoginNoticeRoute
   '/youtube/toolbar': typeof YoutubeToolbarRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/discord': typeof SettingsDiscordRoute
   '/integrations': typeof SettingsIntegrationsRoute
   '/player': typeof SettingsPlayerRoute
+  '/streamdeck': typeof SettingsStreamdeckRoute
   '/youtube/loading': typeof YoutubeLoadingRoute
   '/youtube/login-notice': typeof YoutubeLoginNoticeRoute
   '/youtube/toolbar': typeof YoutubeToolbarRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/_settings/discord': typeof SettingsDiscordRoute
   '/_settings/integrations': typeof SettingsIntegrationsRoute
   '/_settings/player': typeof SettingsPlayerRoute
+  '/_settings/streamdeck': typeof SettingsStreamdeckRoute
   '/youtube/loading': typeof YoutubeLoadingRoute
   '/youtube/login-notice': typeof YoutubeLoginNoticeRoute
   '/youtube/toolbar': typeof YoutubeToolbarRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/discord'
     | '/integrations'
     | '/player'
+    | '/streamdeck'
     | '/youtube/loading'
     | '/youtube/login-notice'
     | '/youtube/toolbar'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/discord'
     | '/integrations'
     | '/player'
+    | '/streamdeck'
     | '/youtube/loading'
     | '/youtube/login-notice'
     | '/youtube/toolbar'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/_settings/discord'
     | '/_settings/integrations'
     | '/_settings/player'
+    | '/_settings/streamdeck'
     | '/youtube/loading'
     | '/youtube/login-notice'
     | '/youtube/toolbar'
@@ -280,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsPlayerRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/_settings/streamdeck': {
+      id: '/_settings/streamdeck'
+      path: '/streamdeck'
+      fullPath: '/streamdeck'
+      preLoaderRoute: typeof SettingsStreamdeckRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/youtube/loading': {
       id: '/youtube/loading'
       path: '/youtube/loading'
@@ -310,6 +329,7 @@ interface SettingsRouteRouteChildren {
   SettingsDiscordRoute: typeof SettingsDiscordRoute
   SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
   SettingsPlayerRoute: typeof SettingsPlayerRoute
+  SettingsStreamdeckRoute: typeof SettingsStreamdeckRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -319,6 +339,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsDiscordRoute: SettingsDiscordRoute,
   SettingsIntegrationsRoute: SettingsIntegrationsRoute,
   SettingsPlayerRoute: SettingsPlayerRoute,
+  SettingsStreamdeckRoute: SettingsStreamdeckRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

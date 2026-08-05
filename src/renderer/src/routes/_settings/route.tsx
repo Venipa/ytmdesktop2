@@ -1,5 +1,6 @@
 import {
   RiCodeSSlashLine,
+  RiDashboardLine,
   RiDiscordLine,
   RiGithubFill,
   RiGlobalLine,
@@ -39,6 +40,7 @@ const tabs = [
 	{ to: "/", label: "Generic", icon: RiSettings3Line },
 	{ to: "/player", label: "Player", icon: RiMusic2Line },
 	{ to: "/discord", label: "Discord", icon: RiDiscordLine },
+	{ to: "/streamdeck", label: "Stream Deck", icon: RiDashboardLine },
 	{ to: "/custom-css", label: "Custom CSS", icon: RiCodeSSlashLine },
 	{ to: "/integrations", label: "Integrations", icon: RiPlugLine },
 	{ to: "/about", label: "About", icon: RiInformationLine },

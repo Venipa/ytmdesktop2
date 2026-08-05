@@ -14,7 +14,18 @@ export const API_ROUTES = {
 	TRACK_CONTROL_TOGGLE_PLAY: "api/track/toggle-play-state",
 	TRACK_CONTROL_REPEAT: "api/track/repeat",
 	TRACK_CONTROL_SHUFFLE: "api/track/shuffle",
+	TRACK_CONTROL_VOLUME: "api/track/volume",
+	TRACK_CONTROL_VOLUME_UP: "api/track/volume-up",
+	TRACK_CONTROL_VOLUME_DOWN: "api/track/volume-down",
 	TRACK_SOCKET: "api/socket",
+	AUTH_REQUEST_CODE: "api/auth/requestcode",
+	AUTH_REQUEST: "api/auth/request",
+} as const;
+
+export const API_AUTH_EVENTS = {
+	PENDING: "api.auth.pending",
+	RESOLVED: "api.auth.resolved",
+	CLIENTS: "api.auth.clients",
 } as const;
 const IPC_EVENT_NAMES = {
 	SERVER_SETTINGS_CHANGE: "settingsProvider.change",

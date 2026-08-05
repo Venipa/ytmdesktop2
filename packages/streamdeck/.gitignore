@@ -1,0 +1,5 @@
+node_modules/
+dist/
+*.log
+com.venipa.ytmdesktop2.sdPlugin/bin/
+com.venipa.ytmdesktop2.sdPlugin/logs/

@@ -23,7 +23,9 @@
 		"biome:lint": "biome lint ./src",
 		"biome:format": "biome format ./src --write",
 		"biome:check": "biome check ./src",
-		"biome:check:apply": "biome check ./src --write"
+		"biome:check:apply": "biome check ./src --write",
+		"streamdeck:build": "pnpm --dir packages/streamdeck build",
+		"streamdeck:pack": "pnpm --dir packages/streamdeck pack"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.6.0",

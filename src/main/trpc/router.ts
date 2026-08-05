@@ -1,6 +1,7 @@
 // @ts-nocheck — tRPC 10 + TS 5.x nested CreateRouterInner assignability false positive.
 // `export type AppRouter = typeof appRouter` still infers full procedure I/O (not any).
 
+import { apiRouter } from "@main/trpc/routers/api";
 import { appServiceRouter } from "@main/trpc/routers/app";
 import { customCssRouter } from "@main/trpc/routers/customCss";
 import { discordRouter } from "@main/trpc/routers/discord";
@@ -23,6 +24,7 @@ export const appRouter = router({
 	track: trackRouter,
 	settings: settingsRouter,
 	app: appServiceRouter,
+	api: apiRouter,
 	update: updateRouter,
 	navigation: navigationRouter,
 	miniplayer: miniplayerRouter,

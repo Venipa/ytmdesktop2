@@ -210,6 +210,18 @@ export class TrackService {
 		return await this.executeCommand<TrackControlResponse>("shuffle");
 	}
 
+	async volumeTrack(data?: { volume?: number }): Promise<{ volume: number }> {
+		return await this.executeCommand<{ volume: number }>("volume", data);
+	}
+
+	async volumeUpTrack(data?: { amount?: number }): Promise<{ volume: number }> {
+		return await this.executeCommand<{ volume: number }>("volumeUp", data);
+	}
+
+	async volumeDownTrack(data?: { amount?: number }): Promise<{ volume: number }> {
+		return await this.executeCommand<{ volume: number }>("volumeDown", data);
+	}
+
 	async forwardTrack(_ev: unknown, data?: { time?: number }): Promise<TrackControlResponse> {
 		const { time } = data ?? {};
 		if (typeof time === "number" && time !== 0) {
