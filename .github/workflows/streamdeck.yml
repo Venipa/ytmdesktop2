@@ -24,17 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/setup@v2
         with:
           version: 11
-
-      - name: Use Node.js 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
+          runtime: node@24
+          cache: true
+          install: false
 
       - name: Configure GitHub Packages auth
         run: |
@@ -55,16 +52,18 @@ jobs:
         run: pnpm streamdeck:pack
 
       - name: Upload plugin artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ytmdesktop2-streamdeck
           path: dist/streamdeck/*.streamDeckPlugin
           if-no-files-found: error
           retention-days: 30
+          # already compressed package — skip zlib
+          compression-level: 0
 
       # Actions artifacts need auth + expire — publish a dedicated release for public downloads.
       - name: Publish streamdeck-plugin release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: streamdeck-plugin
           name: Stream Deck Plugin
@@ -77,6 +76,5 @@ jobs:
           files: dist/streamdeck/*.streamDeckPlugin
           fail_on_unmatched_files: true
           make_latest: false
+          # default true; keep explicit — reused streamdeck-plugin tag
           overwrite_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
