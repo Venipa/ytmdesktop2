@@ -212,9 +212,8 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 
 	async AfterInit() {
 		trackService.onTrackChange((track) => void this.__onTrackInfo(track), { debounce: 1000 });
-		this.settingsInstance.onSettingChange("discord.enabled", (value) => void this.__onToggleEnabled(value as boolean), {
-			debounce: 1000,
-		});
+		// No debounce on enabled — disable must stop loading/reconnect immediately
+		this.settingsInstance.onSettingChange("discord.enabled", (value) => void this.__onToggleEnabled(value as boolean));
 		this.settingsInstance.onSettingChange("discord.buttons", (value) => void this.__onToggleButtons(value as boolean), {
 			debounce: 1000,
 		});
