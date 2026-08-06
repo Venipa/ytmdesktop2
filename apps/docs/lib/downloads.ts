@@ -73,8 +73,14 @@ function archLabel(arch: CpuArch): string {
     case 'universal':
       return 'Universal';
     default:
-      return 'macOS';
+      // electron-builder often omits arch for default x64 mac artifacts
+      return 'Intel';
   }
+}
+
+/** Mac builds without an arch token are almost always the Intel (x64) artifact. */
+function resolveMacArch(arch: CpuArch): CpuArch {
+  return arch === 'unknown' ? 'x64' : arch;
 }
 
 /** electron-builder mac zips often look like `…-arm64.zip` / `…-x64.zip` (no "mac" token). */
@@ -105,32 +111,35 @@ export function getDownloadLabel(asset: ReleaseAsset): DownloadLabel {
   }
 
   if (name.endsWith('.dmg')) {
+    const macArch = resolveMacArch(arch);
     return {
       kind: 'macos-dmg',
       platform: 'macos',
-      arch,
+      arch: macArch,
       title: 'macOS DMG',
-      description: archLabel(arch),
+      description: archLabel(macArch),
     };
   }
 
   if (name.endsWith('.pkg')) {
+    const macArch = resolveMacArch(arch);
     return {
       kind: 'macos-pkg',
       platform: 'macos',
-      arch,
+      arch: macArch,
       title: 'macOS package',
-      description: archLabel(arch),
+      description: archLabel(macArch),
     };
   }
 
   if (isLikelyMacZip(name)) {
+    const macArch = resolveMacArch(arch);
     return {
       kind: 'macos-zip',
       platform: 'macos',
-      arch,
+      arch: macArch,
       title: 'macOS zip',
-      description: archLabel(arch),
+      description: archLabel(macArch),
     };
   }
 
