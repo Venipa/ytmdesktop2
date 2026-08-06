@@ -108,8 +108,8 @@ importers:
         specifier: 10.45.4
         version: 10.45.4
       '@venipa/xosms':
-        specifier: 0.7.3
-        version: 0.7.3
+        specifier: 0.8.3
+        version: 0.8.3
       cnfast:
         specifier: ^0.1.0
         version: 0.1.0
@@ -3325,49 +3325,49 @@ packages:
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
     deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
-  '@venipa/xosms-darwin-arm64@0.7.3':
-    resolution: {integrity: sha512-gTj0uoBzTJZlayl++JgfTK6CLPXrhfYLhnGqb5yv9JVlvQb4iHewnsRA0hZ+GGcvRRZ59B80mh7sjRKkhgmoyg==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-darwin-arm64/0.7.3/f75312f26578c1a54a5feb68c0d948822971a854}
+  '@venipa/xosms-darwin-arm64@0.8.3':
+    resolution: {integrity: sha512-JuP6Lmkm1PZ6u2Tj0M2JSZecHGevNIWcxGa+OfXa0+pv2MPL2hTRbxaltiKZDuoJmzVphr49H0krZFtofw7EMA==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-darwin-arm64/0.8.3/121d69ac3ddb2e64e35cfc09dfba086df88978a1}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@venipa/xosms-darwin-universal@0.7.3':
-    resolution: {integrity: sha512-iA+P4IiHwMUKxqBFwxRk+iy3SNlAhy8hUuGkwEBzR1nsZZ2k26khTcGq8GUy14vTnmHHoSQeKx0X5+9cgGtFuQ==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-darwin-universal/0.7.3/9a0d54c0d30418fecce55e58b3be212fa64e8a9c}
+  '@venipa/xosms-darwin-universal@0.8.3':
+    resolution: {integrity: sha512-+RebX0VB5h3dc3CqFrK360fO+Y3ObxdyoBTcPsfyN/V+us5VQfJecjpEFdhgUOYJr40+nuDonszLdlJQ9buZMg==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-darwin-universal/0.8.3/77ffb06b4b40cf834e544a0a7764822c8de9d0d6}
     engines: {node: '>= 10'}
     os: [darwin]
 
-  '@venipa/xosms-darwin-x64@0.7.3':
-    resolution: {integrity: sha512-t47TvKc1r+uGDN0MA8w13w2/MTpUujSbmrqwCBrO++PXArhCnOCo71G1Oxv4kZjhh6HqgVUnsX6y61xTSKB/7g==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-darwin-x64/0.7.3/c72aa81dcf056dfe70440ac938f7f8778ec36850}
+  '@venipa/xosms-darwin-x64@0.8.3':
+    resolution: {integrity: sha512-RoEy+YRoisU7Qbb61y+DSq2rGDXtkVUJQiVPo/LvXc8zLA9WfR1u6qQB/xAJGX8PwY3xjKFBj9cqqME98bvjLA==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-darwin-x64/0.8.3/66734dcdf2b32f16d86327c20280a0776c03949e}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@venipa/xosms-linux-arm64-gnu@0.7.3':
-    resolution: {integrity: sha512-iu9DDrDXVt+3SsKbZyf2gnxDt4QeLXIOPYIRe6ESobZNGV+AGsBC7bB+KQY34ima/f4RT9LqUyNBKdOs1FDu0w==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-linux-arm64-gnu/0.7.3/ae8680b44b2c56d5f04a1f25e4dfa847811c48fc}
+  '@venipa/xosms-linux-arm64-gnu@0.8.3':
+    resolution: {integrity: sha512-ToueSf6V2ifbSXLnQ9ApW+OOf7Ag/Et1ghw1O01FdqZy09UynytO7P20KG75SrF37dOqbVm2yNCT/0u18CiPhQ==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-linux-arm64-gnu/0.8.3/12c6c723e07855d4921fb8a6e09f12874cbdb991}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
 
-  '@venipa/xosms-linux-x64-gnu@0.7.3':
-    resolution: {integrity: sha512-Xewpl25+L1sLlJbye0r/h++k0RmBviTWw22prx/ey2RXm18WutkULiNb8qT6H6UtZIf3CGlMUQJyC0vCbPWz8w==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-linux-x64-gnu/0.7.3/a5930f320ebc3324aa56db665b8c4636d6e4a17a}
+  '@venipa/xosms-linux-x64-gnu@0.8.3':
+    resolution: {integrity: sha512-/CDRe5U68irDzW4+HQ/0PYtRAAjyDzmw1cDdlueynRAjZ0VMTdyuC7nSwsI1dfCelS14npkHpk280DkUBKyV9w==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-linux-x64-gnu/0.8.3/f366fbb93d1f10a58734e052ab30ca60d69fdca8}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
 
-  '@venipa/xosms-win32-arm64-msvc@0.7.3':
-    resolution: {integrity: sha512-AWGVoyfdb9L0TTiJNmqXEGZ21jQIYZZAQ39scng9CmfjOBY+kJ+50hGPkNwN3fh6riMoAEPKp1bWgKGFXNrguQ==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-win32-arm64-msvc/0.7.3/95b65bd27488c34ba33a60d3fa4367ed7d698821}
+  '@venipa/xosms-win32-arm64-msvc@0.8.3':
+    resolution: {integrity: sha512-9MMo7kWsqtd9TwQj2Wdq1g5zJI8ZcNd9Z1aZan2hmIu5xKplPzws/w9jFyx2kWiTpygZTcGxowjuVU8l1J+yuQ==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-win32-arm64-msvc/0.8.3/fa295c8f2b894535df8043f46681726168c17d95}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [win32]
 
-  '@venipa/xosms-win32-x64-msvc@0.7.3':
-    resolution: {integrity: sha512-EvDja/UzS/MMpZo2MEz4Qp9eJDxX66hCert5eWPWjSIGaE01cL95xzb/uVGhVzkbX73cjPsDXbUyMiX7ivrt2A==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-win32-x64-msvc/0.7.3/487086f2bb22fdbe32762877441dc5a7914ce4a3}
+  '@venipa/xosms-win32-x64-msvc@0.8.3':
+    resolution: {integrity: sha512-XnT9ixP/4llBZqeP/SyQ4CJeRAQJWReUYr8CjR6Z9F8MeqQB+OBTZjbqcGku86RTZp8nL5bvldZced6PJdhFGQ==, tarball: https://npm.pkg.github.com/download/@venipa/xosms-win32-x64-msvc/0.8.3/f364cfa506cacadf2abb26a44374cccc454ac6f7}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
 
-  '@venipa/xosms@0.7.3':
-    resolution: {integrity: sha512-0EygXZeLVfqZp4DFswdnsjxMGUK1Xfnm0UDI9ZYo06SNZZW0HondJLZmlIa2pbiTjO6CUqyiDSxW+/4OIHIo3w==, tarball: https://npm.pkg.github.com/download/@venipa/xosms/0.7.3/bd6826013fefded6138591ee299070dd8eb8d213}
+  '@venipa/xosms@0.8.3':
+    resolution: {integrity: sha512-LyUa//GZKeQyoh7QN2DjGPOgaOt06WEdR7tR6cMvdMi7q6Yo1L8lDundQ2SG7zi8Ry6T1rbj96K8toSR5iFLkA==, tarball: https://npm.pkg.github.com/download/@venipa/xosms/0.8.3/8d616dbb9b3cc0d767d583cc69a6984d620b5dc9}
     engines: {node: '>= 10'}
 
   '@vibrant/color@3.2.1-alpha.1':
@@ -4042,6 +4042,7 @@ packages:
 
   crypto-js@4.2.0:
     resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
+    deprecated: Active development of CryptoJS has been discontinued. This library is no longer maintained.
 
   cssesc@3.0.0:
     resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
@@ -10379,36 +10380,36 @@ snapshots:
 
   '@ungap/structured-clone@1.3.0': {}
 
-  '@venipa/xosms-darwin-arm64@0.7.3':
+  '@venipa/xosms-darwin-arm64@0.8.3':
     optional: true
 
-  '@venipa/xosms-darwin-universal@0.7.3':
+  '@venipa/xosms-darwin-universal@0.8.3':
     optional: true
 
-  '@venipa/xosms-darwin-x64@0.7.3':
+  '@venipa/xosms-darwin-x64@0.8.3':
     optional: true
 
-  '@venipa/xosms-linux-arm64-gnu@0.7.3':
+  '@venipa/xosms-linux-arm64-gnu@0.8.3':
     optional: true
 
-  '@venipa/xosms-linux-x64-gnu@0.7.3':
+  '@venipa/xosms-linux-x64-gnu@0.8.3':
     optional: true
 
-  '@venipa/xosms-win32-arm64-msvc@0.7.3':
+  '@venipa/xosms-win32-arm64-msvc@0.8.3':
     optional: true
 
-  '@venipa/xosms-win32-x64-msvc@0.7.3':
+  '@venipa/xosms-win32-x64-msvc@0.8.3':
     optional: true
 
-  '@venipa/xosms@0.7.3':
+  '@venipa/xosms@0.8.3':
     optionalDependencies:
-      '@venipa/xosms-darwin-arm64': 0.7.3
-      '@venipa/xosms-darwin-universal': 0.7.3
-      '@venipa/xosms-darwin-x64': 0.7.3
-      '@venipa/xosms-linux-arm64-gnu': 0.7.3
-      '@venipa/xosms-linux-x64-gnu': 0.7.3
-      '@venipa/xosms-win32-arm64-msvc': 0.7.3
-      '@venipa/xosms-win32-x64-msvc': 0.7.3
+      '@venipa/xosms-darwin-arm64': 0.8.3
+      '@venipa/xosms-darwin-universal': 0.8.3
+      '@venipa/xosms-darwin-x64': 0.8.3
+      '@venipa/xosms-linux-arm64-gnu': 0.8.3
+      '@venipa/xosms-linux-x64-gnu': 0.8.3
+      '@venipa/xosms-win32-arm64-msvc': 0.8.3
+      '@venipa/xosms-win32-x64-msvc': 0.8.3
 
   '@vibrant/color@3.2.1-alpha.1': {}
 
