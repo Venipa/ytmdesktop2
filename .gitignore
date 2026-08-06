@@ -38,3 +38,7 @@ apps/ytmdesktop2/dist_electron*
 /*.tgz
 
 routeTree.gen.ts
+
+# Private docs for deployment docs
+.github/*.md
+.cursor/rules/discord-release-notes.mdc
