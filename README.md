@@ -41,7 +41,7 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 <img width="285" height="133" alt="DiscordPTB_rObJDxsJQ8" src="https://github.com/user-attachments/assets/6f6c6836-8916-4a58-940e-e25d632e66ad" />
 
 
-### Custom CSS
+### Themes
 
 ![image](https://user-images.githubusercontent.com/17952364/149849609-fe5d3819-7303-4467-9f8e-56fa1e306c87.png)
 

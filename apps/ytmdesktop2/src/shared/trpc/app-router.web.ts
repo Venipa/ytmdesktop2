@@ -106,7 +106,8 @@ const trayRouter = router({
 	taskView: publicProcedure.mutation((): any => undefined),
 });
 
-const customCssRouter = router({
+const themesRouter = router({
+	list: publicProcedure.query((): { id: string; name: string; kind: "builtin" | "custom" }[] => []),
 	reload: publicProcedure.mutation((): any => undefined),
 });
 
@@ -147,7 +148,7 @@ export const appRouter = router({
 	navigation: navigationRouter,
 	miniplayer: miniplayerRouter,
 	tray: trayRouter,
-	customCss: customCssRouter,
+	themes: themesRouter,
 	lastfm: lastfmRouter,
 	window: windowRouter,
 	discord: discordRouter,

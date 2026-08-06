@@ -19,7 +19,7 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 	}
 	async AfterInit() {
 		this.settingsInstance.onSettingChange(
-			["app.autostart", "app.autoupdate", "app.minimizeTrayOverride", "discord.enabled", "discord.buttons", "customcss.enabled", "customcss.scssFile"],
+			["app.autostart", "app.autoupdate", "app.minimizeTrayOverride", "discord.enabled", "discord.buttons", "themes.enabled", "themes.customFile", "themes.selected"],
 			() => this.onSettingsChange(),
 			{ debounce: 50 },
 		);

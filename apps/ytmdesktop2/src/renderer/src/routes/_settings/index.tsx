@@ -38,7 +38,7 @@ function GenericSettingsPage() {
 			<Card>
 				<CardHeader>
 					<CardTitle>Application</CardTitle>
-					<CardDescription>Startup, updates, and system behavior.</CardDescription>
+					<CardDescription>Startup and system behavior.</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<FieldGroup>
@@ -46,18 +46,40 @@ function GenericSettingsPage() {
 							Enable Autostart
 						</SettingsCheckbox>
 						{appAutostartEnabled && !autostartPending && <SettingsCheckbox configKey="app.autostartMinimized">Start minimized</SettingsCheckbox>}
-						<SettingsCheckbox configKey="app.autoupdate">Enable Autoupdate</SettingsCheckbox>
-						<SettingsCheckbox
-							configKey="app.enableStatisticsAndErrorTracing"
-							description="Allows faster bug fixing via anonymized error reports."
-						>
-							Allow anonymized error reporting
-						</SettingsCheckbox>
 						<SettingsCheckbox configKey="app.minimizeTrayOverride" description="Close window to tray instead of quitting.">
 							Minimize to tray on close
 						</SettingsCheckbox>
 						<SettingsCheckbox configKey="app.disableHardwareAccel" description="Requires an app restart to apply.">
 							Disable Hardware Acceleration
+						</SettingsCheckbox>
+					</FieldGroup>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Updater</CardTitle>
+					<CardDescription>Automatic update checks and installs.</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<FieldGroup>
+						<SettingsCheckbox configKey="app.autoupdate">Enable Autoupdate</SettingsCheckbox>
+					</FieldGroup>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Sentry / Error reporting</CardTitle>
+					<CardDescription>Help improve the app by sharing anonymized crash data.</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<FieldGroup>
+						<SettingsCheckbox
+							configKey="app.enableStatisticsAndErrorTracing"
+							description="Allows faster bug fixing via anonymized error reports."
+						>
+							Allow anonymized error reporting
 						</SettingsCheckbox>
 					</FieldGroup>
 				</CardContent>

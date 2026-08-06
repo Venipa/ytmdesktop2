@@ -3,7 +3,6 @@
 import type apiProvider from "@routers/api/service";
 import type appProvider from "@routers/app/service";
 import type authProvider from "@routers/auth/service";
-import type customCssProvider from "@routers/customCss/service";
 import type discordProvider from "@routers/discord/service";
 import type eventProvider from "@routers/event/service";
 import type lastfmProvider from "@routers/lastfm/service";
@@ -13,6 +12,7 @@ import type navigationProvider from "@routers/navigation/service";
 import type settingsProvider from "@routers/settings/service";
 import type shortcutProvider from "@routers/shortcut/service";
 import type startupProvider from "@routers/startup/service";
+import type themesProvider from "@routers/themes/service";
 import type touchbarProvider from "@routers/touchbar/service";
 import type { TrackService as trackProvider } from "@routers/track/service";
 import type trayProvider from "@routers/tray/service";
@@ -26,7 +26,6 @@ export interface ServiceTypeMap {
   "api": apiProvider;
   "app": appProvider;
   "auth": authProvider;
-  "customCss": customCssProvider;
   "discord": discordProvider;
   "event": eventProvider;
   "lastfm": lastfmProvider;
@@ -36,6 +35,7 @@ export interface ServiceTypeMap {
   "settings": settingsProvider;
   "shortcut": shortcutProvider;
   "startup": startupProvider;
+  "themes": themesProvider;
   "touchbar": touchbarProvider;
   "track": trackProvider;
   "tray": trayProvider;

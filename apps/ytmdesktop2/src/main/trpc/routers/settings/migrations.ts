@@ -1,4 +1,5 @@
 import { platform } from "@electron-toolkit/utils";
+import type { LegacyCustomCssConfig } from "@main/trpc/routers/themes/types";
 import { app } from "electron";
 import { Migration } from "electron-conf";
 import { readFileSync, rmSync, statSync } from "fs";
@@ -48,6 +49,27 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 	{
 		hook(store) {
 			store.set("customcss.thumbnailBackground", false);
+		},
+	},
+	{
+		hook(store) {
+			const data = store.store as SettingsStore & { customcss?: LegacyCustomCssConfig };
+			if (data.themes && !data.customcss) return;
+			const old = data.customcss;
+			if (!old) return;
+
+			const defaultPath = path.resolve(app.getPath("documents"), "ytmdesktop", "custom.scss");
+			const file = old.scssFile ?? null;
+			const isCustom = !!file && path.normalize(file) !== path.normalize(defaultPath);
+
+			store.set("themes", {
+				enabled: old.enabled ?? true,
+				selected: isCustom ? "custom" : "default",
+				customFile: file,
+				watching: old.watching ?? false,
+				thumbnailBackground: old.thumbnailBackground ?? true,
+			});
+			store.delete("customcss" as keyof SettingsStore);
 		},
 	},
 ];

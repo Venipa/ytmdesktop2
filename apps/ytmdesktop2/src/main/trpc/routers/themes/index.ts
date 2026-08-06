@@ -1,0 +1,1 @@
+export { themesRouter } from "./router";

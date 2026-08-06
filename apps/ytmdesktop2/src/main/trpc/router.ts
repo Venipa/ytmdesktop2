@@ -4,12 +4,12 @@
 import { apiRouter } from "@main/trpc/routers/api";
 import { appServiceRouter } from "@main/trpc/routers/app";
 import { authRouter } from "@main/trpc/routers/auth";
-import { customCssRouter } from "@main/trpc/routers/customCss";
 import { discordRouter } from "@main/trpc/routers/discord";
 import { lastfmRouter } from "@main/trpc/routers/lastfm";
 import { miniplayerRouter } from "@main/trpc/routers/miniPlayer";
 import { navigationRouter } from "@main/trpc/routers/navigation";
 import { settingsRouter } from "@main/trpc/routers/settings";
+import { themesRouter } from "@main/trpc/routers/themes";
 import { trackRouter } from "@main/trpc/routers/track";
 import { trayRouter } from "@main/trpc/routers/tray";
 import { updateRouter } from "@main/trpc/routers/update";
@@ -31,7 +31,7 @@ export const appRouter = router({
 	navigation: navigationRouter,
 	miniplayer: miniplayerRouter,
 	tray: trayRouter,
-	customCss: customCssRouter,
+	themes: themesRouter,
 	lastfm: lastfmRouter,
 	window: windowRouter,
 	discord: discordRouter,

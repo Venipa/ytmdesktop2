@@ -1,0 +1,29 @@
+---
+title: Themes
+description: Theme YouTube Music with bundled or custom styles
+---
+
+Pick a bundled theme or inject your own SCSS/CSS to restyle the embedded YouTube Music UI — colors, layout tweaks, and personal chrome.
+
+![Full player UI](/images/player-full-2.png)
+
+## Setup
+
+1. Open **Settings → Themes**.
+2. Choose **Default** (bundled) or **Custom** and point at a `.scss` / `.sass` / `.css` file.
+3. Reload / apply — changes target the YouTube Music view.
+
+For Custom, the default file location (if unset) is under your Documents folder: `ytmdesktop/custom.scss`.
+
+## Tips
+
+- Prefer SCSS/CSS that targets YouTube Music DOM carefully — upstream UI changes can break selectors.
+- Enable **Update on Changes** when editing a custom file to live-reload.
+- Keep a backup of working themes before large edits.
+
+## Related
+
+<Cards>
+  <Card title="All features" href="/docs/features" />
+  <Card title="Mini player" href="/docs/features/mini-player" />
+</Cards>

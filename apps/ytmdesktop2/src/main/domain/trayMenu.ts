@@ -87,26 +87,26 @@ export const createTrayMenu = (provider: BaseProvider) => {
 		},
 		{
 			type: "submenu",
-			label: "Custom CSS",
+			label: "Themes",
 			submenu: [
 				{
-					label: "Enable CSS",
+					label: "Enable Themes",
 					type: "checkbox",
-					checked: sp.customcss.enabled,
+					checked: sp.themes.enabled,
 					click: (item) => {
-						settings.set("customcss.enabled", item.checked);
+						settings.set("themes.enabled", item.checked);
 					},
 				},
 				{
-					label: "Open selected CSS File",
-					enabled: sp.customcss.enabled && !!sp.customcss.scssFile,
+					label: "Open custom theme file",
+					enabled: sp.themes.enabled && sp.themes.selected === "custom" && !!sp.themes.customFile,
 					click: (item) => {
-						if (item.enabled && sp.customcss?.scssFile) shell.openExternal(sp.customcss.scssFile!);
+						if (item.enabled && sp.themes?.customFile) void shell.openPath(sp.themes.customFile!);
 					},
 				},
 				{
-					label: "Change CSS File",
-					enabled: sp.customcss.enabled,
+					label: "Change Theme",
+					enabled: sp.themes.enabled,
 					click: (item) => {
 						if (item.enabled) void appProvider.openSettingsWindow();
 					},

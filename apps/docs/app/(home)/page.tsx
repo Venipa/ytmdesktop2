@@ -55,9 +55,9 @@ const features = [
     image: '/images/feature-miniplayer.jpg',
   },
   {
-    title: 'Custom CSS',
-    description: 'Theme YouTube Music with your own stylesheets.',
-    href: `${docsRoute}/features/custom-css/`,
+    title: 'Themes',
+    description: 'Theme YouTube Music with bundled or custom stylesheets.',
+    href: `${docsRoute}/features/themes/`,
     icon: PaletteIcon,
     image: '/images/player-full-2.png',
   },

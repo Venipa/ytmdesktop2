@@ -3,7 +3,7 @@ import { defaultUri, defaultUrl, isDevelopment } from "@main/infra/devUtils";
 import { serverMain } from "@main/ipc/serverEvents";
 import { stringifyJson } from "@main/lib/json";
 import { createYmlStore } from "@main/lib/store/createYmlStore";
-import { CustomCssConfig } from "@main/trpc/routers/customCss/service";
+import type { ThemesConfig } from "@main/trpc/routers/themes/types";
 import { trackService } from "@main/trpc/routers/track";
 import eventNames from "@shared/constants/eventNames";
 import { VideoResSetting } from "@shared/utils/ISettings";
@@ -47,12 +47,13 @@ const defaultSettings = {
 		enabled: true,
 		buttons: false,
 	},
-	customcss: {
+	themes: {
 		enabled: true,
-		scssFile: null,
+		selected: "default",
+		customFile: null,
 		watching: false,
 		thumbnailBackground: true,
-	} as CustomCssConfig,
+	} as ThemesConfig,
 	state: {
 		currentUrl: null,
 	},
@@ -99,12 +100,18 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 		options?: { debounce?: number },
 	): { unsubscribe(): void } {
 		const keyList = Array.isArray(keys) ? keys : [keys];
-		let fn = (ev: { key: string; value: unknown; prevValue: unknown }) => {
+		// Filter before debounce so unrelated settingChanged events cannot drop matching updates.
+		const run = options?.debounce
+			? debounce((ev: { key: string; value: unknown; prevValue: unknown }) => {
+					handler(ev.value, ev.prevValue, ev.key);
+				}, options.debounce)
+			: (ev: { key: string; value: unknown; prevValue: unknown }) => {
+					handler(ev.value, ev.prevValue, ev.key);
+				};
+		const sub = this.settingChanged.subscribe((ev) => {
 			if (!keyList.includes(ev.key)) return;
-			handler(ev.value, ev.prevValue, ev.key);
-		};
-		if (options?.debounce) fn = debounce(fn, options.debounce) as typeof fn;
-		const sub = this.settingChanged.subscribe(fn);
+			run(ev);
+		});
 		return { unsubscribe: () => sub.unsubscribe() };
 	}
 
@@ -173,7 +180,7 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 				const url = new URL(location);
 				if (url) {
 					if (url.hostname === defaultUri.hostname && previousHostname !== url.hostname) {
-						void this.getProvider("customCss").requestUpdate();
+						void this.getProvider("themes").reapplyAllStyles();
 					}
 					previousHostname = url.hostname;
 					if (url.hostname !== defaultUri.hostname) {

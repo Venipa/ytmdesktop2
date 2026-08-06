@@ -22,6 +22,7 @@ export interface SettingsSelectProps {
 export function SettingsSelect({ configKey, defaultValue = "", label, description, options, className, onChange }: SettingsSelectProps) {
 	const id = useId();
 	const [value, setValue, { isPending }] = useSettingsState<string>(configKey, defaultValue, { debounce: 200 });
+	const items = Object.fromEntries(options.map((opt) => [opt.value, opt.label]));
 
 	return (
 		<Field data-disabled={isPending || undefined} className={cn(className)}>
@@ -29,6 +30,7 @@ export function SettingsSelect({ configKey, defaultValue = "", label, descriptio
 			{description ? <FieldDescription>{description}</FieldDescription> : null}
 			<Select
 				value={value}
+				items={items}
 				disabled={isPending}
 				onValueChange={(next) => {
 					if (next == null) return;

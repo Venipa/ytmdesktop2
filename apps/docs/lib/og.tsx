@@ -312,7 +312,7 @@ function AppPresentOg({
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 28 }}>
-            {['Last.fm', 'Discord', 'Custom CSS', 'Stream Deck'].map((label) => (
+            {['Last.fm', 'Discord', 'Themes', 'Stream Deck'].map((label) => (
               <div
                 key={label}
                 style={{

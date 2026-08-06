@@ -48,7 +48,7 @@ const tabs = [
 	{ to: "/player", label: "Player", icon: RiMusic2Line },
 	{ to: "/discord", label: "Discord", icon: RiDiscordLine },
 	{ to: "/lastfm", label: "Last.fm", icon: RiAlbumLine },
-	{ to: "/custom-css", label: "Custom CSS", icon: RiCodeSSlashLine },
+	{ to: "/themes", label: "Themes", icon: RiCodeSSlashLine },
 	{ to: "/about", label: "About", icon: RiInformationLine },
 ] as const;
 

@@ -3,7 +3,6 @@ import { webUtils } from "electron/renderer";
 import { ELECTRON_TRPC_CHANNEL } from "electron-trpc/main";
 import pkg from "../../package.json";
 import translations from "../translations";
-import { createRendererCSSHandler } from "./webFrameUtils";
 
 /** electron-trpc requires contextIsolation; youtube view keeps it off for player hooks. */
 type RendererGlobalElectronTRPC = {
@@ -163,7 +162,6 @@ export default {
     ...appMethods,
     settingsProvider,
     ...ipc,
-    reloadCustomCss: () => ipcRenderer.send("customcss.update"),
     getPathFromFile: (file: File) => webUtils.getPathForFile(file),
   },
   translations,
@@ -175,7 +173,6 @@ export default {
       const key = webFrame.insertCSS(css);
       return () => webFrame.removeInsertedCSS(key);
     },
-    createCSSHandler: () => createRendererCSSHandler(webFrame),
     ensureDomLoaded,
     ensureWindowLoaded(f: () => void) {
       return ensureDomLoaded(() => {
