@@ -52,7 +52,7 @@ jobs:
         name: install windows deps
         uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.5
         with:
-          sdk-version: 19041
+          sdk-version: 20348
 
       # windows-2025-vs2026 ships VS 2026 (18.x). node-gyp <12.1 cannot detect it
       # (@electron/rebuild used to pull node-gyp@11 → install-app-deps fails on @parcel/watcher).
