@@ -466,24 +466,9 @@ export class TrackService {
 			} catch (error) {
 				this.logger.error("Failed to fanout track to views:", error);
 			}
-			void this.updateMediaOsControls(track);
 		}
 
 		this.queueExternalTrackPush(track, updateLastFm);
-	}
-
-	private async updateMediaOsControls(track: TrackData) {
-		try {
-			const media = this.getProvider("mediaController") as {
-				instance?: { setTimeline: (duration: number, progress: number) => void };
-				handleTrackMediaOSControlChange?: (track: TrackData) => Promise<void>;
-			};
-			if (media?.instance) {
-				await media.handleTrackMediaOSControlChange?.(track);
-			}
-		} catch (error) {
-			this.logger.error("Failed to update media controls:", error);
-		}
 	}
 
 	private pendingExternal: { track: TrackData; updateLastFm: boolean } | null = null;
@@ -630,17 +615,10 @@ export class TrackService {
 		});
 	}
 
-	private async updateMediaTimeline(duration: number, progressSeconds: number, isPlaying: boolean) {
+	private async updateMediaTimeline(_duration: number, progressSeconds: number, isPlaying: boolean) {
+		// OS media controls subscribe via trackService.onTrackStateChange (mediaControl).
 		const discordProvider = this.getProvider("discord") as { updateTrackProgress?: (a: boolean, b: number, c?: boolean) => Promise<void> | void };
 		await discordProvider?.updateTrackProgress?.(isPlaying, progressSeconds);
-		try {
-			const mediaController = this.getProvider("mediaController") as { instance?: { setTimeline: (duration: number, progress: number) => void } };
-			if (mediaController?.instance) {
-				mediaController.instance.setTimeline(duration, progressSeconds);
-			}
-		} catch (error) {
-			this.logger.error("Failed to update media timeline:", error);
-		}
 	}
 
 	async onPlayStateProgress(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
