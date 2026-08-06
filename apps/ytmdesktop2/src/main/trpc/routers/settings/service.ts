@@ -139,15 +139,18 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 	}
 
 	set(key: string, value: unknown) {
+		const nextValue = value ?? null;
 		const prevValue = this.get(key);
-		_settingsStore.set(key, value ?? null);
+		if (stringifyJson(prevValue) === stringifyJson(nextValue)) return this;
+
+		_settingsStore.set(key, nextValue);
 		this.onChange.next(_settingsStore.store);
-		this.settingChanged.next({ key, value, prevValue });
+		this.settingChanged.next({ key, value: nextValue, prevValue });
 		try {
 			// Youtube preload plugins still listen via webContents IPC.
-			this.views.youtubeView?.webContents.send(eventNames.SERVER_SETTINGS_CHANGE, key, value, prevValue);
+			this.views.youtubeView?.webContents.send(eventNames.SERVER_SETTINGS_CHANGE, key, nextValue, prevValue);
 			// BaseEvent / debug listeners on main bus (no renderer round-trip).
-			serverMain.emitServer(eventNames.SERVER_SETTINGS_CHANGE, key, value, prevValue);
+			serverMain.emitServer(eventNames.SERVER_SETTINGS_CHANGE, key, nextValue, prevValue);
 		} catch (ex) {
 			this.logger.error(ex);
 		}

@@ -98,6 +98,7 @@ export function useSettingsState<T>(key: string, defaultValue: T, options: UseSe
 		(next) => {
 			const prev = resolveSettingValue(utils.settings.get.getData(queryInput), defaultRef.current, mapRef.current);
 			const resolved = typeof next === "function" ? (next as (prev: T) => T)(prev) : next;
+			if (Object.is(prev, resolved)) return;
 			utils.settings.get.setData(queryInput, resolved);
 			persist(resolved);
 		},

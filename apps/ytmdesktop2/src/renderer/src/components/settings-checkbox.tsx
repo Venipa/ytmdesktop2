@@ -42,6 +42,7 @@ export function SettingsCheckbox({
 				checked={value}
 				disabled={isPending}
 				onCheckedChange={(checked) => {
+					if (checked === value) return;
 					setValue(checked);
 					onChange?.(checked);
 				}}

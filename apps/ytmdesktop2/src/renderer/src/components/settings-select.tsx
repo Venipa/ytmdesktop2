@@ -51,7 +51,7 @@ export function SettingsSelect({ configKey, defaultValue = "", label, descriptio
 				items={items}
 				disabled={isPending}
 				onValueChange={(next) => {
-					if (next == null) return;
+					if (next == null || next === value) return;
 					setValue(next);
 					onChange?.(next);
 				}}
