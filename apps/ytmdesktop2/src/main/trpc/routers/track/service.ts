@@ -1,7 +1,6 @@
 import { createSendHandler } from "@main/ipc/ipc";
 import { serverMain } from "@main/ipc/serverEvents";
-import { getLifecycleContext, onAfterInit } from "@main/lifecycle";
-import type { BrowserWindowViews } from "@main/windows/mappedWindow";
+import { getAppWindows, getLifecycleContext, getYoutubeView, onAfterInit, requireAppWindows } from "@main/lifecycle";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import type { TrackData } from "@shared/track/trackData";
 import { createLogger } from "@shared/utils/console";
@@ -95,7 +94,6 @@ const stateEmitKey = (state: TrackState): string =>
 	].join("|");
 
 export class TrackService {
-	private _windows: BrowserWindowViews<any> | null = null;
 	private _activeTrackId: string | null = null;
 	private _trackState: TrackState | null = null;
 	private _trackDataCache: TrackEntry | null = null;
@@ -125,11 +123,11 @@ export class TrackService {
 	}
 
 	get views() {
-		return this._windows!.views;
+		return requireAppWindows().views;
 	}
 
 	get windowContext() {
-		return this._windows!;
+		return requireAppWindows();
 	}
 
 	get trackState() {
@@ -147,10 +145,6 @@ export class TrackService {
 		return (this._trackDataCache = this._activeTrackId ? (trackCollection.findById(this._activeTrackId) ?? null) : null);
 	}
 
-	attach(windows: BrowserWindowViews<any>): void {
-		this._windows = windows;
-	}
-
 	bindIpcListeners(): void {
 		if (this._ipcBound) return;
 		this._ipcBound = true;
@@ -164,7 +158,7 @@ export class TrackService {
 
 	afterInit(): void {
 		if (this._styleBound) return;
-		if (!this._windows?.views?.youtubeView) return;
+		if (!getYoutubeView()) return;
 		this._styleBound = true;
 		this.handleTrackStyle();
 	}
@@ -174,8 +168,12 @@ export class TrackService {
 	}
 
 	async executeCommand<T = unknown>(command: string, ...args: unknown[]): Promise<T> {
+		const youtubeView = getYoutubeView();
+		if (!youtubeView) {
+			throw new Error(`TrackService: youtube view not ready for command "${command}"`);
+		}
 		// track-api-controls plugin registers under service "api" → plugins:api:cmd:*
-		return await createSendHandler<T>(this.views.youtubeView, `plugins:api:cmd:${command}`)(...args);
+		return await createSendHandler<T>(youtubeView, `plugins:api:cmd:${command}`)(...args);
 	}
 
 	getTrackInformation(): TrackEntry | null {
@@ -303,9 +301,10 @@ export class TrackService {
 	}
 
 	async getActiveTrackByDOM(): Promise<string | null> {
-		if (!this._windows?.views?.youtubeView?.webContents) return null;
+		const youtubeView = getYoutubeView();
+		if (!youtubeView) return null;
 		try {
-			const href = await this.views.youtubeView.webContents.executeJavaScript(`document.querySelector("a.ytp-title-link.yt-uix-sessionlink")?.href`);
+			const href = await youtubeView.webContents.executeJavaScript(`document.querySelector("a.ytp-title-link.yt-uix-sessionlink")?.href`);
 			return href ? (new URLSearchParams(href.split("?")[1])?.get("v") ?? null) : null;
 		} catch {
 			return null;
@@ -313,9 +312,10 @@ export class TrackService {
 	}
 
 	async currentSongLikeState(): Promise<[boolean, boolean]> {
-		if (!this._windows?.views?.youtubeView?.webContents) return [false, false];
+		const youtubeView = getYoutubeView();
+		if (!youtubeView) return [false, false];
 		try {
-			const values = await this.views.youtubeView.webContents.executeJavaScript(
+			const values = await youtubeView.webContents.executeJavaScript(
 				`[
           document.querySelector("#like-button-renderer #button-shape-like.like button")?.ariaPressed,
           document.querySelector("#like-button-renderer #button-shape-dislike.dislike button")?.ariaPressed
@@ -459,10 +459,11 @@ export class TrackService {
 		// Immediate — subscribers (toolbar / miniplayer) get data now
 		events.emit("track:change", track);
 
-		if (this._windows) {
+		const windows = getAppWindows();
+		if (windows) {
 			try {
-				this.views.youtubeView?.webContents.send("trackId:change", track.video.videoId);
-				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
+				windows.views.youtubeView?.webContents.send("trackId:change", track.video.videoId);
+				windows.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
 			} catch (error) {
 				this.logger.error("Failed to fanout track to views:", error);
 			}
@@ -744,7 +745,6 @@ export const trackService = new TrackService();
 // Bind IPC before youtube view loads — avoids dropping early track:info-req / play-state.
 trackService.bindIpcListeners();
 
-onAfterInit(({ windows }) => {
-	if (windows) trackService.attach(windows);
+onAfterInit(() => {
 	trackService.afterInit();
 });

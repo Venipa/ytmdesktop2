@@ -36,6 +36,24 @@ export function getLifecycleContext(): LifecycleContext {
 	return context;
 }
 
+/** Shared window context — prefer this over per-service attach/_windows copies. */
+export function getAppWindows(): BrowserWindowViews<any> | null {
+	return context?.windows ?? null;
+}
+
+export function requireAppWindows(): BrowserWindowViews<any> {
+	const windows = getAppWindows();
+	if (!windows) throw new Error("App windows not ready");
+	return windows;
+}
+
+/** Live youtube music view, or null if missing/destroyed. */
+export function getYoutubeView(): WebContentsView | null {
+	const view = getAppWindows()?.views?.youtubeView as WebContentsView | undefined;
+	if (!view?.webContents || view.webContents.isDestroyed()) return null;
+	return view;
+}
+
 function register(phase: LifecyclePhase, handler: LifecycleHandler): void {
 	handlers[phase].push(handler);
 }
@@ -84,14 +102,14 @@ function isMusicYoutubeUrl(url: string): boolean {
 	}
 }
 
-function getYoutubeView(windows: BrowserWindowViews<any> | null): WebContentsView | null {
+function resolveYoutubeView(windows: BrowserWindowViews<any> | null): WebContentsView | null {
 	const view = windows?.views?.youtubeView as WebContentsView | undefined;
 	if (!view?.webContents || view.webContents.isDestroyed()) return null;
 	return view;
 }
 
 function attachMusicReloadBridge(windows: BrowserWindowViews<any> | null): void {
-	const view = getYoutubeView(windows);
+	const view = resolveYoutubeView(windows);
 	if (!view) return;
 
 	const webContentsId = view.webContents.id;
