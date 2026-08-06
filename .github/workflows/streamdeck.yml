@@ -13,6 +13,8 @@ on:
 permissions:
   contents: write
   packages: read # @venipa/* on GitHub Packages (if resolved via lockfile)
+  id-token: write # OIDC for artifact attestations
+  attestations: write
 
 concurrency:
   group: streamdeck-${{ github.ref }}
@@ -51,6 +53,11 @@ jobs:
       - name: Pack Stream Deck plugin
         run: pnpm streamdeck:pack
 
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/streamdeck/*.streamDeckPlugin
+
       - name: Upload plugin artifact
         uses: actions/upload-artifact@v7
         with:
@@ -71,6 +78,11 @@ jobs:
             Latest Stream Deck plugin build (`.streamDeckPlugin`).
 
             Download the file, then double-click / import it in Stream Deck software.
+
+            Verify provenance (optional):
+            ```
+            gh attestation verify <path-to>.streamDeckPlugin --repo ${{ github.repository }}
+            ```
 
             Docs: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/docs/integrations/streamdeck/
           files: dist/streamdeck/*.streamDeckPlugin
