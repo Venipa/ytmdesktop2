@@ -14,7 +14,6 @@ export default class IPCClient extends EventEmitter {
 
 	constructor() {
 		super();
-
 		this.createSocket();
 	}
 
@@ -34,11 +33,7 @@ export default class IPCClient extends EventEmitter {
 				const op = buffer.readInt32LE(0);
 				const length = buffer.readInt32LE(4);
 				const json = JSON.parse(buffer.toString("utf-8", 8, 8 + length));
-
-				this.emit("data", {
-					op,
-					json,
-				});
+				this.emit("data", { op, json });
 			} catch {
 				/* invalid json provided, ignore */
 			}
@@ -53,30 +48,32 @@ export default class IPCClient extends EventEmitter {
 	}
 
 	public send(data: unknown, op = OPCode.FRAME) {
+		if (this.socket.destroyed || !this.socket.writable) return;
 		const json = JSON.stringify(data);
 		const length = Buffer.byteLength(json);
 		const buffer = Buffer.alloc(8 + length);
 		buffer.writeInt32LE(op, 0);
 		buffer.writeInt32LE(length, 4);
 		buffer.write(json, 8, length);
-
-		if (this.socket.writable) {
-			this.socket.write(buffer);
-		} else {
-			this.socket.end();
-			this.createSocket();
-		}
+		this.socket.write(buffer);
 	}
 
 	public close() {
-		if (!this.socket.closed) {
-			this.send({}, OPCode.CLOSE);
+		if (!this.socket.destroyed && !this.socket.closed) {
+			try {
+				this.send({}, OPCode.CLOSE);
+			} catch {
+				/* ignore */
+			}
 			this.socket.end();
 		}
 	}
 
 	public destroy() {
 		this.removeAllListeners();
-		this.socket.destroy();
+		if (!this.socket.destroyed) {
+			this.socket.removeAllListeners();
+			this.socket.destroy();
+		}
 	}
 }

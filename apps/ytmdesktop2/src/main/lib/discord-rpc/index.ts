@@ -6,6 +6,7 @@ import EventEmitter from "events";
 import IPCClient, { OPCode } from "./ipc";
 
 const log = createLogger("Lib:DiscordRPC.Client");
+
 function directoryExists(dirPath: string): boolean {
 	try {
 		return existsSync(dirPath) && statSync(dirPath).isDirectory();
@@ -25,24 +26,20 @@ function getIPCPath(id: number): string {
 
 	if (directoryExists(`${prefix}/${discordSnapDir}`)) {
 		return `${prefix}/${discordSnapDir}/discord-ipc-${id}`;
-	} else {
-		return `${prefix}/discord-ipc-${id}`;
 	}
+	return `${prefix}/discord-ipc-${id}`;
 }
 
 const PROCESS_PID = process?.pid ?? 0;
-log.debug("PROCESS_PID", PROCESS_PID);
 const MAX_CONNECTION_ITERATIONS = 10;
 
 function stringLimit(str: string, limit: number, minimum: number) {
 	if (str.length > limit) {
 		return str.substring(0, limit - 3) + "...";
 	}
-
 	if (str.length < minimum) {
-		return str.padEnd(minimum, "​"); // There's a zero width space here
+		return str.padEnd(minimum, "​"); // zero-width space
 	}
-
 	return str;
 }
 
@@ -61,29 +58,43 @@ export default class DiscordClient extends EventEmitter {
 	private connectionPromise: Promise<void> | null = null;
 	private ipcClient = new IPCClient();
 	private connected = false;
-	private currentActivity: DiscordActivity;
+	private destroyed = false;
+	private abortConnect = false;
+	private currentActivity: DiscordActivity | undefined;
+	private previousActivity: string | null = null;
+
 	get presence() {
 		return this.currentActivity;
 	}
+
 	get isConnected() {
-		return this.connected;
+		return this.connected && !this.destroyed;
 	}
+
 	constructor(clientId: string) {
 		super();
-
 		this.clientId = clientId;
 	}
 
 	public connect() {
+		if (this.destroyed) return Promise.reject(new Error("DiscordClient destroyed"));
+		if (this.connected) return Promise.resolve();
 		if (this.connectionPromise) return this.connectionPromise;
+
+		this.abortConnect = false;
 		this.ipcClient.removeAllListeners();
 
-		// Promise chaining is OK here, we're looping through different IPC paths and seeing which one works
+		// Promise chaining is OK here — loop IPC paths until one works
 		// eslint-disable-next-line no-async-promise-executor
 		this.connectionPromise = new Promise(async (resolve, reject) => {
 			log.debug(`initiated connection loop over ${MAX_CONNECTION_ITERATIONS} ids`);
 			let id = 0;
 			while (id < MAX_CONNECTION_ITERATIONS) {
+				if (this.abortConnect || this.destroyed) {
+					this.connectionPromise = null;
+					reject(new Error("DiscordClient connect aborted"));
+					return;
+				}
 				try {
 					await new Promise<void>((ipcResolve, ipcReject) => {
 						const ipcPath = getIPCPath(id);
@@ -101,8 +112,15 @@ export default class DiscordClient extends EventEmitter {
 							this.ipcClient.removeAllListeners();
 							ipcResolve();
 						});
-						this.ipcClient.connect(getIPCPath(id));
+						this.ipcClient.connect(ipcPath);
 					});
+
+					if (this.abortConnect || this.destroyed) {
+						this.ipcClient.destroy();
+						this.connectionPromise = null;
+						reject(new Error("DiscordClient connect aborted"));
+						return;
+					}
 
 					this.connected = true;
 					this.ipcClient.send(
@@ -121,22 +139,14 @@ export default class DiscordClient extends EventEmitter {
 					this.ipcClient.on("error", (error) => {
 						this.emit("error", error);
 					});
-					this.ipcClient.on("data", (op: OPCode, json: unknown) => {
-						switch (op) {
-							case OPCode.PING: {
-								this.ipcClient.send(json, OPCode.PONG);
-								break;
-							}
-
-							default: {
-								break;
-							}
+					this.ipcClient.on("data", (payload: { op: OPCode; json: unknown }) => {
+						if (payload?.op === OPCode.PING) {
+							this.ipcClient.send(payload.json, OPCode.PONG);
 						}
 					});
 
 					this.connectionPromise = null;
 					resolve();
-
 					return;
 				} catch {
 					id++;
@@ -144,29 +154,37 @@ export default class DiscordClient extends EventEmitter {
 			}
 
 			this.connectionPromise = null;
-			reject();
+			reject(new Error("Failed to connect to Discord IPC"));
 		});
 
 		return this.connectionPromise;
 	}
 
 	public close() {
+		this.abortConnect = true;
+		this.connectionPromise = null;
 		if (this.connected) {
 			this.ipcClient.once("close", () => {
 				this.ipcClient.removeAllListeners();
 			});
 			this.ipcClient.close();
 		}
+		this.connected = false;
 	}
 
 	public destroy() {
+		this.abortConnect = true;
+		this.destroyed = true;
 		this.connected = false;
 		this.currentActivity = undefined;
+		this.previousActivity = null;
+		this.connectionPromise = null;
 		this.removeAllListeners();
 		this.ipcClient.destroy();
 	}
-	private previousActivity: string | null = null;
+
 	public setActivity(activity: DiscordActivity) {
+		if (!this.isConnected) return;
 		this.currentActivity = activityDetailString(activity);
 		try {
 			this.ipcClient.send({
@@ -179,7 +197,7 @@ export default class DiscordClient extends EventEmitter {
 			});
 			if (this.previousActivity !== activity.details) {
 				log.debug("activity set", `${this.previousActivity ?? "empty"} -> ${activity.details}`);
-				this.previousActivity = activity.details;
+				this.previousActivity = activity.details ?? null;
 			}
 		} catch (error) {
 			log.error("error setting activity", error);
@@ -188,6 +206,7 @@ export default class DiscordClient extends EventEmitter {
 
 	public clearActivity() {
 		this.currentActivity = undefined;
+		if (!this.isConnected) return;
 		try {
 			this.ipcClient.send({
 				cmd: "SET_ACTIVITY",
