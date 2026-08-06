@@ -45,6 +45,7 @@
 		"@venipa/xosms": "0.7.3",
 		"autoprefixer": "^10.4.8",
 		"chalk": "^5.0.1",
+		"cnfast": "^0.1.0",
 		"core-js": "^3.24.1",
 		"cors": "^2.8.5",
 		"crypto-js": "^4.2.0",

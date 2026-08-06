@@ -4,10 +4,10 @@ import got, { Got, Method } from "got";
 import fetch from "node-fetch";
 export class LastFMClient {
 	private client: Got;
-	private token: string;
-	private session: string;
-	private sessionName: string;
-	private lastError: null;
+	private token: string | null = null;
+	private session: string | null = null;
+	private sessionName: string | null = null;
+	private lastError: unknown = null;
 	constructor(private key: { api: string; secret: string }) {
 		this.client = got.extend({
 			prefixUrl: "https://ws.audioscrobbler.com/2.0/",
@@ -136,11 +136,11 @@ export class LastFMClient {
 	isConnected() {
 		return !!this.session;
 	}
-	setAuthorize({ token, session, name }: { token: string; session?: string; name?: string }) {
-		this.token = token;
-		this.session = session;
+	setAuthorize({ token, session, name }: { token: string | null; session?: string | null; name?: string | null }) {
+		this.token = token ?? null;
+		this.session = session ?? null;
 		if (!this.session) this.sessionName = null;
-		else this.sessionName = name;
+		else this.sessionName = name ?? null;
 
 		this.lastError = null;
 	}

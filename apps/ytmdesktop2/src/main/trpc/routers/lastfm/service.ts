@@ -30,6 +30,8 @@ const lastFmClient =
 export default class LastFMProvider extends BaseProvider implements AfterInit, OnInit {
 	private lastNowPlayingId: string | null = null;
 	private lastScrobbledId: string | null = null;
+	private authProgress = false;
+	private authWindow: BrowserWindow | null = null;
 
 	constructor(private app: App) {
 		super("lastfm");
@@ -70,9 +72,43 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	async AfterInit() {
 		if (!this.views.toolbarView?.webContents.isLoading()) this.sendState();
 		this.views.toolbarView.webContents.on("did-finish-load", () => this.sendState());
+		// No debounce — disable must clear session / close auth immediately
+		this.getProvider("settings").onSettingChange("lastfm.enabled", (value) => void this.__onToggleEnabled(!!value));
 	}
-	private authProgress = false;
+
+	private async __onToggleEnabled(enabled: boolean) {
+		if (!this.client) return;
+		if (enabled) {
+			if (this.client.isConnected() || this.authProgress) {
+				this.sendState();
+				return;
+			}
+			await this.handleLastFMAuth();
+			return;
+		}
+		await this.disconnect();
+	}
+
+	/** Tear down auth window, session, and stored credentials. */
+	async disconnect() {
+		if (this.authWindow && !this.authWindow.isDestroyed()) {
+			this.authWindow.close();
+		}
+		this.authWindow = null;
+		this.authProgress = false;
+		this.lastNowPlayingId = null;
+		this.lastScrobbledId = null;
+		if (this.client) {
+			this.client.setAuthorize({ token: null, session: null });
+		}
+		const settings = this.getProvider("settings");
+		settings.set("lastfm.name", null);
+		await Promise.all([secureStore.delete(LASTFM_KEYTAR_SESSION), secureStore.delete(LASTFM_KEYTAR_TOKEN)]);
+		this.sendState();
+	}
+
 	private async authorizeSession() {
+		if (!this.client) return;
 		if (this.authProgress) return;
 		const token = await this.client.authorize();
 		const win = new BrowserWindow({
@@ -94,6 +130,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			fullscreenable: false,
 			modal: true,
 		});
+		this.authWindow = win;
 		await win.loadURL(this.client.getUserAuthorizeUrl());
 		const hasSuccessInfo = () => win.webContents.executeJavaScript(`!!document.querySelector("#mantle_skin .alert.alert-success")`);
 		const settings = this.getProvider("settings");
@@ -125,16 +162,22 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		this.authProgress = true;
 		this.sendState();
 		win.once("closed", () => {
+			this.authWindow = null;
 			this.authProgress = false;
+			// Auth cancelled without session — flip enabled back off
+			if (!this.client?.isConnected()) {
+				settings.set("lastfm.enabled", false);
+			}
 			this.sendState();
 		});
 	}
 	getState() {
 		if (!this.client) return { connected: false, name: null, processing: false, error: true };
 		const lastfm = this.getProvider("settings")?.get<LastFMSettings>("lastfm");
+		const enabled = !!lastfm?.enabled;
 		return {
-			connected: this.client.isConnected(),
-			name: this.client.getName() || (lastfm.enabled ? lastfm.name : null),
+			connected: enabled && this.client.isConnected(),
+			name: this.client.getName() || (enabled ? lastfm.name : null),
 			error: this.client.hasError(),
 			processing: this.authProgress,
 		};
@@ -146,7 +189,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		return this.getState();
 	}
 	async handleLastFMProfile() {
-		if (!this.client.isConnected()) return;
+		if (!this.client?.isConnected()) return;
 		const username = this.client.getName() || this.getProvider("settings")?.instance.lastfm.name;
 		return await shell.openExternal(`https://www.last.fm/user/${escapeHTML(username)}/`);
 	}
@@ -161,22 +204,14 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	async handleLastFMToggle(_, state: boolean) {
 		if (state === undefined) return null;
 		const settings = this.getProvider("settings");
+		// Setting change drives connect/disconnect via onSettingChange
 		settings.set("lastfm.enabled", !!state);
 		settings.saveToDrive();
-		if (state) {
-			this.client.setAuthorize({ token: null, session: null });
-			await this.handleLastFMAuth();
-		} else {
-			this.client.setAuthorize({ token: null, session: null });
-			settings.set("lastfm.name", null);
-			await Promise.all([secureStore.delete(LASTFM_KEYTAR_SESSION), secureStore.delete(LASTFM_KEYTAR_TOKEN)]);
-		}
-		this.sendState();
 		return this.getState();
 	}
 
 	async handleTrackStart(track: TrackData) {
-		if (!this.client.isConnected()) {
+		if (!this.client?.isConnected()) {
 			this.logger.debug("lastfm.handleTrackStart", track.video.videoId, "not connected");
 			return;
 		}
@@ -207,7 +242,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	}
 
 	async handleTrackChange(track: TrackData) {
-		if (!this.client.isConnected()) {
+		if (!this.client?.isConnected()) {
 			this.logger.debug("lastfm.handleTrackChange", track.video.videoId, "not connected");
 			return;
 		}
