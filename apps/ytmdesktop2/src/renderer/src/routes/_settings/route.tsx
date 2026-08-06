@@ -1,5 +1,6 @@
 import {
 	RiAlbumLine,
+	RiArrowRightSLine,
 	RiCodeSSlashLine,
 	RiDashboardLine,
 	RiDiscordLine,
@@ -14,9 +15,10 @@ import {
 	RiShieldKeyholeLine,
 } from "@remixicon/react";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { type ComponentType, type CSSProperties, memo, Suspense, useEffect } from "react";
+import { type ComponentType, type CSSProperties, memo, Suspense, useEffect, useState } from "react";
 import LogoIcon from "@/assets/logo.svg?react";
 import { ControlBar } from "@/components/control-bar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	Sidebar,
@@ -134,33 +136,38 @@ const SettingsNavSubItem = memo(function SettingsNavSubItem({
 });
 
 const ApiIntegrationsNav = memo(function ApiIntegrationsNav() {
-	const navigate = useNavigate();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const isSectionActive = pathname.startsWith("/api-integrations");
+	const [open, setOpen] = useState(isSectionActive);
+
+	useEffect(() => {
+		if (isSectionActive) setOpen(true);
+	}, [isSectionActive]);
 
 	return (
 		<SidebarMenuItem>
-			<SidebarMenuButton
-				isActive={isSectionActive}
-				onClick={() => {
-					if (pathname === "/api-integrations/api") return;
-					void navigate({ to: "/api-integrations/api" });
-				}}
-			>
-				<RiShieldKeyholeLine />
-				<span>API & Integrations</span>
-			</SidebarMenuButton>
-			<SidebarMenuSub>
-				{apiCoreSubs.map((item) => (
-					<SettingsNavSubItem key={item.to} {...item} />
-				))}
-				<li className="px-2 pt-2 pb-0.5" aria-hidden>
-					<span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Integrations</span>
-				</li>
-				{apiIntegrationSubs.map((item) => (
-					<SettingsNavSubItem key={item.to} {...item} />
-				))}
-			</SidebarMenuSub>
+			<Collapsible open={open} onOpenChange={setOpen} className="group/collapsible w-full">
+				<CollapsibleTrigger render={<SidebarMenuButton isActive={isSectionActive} />}>
+					<RiShieldKeyholeLine />
+					<span>API & Integrations</span>
+					<RiArrowRightSLine
+						className={cn("ml-auto transition-transform duration-150 ease-out", open && "rotate-90")}
+					/>
+				</CollapsibleTrigger>
+				<CollapsibleContent>
+					<SidebarMenuSub>
+						{apiCoreSubs.map((item) => (
+							<SettingsNavSubItem key={item.to} {...item} />
+						))}
+						<li className="px-2 pt-2 pb-0.5" aria-hidden>
+							<span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Integrations</span>
+						</li>
+						{apiIntegrationSubs.map((item) => (
+							<SettingsNavSubItem key={item.to} {...item} />
+						))}
+					</SidebarMenuSub>
+				</CollapsibleContent>
+			</Collapsible>
 		</SidebarMenuItem>
 	);
 });

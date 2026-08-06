@@ -21,7 +21,7 @@ const defaultSettings = {
 		authRequired: false,
 	},
 	app: {
-		beta: false,
+		channel: "stable" as "stable" | "beta" | "alpha",
 		autoupdate: true,
 		autostart: true,
 		autostartMinimized: true,

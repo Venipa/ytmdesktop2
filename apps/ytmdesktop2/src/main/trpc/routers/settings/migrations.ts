@@ -72,6 +72,18 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 			store.delete("customcss" as keyof SettingsStore);
 		},
 	},
+	{
+		hook(store) {
+			const data = store.store as SettingsStore & { app?: { beta?: boolean; channel?: string } };
+			if (data.app?.channel === "stable" || data.app?.channel === "beta" || data.app?.channel === "alpha") {
+				if ("beta" in (data.app ?? {})) store.delete("app.beta" as keyof SettingsStore);
+				return;
+			}
+			const legacyBeta = !!(data.app as { beta?: boolean } | undefined)?.beta;
+			store.set("app.channel", legacyBeta ? "beta" : "stable");
+			store.delete("app.beta" as keyof SettingsStore);
+		},
+	},
 ];
 
 export default migrations;

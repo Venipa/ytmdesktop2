@@ -132,7 +132,7 @@ export function SettingsInlineEditor({
 				<PopoverContent
 					align="end"
 					sideOffset={6}
-					className="w-64 gap-3 rounded-xl p-3 duration-0 data-open:animate-none data-closed:animate-none"
+					className="w-64 gap-3 rounded-xl p-3"
 				>
 					<PopoverHeader>
 						<PopoverTitle>{label ?? "Edit"}</PopoverTitle>

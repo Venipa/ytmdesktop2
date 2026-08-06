@@ -4,7 +4,12 @@ import SettingsProvider from "@main/trpc/routers/settings/service";
 import { createAppWindow } from "@main/windows/windowUtils";
 import { cacheWithFile } from "@shared/utils/filecache";
 import { apiRepoUrl } from "@shared/utils/github";
-import type { ProgressInfo, ReleaseNoteEntry, UpdateInfo } from "@shared/utils/updater";
+import type { ProgressInfo, ReleaseNoteEntry, UpdateChannel, UpdateInfo } from "@shared/utils/updater";
+import {
+	electronUpdaterChannelFor,
+	isVersionAllowedOnChannel,
+	parseUpdateChannel,
+} from "@shared/utils/updater";
 import { observable } from "@trpc/server/observable";
 import { App, BrowserWindow } from "electron";
 import { autoUpdater, CancellationToken, type UpdateInfo as ElectronUpdateInfo } from "electron-updater";
@@ -90,7 +95,7 @@ function noteFromFeed(notes: ElectronUpdateInfo["releaseNotes"], version: string
 async function fetchGithubReleaseRange(options: {
 	currentVersion: string;
 	targetVersion: string;
-	includePrerelease: boolean;
+	channel: UpdateChannel;
 }): Promise<ReleaseNoteEntry[]> {
 	const current = cleanVersion(options.currentVersion) ?? options.currentVersion;
 	const target = cleanVersion(options.targetVersion) ?? options.targetVersion;
@@ -100,14 +105,18 @@ async function fetchGithubReleaseRange(options: {
 			const res = await fetch(`${apiRepoUrl}/releases?per_page=50`, { headers: githubHeaders() });
 			if (!res.ok) throw new Error(`GitHub releases: ${res.status}`);
 			return (await res.json()) as GithubReleaseJson[];
-		}, `releases-${target}-gt-${current}`);
+		}, `releases-${options.channel}-${target}-gt-${current}`);
 
 		const entries: ReleaseNoteEntry[] = [];
 		for (const release of raw) {
 			if (release.draft) continue;
-			if (release.prerelease && !options.includePrerelease) continue;
 			const version = cleanVersion(release.tag_name ?? "");
 			if (!version) continue;
+
+			// Stable channel: GitHub non-prerelease only.
+			if (options.channel === "stable" && release.prerelease) continue;
+			if (!isVersionAllowedOnChannel(version, options.channel)) continue;
+
 			try {
 				if (!semver.gt(version, current, { loose: true })) continue;
 				if (!semver.lte(version, target, { loose: true })) continue;
@@ -130,12 +139,12 @@ async function fetchGithubReleaseRange(options: {
 
 async function toAppUpdateInfo(
 	info: ElectronUpdateInfo,
-	options: { currentVersion: string; includePrerelease: boolean },
+	options: { currentVersion: string; channel: UpdateChannel },
 ): Promise<UpdateInfo> {
 	let releases = await fetchGithubReleaseRange({
 		currentVersion: options.currentVersion,
 		targetVersion: info.version,
-		includePrerelease: options.includePrerelease,
+		channel: options.channel,
 	});
 
 	// Ensure the target version always appears, even if GitHub list miss it.
@@ -182,6 +191,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	private _autoUpdateCheckHandle: NodeJS.Timeout | null = null;
 	private _window: BrowserWindow | null = null;
 	private _showUpdateDialogPromise: Promise<void> | null = null;
+	private _ignoreUpdaterEvents = false;
 
 	constructor(private app: App) {
 		super("update");
@@ -215,12 +225,43 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		return this.settingsInstance.instance.app.autoupdate && !isDevelopment;
 	}
 
-	private isUpdateInRange(ver: string): boolean {
-		this.logger.debug("isUpdateInRange", { newVersion: ver, currentVersion: this.app.getVersion() });
+	private getChannel(): UpdateChannel {
+		return parseUpdateChannel(this.settingsInstance.get("app.channel"));
+	}
+
+	/** Sync electron-updater flags for a specific channel probe. */
+	private applyUpdaterFeed(channel: UpdateChannel) {
+		const allowPre = channel !== "stable";
+		autoUpdater.allowPrerelease = allowPre;
+		autoUpdater.channel = electronUpdaterChannelFor(channel);
+		this.logger.debug("applyUpdaterFeed", { channel, allowPrerelease: allowPre, feedChannel: autoUpdater.channel });
+	}
+
+	/** Sync feed to the user's selected channel. */
+	private applyUpdateChannel() {
+		this.applyUpdaterFeed(this.getChannel());
+	}
+
+	/** Drop offered/downloaded update so channel switches cannot install the wrong build. */
+	private clearPendingUpdate(reason: string) {
+		this.logger.debug("clearPendingUpdate", { reason });
+		this.onDownloadUpdateCancel();
+		this._updateDownloaded = false;
+		this._updateQueuedForInstall = false;
+		this.setProgress(null);
+		this.setUpdate(null, false);
+	}
+
+	private isUpdateInRange(ver: string, channel: UpdateChannel = this.getChannel()): boolean {
+		this.logger.debug("isUpdateInRange", { newVersion: ver, currentVersion: this.app.getVersion(), channel });
 		if (devShowUpdateDialog) return true;
+		if (!isVersionAllowedOnChannel(ver, channel)) {
+			this.logger.debug("Reject update — not allowed on channel", { ver, channel });
+			return false;
+		}
 		try {
 			return semver.gtr(ver, this.app.getVersion(), {
-				includePrerelease: !!this.settingsInstance.get("app.beta"),
+				includePrerelease: channel !== "stable",
 				loose: true,
 			});
 		} catch (err) {
@@ -255,11 +296,12 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	private resolveUpdateInfo(ev: ElectronUpdateInfo) {
 		return toAppUpdateInfo(ev, {
 			currentVersion: this.app.getVersion(),
-			includePrerelease: !!this.settingsInstance.get("app.beta"),
+			channel: this.getChannel(),
 		});
 	}
 
 	private async handleUpdateAvailable(ev: ElectronUpdateInfo) {
+		if (this._ignoreUpdaterEvents) return;
 		this.logger.debug("handleUpdateAvailable", { version: ev.version });
 		const inRange = this.isUpdateInRange(ev.version);
 		if (!inRange) {
@@ -272,6 +314,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	}
 
 	private async handleUpdateDownloaded(ev: ElectronUpdateInfo) {
+		if (this._ignoreUpdaterEvents) return;
 		this.setDownloaded(await this.resolveUpdateInfo(ev));
 		if (this.isAutoUpdate) this.quitAndInstall();
 	}
@@ -325,7 +368,6 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 
 	BeforeStart() {
 		autoUpdater.logger = this.logger;
-		const betaEnabled = this.settingsInstance.get("app.beta");
 		autoUpdater.setFeedURL({
 			provider: "github",
 			owner: GITHUB_FEED.owner,
@@ -334,24 +376,32 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		if (devShowUpdateDialog) autoUpdater.forceDevUpdateConfig = true;
 		autoUpdater.autoDownload = false;
 		autoUpdater.autoInstallOnAppQuit = isProduction;
-		autoUpdater.allowPrerelease = !!betaEnabled;
 		autoUpdater.fullChangelog = false;
+		this.applyUpdateChannel();
 
 		this.logger.debug(autoUpdater.updateConfigPath);
 		this.logger.debug("Updater Cache: " + (autoUpdater as unknown as { app: { baseCachePath: string } }).app.baseCachePath);
 
 		autoUpdater.on("update-available", (info) => void this.handleUpdateAvailable(info));
 		autoUpdater.on("update-not-available", () => {
+			if (this._ignoreUpdaterEvents) return;
 			this.setUpdate(null, false);
 			this.setChecking(false);
 		});
-		autoUpdater.on("update-cancelled", () => this.setChecking(false));
+		autoUpdater.on("update-cancelled", () => {
+			if (this._ignoreUpdaterEvents) return;
+			this.setChecking(false);
+		});
 		autoUpdater.on("error", (err) => {
+			if (this._ignoreUpdaterEvents) return;
 			this.logger.error("Updater error", err);
 			this.setChecking(false);
 			this.setProgress(null);
 		});
-		autoUpdater.on("checking-for-update", () => this.setChecking(true));
+		autoUpdater.on("checking-for-update", () => {
+			if (this._ignoreUpdaterEvents) return;
+			this.setChecking(true);
+		});
 		autoUpdater.on("download-progress", (ev) => {
 			if (!this._updateDownloaded) this.setProgress(ev);
 		});
@@ -365,7 +415,7 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	}
 
 	async AfterInit() {
-		this.settingsInstance.onSettingChange("app.beta", (enabled) => this.onBetaToggled(!!enabled), { debounce: 250 });
+		this.settingsInstance.onSettingChange("app.channel", () => this.onChannelChanged(), { debounce: 250 });
 		this.settingsInstance.onSettingChange("app.autoupdate", (enabled) => this.onAutoUpdateToggled(!!enabled), {
 			debounce: 250,
 		});
@@ -413,19 +463,58 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		return this._updateDownloaded;
 	}
 
+	/**
+	 * Probe the selected channel feed, and for beta/alpha also probe stable so a
+	 * newer stable release always wins over an older pre-release.
+	 */
+	private async resolveBestUpdate(): Promise<ElectronUpdateInfo | null> {
+		const channel = this.getChannel();
+		const candidates: ElectronUpdateInfo[] = [];
+
+		const probe = async (feed: UpdateChannel) => {
+			this.applyUpdaterFeed(feed);
+			try {
+				const result = await autoUpdater.checkForUpdates();
+				const info = result?.updateInfo;
+				if (info && this.isUpdateInRange(info.version, channel)) {
+					candidates.push(info);
+				}
+			} catch (err) {
+				this.logger.debug("Channel probe failed", { feed, err: err instanceof Error ? err.message : err });
+			}
+		};
+
+		await probe(channel);
+		if (channel !== "stable") {
+			await probe("stable");
+		}
+
+		this.applyUpdateChannel();
+
+		if (!candidates.length) return null;
+		candidates.sort((a, b) => {
+			const av = cleanVersion(a.version) ?? a.version;
+			const bv = cleanVersion(b.version) ?? b.version;
+			return semver.rcompare(av, bv, { loose: true });
+		});
+		return candidates[0] ?? null;
+	}
+
 	private async _checkUpdate() {
 		this.setChecking(true);
+		this._ignoreUpdaterEvents = true;
 		try {
-			autoUpdater.allowPrerelease = !!this.settingsInstance.get("app.beta");
-			const result = await autoUpdater.checkForUpdates();
-			if (!result?.updateInfo || !this.isUpdateInRange(result.updateInfo.version)) {
+			const best = await this.resolveBestUpdate();
+			if (!best) {
 				this.setUpdate(null, false);
 				throw new Error("No Update available");
 			}
-			const info = await this.resolveUpdateInfo(result.updateInfo);
+			const info = await this.resolveUpdateInfo(best);
 			this.setUpdate(info, true);
-			return { ...result, updateInfo: info };
+			return { updateInfo: info };
 		} finally {
+			this._ignoreUpdaterEvents = false;
+			this.applyUpdateChannel();
 			this.setChecking(false);
 		}
 	}
@@ -482,9 +571,12 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		}
 	}
 
-	onBetaToggled(enabled: boolean) {
-		autoUpdater.allowPrerelease = !!enabled;
-		void this.onCheckUpdate({ showDialog: false });
+	onChannelChanged() {
+		const channel = this.getChannel();
+		this.logger.debug("onChannelChanged", { channel });
+		this.applyUpdateChannel();
+		this.clearPendingUpdate("channel-change");
+		void this.onCheckUpdate({ showDialog: false }).catch((err) => this.logger.error("Channel change recheck failed", err));
 	}
 
 	onAutoUpdateToggled(autoUpdateEnabled: boolean) {

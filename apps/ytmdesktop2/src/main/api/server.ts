@@ -79,7 +79,7 @@ export async function startApiServer(options: {
 	app.get("/", (c) =>
 		c.json({
 			name: "YTMDesktop2 Api",
-			beta: config?.app?.beta,
+			channel: config?.app?.channel ?? "stable",
 			player: config?.player,
 			authRequired,
 			routes,

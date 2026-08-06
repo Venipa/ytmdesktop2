@@ -1,5 +1,6 @@
+import { UPDATE_CHANNEL_LABELS, type UpdateChannel } from "@shared/utils/updater";
 import { createFileRoute } from "@tanstack/react-router";
-import { SettingsCheckbox } from "@/components/settings-checkbox";
+import { SettingsSelect } from "@/components/settings-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
@@ -9,6 +10,18 @@ import { useUpdater } from "@/hooks/use-updater";
 export const Route = createFileRoute("/_settings/about")({
 	component: AboutSettingsPage,
 });
+
+const CHANNEL_DESCRIPTIONS: Record<UpdateChannel, string> = {
+	stable: "Official releases only. Recommended for most users.",
+	beta: "Release candidates (-rc.n). Also receives newer stable builds.",
+	alpha: "Early builds (-a.n). Also receives newer beta and stable builds.",
+};
+
+const CHANNEL_OPTIONS = (Object.keys(UPDATE_CHANNEL_LABELS) as UpdateChannel[]).map((value) => ({
+	value,
+	label: UPDATE_CHANNEL_LABELS[value],
+	description: CHANNEL_DESCRIPTIONS[value],
+}));
 
 function AboutSettingsPage() {
 	const appVersion = window.api.version;
@@ -64,9 +77,7 @@ function AboutSettingsPage() {
 				</CardHeader>
 				<CardContent>
 					<FieldGroup>
-						<SettingsCheckbox configKey="app.beta" description="Include pre-release builds when checking for updates.">
-							Include Pre Releases / Beta
-						</SettingsCheckbox>
+						<SettingsSelect configKey="app.channel" defaultValue="stable" label="Update channel" options={CHANNEL_OPTIONS} />
 					</FieldGroup>
 				</CardContent>
 			</Card>
