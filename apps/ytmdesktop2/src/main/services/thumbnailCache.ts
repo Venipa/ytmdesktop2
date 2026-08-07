@@ -4,11 +4,10 @@ import { getYoutubeView } from "@main/lifecycle";
 import { APP_THUMB_SCHEME, fromAppThumbRequest, isCachableThumbUrl } from "@shared/media/appThumbUrl";
 import { logger } from "@shared/utils/console";
 import { createHash } from "crypto";
-import { app, session as electronSession, protocol, type Session } from "electron";
+import { app, session as electronSession, net, type Session } from "electron";
 import type Encryption from "encryption.js";
-import { createReadStream, existsSync, promises as fs, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync } from "fs";
+import { existsSync, promises as fs, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync } from "fs";
 import { join } from "path";
-import { Readable } from "stream";
 
 const log = logger.child("thumb-cache");
 const MAX_ENTRIES = 200;
@@ -29,10 +28,14 @@ interface CacheEntry {
 	size: number;
 }
 
+function tick(): Promise<void> {
+	return new Promise((resolve) => setImmediate(resolve));
+}
+
 /**
  * Disk + in-flight cache for YT CDN thumbs.
  * Fetches via youtubeView session (cookies / UA / referer) so Google sees
- * the logged-in client — then streams the file to app windows (tray, etc.).
+ * the logged-in client — then serves bytes to app windows (tray, etc.).
  * Meta JSON encrypted with persistent secret from `thumb-cache.key`.
  */
 class ThumbnailCache {
@@ -58,27 +61,31 @@ class ThumbnailCache {
 		if (this.registered) return;
 		this.registered = true;
 		this.ensureDir();
-		this.getEncryptor(); // create/load thumb-cache.key early
+		this.getEncryptor();
 
-		protocol.handle(APP_THUMB_SCHEME, async (request) => {
+		// Bind to defaultSession — app windows share it.
+		electronSession.defaultSession.protocol.handle(APP_THUMB_SCHEME, async (request) => {
 			const remote = fromAppThumbRequest(request.url);
 			if (!remote) {
+				log.warn("bad thumb url", request.url);
 				return new Response("bad thumb url", { status: 400 });
 			}
 			try {
+				// Leave protocol stack before session network I/O (avoids nested-fetch stalls).
+				await tick();
 				const entry = await this.get(remote);
-				const body = Readable.toWeb(createReadStream(entry.filePath)) as ReadableStream;
-				return new Response(body, {
+				const buf = readFileSync(entry.filePath);
+				return new Response(new Uint8Array(buf), {
 					status: 200,
 					headers: {
 						"Content-Type": entry.mime,
-						"Content-Length": String(entry.size),
+						"Content-Length": String(buf.byteLength),
 						"Cache-Control": "public, max-age=31536000, immutable",
 						"Access-Control-Allow-Origin": "*",
 					},
 				});
 			} catch (err) {
-				log.warn("protocol serve failed", remote, err);
+				log.error("protocol serve failed", remote, err);
 				return new Response(null, { status: 502 });
 			}
 		});
@@ -178,8 +185,15 @@ class ThumbnailCache {
 			"Accept-Language": "en-US,en;q=0.9",
 		};
 
-		// session.fetch attaches this partition's cookies (logged-in YTM).
-		const res = await ses.fetch(url, { headers, bypassCustomProtocolHandlers: true });
+		// Prefer session.fetch (cookies). Fall back to net.fetch if session call fails
+		// (e.g. nested protocol / partition edge cases in packaged builds).
+		let res: Response;
+		try {
+			res = await ses.fetch(url, { headers, bypassCustomProtocolHandlers: true });
+		} catch (err) {
+			log.warn("session.fetch failed, trying net.fetch", url, err);
+			res = await net.fetch(url, { headers, bypassCustomProtocolHandlers: true });
+		}
 
 		if (!res.ok) {
 			throw new Error(`thumb fetch ${res.status} ${url}`);
