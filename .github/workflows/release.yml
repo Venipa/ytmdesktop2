@@ -35,18 +35,33 @@ jobs:
           sudo apt update
           sudo apt install libdbus-1-dev elfutils
       - if: matrix.os == 'ubuntu-latest'
-        name: install ubuntu snap
-        continue-on-error: true
+        name: install ubuntu snap + lxd
         run: |
-          sudo apt install snapd
+          sudo apt install -y snapd
           sudo snap install snapcraft --classic
+          # core24 snapcraft.useLXD — LXD must be ready before electron-builder
+          sudo snap install lxd
+          sudo lxd waitready --timeout=60
+          sudo lxd init --auto
+          sudo usermod --append --groups lxd "$USER"
+          # Docker FORWARD rules break LXD networking on GitHub-hosted runners
+          # https://documentation.ubuntu.com/lxd/en/latest/howto/network_bridge_firewalld/
+          sudo iptables -I DOCKER-USER -j ACCEPT || true
+          sudo iptables -P FORWARD ACCEPT || true
+          # newgrp does not work in Actions; refresh group via sudo --user
+          # https://github.com/actions/runner-images/issues/9932
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxc info
 
       - if: matrix.os == 'ubuntu-latest'
         name: install ubuntu flatpak
-        continue-on-error: true
         run: |
-          sudo apt install flatpak flatpak-builder
+          sudo apt install -y flatpak flatpak-builder
           sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          # electron-builder flatpak target needs Platform/Sdk/BaseApp matching electron-builder.yml
+          sudo flatpak install -y flathub \
+            org.freedesktop.Platform/x86_64/24.08 \
+            org.freedesktop.Sdk/x86_64/24.08 \
+            org.electronjs.Electron2.BaseApp/x86_64/24.08
 
       - if: matrix.os == 'windows-2025-vs2026'
         name: install windows deps
@@ -110,7 +125,14 @@ jobs:
           chmod 600 .secrets/AuthKey.p8
 
       - name: Build Electron release
-        run: pnpm release
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            # Pick up lxd group membership from prior usermod (newgrp is a no-op in Actions)
+            sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- pnpm release
+          else
+            pnpm release
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
