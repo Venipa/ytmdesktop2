@@ -27,8 +27,10 @@ allowBuilds:
 
 # @electron/rebuild@4 pulls node-gyp@11 which cannot detect VS 2026 (18.x).
 # node-gyp >=12.1 required on windows-2025-vs2026 runners.
+# node-abi <4.32 cannot resolve Electron 43 ABI (installAppDeps / @electron/rebuild).
 overrides:
   node-gyp: ^13.0.1
+  node-abi: ^4.33.0
 
 minimumReleaseAgeExclude:
   - '@venipa/xosms-darwin-arm64@0.8.3'
