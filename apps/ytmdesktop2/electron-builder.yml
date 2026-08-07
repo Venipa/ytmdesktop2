@@ -109,6 +109,10 @@ snapcraft:
     description: Unofficial YouTube Music desktop client with Discord RPC, Last.fm, and local API.
     # core24 allows Wayland by default; set forceX11: true to disable
     useLXD: true
+    plugs:
+      - browser-support
+    executableArgs:
+      - --no-sandbox
     slots:
       - mpris:
           name: chromium
