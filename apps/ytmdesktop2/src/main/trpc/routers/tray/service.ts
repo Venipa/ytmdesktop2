@@ -1,16 +1,18 @@
-import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
+import { platform } from "@electron-toolkit/utils";
+import { AfterInit, BaseProvider, OnDestroy, OnInit } from "@main/core/baseProvider";
 import { createTrayNativeImage } from "@main/domain/trayIcon";
 import { createTrayMenu } from "@main/domain/trayMenu";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import TrayViewProvider from "@main/trpc/routers/trayView/service";
 import { App, Menu, Tray } from "electron";
 
-export default class TrayProvider extends BaseProvider implements AfterInit, OnDestroy {
+export default class TrayProvider extends BaseProvider implements OnInit, AfterInit, OnDestroy {
 	get settingsInstance(): SettingsProvider {
 		return this.getProvider("settings");
 	}
 	private _tray!: Tray;
 	private _menu: Menu | null = null;
+	private _settingsBound = false;
 
 	get Tray() {
 		return this._tray;
@@ -20,12 +22,21 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 		super("tray");
 	}
 
+	/** Create menu-bar / notification-area icon as soon as app is ready — do not wait for window load. */
+	async OnInit() {
+		await this.initializeTray();
+	}
+
 	async AfterInit() {
-		this.settingsInstance.onSettingChange(
-			["app.autostart", "app.autoupdate", "app.minimizeTrayOverride", "discord.enabled", "discord.buttons", "themes.enabled", "themes.customFile", "themes.selected"],
-			() => this.onSettingsChange(),
-			{ debounce: 50 },
-		);
+		if (!this._settingsBound) {
+			this._settingsBound = true;
+			this.settingsInstance.onSettingChange(
+				["app.autostart", "app.autoupdate", "app.minimizeTrayOverride", "discord.enabled", "discord.buttons", "themes.enabled", "themes.customFile", "themes.selected"],
+				() => this.onSettingsChange(),
+				{ debounce: 50 },
+			);
+		}
+		// Ensure tray exists even if OnInit was skipped somehow.
 		await this.initializeTray();
 	}
 
@@ -39,35 +50,70 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 	}
 
 	async initializeTray() {
-		// AfterInit can re-run on window reload — reuse tray so macOS menu bar does not flicker/drop.
 		if (this._tray && !this._tray.isDestroyed()) {
-			this.buildMenu();
+			try {
+				this.buildMenu();
+			} catch (err) {
+				this.logger.error("Failed to rebuild tray menu", err);
+			}
 			return this._tray;
 		}
 
-		const icon = createTrayNativeImage();
-		if (icon.isEmpty()) {
-			this.logger.error("Tray icon NativeImage is empty — menu bar icon will be invisible");
-		}
+		try {
+			const icon = createTrayNativeImage();
+			if (icon.isEmpty()) {
+				this.logger.error("Tray NativeImage empty — status item may be invisible");
+			} else {
+				this.logger.debug("Tray icon ready", icon.getSize(), { template: icon.isTemplateImage() });
+			}
 
-		this._tray = new Tray(icon);
-		this._tray.setToolTip("YouTube Music for Desktop");
-		// Do not setContextMenu — macOS would steal left-click for the menu.
-		this.buildMenu();
-		this._tray.setIgnoreDoubleClickEvents(true);
-		this._tray.on("click", () => {
-			void this.trayView.toggle();
-		});
-		// right-click + Ctrl+click (macOS) → context menu
-		this._tray.on("right-click", (_ev, bounds) => {
-			const menu = this._menu ?? this.buildMenu();
-			this._tray.popUpContextMenu(menu, bounds);
-		});
-		return this._tray;
+			this._tray = new Tray(icon);
+			this._tray.setToolTip("YouTube Music for Desktop");
+
+			// macOS: if glyph fails, short title still creates a visible status item.
+			if (platform.isMacOS && icon.isEmpty()) {
+				this._tray.setTitle("YT");
+			}
+
+			try {
+				this.buildMenu();
+			} catch (err) {
+				this.logger.error("Failed to build tray menu", err);
+			}
+
+			// Do not setContextMenu — macOS would steal left-click for the menu.
+			this._tray.setIgnoreDoubleClickEvents(true);
+			this._tray.on("click", () => {
+				void this.trayView.toggle();
+			});
+			this._tray.on("right-click", (_ev, bounds) => {
+				try {
+					const menu = this._menu ?? this.buildMenu();
+					this._tray.popUpContextMenu(menu, bounds);
+				} catch (err) {
+					this.logger.error("Failed to pop tray menu", err);
+				}
+			});
+
+			this.logger.debug("Tray created", {
+				platform: process.platform,
+				bounds: this._tray.getBounds(),
+			});
+			return this._tray;
+		} catch (err) {
+			this.logger.error("initializeTray failed", err);
+			return undefined as unknown as Tray;
+		}
 	}
 
 	private onSettingsChange() {
-		if (this._tray) this.buildMenu();
+		if (this._tray && !this._tray.isDestroyed()) {
+			try {
+				this.buildMenu();
+			} catch (err) {
+				this.logger.error("Failed to rebuild tray menu on settings change", err);
+			}
+		}
 	}
 
 	async OnDestroy() {

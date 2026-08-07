@@ -18,6 +18,7 @@ files:
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig*.json}"
 asarUnpack:
   - resources/**
+  - "**/{trayTemplate,trayTemplate-2x,16x16,32x32,favicon}.*"
 win:
   executableName: ytmdesktop
   artifactName: ${name}-${version}-setup.${ext}
