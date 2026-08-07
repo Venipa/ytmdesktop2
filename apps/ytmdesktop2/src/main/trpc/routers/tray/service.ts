@@ -1,9 +1,9 @@
 import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
+import { createTrayNativeImage } from "@main/domain/trayIcon";
 import { createTrayMenu } from "@main/domain/trayMenu";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import TrayViewProvider from "@main/trpc/routers/trayView/service";
 import { App, Menu, Tray } from "electron";
-import TracIconPath from "~/build/favicon.ico?asset";
 
 export default class TrayProvider extends BaseProvider implements AfterInit, OnDestroy {
 	get settingsInstance(): SettingsProvider {
@@ -54,7 +54,12 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 		}
 
 		try {
-			this._tray = new Tray(TracIconPath);
+			const icon = createTrayNativeImage();
+			if (icon.isEmpty()) {
+				this.logger.error("Tray icon empty — menu bar / notification area icon may be invisible");
+			}
+
+			this._tray = new Tray(icon);
 			this._tray.setToolTip("YouTube Music for Desktop");
 			// Do not setContextMenu — macOS would steal left-click for the menu.
 			try {
