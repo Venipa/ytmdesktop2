@@ -62,6 +62,8 @@ dmg:
 linux:
   executableName: ytmdesktop2
   description: Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.
+  # Match Electron WM_CLASS / app_id to installed .desktop (see package.json desktopName).
+  syncDesktopName: true
   target:
     - target: appImage
       arch: x64
@@ -80,6 +82,9 @@ linux:
   icon: build/icon.icns
 # Override EB defaults (http-parser is AUR-only; breaks Arch/CachyOS installs).
 pacman:
+  # Arch package names cannot contain spaces (extraMetadata.name is the product title).
+  packageName: ytmdesktop2
+  artifactName: ytmdesktop2-${version}.${arch}.${ext}
   depends:
     # Core Electron / GTK
     - gtk3

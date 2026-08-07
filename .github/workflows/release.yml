@@ -33,7 +33,7 @@ jobs:
         name: update apt and install utils
         run: |
           sudo apt update
-          sudo apt install libdbus-1-dev elfutils
+          sudo apt install -y libdbus-1-dev elfutils libarchive-tools
       - if: startsWith(matrix.os, 'ubuntu')
         name: install ubuntu snap + lxd
         run: |

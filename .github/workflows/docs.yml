@@ -64,6 +64,7 @@ jobs:
           count="$(gh api "repos/${{ github.repository }}" --jq '.stargazers_count')"
           echo "count=${count}" >> "$GITHUB_OUTPUT"
 
+      # Build fetches GitHub releases (stable + prerelease beta/alpha) via GITHUB_TOKEN
       - name: Build static site
         working-directory: apps/docs
         run: pnpm run build:pages

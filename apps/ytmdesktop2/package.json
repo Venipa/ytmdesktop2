@@ -4,6 +4,7 @@
 	"version": "0.0.0",
 	"private": false,
 	"author": "Venipa <admin@venipa.net>",
+	"desktopName": "ytmdesktop2",
 	"main": "./out/main/index.js",
 	"scripts": {
 		"format": "prettier --write .",

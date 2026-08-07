@@ -1,8 +1,9 @@
 name: Trigger docs workflow on release
 
-# Release events run on tag refs (e.g. v1.0.2). The github-pages environment
-# rejects those tags via deployment branch/tag protection. Dispatch Deploy docs
-# on the default branch instead so the deploy ref is allowed.
+# Release events run on tag refs (e.g. v1.0.2 / v1.0.2-rc.1). The github-pages
+# environment rejects those tags via deployment branch/tag protection. Dispatch
+# Deploy docs on the default branch instead so the deploy ref is allowed.
+# Includes stable + prerelease (beta/alpha) publishes so channel downloads refresh.
 on:
   release:
     types: [published]
