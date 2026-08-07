@@ -66,7 +66,7 @@
 		"motion": "^13.0.0",
 		"next-themes": "^0.4.6",
 		"node-fetch": "^2.6.7",
-		"node-vibrant": "^3.2.1-alpha.1",
+		"node-vibrant": "^4.0.4",
 		"non.geist": "^1.0.4",
 		"pretty-bytes": "^7.0.0",
 		"react": "^19.2.8",

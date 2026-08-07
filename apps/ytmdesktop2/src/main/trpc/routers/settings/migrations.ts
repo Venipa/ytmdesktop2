@@ -84,6 +84,11 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 			store.delete("app.beta" as keyof SettingsStore);
 		},
 	},
+	{
+		hook(store) {
+			store.set("themes.blur", false);
+		},
+	},
 ];
 
 export default migrations;

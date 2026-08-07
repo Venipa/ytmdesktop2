@@ -1,0 +1,24 @@
+// Glass / backdrop blur — toggled via themes.blur
+
+ytmusic-player-page.ytmusic-app {
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(20px);
+}
+
+#player-bar-background.ytmusic-app-layout {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+tp-yt-paper-dialog,
+tp-yt-paper-listbox.ytmusic-menu-popup-renderer {
+  backdrop-filter: blur(10px);
+}
+
+// Soften thumbnail background when that chrome layer is on
+ytmusic-player-page:not([is-mweb-modernization-enabled]) .content.ytmusic-player-page:before {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 1;
+  filter: saturate(120%) brightness(1.15) opacity(0.33) blur(16px);
+}

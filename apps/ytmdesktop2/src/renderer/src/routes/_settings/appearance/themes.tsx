@@ -38,6 +38,9 @@ function ThemesSettingsPage() {
 				<FieldGroup>
 					<SettingsCheckbox configKey="themes.enabled">Enable Themes</SettingsCheckbox>
 					<SettingsCheckbox configKey="themes.thumbnailBackground">Enable Thumbnail Background</SettingsCheckbox>
+					<SettingsCheckbox configKey="themes.blur" description="Glass blur on player, bar, and dialogs. Turn off for better performance.">
+						Enable Blur
+					</SettingsCheckbox>
 					{enabled && !enabledPending && (
 						<>
 							<SettingsSelect configKey="themes.selected" label="Theme" defaultValue="default" options={themeOptions} />

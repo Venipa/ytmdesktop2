@@ -5,6 +5,8 @@ export interface ThemesConfig {
 	customFile: string | null;
 	watching: boolean;
 	thumbnailBackground?: boolean;
+	/** Glass / backdrop blur chrome (player page, bar, dialogs, thumbnail soften). */
+	blur?: boolean;
 }
 
 /** Legacy settings shape (pre-themes migration). */

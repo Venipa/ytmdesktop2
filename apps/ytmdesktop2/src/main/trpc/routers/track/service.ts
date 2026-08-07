@@ -9,7 +9,7 @@ import { createLogger } from "@shared/utils/console";
 import { observable } from "@trpc/server/observable";
 import { ipcMain } from "electron";
 import { clamp, clone, debounce } from "lodash-es";
-import Vibrant from "node-vibrant";
+import { Vibrant } from "node-vibrant/node";
 import { firstBy } from "thenby";
 
 export type TrackState = {

@@ -1,4 +1,4 @@
-// blurred thumbnail background
+// Thumbnail background (blur lives in chrome/blur.scss via themes.blur)
 
 ytmusic-player-page:not([is-mweb-modernization-enabled]) .content.ytmusic-player-page:before {
   content: "";
@@ -7,9 +7,7 @@ ytmusic-player-page:not([is-mweb-modernization-enabled]) .content.ytmusic-player
   background-position: center;
   background-repeat: no-repeat;
   background-color: var(--ytmd-thumbnail-accent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  filter: saturate(120%) brightness(1.15) opacity(0.33) blur(16px);
+  opacity: 0.33;
   mix-blend-mode: exclusion;
   border-radius: 8px;
   overflow: hidden;

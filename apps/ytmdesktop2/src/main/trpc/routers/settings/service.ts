@@ -55,6 +55,7 @@ const defaultSettings = {
 		customFile: null,
 		watching: false,
 		thumbnailBackground: true,
+		blur: true,
 	} as ThemesConfig,
 	state: {
 		currentUrl: null,

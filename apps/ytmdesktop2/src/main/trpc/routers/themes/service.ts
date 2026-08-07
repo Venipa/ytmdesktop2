@@ -1,6 +1,7 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
 import { onMusicReload } from "@main/lifecycle";
 import SettingsProvider from "@main/trpc/routers/settings/service";
+import chromeBlurScss from "@main/trpc/routers/themes/assets/chrome/blur.scss?raw";
 import chromeScrollbarScss from "@main/trpc/routers/themes/assets/chrome/scrollbar.scss?raw";
 import chromeThumbnailScss from "@main/trpc/routers/themes/assets/chrome/thumbnail-bg.scss?raw";
 import type { App } from "electron";
@@ -21,6 +22,7 @@ export default class ThemesProvider extends BaseProvider implements AfterInit {
 	private injector: CssInjector | null = null;
 	private chromeCss: string | null = null;
 	private thumbnailCss: string | null = null;
+	private blurCss: string | null = null;
 	private readonly DEBOUNCE_DELAY = 1000;
 	private reapplyChain: Promise<void> = Promise.resolve();
 
@@ -44,6 +46,7 @@ export default class ThemesProvider extends BaseProvider implements AfterInit {
 				customFile: null,
 				watching: false,
 				thumbnailBackground: true,
+				blur: true,
 			}
 		);
 	}
@@ -66,6 +69,9 @@ private boundWebContentsId: number | null = null;
 		}
 		if (!this.thumbnailCss) {
 			this.thumbnailCss = await this.compiler.compileString(chromeThumbnailScss, "chrome:thumbnail");
+		}
+		if (!this.blurCss) {
+			this.blurCss = await this.compiler.compileString(chromeBlurScss, "chrome:blur");
 		}
 	}
 
@@ -163,6 +169,11 @@ private boundWebContentsId: number | null = null;
 					await injector.inject("thumbnail", this.thumbnailCss);
 				}
 
+				const blurOn = config.blur ?? true;
+				if (blurOn && this.blurCss) {
+					await injector.inject("blur", this.blurCss);
+				}
+
 				if (config.enabled) await this.updateTheme();
 			});
 		return this.reapplyChain;
@@ -174,6 +185,17 @@ private boundWebContentsId: number | null = null;
 		await this.ensureChromeCompiled();
 		if (enabled && this.thumbnailCss) await injector.inject("thumbnail", this.thumbnailCss);
 		else await injector.clear("thumbnail");
+		// Blur softens thumbnail ::before — re-inject after so filter wins cascade.
+		const blurOn = this.getConfig().blur ?? true;
+		if (blurOn) await this.applyBlur(true);
+	}
+
+	private async applyBlur(enabled: boolean): Promise<void> {
+		const injector = this.getInjector();
+		if (!injector) return;
+		await this.ensureChromeCompiled();
+		if (enabled && this.blurCss) await injector.inject("blur", this.blurCss);
+		else await injector.clear("blur");
 	}
 
 	private async onThemesSettingChange(_value: unknown, _prev: unknown, key: string): Promise<void> {
@@ -182,6 +204,11 @@ private boundWebContentsId: number | null = null;
 
 		if (key === "themes.thumbnailBackground") {
 			await this.applyThumbnail(!!config.thumbnailBackground);
+			return;
+		}
+
+		if (key === "themes.blur") {
+			await this.applyBlur(!!config.blur);
 			return;
 		}
 
@@ -229,7 +256,7 @@ private boundWebContentsId: number | null = null;
 		await this.ensureChromeCompiled();
 
 		this.settingsInstance.onSettingChange(
-			["themes.enabled", "themes.selected", "themes.customFile", "themes.watching", "themes.thumbnailBackground"],
+			["themes.enabled", "themes.selected", "themes.customFile", "themes.watching", "themes.thumbnailBackground", "themes.blur"],
 			(value, prev, key) => void this.onThemesSettingChange(value, prev, key),
 			{ debounce: 1000 },
 		);
