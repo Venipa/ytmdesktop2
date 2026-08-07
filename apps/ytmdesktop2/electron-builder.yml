@@ -69,6 +69,8 @@ linux:
       arch: arm64
     - target: deb
       arch: x64
+    - target: pacman
+      arch: x64
     - target: flatpak
       arch: x64
     - target: snap
@@ -76,6 +78,30 @@ linux:
   maintainer: youtube-music.app
   category: AudioVideo
   icon: build/icon.icns
+# Override EB defaults (http-parser is AUR-only; breaks Arch/CachyOS installs).
+pacman:
+  depends:
+    # Core Electron / GTK
+    - gtk3
+    - nss
+    - at-spi2-core
+    - libsecret
+    - xdg-utils
+    # Display: Wayland + X11 (ozone-platform-hint=auto in app)
+    - wayland
+    - libxkbcommon
+    - libxss
+    - libxtst
+    # GPU (Flatpak --device=dri)
+    - libdrm
+    - mesa
+    # Audio (Flatpak --socket=pulseaudio; PipeWire-Pulse on CachyOS)
+    - libpulse
+    - alsa-lib
+    # Desktop integration (notifications, tray, MPRIS/session bus)
+    - libnotify
+    - libayatana-appindicator
+    - dbus
 flatpak:
   useWaylandFlags: true
   category: AudioVideo

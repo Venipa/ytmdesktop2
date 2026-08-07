@@ -62,7 +62,6 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 				});
 			}
 		}
-		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
 	}
 
 	async AfterInit() {

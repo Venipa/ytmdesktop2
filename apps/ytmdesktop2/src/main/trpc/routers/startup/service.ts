@@ -29,7 +29,7 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 			// todo: testing on other os platforms
 			app.commandLine.appendSwitch("force-device-scale-factor", "1");
 		if (platform.isLinux && GTK_VERSION) this.app.commandLine.appendSwitch("gtk-version", GTK_VERSION);
-		this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
+		if (platform.isLinux) this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
 		// better gpu performance - for faster blur effect
 		this.app.commandLine.appendSwitch("disable-gpu-sandbox");
 		this.app.commandLine.appendSwitch(
