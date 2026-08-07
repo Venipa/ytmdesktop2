@@ -1,0 +1,5 @@
+{
+  "title": "Internals",
+  "pages": ["index", "thumbnail-cache", "encrypted-stores"],
+  "defaultOpen": true
+}

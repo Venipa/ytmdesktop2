@@ -1,0 +1,37 @@
+---
+title: Encrypted stores
+description: Why secrets live in encrypted on-disk stores
+---
+
+YTMDesktop2 keeps sensitive auth data in **encrypted stores** instead of plain settings files.
+
+## Why we use them
+
+App settings (`app-settings.yml`) are readable YAML — fine for zoom, themes, and toggles. Credentials are different: if someone copies your user-data folder, session tokens should not be sitting there in clear text.
+
+Encrypted stores wrap those values with AES before they hit disk, so Last.fm login (and future service integrations) stay protected even when the rest of the profile is easy to inspect.
+
+## Why it is secure
+
+- Each store has its own secret, kept in a separate `.key` file under user data.
+- Payloads are encrypted with **AES-256-CBC** via `encryption.js` before write.
+- Decrypt runs only in the main process when the app needs the value — renderers never see the raw key material.
+- A damaged or foreign ciphertext fails closed: the app logs the error and starts empty rather than exposing garbage as secrets.
+
+This is local encryption at rest (device access still matters). It is not a substitute for OS account security, but it stops casual reading of credential files.
+
+## What we store
+
+| Data | Purpose |
+| --- | --- |
+| **Last.fm** session / token | Scrobbling and Now Playing |
+| **Future internal service integrations** | Same encrypted credentials path as we add more services |
+
+Plain settings and UI state stay in normal YAML stores and are not mixed with these secrets.
+
+## Related
+
+<Cards>
+  <Card title="Last.fm" href="/docs/features/lastfm" />
+  <Card title="Internals" href="/docs/internals" />
+</Cards>

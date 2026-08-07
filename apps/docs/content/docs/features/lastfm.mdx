@@ -19,6 +19,7 @@ Connect your Last.fm account so YTMDesktop2 can update **Now Playing** and scrob
 
 - Switching tracks mid-listen abandons a pending scrobble unless the threshold was already crossed.
 - Last.fm updates are debounced so rapid skipping does not spam the API.
+- Auth tokens are kept in an [encrypted store](/docs/internals/encrypted-stores) — clearing app data or the key file requires re-auth.
 - Disconnect or toggle Last.fm anytime from the same settings page.
 
 ## Related
@@ -26,4 +27,5 @@ Connect your Last.fm account so YTMDesktop2 can update **Now Playing** and scrob
 <Cards>
   <Card title="All features" href="/docs/features" />
   <Card title="Discord Rich Presence" href="/docs/features/discord" />
+  <Card title="Encrypted stores" href="/docs/internals/encrypted-stores" />
 </Cards>

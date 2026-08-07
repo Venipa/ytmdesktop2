@@ -1,0 +1,62 @@
+---
+title: Thumbnail cache
+description: Disk cache and ytmd-thumb protocol for album art
+---
+
+YTMDesktop2 caches YouTube Music album art on disk and serves it to app chrome over `ytmd-thumb://`.
+
+## Who uses it
+
+| Surface | Role |
+| --- | --- |
+| [Tray view](/docs/features/tray-view) | Cover art in the tray popup (`toAppThumbUrl`) |
+| [Mini player](/docs/features/mini-player) | Cover art in the compact window (`toAppThumbUrl`) |
+| Track accent | Palette / accent color from the cached image buffer |
+| macOS Touch Bar | Artwork bytes via `getBuffer` |
+
+The embedded YouTube Music webview does **not** use this cache — it loads CDN thumbs itself.
+
+## Why it exists
+
+Tray view and mini player are separate windows from the YouTube Music webview. Loading CDN URLs directly often fails without the logged-in session cookies and browser-like headers. The cache:
+
+1. Fetches thumbs through the YouTube Music session (cookies, user agent, referer).
+2. Stores image bytes under the app user-data folder.
+3. Serves them back to tray view, mini player, and other app UI over `ytmd-thumb://`.
+
+## How tray view and mini player load art
+
+Both map remote URLs with `toAppThumbUrl()`:
+
+- HTTPS thumbs on `googleusercontent.com`, `ggpht.com`, or `ytimg.com` → `ytmd-thumb://i/<base64url>`
+- Anything else stays as the original URL
+
+The main process handles `ytmd-thumb` on the default session (shared by tray / mini player) and returns cached bytes, or fetches once then caches.
+
+## Storage
+
+| Item | Location / limit |
+| --- | --- |
+| Cache directory | `<userData>/thumb-cache/` |
+| Entry key | SHA-256 of the remote URL |
+| Files per entry | Binary blob + encrypted `.json` meta |
+| Max entries | 200 (oldest pruned) |
+| Meta encryption | AES-256-CBC via `thumb-cache.key` |
+
+Meta stores URL, MIME type, size, and save time. Invalid or decrypt-failed meta triggers a refetch.
+
+## Fetch behavior
+
+- Prefer `youtubeView` session `fetch` so Google sees the logged-in client.
+- Spoof image `Sec-Fetch-*` / `Sec-CH-UA` headers similar to a real Music page request.
+- Fall back to `net.fetch` if session fetch fails.
+- In-flight requests are deduped per URL key.
+- Successful responses are served with long-lived `Cache-Control` to the renderer.
+
+## Related
+
+<Cards>
+  <Card title="Tray view" href="/docs/features/tray-view" />
+  <Card title="Mini player" href="/docs/features/mini-player" />
+  <Card title="Internals" href="/docs/internals" />
+</Cards>
