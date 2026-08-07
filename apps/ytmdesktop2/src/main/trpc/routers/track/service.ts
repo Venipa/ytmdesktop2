@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import { createSendHandler } from "@main/ipc/ipc";
 import { serverMain } from "@main/ipc/serverEvents";
 import { getAppWindows, getLifecycleContext, getYoutubeView, onAfterInit, requireAppWindows } from "@main/lifecycle";
+import { thumbnailCache } from "@main/services/thumbnailCache";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import type { TrackData } from "@shared/track/trackData";
 import { createLogger } from "@shared/utils/console";
@@ -709,11 +710,11 @@ export class TrackService {
 		const videoId = track.video.videoId;
 		if (this._currentPallete && this._currentPallete.id === videoId) return this._currentPallete.color;
 
-		const color = await fetch(thumbnailUrl)
-			.then((th) => th.arrayBuffer())
-			.then((file) => Vibrant.from(Buffer.from(file)))
-			.then((clr) => clr.getPalette())
-			.then((clr) => clr.Vibrant?.hex ?? null)
+		const color = await thumbnailCache
+			.getBuffer(thumbnailUrl)
+			.then((file) => (file ? Vibrant.from(file) : null))
+			.then((clr) => clr?.getPalette() ?? null)
+			.then((clr) => clr?.Vibrant?.hex ?? null)
 			.catch((err) => {
 				this.logger.error("Error extracting accent color:", err);
 				return null;

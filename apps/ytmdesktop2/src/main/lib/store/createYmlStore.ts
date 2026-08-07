@@ -35,6 +35,7 @@ export function createEncryption(name: string, algorithm: "aes-256-gcm" | "aes-2
 	return new Encryption({ secret: getOrCreateEncryptionSecret(name), algorithm });
 }
 
+
 export const createYmlStore = <T extends Record<string, any> = Record<string, any>>(name: string, options: Options<T> = {} as Options<T>) =>
 	new Store<T>({
 		ext: ".yml",

@@ -1,3 +1,4 @@
+import { toAppThumbUrl } from "@shared/media/appThumbUrl";
 import { createFileRoute } from "@tanstack/react-router";
 import { cva } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
@@ -65,7 +66,6 @@ function useReadyImage(src: string | null | undefined): string | null {
 		}
 		let cancelled = false;
 		const img = new Image();
-		img.crossOrigin = "anonymous";
 		const done = () => {
 			if (!cancelled) setReady((prev) => (prev === src ? prev : src));
 		};
@@ -311,7 +311,7 @@ function TrayViewPage() {
 		document.title = "YouTube Music - Tray";
 	}, []);
 
-	const thumbnail = track?.meta?.thumbnail;
+	const thumbnail = toAppThumbUrl(track?.meta?.thumbnail);
 	const playing = !!playState?.playing;
 	const title = track?.video?.title ?? "Nothing playing";
 	const artist = track?.video?.author ?? "";

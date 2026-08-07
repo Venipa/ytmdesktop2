@@ -1,3 +1,4 @@
+import { toAppThumbUrl } from "@shared/media/appThumbUrl";
 import { createFileRoute } from "@tanstack/react-router";
 import { cva, type VariantProps } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
@@ -247,7 +248,7 @@ function MiniPlayerPage() {
 		setStayOnTopLocal(result);
 	}
 
-	const thumbnail = track?.meta?.thumbnail;
+	const thumbnail = toAppThumbUrl(track?.meta?.thumbnail);
 	const playing = !!playState?.playing;
 
 	const time = useMemo((): [string, string, number] | null => {

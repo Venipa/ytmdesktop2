@@ -4,6 +4,7 @@ import { attachTrayState } from "@main/handlers/trayState";
 import { initializeCustomElectronEnvironment } from "@main/infra/electron";
 import { serverMain } from "@main/ipc/serverEvents";
 import { runLifecycle, setLifecycleContext } from "@main/lifecycle";
+import { thumbnailCache } from "@main/services/thumbnailCache";
 import { attachTrpcWindow, initElectronTrpc } from "@main/trpc/handler";
 import { WindowManager } from "@main/windows/windowManager";
 import { onWindowLoad } from "@main/windows/windowUtils";
@@ -41,6 +42,17 @@ const runApp = async function () {
 
 	protocol.registerSchemesAsPrivileged([
 		{ scheme: "app", privileges: { secure: true, standard: true } },
+		{
+			scheme: "ytmd-thumb",
+			privileges: {
+				standard: true,
+				secure: true,
+				supportFetchAPI: true,
+				corsEnabled: true,
+				stream: true,
+				bypassCSP: true,
+			},
+		},
 		{
 			scheme: "http",
 			privileges: {
@@ -92,6 +104,7 @@ const runApp = async function () {
 
 	app.on("activate", reactivate); // runs when the app is activated (e.g. when the app is brought back from the background)
 	app.on("ready", async () => {
+		thumbnailCache.registerProtocol();
 		await waitMs(); // next tick
 		mainWindow = await windowManager.createRootWindow();
 		attachTrpcWindow(mainWindow.main);

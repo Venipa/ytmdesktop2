@@ -1,5 +1,6 @@
 import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
+import { thumbnailCache } from "@main/services/thumbnailCache";
 import { createMainCaller } from "@main/trpc/caller";
 import { trackService } from "@main/trpc/routers/track";
 import { NativeImage, nativeImage, TouchBar } from "electron";
@@ -209,8 +210,9 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 			trackService.onTrackChange(async (nextTrack) => {
 				songTitle.label = nextTrack.video.title;
 				this.logger.debug("TouchbarProvider onTrackChange", songTitle.label, nextTrack.video.thumbnail.thumbnails?.[0]?.url);
-				const buffer = nextTrack.video.thumbnail.thumbnails?.[0]?.url && (await fetch(nextTrack.video.thumbnail.thumbnails[0].url).catch(() => null));
-				songImage.icon = (buffer ? nativeImage.createFromBuffer(Buffer.from(await buffer.arrayBuffer())) : nativeImage.createFromPath(appIconPath)).resize({
+				const thumbUrl = nextTrack.video.thumbnail.thumbnails?.[0]?.url;
+				const buffer = thumbUrl ? await thumbnailCache.getBuffer(thumbUrl) : null;
+				songImage.icon = (buffer ? nativeImage.createFromBuffer(buffer) : nativeImage.createFromPath(appIconPath)).resize({
 					height: 23,
 				});
 				const { liked, disliked } = (await track().state()) ?? {};
