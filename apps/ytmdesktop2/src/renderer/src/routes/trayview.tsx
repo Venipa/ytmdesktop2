@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
 import { clamp } from "lodash-es";
 import { ArrowLeftIcon } from "lucide-react";
-import { type ButtonHTMLAttributes, type CSSProperties, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import ApiIcon from "@/assets/icons/chip.svg?react";
 import DiscordIcon from "@/assets/icons/discord-rpc.svg?react";
 import LastFMIcon from "@/assets/icons/lastfm.svg?react";
@@ -62,17 +62,17 @@ const chromeButtonVariants = cva(
 
 const playerButtonVariants = cva(
 	[
-		"inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-foreground transition-[transform,background-color] duration-100",
-		"enabled:hover:bg-accent/15 enabled:active:scale-95",
+		"inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-[transform,background-color,color] duration-100",
+		"enabled:hover:bg-foreground/10 enabled:active:scale-95",
 		"disabled:pointer-events-none disabled:opacity-50",
-		"[&_svg]:pointer-events-none [&_svg]:size-4.5 [&_svg]:shrink-0",
+		"[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
 		"data-[active=true]:text-accent",
 	].join(" "),
 	{
 		variants: {
 			variant: {
 				default: "",
-				hero: "size-9 rounded-full border border-border bg-background/70 shadow-sm backdrop-blur-sm",
+				hero: "size-9 bg-foreground/10 [&_svg]:size-[1.125rem]",
 			},
 		},
 		defaultVariants: { variant: "default" },
@@ -147,6 +147,7 @@ function TrayViewPage() {
 	const { mutateAsync: play } = trpc.track.play.useMutation();
 	const { mutateAsync: seek } = trpc.track.seek.useMutation();
 	const { mutateAsync: like } = trpc.track.like.useMutation();
+	const { mutateAsync: dislike } = trpc.track.dislike.useMutation();
 	const { mutateAsync: hideTrayView } = trpc.trayView.hide.useMutation();
 	const { mutateAsync: openMain } = trpc.trayView.openMain.useMutation();
 	const { mutateAsync: openSettings } = trpc.app.openSettings.useMutation();
@@ -160,6 +161,7 @@ function TrayViewPage() {
 	const title = track?.video?.title ?? "Nothing playing";
 	const artist = track?.video?.author ?? "";
 	const hasLike = typeof playState?.liked === "boolean";
+	const hasDislike = typeof playState?.disliked === "boolean";
 	const accent = trackAccent || playState?.accent || null;
 
 	useEffect(() => {
@@ -193,11 +195,6 @@ function TrayViewPage() {
 		};
 	}, [playState?.progress, playState?.duration, track?.meta?.duration]);
 
-	const stripStyle = useMemo((): CSSProperties | undefined => {
-		if (!accent) return undefined;
-		return { backgroundColor: accent };
-	}, [accent]);
-
 	function handleNext() {
 		setTrackBusy(true);
 		return next()
@@ -217,8 +214,30 @@ function TrayViewPage() {
 
 	function likeToggle() {
 		if (typeof playStateRef.current?.liked !== "boolean") return;
+		const next = !playStateRef.current.liked;
+		patchPlayState(utils, { liked: next, ...(next ? { disliked: false } : {}) });
 		setTrackBusy(true);
-		return like(!playStateRef.current.liked).finally(() => setTrackBusy(false));
+		return like({ liked: next })
+			.then((liked) => {
+				if (typeof liked === "boolean") {
+					patchPlayState(utils, { liked, ...(liked ? { disliked: false } : {}) });
+				}
+			})
+			.finally(() => setTrackBusy(false));
+	}
+
+	function dislikeToggle() {
+		if (typeof playStateRef.current?.disliked !== "boolean") return;
+		const next = !playStateRef.current.disliked;
+		patchPlayState(utils, { disliked: next, ...(next ? { liked: false } : {}) });
+		setTrackBusy(true);
+		return dislike({ disliked: next })
+			.then((disliked) => {
+				if (typeof disliked === "boolean") {
+					patchPlayState(utils, { disliked, ...(disliked ? { liked: false } : {}) });
+				}
+			})
+			.finally(() => setTrackBusy(false));
 	}
 
 	async function handleSettings() {
@@ -226,23 +245,54 @@ function TrayViewPage() {
 		await openSettings();
 	}
 
-	const [hoverPct, setHoverPct] = useState<number | null>(null);
+	const [seekHovering, setSeekHovering] = useState(false);
 	const durationSec = playState?.duration || Number(track?.meta?.duration) || 0;
+	const durationSecRef = useRef(durationSec);
+	durationSecRef.current = durationSec;
+	const currentTimeLabel = time?.current ?? "0:00";
 
-	const hoverTimeLabel = useMemo(() => {
-		if (hoverPct === null || durationSec <= 0) return null;
-		return formatTime((hoverPct / 100) * durationSec);
-	}, [hoverPct, durationSec]);
+	const seekTrackRef = useRef<HTMLDivElement>(null);
+	const seekHoverFillRef = useRef<HTMLDivElement>(null);
+	const seekThumbRef = useRef<HTMLDivElement>(null);
+	const seekTipRef = useRef<HTMLDivElement>(null);
+	const seekTimeRef = useRef<HTMLSpanElement>(null);
+	const seekHoveringRef = useRef(false);
+
+	useEffect(() => {
+		if (seekHoveringRef.current) return;
+		if (seekTimeRef.current) seekTimeRef.current.textContent = currentTimeLabel;
+	}, [currentTimeLabel]);
+
+	function syncSeekHover(clientX: number) {
+		const trackEl = seekTrackRef.current;
+		if (!trackEl) return;
+		const rect = trackEl.getBoundingClientRect();
+		if (rect.width <= 0) return;
+		const pct = clamp(((clientX - rect.left) / rect.width) * 100, 0, 100);
+		const pctStr = `${pct}%`;
+		if (seekHoverFillRef.current) seekHoverFillRef.current.style.width = pctStr;
+		if (seekThumbRef.current) seekThumbRef.current.style.left = pctStr;
+		if (seekTipRef.current) seekTipRef.current.style.left = pctStr;
+		const dur = durationSecRef.current;
+		const label = dur > 0 ? formatTime((pct / 100) * dur) : "0:00";
+		if (seekTipRef.current) seekTipRef.current.textContent = label;
+		if (seekTimeRef.current) seekTimeRef.current.textContent = label;
+	}
 
 	function handleSeekHover(ev: MouseEvent<HTMLDivElement>) {
-		const rect = ev.currentTarget.getBoundingClientRect();
-		if (rect.width <= 0) return;
-		const pct = clamp(((ev.clientX - rect.left) / rect.width) * 100, 0, 100);
-		setHoverPct(pct);
+		syncSeekHover(ev.clientX);
+	}
+
+	function handleSeekEnter(ev: MouseEvent<HTMLDivElement>) {
+		seekHoveringRef.current = true;
+		setSeekHovering(true);
+		requestAnimationFrame(() => syncSeekHover(ev.clientX));
 	}
 
 	function clearSeekHover() {
-		setHoverPct(null);
+		seekHoveringRef.current = false;
+		setSeekHovering(false);
+		if (seekTimeRef.current) seekTimeRef.current.textContent = currentTimeLabel;
 	}
 
 	function setCurrentTime(ev: MouseEvent<HTMLDivElement>) {
@@ -265,29 +315,40 @@ function TrayViewPage() {
 
 	return (
 		<div className="absolute inset-0 flex overflow-hidden border border-border bg-background text-foreground shadow-sm">
-			<div className="w-1 shrink-0 bg-accent" style={stripStyle} aria-hidden />
+			{/* Full-bleed art, opacified */}
+			<div className="pointer-events-none absolute inset-0" aria-hidden>
+				{thumbnail ? (
+					<>
+						<div
+							className="absolute inset-0 scale-110 bg-cover bg-center"
+							style={{ backgroundImage: `url(${thumbnail})` }}
+						/>
+						<div
+							className="absolute inset-0 scale-125 bg-cover bg-center opacity-70 blur-2xl"
+							style={{ backgroundImage: `url(${thumbnail})` }}
+						/>
+						{accent ? <div className="absolute inset-0 opacity-25" style={{ backgroundColor: accent }} /> : null}
+						<div className="absolute inset-0 bg-background/70" />
+					</>
+				) : (
+					<div className="absolute inset-0 bg-muted/30" />
+				)}
+			</div>
 
-			<div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-				<div className="pointer-events-none absolute inset-0" aria-hidden>
-					{thumbnail ? (
-						<>
-							<div
-								className="absolute inset-0 scale-125 bg-cover bg-center opacity-[0.2] blur-xl"
-								style={{ backgroundImage: `url(${thumbnail})` }}
-							/>
-							{accent ? <div className="absolute inset-0 opacity-15" style={{ backgroundColor: accent }} /> : null}
-							<div className="absolute inset-0 bg-background/80" />
-						</>
-					) : (
-						<div className="absolute inset-0 bg-muted/20" />
-					)}
-				</div>
+			{/* Accent pill rail */}
+			<div className="relative z-10 flex w-3 shrink-0 items-stretch justify-center py-2.5 ml-1" aria-hidden>
+				<div
+					className="w-1.5 rounded-full bg-accent"
+					style={accent ? { backgroundColor: accent } : undefined}
+				/>
+			</div>
 
+			<div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
 				<div className="relative z-10 flex min-h-0 flex-1">
 					{/* Player column */}
 					<div className="flex min-w-0 flex-1 flex-col px-3 pt-3 pb-2">
 						<div className="flex items-start gap-2.5">
-							<div className="size-12 shrink-0 overflow-hidden rounded-lg bg-muted/80 ring-1 ring-border/50 shadow-sm">
+							<div className="size-16 shrink-0 overflow-hidden rounded-lg bg-muted/80 ring-1 ring-border/50 shadow-sm">
 								{thumbnail ? (
 									<img src={thumbnail} alt="" className="size-full object-cover" draggable={false} />
 								) : (
@@ -298,8 +359,8 @@ function TrayViewPage() {
 							</div>
 
 							<div className="min-w-0 flex-1 pt-0.5">
-								<p className="truncate text-sm leading-tight font-semibold">{title}</p>
-								{artist ? <p className="mt-0.5 truncate text-xs text-muted-foreground">{artist}</p> : null}
+								<p className="truncate text-base leading-tight font-semibold">{title}</p>
+								{artist ? <p className="mt-0.5 truncate text-sm text-muted-foreground">{artist}</p> : null}
 							</div>
 
 							<div className="flex shrink-0 items-center gap-0.5">
@@ -328,17 +389,19 @@ function TrayViewPage() {
 
 						{/* Progress + duration */}
 						<div className="mt-3 flex items-center gap-2">
-							<span className="w-9 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
-								{hoverTimeLabel ?? time?.current ?? "0:00"}
-							</span>
+							<span
+								ref={seekTimeRef}
+								className="w-9 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground/40"
+							/>
 							<div
+								ref={seekTrackRef}
 								className={cn(
 									"group relative h-1.5 min-w-0 flex-1 cursor-pointer rounded-full bg-muted/80",
 									!track && "pointer-events-none opacity-40",
 								)}
 								onClick={setCurrentTime}
 								onMouseMove={handleSeekHover}
-								onMouseEnter={handleSeekHover}
+								onMouseEnter={handleSeekEnter}
 								onMouseLeave={clearSeekHover}
 								role="slider"
 								aria-label="Seek"
@@ -355,55 +418,69 @@ function TrayViewPage() {
 										...(accent ? { backgroundColor: accent } : {}),
 									}}
 								/>
-								{/* Hover preview fill */}
-								{hoverPct !== null ? (
-									<div
-										className="absolute inset-y-0 left-0 rounded-full bg-foreground/25 transition-[width] duration-75"
-										style={{ width: `${hoverPct}%` }}
-									/>
-								) : null}
-								{/* Hover scrubber + tooltip time */}
-								{hoverPct !== null && hoverTimeLabel ? (
-									<Tooltip open>
-										<TooltipTrigger
-											render={
-												<div
-													className="pointer-events-none absolute top-1/2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground shadow-sm ring-2 ring-background"
-													style={{ left: `${hoverPct}%` }}
-												/>
-											}
-										/>
-										<TooltipContent side="top" sideOffset={8} className="px-1.5 py-0.5 font-mono text-[10px] tabular-nums">
-											{hoverTimeLabel}
-										</TooltipContent>
-									</Tooltip>
-								) : null}
+								{/* Hover preview — imperative width, no transition */}
+								<div
+									ref={seekHoverFillRef}
+									className={cn("absolute inset-y-0 left-0 rounded-full bg-foreground/25", !seekHovering && "hidden")}
+									style={{ width: 0 }}
+								/>
+								{/* Scrubber thumb + tip — follow cursor via refs */}
+								<div
+									ref={seekThumbRef}
+									className={cn(
+										"pointer-events-none absolute top-1/2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground shadow-sm ring-2 ring-background",
+										!seekHovering && "hidden",
+									)}
+									style={{ left: 0 }}
+								/>
+								<div
+									ref={seekTipRef}
+									className={cn(
+										"pointer-events-none absolute bottom-full z-20 mb-1.5 -translate-x-1/2 rounded-md bg-foreground px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-background shadow-sm",
+										!seekHovering && "hidden",
+									)}
+									style={{ left: 0 }}
+								/>
 							</div>
 							<span className="w-9 shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">{time?.end ?? "0:00"}</span>
 						</div>
 
-						{/* Transport */}
-						<div className="mt-auto flex items-center justify-center gap-1 pt-2">
-							{hasLike ? (
-								<PlayerButton active={!!playState?.liked} disabled={trackBusy || !track} aria-label="Like" onClick={likeToggle}>
-									<LikeIcon />
+						{/* Transport — segmented dock */}
+						<div className="mt-auto flex justify-center pt-2">
+							<div className="flex items-center gap-0.5 rounded-full border border-border/50 bg-background/50 p-1 shadow-sm backdrop-blur-md">
+								{hasLike ? (
+									<PlayerButton active={!!playState?.liked} disabled={trackBusy || !track} aria-label="Like" onClick={likeToggle}>
+										<LikeIcon />
+									</PlayerButton>
+								) : null}
+								<PlayerButton disabled={trackBusy || !track} aria-label="Previous" onClick={handlePrev}>
+									<PrevIcon />
 								</PlayerButton>
-							) : null}
-							<PlayerButton disabled={trackBusy || !track} aria-label="Previous" onClick={handlePrev}>
-								<PrevIcon />
-							</PlayerButton>
-							<PlayerButton
-								variant="hero"
-								disabled={trackBusy || !track}
-								aria-label={playing ? "Pause" : "Play"}
-								style={accent ? { borderColor: accent } : undefined}
-								onClick={() => void (!playing ? play() : pause())}
-							>
-								{playing ? <PauseIcon /> : <PlayIcon />}
-							</PlayerButton>
-							<PlayerButton disabled={trackBusy || !track} aria-label="Next" onClick={handleNext}>
-								<NextIcon />
-							</PlayerButton>
+								<PlayerButton
+									variant="hero"
+									disabled={trackBusy || !track}
+									aria-label={playing ? "Pause" : "Play"}
+									style={
+										accent
+											? {
+													backgroundColor: `color-mix(in oklab, ${accent} 28%, transparent)`,
+													color: accent,
+												}
+											: undefined
+									}
+									onClick={() => void (!playing ? play() : pause())}
+								>
+									{playing ? <PauseIcon /> : <PlayIcon />}
+								</PlayerButton>
+								<PlayerButton disabled={trackBusy || !track} aria-label="Next" onClick={handleNext}>
+									<NextIcon />
+								</PlayerButton>
+								{hasDislike ? (
+									<PlayerButton active={!!playState?.disliked} disabled={trackBusy || !track} aria-label="Dislike" onClick={dislikeToggle}>
+										<LikeIcon className="rotate-180" />
+									</PlayerButton>
+								) : null}
+							</div>
 						</div>
 					</div>
 

@@ -185,11 +185,49 @@ export class TrackService {
 	}
 
 	async postTrackLike(_ev: unknown, like: boolean): Promise<boolean | null> {
-		return await this.executeCommand<boolean>("like", like);
+		// Emit intent immediately so tray/miniplayer update before YTM DOM settles.
+		this.setTrackState((state) => {
+			state.liked = like;
+			if (like) state.disliked = false;
+		});
+		const liked = await this.executeCommand<boolean>("like", like);
+		const resolved = typeof liked === "boolean" ? liked : like;
+		this.setTrackState((state) => {
+			if (state.liked === resolved && (!resolved || !state.disliked)) return;
+			state.liked = resolved;
+			if (resolved) state.disliked = false;
+		});
+		// Verify from DOM after YTM finishes updating aria-pressed.
+		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
+			this.setTrackState((state) => {
+				if (state.liked === isLiked && state.disliked === isDLiked) return;
+				state.liked = isLiked;
+				state.disliked = isDLiked;
+			});
+		});
+		return resolved;
 	}
 
 	async postTrackDisLike(_ev: unknown, dislike: boolean): Promise<boolean | null> {
-		return await this.executeCommand<boolean>("dislike", dislike);
+		this.setTrackState((state) => {
+			state.disliked = dislike;
+			if (dislike) state.liked = false;
+		});
+		const disliked = await this.executeCommand<boolean>("dislike", dislike);
+		const resolved = typeof disliked === "boolean" ? disliked : dislike;
+		this.setTrackState((state) => {
+			if (state.disliked === resolved && (!resolved || !state.liked)) return;
+			state.disliked = resolved;
+			if (resolved) state.liked = false;
+		});
+		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
+			this.setTrackState((state) => {
+				if (state.liked === isLiked && state.disliked === isDLiked) return;
+				state.liked = isLiked;
+				state.disliked = isDLiked;
+			});
+		});
+		return resolved;
 	}
 
 	async nextTrack(): Promise<TrackControlResponse> {
@@ -315,13 +353,23 @@ export class TrackService {
 		const youtubeView = getYoutubeView();
 		if (!youtubeView) return [false, false];
 		try {
+			// Prefer like-status on the renderer — aria-pressed on dislike is unreliable in YTM.
+			const status = await youtubeView.webContents.executeJavaScript(
+				`(() => {
+					const el = document.querySelector("#like-button-renderer, ytmusic-like-button-renderer");
+					return (el?.getAttribute("like-status") || el?.getAttribute("like_status") || "").toUpperCase();
+				})()`,
+			);
+			if (typeof status === "string" && status.length > 0) {
+				return [status === "LIKE", status === "DISLIKE"];
+			}
 			const values = await youtubeView.webContents.executeJavaScript(
 				`[
-          document.querySelector("#like-button-renderer #button-shape-like.like button")?.ariaPressed,
-          document.querySelector("#like-button-renderer #button-shape-dislike.dislike button")?.ariaPressed
+          document.querySelector("#like-button-renderer #button-shape-like.like button")?.getAttribute("aria-pressed"),
+          document.querySelector("#like-button-renderer #button-shape-dislike.dislike button")?.getAttribute("aria-pressed")
         ]`,
 			);
-			return values.map((x: string) => x === "true") as [boolean, boolean];
+			return [(values?.[0] === "true"), (values?.[1] === "true")] as [boolean, boolean];
 		} catch {
 			return [false, false];
 		}

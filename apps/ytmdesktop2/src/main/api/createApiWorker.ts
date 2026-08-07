@@ -38,8 +38,8 @@ export const createApiWorker = async (api: ApiProvider, parent?: BrowserWindow):
 		[API_ROUTES.TRACK_CONTROL_VOLUME_DOWN]: (data?: { amount?: number }) => trackCaller().volumeDown(data),
 		[API_ROUTES.TRACK_CURRENT]: () => trackCaller().current(),
 		[API_ROUTES.TRACK_CURRENT_STATE]: () => trackCaller().state(),
-		[API_ROUTES.TRACK_LIKE]: (like?: boolean) => trackCaller().like(!!like),
-		[API_ROUTES.TRACK_DISLIKE]: (dislike?: boolean) => trackCaller().dislike(!!dislike),
+		[API_ROUTES.TRACK_LIKE]: (like?: boolean) => trackCaller().like({ liked: !!like }),
+		[API_ROUTES.TRACK_DISLIKE]: (dislike?: boolean) => trackCaller().dislike({ disliked: !!dislike }),
 		[API_ROUTES.AUTH_REQUEST_CODE]: (data?: { appId: string; appName: string; appVersion: string }) =>
 			appAuth.requestCode(data as { appId: string; appName: string; appVersion: string }),
 		[API_ROUTES.AUTH_REQUEST]: (data?: { appId: string; code: string }) => appAuth.requestToken(data as { appId: string; code: string }),

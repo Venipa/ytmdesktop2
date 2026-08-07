@@ -14,6 +14,18 @@ function playbackSnapshot(playerApi: PlayerApi, playing?: boolean) {
 	};
 }
 
+function readLikeStatus(): { liked: boolean; disliked: boolean } {
+	const el = document.querySelector<HTMLElement>("#like-button-renderer, ytmusic-like-button-renderer");
+	const status = (el?.getAttribute("like-status") || el?.getAttribute("like_status") || "").toUpperCase();
+	if (status === "LIKE" || status === "DISLIKE" || status === "INDIFFERENT") {
+		return { liked: status === "LIKE", disliked: status === "DISLIKE" };
+	}
+	const likePressed = document.querySelector<HTMLElement>("#like-button-renderer #button-shape-like.like button")?.getAttribute("aria-pressed") === "true";
+	const dislikePressed =
+		document.querySelector<HTMLElement>("#like-button-renderer #button-shape-dislike.dislike button")?.getAttribute("aria-pressed") === "true";
+	return { liked: likePressed, disliked: dislikePressed };
+}
+
 const trackControls = {
 	toggle: (player: PlayerApi) => {
 		const state = player.getPlayerStateObject();
@@ -64,15 +76,27 @@ const trackControls = {
 	backward: (playerApi: PlayerApi, data?: SeekPayload) => trackControls.seek(playerApi, { time: -Math.abs(Number(data?.time ?? 10000)) }),
 	like: async (liked: boolean) => {
 		const btn = document.querySelector<HTMLElement>("#like-button-renderer #button-shape-like.like button");
-		const pressed = btn?.getAttribute("aria-pressed") === "true";
-		if (btn && pressed !== liked) btn.click();
-		return document.querySelector<HTMLElement>("#like-button-renderer #button-shape-like.like button")?.getAttribute("aria-pressed") === "true";
+		const current = readLikeStatus();
+		if (!btn) return current.liked;
+		if (current.liked === liked) return liked;
+		btn.click();
+		for (let i = 0; i < 12; i++) {
+			await new Promise((r) => setTimeout(r, 40));
+			if (readLikeStatus().liked === liked) return liked;
+		}
+		return liked;
 	},
 	dislike: async (disliked: boolean) => {
 		const btn = document.querySelector<HTMLElement>("#like-button-renderer #button-shape-dislike.dislike button");
-		const pressed = btn?.getAttribute("aria-pressed") === "true";
-		if (btn && pressed !== disliked) btn.click();
-		return document.querySelector<HTMLElement>("#like-button-renderer #button-shape-dislike.dislike button")?.getAttribute("aria-pressed") === "true";
+		const current = readLikeStatus();
+		if (!btn) return current.disliked;
+		if (current.disliked === disliked) return disliked;
+		btn.click();
+		for (let i = 0; i < 12; i++) {
+			await new Promise((r) => setTimeout(r, 40));
+			if (readLikeStatus().disliked === disliked) return disliked;
+		}
+		return disliked;
 	},
 	volume: (playerApi: PlayerApi, data?: { volume?: number }) => {
 		if (typeof data?.volume === "number" && Number.isFinite(data.volume)) {

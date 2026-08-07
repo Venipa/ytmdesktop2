@@ -185,18 +185,34 @@ function MiniPlayerPage() {
 
 	function dislikeToggle() {
 		if (typeof playStateRef.current?.disliked !== "boolean") return;
+		const next = !playStateRef.current.disliked;
+		patchPlayState(utils, { disliked: next, ...(next ? { liked: false } : {}) });
 		setTrackBusy(true);
-		return dislike(!playStateRef.current.disliked).finally(() => {
-			setTrackBusy(false);
-		});
+		return dislike({ disliked: next })
+			.then((disliked) => {
+				if (typeof disliked === "boolean") {
+					patchPlayState(utils, { disliked, ...(disliked ? { liked: false } : {}) });
+				}
+			})
+			.finally(() => {
+				setTrackBusy(false);
+			});
 	}
 
 	function likeToggle() {
 		if (typeof playStateRef.current?.liked !== "boolean") return;
+		const next = !playStateRef.current.liked;
+		patchPlayState(utils, { liked: next, ...(next ? { disliked: false } : {}) });
 		setTrackBusy(true);
-		return like(!playStateRef.current.liked).finally(() => {
-			setTrackBusy(false);
-		});
+		return like({ liked: next })
+			.then((liked) => {
+				if (typeof liked === "boolean") {
+					patchPlayState(utils, { liked, ...(liked ? { disliked: false } : {}) });
+				}
+			})
+			.finally(() => {
+				setTrackBusy(false);
+			});
 	}
 
 	const handleAccent = useCallback(

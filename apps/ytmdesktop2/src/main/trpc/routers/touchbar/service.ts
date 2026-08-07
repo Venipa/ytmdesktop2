@@ -73,7 +73,7 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 				backgroundColor: trackState?.liked ? emoteColors.like : emoteColorsOff.like,
 				click: () => {
 					track()
-						.like(true)
+						.like({ liked: true })
 						.then((liked) => {
 							likeButton.backgroundColor = liked ? "#202020" : null;
 						});
@@ -84,7 +84,7 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 				backgroundColor: trackState?.disliked ? emoteColors.dislike : emoteColorsOff.dislike,
 				click: () => {
 					track()
-						.dislike(false)
+						.dislike({ disliked: true })
 						.then((disliked) => {
 							dislikeButton.backgroundColor = disliked ? "#202020" : null;
 						});
@@ -125,13 +125,13 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 				() => track().next(),
 				() =>
 					track()
-						.like(true)
+						.like({ liked: true })
 						.then((liked) => {
 							likeButton.backgroundColor = liked ? emoteColors.like : emoteColorsOff.like;
 						}),
 				() =>
 					track()
-						.dislike(true)
+						.dislike({ disliked: true })
 						.then((disliked) => {
 							dislikeButton.backgroundColor = disliked ? emoteColors.dislike : emoteColorsOff.dislike;
 						}),
