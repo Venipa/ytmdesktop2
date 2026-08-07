@@ -60,7 +60,7 @@ mac:
 dmg:
   title: "Install or Update ${productName} ${version}"
 linux:
-  executableName: ytmdesktop
+  executableName: ytmdesktop2
   description: Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.
   target:
     - target: appImage
@@ -97,7 +97,7 @@ flatpak:
     - --talk-name=org.freedesktop.Notifications
     - --talk-name=org.gnome.SessionManager
     - --talk-name=org.kde.StatusNotifierWatcher
-    - --own-name=org.mpris.MediaPlayer2.ytmdesktop.*
+    - --own-name=org.mpris.MediaPlayer2.ytmdesktop2.*
 snapcraft:
   base: core24
   publish:

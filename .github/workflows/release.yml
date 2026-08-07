@@ -29,12 +29,12 @@ jobs:
           cache: true
           install: false
         # install dbus-1 dep for xosms
-      - if: matrix.os == 'ubuntu-latest'
+      - if: startsWith(matrix.os, 'ubuntu')
         name: update apt and install utils
         run: |
           sudo apt update
           sudo apt install libdbus-1-dev elfutils
-      - if: matrix.os == 'ubuntu-latest'
+      - if: startsWith(matrix.os, 'ubuntu')
         name: install ubuntu snap + lxd
         run: |
           sudo apt install -y snapd
@@ -52,7 +52,7 @@ jobs:
           # https://github.com/actions/runner-images/issues/9932
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxc info
 
-      - if: matrix.os == 'ubuntu-latest'
+      - if: startsWith(matrix.os, 'ubuntu')
         name: install ubuntu flatpak
         run: |
           sudo apt install -y flatpak flatpak-builder
@@ -63,7 +63,7 @@ jobs:
             org.freedesktop.Sdk/x86_64/24.08 \
             org.electronjs.Electron2.BaseApp/x86_64/24.08
 
-      - if: matrix.os == 'windows-2025-vs2026'
+      - if: startsWith(matrix.os, 'windows')
         name: install windows deps
         uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.5
         with:
@@ -117,7 +117,7 @@ jobs:
       # Secrets: MACOS_DEVELOPER_ID_APPLICATION_P12 (+ _PASSWORD),
       #          APPLE_NOTARY_API_KEY_P8, APPLE_NOTARY_API_KEY_ID, APPLE_NOTARY_API_ISSUER_ID
       # Not needed: Mac App Store certs, Developer ID Installer (no .pkg)
-      - if: matrix.os == 'macos-latest'
+      - if: startsWith(matrix.os, 'macos')
         name: Prepare Apple notarization key
         run: |
           mkdir -p .secrets
@@ -127,7 +127,7 @@ jobs:
       - name: Build Electron release
         shell: bash
         run: |
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          if [ "${{ startsWith(matrix.os, 'ubuntu') }}" = "true" ]; then
             # Pick up lxd group membership from prior usermod (newgrp is a no-op in Actions)
             sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- pnpm release
           else
@@ -141,16 +141,24 @@ jobs:
           VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
           # electron-builder code signing (Developer ID Application .p12) — macOS only
-          CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.MACOS_DEVELOPER_ID_APPLICATION_P12 || '' }}
-          CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.MACOS_DEVELOPER_ID_APPLICATION_PASSWORD || '' }}
+          CSC_LINK: ${{ startsWith(matrix.os, 'macos') && secrets.MACOS_DEVELOPER_ID_APPLICATION_P12 || '' }}
+          CSC_KEY_PASSWORD: ${{ startsWith(matrix.os, 'macos') && secrets.MACOS_DEVELOPER_ID_APPLICATION_PASSWORD || '' }}
           # electron-builder notarize: true → notarytool via App Store Connect API key
-          APPLE_API_KEY: ${{ matrix.os == 'macos-latest' && format('{0}/.secrets/AuthKey.p8', github.workspace) || '' }}
-          APPLE_API_KEY_ID: ${{ matrix.os == 'macos-latest' && secrets.APPLE_NOTARY_API_KEY_ID || '' }}
-          APPLE_API_ISSUER: ${{ matrix.os == 'macos-latest' && secrets.APPLE_NOTARY_API_ISSUER_ID || '' }}
-      - if: always() && matrix.os == 'macos-latest'
+          APPLE_API_KEY: ${{ startsWith(matrix.os, 'macos') && format('{0}/.secrets/AuthKey.p8', github.workspace) || '' }}
+          APPLE_API_KEY_ID: ${{ startsWith(matrix.os, 'macos') && secrets.APPLE_NOTARY_API_KEY_ID || '' }}
+          APPLE_API_ISSUER: ${{ startsWith(matrix.os, 'macos') && secrets.APPLE_NOTARY_API_ISSUER_ID || '' }}
+      - if: always() && startsWith(matrix.os, 'macos')
         name: Cleanup Apple secrets
         run: rm -rf .secrets
-      - if: matrix.os == 'ubuntu-latest'
+      - if: startsWith(matrix.os, 'ubuntu')
+        name: Upload snap artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-snap
+          path: apps/ytmdesktop2/dist/*.snap
+          if-no-files-found: error
+          retention-days: 5
+      - if: startsWith(matrix.os, 'ubuntu')
         name: Upload release source maps to sentry
         continue-on-error: true
         env:
@@ -172,6 +180,42 @@ jobs:
 
           # Create new deploy for this Sentry release
           sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_DEPLOY_ENVIRONMENT
+
+  publish-snap:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Download snap artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: linux-snap
+          path: artifacts
+
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Publish snap to Snap Store
+        env:
+          SNAP_CSC_LINK: ${{ secrets.SNAP_CSC_LINK }}
+          CHANNEL: ${{ contains(github.ref_name, '-rc.') && 'candidate' || 'stable' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SNAP_CSC_LINK:-}" ]; then
+            echo "::error::SNAP_CSC_LINK secret is required (snapcraft export-login - | base64 -w0)"
+            exit 1
+          fi
+          export SNAPCRAFT_STORE_CREDENTIALS="$(printf '%s' "$SNAP_CSC_LINK" | base64 -d)"
+          shopt -s nullglob
+          snaps=(artifacts/*.snap)
+          if [ ${#snaps[@]} -eq 0 ]; then
+            echo "::error::No .snap files found in artifacts"
+            exit 1
+          fi
+          for snap in "${snaps[@]}"; do
+            echo "Uploading $snap → $CHANNEL"
+            snapcraft upload --release="$CHANNEL" "$snap"
+          done
 
   finalize-release:
     needs: build
