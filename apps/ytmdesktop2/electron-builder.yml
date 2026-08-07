@@ -94,6 +94,23 @@ flatpak:
     - --share=network
     - --filesystem=xdg-music:rw
     - --filesystem=xdg-download:rw
+    # Themes / custom.scss under Documents/ytmdesktop
+    - --filesystem=xdg-documents/ytmdesktop:create
+    # Discord Rich Presence (host Discord IPC sockets)
+    - --filesystem=xdg-run/discord-ipc-0
+    - --filesystem=xdg-run/discord-ipc-1
+    - --filesystem=xdg-run/discord-ipc-2
+    - --filesystem=xdg-run/discord-ipc-3
+    - --filesystem=xdg-run/discord-ipc-4
+    - --filesystem=xdg-run/discord-ipc-5
+    - --filesystem=xdg-run/discord-ipc-6
+    - --filesystem=xdg-run/discord-ipc-7
+    - --filesystem=xdg-run/discord-ipc-8
+    - --filesystem=xdg-run/discord-ipc-9
+    # Discord Rich Presence (Discord Flatpak: stable / PTB / Canary)
+    - --filesystem=xdg-run/app/com.discordapp.Discord:create
+    - --filesystem=xdg-run/app/com.discordapp.DiscordPTB:create
+    - --filesystem=xdg-run/app/com.discordapp.DiscordCanary:create
     - --talk-name=org.freedesktop.Notifications
     - --talk-name=org.gnome.SessionManager
     - --talk-name=org.kde.StatusNotifierWatcher
@@ -135,16 +152,10 @@ snapcraft:
             - /run/user/*/discord-ipc-7
             - /run/user/*/discord-ipc-8
             - /run/user/*/discord-ipc-9
-            - /run/user/*/snap.discord/discord-ipc-0
-            - /run/user/*/snap.discord/discord-ipc-1
-            - /run/user/*/snap.discord/discord-ipc-2
-            - /run/user/*/snap.discord/discord-ipc-3
-            - /run/user/*/snap.discord/discord-ipc-4
-            - /run/user/*/snap.discord/discord-ipc-5
-            - /run/user/*/snap.discord/discord-ipc-6
-            - /run/user/*/snap.discord/discord-ipc-7
-            - /run/user/*/snap.discord/discord-ipc-8
-            - /run/user/*/snap.discord/discord-ipc-9
+            # Discord snap: stable / PTB / Canary
+            - /run/user/*/snap.discord
+            - /run/user/*/snap.discord-ptb
+            - /run/user/*/snap.discord-canary
     executableArgs:
       - --no-sandbox
     slots:

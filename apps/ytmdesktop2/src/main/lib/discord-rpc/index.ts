@@ -22,12 +22,26 @@ function getIPCPath(id: number): string {
 
 	const dirtyPrefix = process.env.XDG_RUNTIME_DIR || process.env.TMPDIR || process.env.TMP || process.env.TEMP || "/tmp";
 	// Snaps remap XDG_RUNTIME_DIR to .../snap.<name>; Discord IPC lives on the host runtime dir
-	// (.../discord-ipc-N) or under .../snap.discord/ when Discord itself is a snap.
+	// (.../discord-ipc-N) or under packaged Discord dirs (snap / Flatpak stable|PTB|Canary).
 	const prefix = dirtyPrefix.replace(/\/$/, "").replace(/\/snap\.[^/]+$/, "");
-	const discordSnapDir = "snap.discord";
-
-	if (directoryExists(`${prefix}/${discordSnapDir}`)) {
-		return `${prefix}/${discordSnapDir}/discord-ipc-${id}`;
+	const packagedDirs = [
+		`${prefix}/snap.discord`,
+		`${prefix}/snap.discord-ptb`,
+		`${prefix}/snap.discord-canary`,
+		`${prefix}/app/com.discordapp.Discord`,
+		`${prefix}/app/com.discordapp.DiscordPTB`,
+		`${prefix}/app/com.discordapp.DiscordCanary`,
+	];
+	for (const dir of packagedDirs) {
+		const socketPath = `${dir}/discord-ipc-${id}`;
+		if (existsSync(socketPath)) {
+			return socketPath;
+		}
+	}
+	for (const dir of packagedDirs) {
+		if (directoryExists(dir)) {
+			return `${dir}/discord-ipc-${id}`;
+		}
 	}
 	return `${prefix}/discord-ipc-${id}`;
 }
