@@ -4,7 +4,7 @@ import { isDevelopment } from "@main/infra/devUtils";
 import { setSentryEnabled } from "@main/infra/sentry";
 import { serverMain } from "@main/ipc/serverEvents";
 import { trackService } from "@main/trpc/routers/track";
-import { createAppDialogWindow, createAppWindow, WindowOptions } from "@main/windows/windowUtils";
+import { centerWindowOnParent, createAppDialogWindow, createAppWindow, WindowOptions } from "@main/windows/windowUtils";
 import { stripUndefined } from "@shared/utils/object";
 import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
 import { clamp, debounce } from "lodash-es";
@@ -118,18 +118,22 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 	/** Open / focus settings BrowserWindow. */
 	async openSettingsWindow() {
 		let settingsWindow = this.views.settingsWindow as any as BrowserWindow;
+		const parent = this.windowContext.main;
 		try {
 			if (settingsWindow && !settingsWindow.isDestroyed()) {
+				centerWindowOnParent(settingsWindow, parent);
 				settingsWindow.show();
+				settingsWindow.moveTop();
+				settingsWindow.focus();
 				return settingsWindow;
 			}
 			if (this.settingsWindowOpenPromise) {
 				return await this.settingsWindowOpenPromise;
 			}
 			this.settingsWindowOpenPromise = createAppWindow({
-				parent: this.windowContext.main,
-        height: 640,
-        minHeight: 540,
+				parent,
+				height: 640,
+				minHeight: 540,
 				minimizeable: false,
 			}).then((win) => {
 				win.on("close", () => {
@@ -157,11 +161,14 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 		if (this._windowMap.has(windowName)) {
 			const window = this._windowMap.get(windowName);
 			if (window) {
+				centerWindowOnParent(window, this.windowContext.main);
 				if (window.isMinimized()) window.restore();
 				if (!window.isVisible()) {
 					window.show();
 					window.setSkipTaskbar(false);
 				} else window.show();
+				window.moveTop();
+				window.focus();
 				return;
 			}
 		}

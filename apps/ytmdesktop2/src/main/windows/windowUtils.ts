@@ -29,11 +29,22 @@ export function parseScriptPath(p: string) {
 	log.child("parseScriptPath").debug(__dirname, p);
 	return join(__dirname, "../preload", p);
 }
+/** Center child over parent bounds (works across multi-monitor). */
+export function centerWindowOnParent(win: BrowserWindow, parent?: BrowserWindow | null) {
+	if (!win || win.isDestroyed() || !parent || parent.isDestroyed()) return;
+	const parentBounds = parent.getBounds();
+	const { width, height } = win.getBounds();
+	const x = Math.round(parentBounds.x + (parentBounds.width - width) / 2);
+	const y = Math.round(parentBounds.y + (parentBounds.height - height) / 2);
+	win.setPosition(x, y);
+}
+
 export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	// eslint-disable-next-line prefer-const
 	let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top, showTaskBar, minimizeable, maximizeable, show } = appOptions ?? {};
 	if (!path) path = "/";
-	// Create the browser window.
+	const shouldShow = show ?? true;
+	// Create hidden so we can position relative to parent before first paint (avoids primary-display flash).
 	const win = new BrowserWindow({
 		width: width ?? 800,
 		height: height ?? 600,
@@ -41,7 +52,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 		minHeight: minHeight ?? 480,
 		maxWidth,
 		maxHeight,
-		show: show ?? true,
+		show: false,
 		minimizable: minimizeable === true,
 		maximizable: maximizeable === true,
 		backgroundColor: "#000000",
@@ -72,6 +83,11 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	});
 	syncWindowStateToWebContents(win)(win.webContents);
 	attachTrpcWindow(win);
+	if (parent) centerWindowOnParent(win, parent);
+	if (shouldShow) {
+		win.show();
+		win.moveTop();
+	}
 	return win;
 }
 export async function createAppDialogWindow<Action extends "close" | "ok">(appOptions?: Partial<WindowOptions> & { onResponse?: (action: Action) => void }) {
