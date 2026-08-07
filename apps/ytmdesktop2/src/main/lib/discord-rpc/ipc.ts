@@ -1,4 +1,4 @@
-import EventEmitter from "events";
+import EventEmitter from "node:events";
 import { Socket } from "net";
 
 export enum OPCode {

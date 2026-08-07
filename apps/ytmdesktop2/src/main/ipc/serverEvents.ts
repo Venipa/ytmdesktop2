@@ -1,5 +1,5 @@
+import EventEmitter from "node:events";
 import { ipcMain } from "electron";
-import EventEmitter from "events";
 
 type Listener = (...args: any[]) => void;
 

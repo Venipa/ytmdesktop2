@@ -1,8 +1,8 @@
+import EventEmitter from "node:events";
 import { existsSync, statSync } from "node:fs";
 import { type DiscordActivity } from "@main/lib/discord-rpc/discord-rpc";
 import { createLogger } from "@shared/utils/console";
 import { randomUUID } from "crypto";
-import EventEmitter from "events";
 import IPCClient, { OPCode } from "./ipc";
 
 const log = createLogger("Lib:DiscordRPC.Client");

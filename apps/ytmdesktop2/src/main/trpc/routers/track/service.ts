@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { createSendHandler } from "@main/ipc/ipc";
 import { serverMain } from "@main/ipc/serverEvents";
 import { getAppWindows, getLifecycleContext, getYoutubeView, onAfterInit, requireAppWindows } from "@main/lifecycle";
@@ -6,7 +7,6 @@ import type { TrackData } from "@shared/track/trackData";
 import { createLogger } from "@shared/utils/console";
 import { observable } from "@trpc/server/observable";
 import { ipcMain } from "electron";
-import { EventEmitter } from "events";
 import { clamp, clone, debounce } from "lodash-es";
 import Vibrant from "node-vibrant";
 import { firstBy } from "thenby";

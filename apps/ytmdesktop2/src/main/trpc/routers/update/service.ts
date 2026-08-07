@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { isDevelopment, isProduction } from "@main/infra/devUtils";
 import SettingsProvider from "@main/trpc/routers/settings/service";
@@ -13,7 +14,6 @@ import {
 import { observable } from "@trpc/server/observable";
 import { App, BrowserWindow } from "electron";
 import { autoUpdater, CancellationToken, type UpdateInfo as ElectronUpdateInfo } from "electron-updater";
-import { EventEmitter } from "events";
 import { clamp } from "lodash-es";
 import semver from "semver";
 
