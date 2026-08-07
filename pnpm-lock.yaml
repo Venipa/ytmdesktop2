@@ -73,7 +73,7 @@ importers:
         version: 1.6.0(@types/react@19.2.18)(date-fns@2.30.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@electron-toolkit/utils':
         specifier: ^3.0.0
-        version: 3.0.0(electron@36.9.5(supports-color@8.1.1))
+        version: 3.0.0(electron@39.8.10(supports-color@8.1.1))
       '@fontsource-variable/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -124,10 +124,10 @@ importers:
         version: 3.3.3
       electron-conf:
         specifier: ^1.2.1
-        version: 1.3.0(electron@36.9.5(supports-color@8.1.1))
+        version: 1.3.0(electron@39.8.10(supports-color@8.1.1))
       electron-trpc:
         specifier: ^0.7.1
-        version: 0.7.1(@trpc/client@10.45.4(@trpc/server@10.45.4))(@trpc/server@10.45.4)(electron@36.9.5(supports-color@8.1.1))(supports-color@8.1.1)
+        version: 0.7.1(@trpc/client@10.45.4(@trpc/server@10.45.4))(@trpc/server@10.45.4)(electron@39.8.10(supports-color@8.1.1))(supports-color@8.1.1)
       electron-updater:
         specifier: ^6.6.2
         version: 6.8.3(supports-color@8.1.1)
@@ -283,8 +283,8 @@ importers:
         specifier: ^7.0.3
         version: 7.0.3
       electron:
-        specifier: 36.9.5
-        version: 36.9.5(supports-color@8.1.1)
+        specifier: 39.8.10
+        version: 39.8.10(supports-color@8.1.1)
       electron-builder:
         specifier: ^26.0.12
         version: 26.8.1(electron-builder-squirrel-windows@26.8.1)(supports-color@8.1.1)
@@ -3149,11 +3149,14 @@ packages:
   '@types/node@16.9.1':
     resolution: {integrity: sha512-QpLcX9ZSsq3YYUUnD3nFDY8H7wctAhQj/TFKL8Ya8v5fMm3CFXxo8zStsLAl780ltoYoo1WvKUVGBQK+1ifr7g==}
 
-  '@types/node@22.19.15':
-    resolution: {integrity: sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg==}
+  '@types/node@22.20.1':
+    resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
 
   '@types/node@24.12.0':
     resolution: {integrity: sha512-GYDxsZi3ChgmckRT9HPU0WEhKLP08ev/Yfcq2AstjrDASOYCSXeyjDsHg4v5t4jOj7cyDX3vmprafKlWIG9MXQ==}
+
+  '@types/node@24.13.3':
+    resolution: {integrity: sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==}
 
   '@types/pg-pool@2.0.6':
     resolution: {integrity: sha512-TaAUE5rq2VQYxab5Ts7WZhKNmuN78Q6PiFonTDdpbx8a1H0M1vhy3rhiMjl+e2iHmogyMw7jZF4FrE6eJUy5HQ==}
@@ -4267,8 +4270,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@36.9.5:
-    resolution: {integrity: sha512-1UCss2IqxqujSzg/2jkRjuiT3G+EEXgd6UKB5kUekwQW1LJ6d4QCr8YItfC3Rr9VIGRDJ29eOERmnRNO1Eh+NA==}
+  electron@39.8.10:
+    resolution: {integrity: sha512-zbYtGPYUI7PzqLAzkk21Rk6j67WN0hxn0Mq/njErZo1d0HSf33is4f8ICI5fMLy5vYe0JtCtM5sYunNOaochSQ==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
@@ -7116,6 +7119,9 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
+  undici-types@7.18.2:
+    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
+
   undici@7.29.0:
     resolution: {integrity: sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw==}
     engines: {node: '>=20.18.1'}
@@ -7839,9 +7845,9 @@ snapshots:
     dependencies:
       '@types/node': 24.12.0
 
-  '@electron-toolkit/utils@3.0.0(electron@36.9.5(supports-color@8.1.1))':
+  '@electron-toolkit/utils@3.0.0(electron@39.8.10(supports-color@8.1.1))':
     dependencies:
-      electron: 36.9.5(supports-color@8.1.1)
+      electron: 39.8.10(supports-color@8.1.1)
 
   '@electron/asar@3.4.1':
     dependencies:
@@ -10148,13 +10154,18 @@ snapshots:
 
   '@types/node@16.9.1': {}
 
-  '@types/node@22.19.15':
+  '@types/node@22.20.1':
     dependencies:
       undici-types: 6.21.0
 
   '@types/node@24.12.0':
     dependencies:
       undici-types: 7.16.0
+
+  '@types/node@24.13.3':
+    dependencies:
+      undici-types: 7.18.2
+    optional: true
 
   '@types/pg-pool@2.0.6':
     dependencies:
@@ -10210,7 +10221,7 @@ snapshots:
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 24.12.0
+      '@types/node': 24.13.3
     optional: true
 
   '@typescript-eslint/eslint-plugin@5.62.0(@typescript-eslint/parser@5.62.0(eslint@8.57.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3))(eslint@8.57.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)':
@@ -11266,10 +11277,10 @@ snapshots:
       - electron-builder-squirrel-windows
       - supports-color
 
-  electron-conf@1.3.0(electron@36.9.5(supports-color@8.1.1)):
+  electron-conf@1.3.0(electron@39.8.10(supports-color@8.1.1)):
     dependencies:
       ajv: 8.18.0
-      electron: 36.9.5(supports-color@8.1.1)
+      electron: 39.8.10(supports-color@8.1.1)
 
   electron-publish@26.8.1(supports-color@8.1.1):
     dependencies:
@@ -11286,12 +11297,12 @@ snapshots:
 
   electron-to-chromium@1.5.313: {}
 
-  electron-trpc@0.7.1(@trpc/client@10.45.4(@trpc/server@10.45.4))(@trpc/server@10.45.4)(electron@36.9.5(supports-color@8.1.1))(supports-color@8.1.1):
+  electron-trpc@0.7.1(@trpc/client@10.45.4(@trpc/server@10.45.4))(@trpc/server@10.45.4)(electron@39.8.10(supports-color@8.1.1))(supports-color@8.1.1):
     dependencies:
       '@trpc/client': 10.45.4(@trpc/server@10.45.4)
       '@trpc/server': 10.45.4
       debug: 4.4.3(supports-color@8.1.1)
-      electron: 36.9.5(supports-color@8.1.1)
+      electron: 39.8.10(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -11334,10 +11345,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@36.9.5(supports-color@8.1.1):
+  electron@39.8.10(supports-color@8.1.1):
     dependencies:
       '@electron/get': 2.0.3(supports-color@8.1.1)
-      '@types/node': 22.19.15
+      '@types/node': 22.20.1
       extract-zip: 2.0.1(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
@@ -14670,6 +14681,9 @@ snapshots:
   undici-types@6.21.0: {}
 
   undici-types@7.16.0: {}
+
+  undici-types@7.18.2:
+    optional: true
 
   undici@7.29.0: {}
 
