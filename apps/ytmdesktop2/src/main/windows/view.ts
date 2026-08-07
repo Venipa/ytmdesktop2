@@ -15,10 +15,12 @@ export const createApiView = async <T extends WebContentsView>(path: string, pos
 			contextIsolation: true,
 			webSecurity: isProduction,
 			allowRunningInsecureContent: !isProduction,
+			backgroundThrottling: false,
 			preload: join(__dirname, "../preload/api.js"),
 			transparent: options?.transparent,
 		},
 	}) as T;
+	view.webContents.setBackgroundThrottling(false);
 	await loadUrlOfWebContents(view.webContents, path);
 	if (postFunc) await Promise.resolve(postFunc(view));
 	const wnd = BrowserWindow.fromWebContents(view.webContents);
@@ -38,10 +40,12 @@ export const createView = async <T extends WebContentsView>(
 			webSecurity: isProduction,
 			allowRunningInsecureContent: !isProduction,
 			contextIsolation: true,
+			backgroundThrottling: false,
 			...options,
 			preload,
 		},
 	}) as T;
+	view.webContents.setBackgroundThrottling(false);
 	if (postFunc) await Promise.resolve(postFunc(view));
 	const wnd = BrowserWindow.fromWebContents(view.webContents);
 	if (wnd) lockSizeToParent(wnd)(view);

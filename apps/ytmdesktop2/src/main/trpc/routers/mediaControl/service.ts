@@ -19,7 +19,6 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 
 	async BeforeStart() {
 		try {
-			app.commandLine.appendSwitch("disable-features", "MediaSessionService");
 			app.commandLine.appendSwitch("in-progress-gpu");
 		} catch (error) {
 			this.logger.error("Failed to set command line switches:", error);

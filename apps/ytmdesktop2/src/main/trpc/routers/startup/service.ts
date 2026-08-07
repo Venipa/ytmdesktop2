@@ -22,7 +22,12 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 		if (platform.isWindows) {
 			app.commandLine.appendSwitch("enable-gpu-rasterization"); // performance feature flags
 			app.commandLine.appendSwitch("enable-zero-copy");
+			app.commandLine.appendSwitch("force_high_performance_gpu"); // fixes choppy/lowfps video and transitions, defaults to primary gpu if no more powerful gpu is found
 		}
+		// Keep renderers (esp. YouTube WebContentsView) off Chromium background/EcoQoS throttling
+		app.commandLine.appendSwitch("disable-renderer-backgrounding");
+		app.commandLine.appendSwitch("disable-background-timer-throttling");
+		app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 		if (isDevelopment) app.commandLine.appendSwitch("disable-web-security");
 		app.commandLine.appendSwitch("high-dpi-support", "1");
 		if (!platform.isWindows)
@@ -45,6 +50,15 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 				.flat()
 				.filter(Boolean)
 				.join(","),
+		);
+		this.app.commandLine.appendSwitch(
+			"disable-features",
+			[
+				"CalculateNativeWinOcclusion",
+				"IntensiveWakeUpThrottling",
+				"UseEcoQoSForBackgroundProcess",
+				"MediaSessionService", // xosms / OS media keys — keep out of Chromium MediaSession
+			].join(","),
 		);
 	}
 	async BeforeStart() {
