@@ -119,7 +119,7 @@ afterPack: ./scripts/afterPack.js
 
 # Fixed version required in monorepo: install-app-deps cannot resolve
 # hoisted root node_modules/electron from apps/ytmdesktop2.
-electronVersion: 39.8.10
+electronVersion: 43.3.0
 npmRebuild: false
 publish:
   - provider: github
