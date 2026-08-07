@@ -9,71 +9,29 @@ permissions:
   contents: write
   packages: read # for @venipa/oxsms github hosted package
 
-jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-2025-vs2026, ubuntu-latest, macos-latest]
-        node-version: [24.14.0]
+env:
+  NODE_VERSION: "24.14.0"
+  COMPILE_ARTIFACT: electron-compile
 
+jobs:
+  # Shared electron-vite build — pack jobs skip typecheck + vite.
+  compile:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.getVersion.outputs.value }}
+      version_ok: ${{ steps.getVersion.outputs.ok }}
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
       - uses: pnpm/setup@v2
         with:
           version: 11
-          runtime: node@${{ matrix.node-version }}
+          runtime: node@${{ env.NODE_VERSION }}
           cache: true
           install: false
-        # install dbus-1 dep for xosms
-      - if: startsWith(matrix.os, 'ubuntu')
-        name: update apt and install utils
-        run: |
-          sudo apt update
-          sudo apt install -y libdbus-1-dev elfutils libarchive-tools
-      - if: startsWith(matrix.os, 'ubuntu')
-        name: install ubuntu snap + lxd
-        run: |
-          sudo apt install -y snapd
-          sudo snap install snapcraft --classic
-          # core24 snapcraft.useLXD — LXD must be ready before electron-builder
-          sudo snap install lxd
-          sudo lxd waitready --timeout=60
-          sudo lxd init --auto
-          sudo usermod --append --groups lxd "$USER"
-          # Docker FORWARD rules break LXD networking on GitHub-hosted runners
-          # https://documentation.ubuntu.com/lxd/en/latest/howto/network_bridge_firewalld/
-          sudo iptables -I DOCKER-USER -j ACCEPT || true
-          sudo iptables -P FORWARD ACCEPT || true
-          # newgrp does not work in Actions; refresh group via sudo --user
-          # https://github.com/actions/runner-images/issues/9932
-          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxc info
-
-      - if: startsWith(matrix.os, 'ubuntu')
-        name: install ubuntu flatpak
-        run: |
-          sudo apt install -y flatpak flatpak-builder
-          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          # electron-builder flatpak target needs Platform/Sdk/BaseApp matching electron-builder.yml
-          sudo flatpak install -y flathub \
-            org.freedesktop.Platform/x86_64/24.08 \
-            org.freedesktop.Sdk/x86_64/24.08 \
-            org.electronjs.Electron2.BaseApp/x86_64/24.08
-
-      - if: startsWith(matrix.os, 'windows')
-        name: install windows deps
-        uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.5
-        with:
-          sdk-version: 20348
-
-      # windows-2025-vs2026 ships VS 2026 (18.x). node-gyp <12.1 cannot detect it
-      # (@electron/rebuild used to pull node-gyp@11 → install-app-deps fails on @parcel/watcher).
-      - if: startsWith(matrix.os, 'windows')
-        name: Setup MSVC environment
-        uses: ilammy/msvc-dev-cmd@v1
 
       - if: github.ref_type == 'tag'
         id: getVersion
@@ -88,18 +46,18 @@ jobs:
             core.setOutput("value", id);
             core.setOutput("ok", isVersion.test(id))
             core.setOutput("releaseType", isRC ? 'rc' : 'stable')
-      - if: github.ref_type == 'tag' && steps.getVersion.outputs.ok
+
+      - if: github.ref_type == 'tag' && steps.getVersion.outputs.ok == 'true'
         name: set app version
         uses: jossef/action-set-json-field@v2.2
         with:
           file: apps/ytmdesktop2/package.json
           field: version
           value: ${{ steps.getVersion.outputs.value }}
+
       - name: Prepare pnpm / auth
         shell: pwsh
         run: |
-          # Auth/registry only in .npmrc. Hoist settings live in pnpm-workspace.yaml
-          # (shamefullyHoist + nodeLinker: hoisted) — required for Electron/pnpm CI builds.
           Remove-Item -Path .npmrc -ErrorAction Ignore
           Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
           Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
@@ -107,51 +65,30 @@ jobs:
           Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
 
       - name: Install dependencies
-        run: |
-          pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Hint for node-gyp 12.1+ / 13.x on windows-2025-vs2026 (VS 18.x)
-          npm_config_msvs_version: "2026"
-      # Outside Mac App Store: Developer ID Application + notarize (see macos-signing.md)
-      # Secrets: MACOS_DEVELOPER_ID_APPLICATION_P12 (+ _PASSWORD),
-      #          APPLE_NOTARY_API_KEY_P8, APPLE_NOTARY_API_KEY_ID, APPLE_NOTARY_API_ISSUER_ID
-      # Not needed: Mac App Store certs, Developer ID Installer (no .pkg)
-      - if: startsWith(matrix.os, 'macos')
-        name: Prepare Apple notarization key
-        run: |
-          mkdir -p .secrets
-          echo "${{ secrets.APPLE_NOTARY_API_KEY_P8 }}" > .secrets/AuthKey.p8
-          chmod 600 .secrets/AuthKey.p8
 
-      - name: Build Electron release
-        shell: bash
-        run: |
-          if [ "${{ startsWith(matrix.os, 'ubuntu') }}" = "true" ]; then
-            # Pick up lxd group membership from prior usermod (newgrp is a no-op in Actions)
-            sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- pnpm release
-          else
-            pnpm release
-          fi
+      - name: Compile Electron app
+        run: pnpm release:compile
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
           VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
           VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
-          # electron-builder code signing (Developer ID Application .p12) — macOS only
-          CSC_LINK: ${{ startsWith(matrix.os, 'macos') && secrets.MACOS_DEVELOPER_ID_APPLICATION_P12 || '' }}
-          CSC_KEY_PASSWORD: ${{ startsWith(matrix.os, 'macos') && secrets.MACOS_DEVELOPER_ID_APPLICATION_PASSWORD || '' }}
-          # electron-builder notarize: true → notarytool via App Store Connect API key
-          APPLE_API_KEY: ${{ startsWith(matrix.os, 'macos') && format('{0}/.secrets/AuthKey.p8', github.workspace) || '' }}
-          APPLE_API_KEY_ID: ${{ startsWith(matrix.os, 'macos') && secrets.APPLE_NOTARY_API_KEY_ID || '' }}
-          APPLE_API_ISSUER: ${{ startsWith(matrix.os, 'macos') && secrets.APPLE_NOTARY_API_ISSUER_ID || '' }}
-      - if: always() && startsWith(matrix.os, 'macos')
-        name: Cleanup Apple secrets
-        run: rm -rf .secrets
-      - if: startsWith(matrix.os, 'ubuntu')
-        name: Upload release source maps to sentry
+
+      - name: Upload compile artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: |
+            apps/ytmdesktop2/out
+            apps/ytmdesktop2/package.json
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Upload release source maps to sentry
         continue-on-error: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -161,20 +98,382 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_URL: ${{ secrets.SENTRY_URL }}
         run: |
-          # Install Sentry CLI
           curl -sL https://sentry.io/get-cli/ | bash
-
-          # Create new Sentry release
           export SENTRY_RELEASE=$(sentry-cli releases propose-version)
           sentry-cli releases new --project $SENTRY_PROJECT $SENTRY_RELEASE
           sentry-cli releases set-commits --auto $SENTRY_RELEASE
           sentry-cli releases finalize $SENTRY_RELEASE
-
-          # Create new deploy for this Sentry release
           sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_DEPLOY_ENVIRONMENT
 
+  build-windows:
+    needs: compile
+    runs-on: windows-2025-vs2026
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 11
+          runtime: node@${{ env.NODE_VERSION }}
+          cache: true
+          install: false
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: .
+
+      - name: install windows deps
+        uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.5
+        with:
+          sdk-version: 20348
+
+      # windows-2025-vs2026 ships VS 2026 (18.x). node-gyp <12.1 cannot detect it
+      # (@electron/rebuild used to pull node-gyp@11 → install-app-deps fails on @parcel/watcher).
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Prepare pnpm / auth
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_msvs_version: "2026"
+
+      - name: Pack Windows release
+        run: pnpm release:pack:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
+          VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+
+  build-macos:
+    needs: compile
+    runs-on: macos-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 11
+          runtime: node@${{ env.NODE_VERSION }}
+          cache: true
+          install: false
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: .
+
+      - name: Prepare pnpm / auth
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Outside Mac App Store: Developer ID Application + notarize (see macos-signing.md)
+      # Secrets: MACOS_DEVELOPER_ID_APPLICATION_P12 (+ _PASSWORD),
+      #          APPLE_NOTARY_API_KEY_P8, APPLE_NOTARY_API_KEY_ID, APPLE_NOTARY_API_ISSUER_ID
+      - name: Prepare Apple notarization key
+        run: |
+          mkdir -p .secrets
+          echo "${{ secrets.APPLE_NOTARY_API_KEY_P8 }}" > .secrets/AuthKey.p8
+          chmod 600 .secrets/AuthKey.p8
+
+      - name: Pack macOS release
+        run: pnpm release:pack:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
+          VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+          CSC_LINK: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_PASSWORD }}
+          APPLE_API_KEY: ${{ format('{0}/.secrets/AuthKey.p8', github.workspace) }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_NOTARY_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_NOTARY_API_ISSUER_ID }}
+
+      - if: always()
+        name: Cleanup Apple secrets
+        run: rm -rf .secrets
+
+  # AppImage x64 + deb + pacman — no LXD / flatpak tooling.
+  build-linux-core:
+    needs: compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 11
+          runtime: node@${{ env.NODE_VERSION }}
+          cache: true
+          install: false
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: .
+
+      - name: update apt and install utils
+        run: |
+          sudo apt update
+          sudo apt install -y libdbus-1-dev elfutils libarchive-tools
+
+      - name: Prepare pnpm / auth
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack Linux core (AppImage/deb/pacman)
+        run: pnpm release:pack:linux:core
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
+          VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+
+  # Native arm64 AppImage (no x64 cross-compile).
+  build-linux-arm:
+    needs: compile
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 11
+          runtime: node@${{ env.NODE_VERSION }}
+          cache: true
+          install: false
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: .
+
+      - name: update apt and install utils
+        run: |
+          sudo apt update
+          sudo apt install -y libdbus-1-dev elfutils
+
+      - name: Prepare pnpm / auth
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack Linux arm64 AppImage
+        run: pnpm release:pack:linux:arm
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
+          VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+
+  build-linux-flatpak:
+    needs: compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 11
+          runtime: node@${{ env.NODE_VERSION }}
+          cache: true
+          install: false
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: .
+
+      - name: update apt and install utils
+        run: |
+          sudo apt update
+          sudo apt install -y libdbus-1-dev flatpak flatpak-builder
+
+      # --user so cache hits ~/.local/share/flatpak (sudo installs skip user cache).
+      - name: Cache flatpak runtimes
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/flatpak
+          key: flatpak-runtimes-user-24.08-${{ runner.os }}-${{ runner.arch }}
+
+      - name: install flatpak runtimes
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub \
+            org.freedesktop.Platform/x86_64/24.08 \
+            org.freedesktop.Sdk/x86_64/24.08 \
+            org.electronjs.Electron2.BaseApp/x86_64/24.08
+
+      - name: Prepare pnpm / auth
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack Linux Flatpak
+        run: pnpm release:pack:linux:flatpak
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
+          VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+
+  build-linux-snap:
+    needs: compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 11
+          runtime: node@${{ env.NODE_VERSION }}
+          cache: true
+          install: false
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: .
+
+      - name: update apt and install utils
+        run: |
+          sudo apt update
+          sudo apt install -y libdbus-1-dev snapd
+
+      - name: install snapcraft + lxd
+        run: |
+          sudo snap install snapcraft --classic
+          # core24 snapcraft.useLXD — LXD must be ready before electron-builder
+          sudo snap install lxd
+          sudo lxd waitready --timeout=60
+          sudo lxd init --auto
+          sudo usermod --append --groups lxd "$USER"
+          # Docker FORWARD rules break LXD networking on GitHub-hosted runners
+          # https://documentation.ubuntu.com/lxd/en/latest/howto/network_bridge_firewalld/
+          sudo iptables -I DOCKER-USER -j ACCEPT || true
+          sudo iptables -P FORWARD ACCEPT || true
+          # newgrp does not work in Actions; refresh group via sudo --user
+          # https://github.com/actions/runner-images/issues/9932
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxc info
+
+      - name: Prepare pnpm / auth
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack Linux Snap
+        shell: bash
+        run: |
+          # Pick up lxd group membership from prior usermod (newgrp is a no-op in Actions)
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- pnpm release:pack:linux:snap
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
+          VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+
   finalize-release:
-    needs: build
+    needs:
+      - build-windows
+      - build-macos
+      - build-linux-core
+      - build-linux-arm
+      - build-linux-flatpak
+      - build-linux-snap
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag'
     steps:

@@ -64,11 +64,11 @@ linux:
   description: Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.
   # Match Electron WM_CLASS / app_id to installed .desktop (see package.json desktopName).
   syncDesktopName: true
+  # arm64 AppImage built on ubuntu-24.04-arm in CI (release:pack:linux:arm).
+  # flatpak/snap are separate CI jobs (release:pack:linux:flatpak|snap).
   target:
     - target: appImage
       arch: x64
-    - target: appImage
-      arch: arm64
     - target: deb
       arch: x64
     - target: pacman
