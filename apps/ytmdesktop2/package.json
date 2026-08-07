@@ -1,5 +1,6 @@
 {
 	"name": "ytmdesktop2",
+  "description": "Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.",
 	"version": "0.0.0",
 	"private": false,
 	"author": "Venipa <admin@venipa.net>",

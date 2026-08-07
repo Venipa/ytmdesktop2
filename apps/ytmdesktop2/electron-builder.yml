@@ -61,6 +61,7 @@ dmg:
   title: "Install or Update ${productName} ${version}"
 linux:
   executableName: ytmdesktop
+  description: Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.
   target:
     - target: appImage
       arch: x64
@@ -78,6 +79,7 @@ linux:
 flatpak:
   useWaylandFlags: true
   category: AudioVideo
+  description: Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.
   runtime: org.freedesktop.Platform
   runtimeVersion: "24.08"
   sdk: org.freedesktop.Sdk
@@ -104,6 +106,7 @@ snapcraft:
     confinement: strict
     grade: stable
     summary: YouTube Music for Desktop
+    description: Unofficial YouTube Music desktop client with Discord RPC, Last.fm, and local API.
     # core24 allows Wayland by default; set forceX11: true to disable
     useLXD: true
     slots:
