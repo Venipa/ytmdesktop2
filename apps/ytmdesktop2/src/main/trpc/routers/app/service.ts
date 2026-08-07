@@ -4,7 +4,7 @@ import { isDevelopment } from "@main/infra/devUtils";
 import { setSentryEnabled } from "@main/infra/sentry";
 import { serverMain } from "@main/ipc/serverEvents";
 import { trackService } from "@main/trpc/routers/track";
-import { createAppDialogWindow, createAppWindow } from "@main/windows/windowUtils";
+import { createAppDialogWindow, createAppWindow, WindowOptions } from "@main/windows/windowUtils";
 import { stripUndefined } from "@shared/utils/object";
 import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
 import { clamp, debounce } from "lodash-es";
@@ -129,8 +129,8 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 			}
 			this.settingsWindowOpenPromise = createAppWindow({
 				parent: this.windowContext.main,
-        height: 800,
-        minHeight: 800,
+        height: 640,
+        minHeight: 540,
 				minimizeable: false,
 			}).then((win) => {
 				win.on("close", () => {
@@ -149,7 +149,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 	}
 
 	/** Open named subwindow (`settingsWindow` or hash route name). */
-	async openSubWindow(windowName: string) {
+	async openSubWindow(windowName: string, windowOptions: Partial<WindowOptions> = {}) {
 		if (!windowName) return;
 		if (windowName === "settingsWindow") {
 			await this.openSettingsWindow();
@@ -166,7 +166,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 				return;
 			}
 		}
-		const window = await createAppWindow({ parent: this.windowContext.main, path: "/" + windowName });
+		const window = await createAppWindow({ ...windowOptions, parent: this.windowContext.main, path: "/" + windowName });
 		this._windowMap.set(windowName, window);
 	}
 

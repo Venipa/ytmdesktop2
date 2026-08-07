@@ -9,7 +9,7 @@ import appIconPath from "~/build/favicon.ico?asset";
 import { registerWindowDialogResponse } from "./dialogResponse";
 import { loadUrlOfWindow, syncWindowStateToWebContents } from "./webContentUtils";
 
-type WindowOptions = {
+export type WindowOptions = {
 	path: string;
 	parent: BrowserWindow;
 	minHeight?: number;
