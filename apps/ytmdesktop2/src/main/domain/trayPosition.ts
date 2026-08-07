@@ -9,22 +9,32 @@ function isEmptyTrayBounds(bounds: Electron.Rectangle): boolean {
 	return bounds.width <= 0 && bounds.height <= 0;
 }
 
+function clampToWorkArea(x: number, y: number, width: number, height: number, workArea: Electron.Rectangle) {
+	return {
+		x: Math.min(Math.max(x, workArea.x), workArea.x + workArea.width - width),
+		y: Math.min(Math.max(y, workArea.y), workArea.y + workArea.height - height),
+	};
+}
+
 /**
  * Position a popup near the tray icon, clamped to the nearest display workArea.
  * Prefers above the icon when the tray sits in the lower half (Windows taskbar),
- * otherwise below (macOS menu bar). Falls back to cursor when getBounds() is empty (some Linux DEs).
+ * otherwise below (macOS menu bar). Falls back to cursor when getBounds() is empty (some Linux DEs)
+ * or when `tray` is missing/destroyed.
  */
-export function positionNearTray(win: BrowserWindow, tray: Tray, size: TrayPopupSize): void {
-	if (!win || win.isDestroyed() || !tray || tray.isDestroyed()) return;
+export function positionNearTray(win: BrowserWindow, tray: Tray | null | undefined, size: TrayPopupSize): void {
+	if (!win || win.isDestroyed()) return;
 
 	const { width, height } = size;
-	const trayBounds = tray.getBounds();
 	let anchorX: number;
 	let anchorY: number;
 	let trayW: number;
 	let trayH: number;
 
-	if (isEmptyTrayBounds(trayBounds)) {
+	const trayOk = tray && !tray.isDestroyed();
+	const trayBounds = trayOk ? tray.getBounds() : null;
+
+	if (!trayBounds || isEmptyTrayBounds(trayBounds)) {
 		const cursor = screen.getCursorScreenPoint();
 		anchorX = cursor.x;
 		anchorY = cursor.y;
@@ -53,8 +63,6 @@ export function positionNearTray(win: BrowserWindow, tray: Tray, size: TrayPopup
 		if (y + height > workArea.y + workArea.height) y = Math.round(anchorY - height - 4);
 	}
 
-	x = Math.min(Math.max(x, workArea.x), workArea.x + workArea.width - width);
-	y = Math.min(Math.max(y, workArea.y), workArea.y + workArea.height - height);
-
+	({ x, y } = clampToWorkArea(x, y, width, height, workArea));
 	win.setBounds({ x, y, width, height });
 }

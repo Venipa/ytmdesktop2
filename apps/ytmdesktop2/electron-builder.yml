@@ -18,7 +18,13 @@ files:
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig*.json}"
 asarUnpack:
   - resources/**
-  - "**/{favicon,16x16,32x32,icon}.*"
+  # electron-vite may hash asset names — match stem; ICNS needs real path (not asar).
+  - "**/*favicon*"
+  - "**/*32x32*"
+  - "**/*16x16*"
+  - "**/*icon*.icns"
+  - "**/*.icns"
+  - "**/assets/**"
 win:
   executableName: ytmdesktop
   artifactName: ${name}-${version}-setup.${ext}

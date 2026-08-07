@@ -1,3 +1,4 @@
+import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
 import { createTrayNativeImage } from "@main/domain/trayIcon";
 import { createTrayMenu } from "@main/domain/trayMenu";
@@ -61,6 +62,10 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 
 			this._tray = new Tray(icon);
 			this._tray.setToolTip("YouTube Music for Desktop");
+			// macOS: text keeps a visible status item if the glyph failed to load.
+			if (platform.isMacOS && icon.isEmpty()) {
+				this._tray.setTitle("YT");
+			}
 			// Do not setContextMenu — macOS would steal left-click for the menu.
 			try {
 				this.buildMenu();

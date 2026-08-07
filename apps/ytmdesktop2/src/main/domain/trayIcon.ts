@@ -1,8 +1,12 @@
 import { platform } from "@electron-toolkit/utils";
+import { createLogger } from "@shared/utils/console";
 import { NativeImage, nativeImage } from "electron";
 import { existsSync, readFileSync } from "fs";
-import trayIconPng from "~/build/32x32.png?asset";
 import trayIconIco from "~/build/favicon.ico?asset";
+import trayIconIcns from "~/src/renderer/src/assets/icons/mac/icon.icns?asset";
+import trayIconPng from "~/src/renderer/src/assets/icons/png/32x32.png?asset";
+
+const log = createLogger("trayIcon");
 
 /** Prefer asar.unpacked so createFromPath works in packaged builds. */
 function resolveAssetPath(assetPath: string): string {
@@ -12,23 +16,63 @@ function resolveAssetPath(assetPath: string): string {
 	return assetPath;
 }
 
+function candidatePaths(assetPath: string): string[] {
+	const unpacked = resolveAssetPath(assetPath);
+	return unpacked !== assetPath ? [unpacked, assetPath] : [assetPath];
+}
+
+/**
+ * ICNS must be loaded from a real file path (NSImage); createFromBuffer often fails.
+ * PNG/ICO can use buffer (works inside asar) with path fallback.
+ */
 function loadTrayImage(assetPath: string): NativeImage {
-	const resolved = resolveAssetPath(assetPath);
-	const path = existsSync(resolved) ? resolved : assetPath;
-	try {
-		if (existsSync(path)) {
-			// Buffer load also works when the file is still inside asar.
-			return nativeImage.createFromBuffer(readFileSync(path));
+	if (!assetPath) return nativeImage.createEmpty();
+
+	const isIcns = /\.icns$/i.test(assetPath);
+
+	for (const candidate of candidatePaths(assetPath)) {
+		if (isIcns) {
+			try {
+				if (!existsSync(candidate)) continue;
+				const img = nativeImage.createFromPath(candidate);
+				if (!img.isEmpty()) return img;
+				log.warn("tray icns decoded empty", candidate);
+			} catch (err) {
+				log.warn("tray icns path load failed", candidate, err);
+			}
+			continue;
 		}
-	} catch {
-		/* fall through */
+
+		try {
+			if (!existsSync(candidate)) continue;
+			const img = nativeImage.createFromBuffer(readFileSync(candidate));
+			if (!img.isEmpty()) return img;
+			log.warn("tray asset decoded empty", candidate);
+		} catch (err) {
+			log.warn("tray asset buffer load failed", candidate, err);
+		}
+		try {
+			const img = nativeImage.createFromPath(candidate);
+			if (!img.isEmpty()) return img;
+		} catch (err) {
+			log.warn("tray asset path load failed", candidate, err);
+		}
 	}
-	return nativeImage.createFromPath(path);
+
+	return nativeImage.createEmpty();
+}
+
+function sizeForTray(img: NativeImage): NativeImage {
+	if (img.isEmpty()) return img;
+	const size = platform.isMacOS ? 32 : 24;
+	const { width, height } = img.getSize();
+	if (width === size && height === size) return img;
+	return img.resize({ width: size, height: size });
 }
 
 /**
  * Tray / menu-bar icon.
- * Windows: ICO. macOS/Linux: app PNG (ICO often empty on Darwin).
+ * Windows: ICO. macOS: ICNS then PNG. Linux: PNG.
  */
 export function createTrayNativeImage(): NativeImage {
 	if (platform.isWindows) {
@@ -36,11 +80,14 @@ export function createTrayNativeImage(): NativeImage {
 		if (!ico.isEmpty()) return ico;
 	}
 
-	const png = loadTrayImage(trayIconPng);
-	if (!png.isEmpty()) {
-		const size = platform.isMacOS ? 18 : 24;
-		return png.resize({ width: size, height: size });
+	if (platform.isMacOS) {
+		const icns = loadTrayImage(trayIconIcns);
+		if (!icns.isEmpty()) return sizeForTray(icns);
 	}
 
-	return loadTrayImage(trayIconIco);
+	const png = loadTrayImage(trayIconPng);
+	if (!png.isEmpty()) return sizeForTray(png);
+
+	// Last resort — build/ favicon / 32x32 if assets path missing in some builds.
+	return sizeForTray(loadTrayImage(trayIconIco));
 }

@@ -110,8 +110,10 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 
 	private position(win: BrowserWindow) {
 		const tray = this.trayProvider?.Tray;
-		if (!tray || tray.isDestroyed()) return;
-		positionNearTray(win, tray, { width: TRAY_VIEW_WIDTH, height: TRAY_VIEW_HEIGHT });
+		positionNearTray(win, tray && !tray.isDestroyed() ? tray : null, {
+			width: TRAY_VIEW_WIDTH,
+			height: TRAY_VIEW_HEIGHT,
+		});
 	}
 
 	private present(win: BrowserWindow) {
