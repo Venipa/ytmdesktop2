@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
 
+# One release per tag; do not cancel mid-publish (assets would be partial).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   packages: read # for @venipa/oxsms github hosted package
@@ -44,9 +49,10 @@ jobs:
             const id = process.env.REF_NAME && process.env.REF_NAME.split('v')[1] || process.env.REF_NAME
             const isRC = id.includes('-rc.')
             core.setOutput("value", id);
-            core.setOutput("ok", isVersion.test(id))
+            core.setOutput("ok", String(isVersion.test(id)))
             core.setOutput("releaseType", isRC ? 'rc' : 'stable')
 
+      # outputs.ok is the string "true"/"false" — bare `if: outputs.ok` is truthy for "false".
       - if: github.ref_type == 'tag' && steps.getVersion.outputs.ok == 'true'
         name: set app version
         uses: jossef/action-set-json-field@v2.2
@@ -56,13 +62,15 @@ jobs:
           value: ${{ steps.getVersion.outputs.value }}
 
       - name: Prepare pnpm / auth
-        shell: pwsh
+        shell: bash
         run: |
-          Remove-Item -Path .npmrc -ErrorAction Ignore
-          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
-          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
-          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -78,15 +86,32 @@ jobs:
           VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
 
+      - name: Verify compile output
+        shell: bash
+        run: test -f apps/ytmdesktop2/out/main/index.js
+
+      # Wildcard → artifact root is out contents. Download into apps/ytmdesktop2/out.
       - name: Upload compile artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: |
-            apps/ytmdesktop2/out
-            apps/ytmdesktop2/package.json
+          path: apps/ytmdesktop2/out/**
           if-no-files-found: error
           retention-days: 3
+
+      # Avoid parallel pack jobs racing on release create.
+      - name: Ensure draft GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          tag="${{ github.ref_name }}"
+          title="v${{ steps.getVersion.outputs.value }} - "
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists"
+          else
+            gh release create "$tag" --draft --title "$title" --notes "Publishing assets…"
+          fi
 
       - name: Upload release source maps to sentry
         continue-on-error: true
@@ -121,11 +146,22 @@ jobs:
           cache: true
           install: false
 
-      - name: Download compile artifact
-        uses: actions/download-artifact@v4
+      - if: needs.compile.outputs.version_ok == 'true'
+        name: set app version
+        uses: jossef/action-set-json-field@v2.2
         with:
-          name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          file: apps/ytmdesktop2/package.json
+          field: version
+          value: ${{ needs.compile.outputs.version }}
+
+      - name: Prepare pnpm / auth
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
 
       - name: install windows deps
         uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.5
@@ -137,20 +173,25 @@ jobs:
       - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Prepare pnpm / auth
-        shell: pwsh
-        run: |
-          Remove-Item -Path .npmrc -ErrorAction Ignore
-          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
-          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
-          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_msvs_version: "2026"
+
+      # After install — shared vite out from compile job.
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: apps/ytmdesktop2/out
+
+      - name: Verify compile output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath "apps/ytmdesktop2/out/main/index.js")) {
+            throw "missing apps/ytmdesktop2/out/main/index.js"
+          }
 
       - name: Pack Windows release
         run: pnpm release:pack:win
@@ -178,25 +219,39 @@ jobs:
           cache: true
           install: false
 
-      - name: Download compile artifact
-        uses: actions/download-artifact@v4
+      - if: needs.compile.outputs.version_ok == 'true'
+        name: set app version
+        uses: jossef/action-set-json-field@v2.2
         with:
-          name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          file: apps/ytmdesktop2/package.json
+          field: version
+          value: ${{ needs.compile.outputs.version }}
 
       - name: Prepare pnpm / auth
-        shell: pwsh
+        shell: bash
         run: |
-          Remove-Item -Path .npmrc -ErrorAction Ignore
-          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
-          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
-          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: apps/ytmdesktop2/out
+
+      - name: Verify compile output
+        shell: bash
+        run: test -f apps/ytmdesktop2/out/main/index.js
 
       # Outside Mac App Store: Developer ID Application + notarize (see macos-signing.md)
       # Secrets: MACOS_DEVELOPER_ID_APPLICATION_P12 (+ _PASSWORD),
@@ -243,11 +298,13 @@ jobs:
           cache: true
           install: false
 
-      - name: Download compile artifact
-        uses: actions/download-artifact@v4
+      - if: needs.compile.outputs.version_ok == 'true'
+        name: set app version
+        uses: jossef/action-set-json-field@v2.2
         with:
-          name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          file: apps/ytmdesktop2/package.json
+          field: version
+          value: ${{ needs.compile.outputs.version }}
 
       - name: update apt and install utils
         run: |
@@ -255,18 +312,30 @@ jobs:
           sudo apt install -y libdbus-1-dev elfutils libarchive-tools
 
       - name: Prepare pnpm / auth
-        shell: pwsh
+        shell: bash
         run: |
-          Remove-Item -Path .npmrc -ErrorAction Ignore
-          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
-          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
-          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: apps/ytmdesktop2/out
+
+      - name: Verify compile output
+        shell: bash
+        run: test -f apps/ytmdesktop2/out/main/index.js
 
       - name: Pack Linux core (AppImage/deb/pacman)
         run: pnpm release:pack:linux:core
@@ -295,11 +364,13 @@ jobs:
           cache: true
           install: false
 
-      - name: Download compile artifact
-        uses: actions/download-artifact@v4
+      - if: needs.compile.outputs.version_ok == 'true'
+        name: set app version
+        uses: jossef/action-set-json-field@v2.2
         with:
-          name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          file: apps/ytmdesktop2/package.json
+          field: version
+          value: ${{ needs.compile.outputs.version }}
 
       - name: update apt and install utils
         run: |
@@ -307,18 +378,30 @@ jobs:
           sudo apt install -y libdbus-1-dev elfutils
 
       - name: Prepare pnpm / auth
-        shell: pwsh
+        shell: bash
         run: |
-          Remove-Item -Path .npmrc -ErrorAction Ignore
-          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
-          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
-          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: apps/ytmdesktop2/out
+
+      - name: Verify compile output
+        shell: bash
+        run: test -f apps/ytmdesktop2/out/main/index.js
 
       - name: Pack Linux arm64 AppImage
         run: pnpm release:pack:linux:arm
@@ -346,45 +429,54 @@ jobs:
           cache: true
           install: false
 
-      - name: Download compile artifact
-        uses: actions/download-artifact@v4
+      - if: needs.compile.outputs.version_ok == 'true'
+        name: set app version
+        uses: jossef/action-set-json-field@v2.2
         with:
-          name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          file: apps/ytmdesktop2/package.json
+          field: version
+          value: ${{ needs.compile.outputs.version }}
 
       - name: update apt and install utils
         run: |
           sudo apt update
-          sudo apt install -y libdbus-1-dev flatpak flatpak-builder
+          sudo apt install -y libdbus-1-dev elfutils flatpak flatpak-builder
 
-      # --user so cache hits ~/.local/share/flatpak (sudo installs skip user cache).
-      - name: Cache flatpak runtimes
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/flatpak
-          key: flatpak-runtimes-user-24.08-${{ runner.os }}-${{ runner.arch }}
-
+      # System install — matches prior working release; electron-builder flatpak-bundler
+      # does not pass --user to flatpak-builder.
       - name: install flatpak runtimes
         run: |
-          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y flathub \
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub \
             org.freedesktop.Platform/x86_64/24.08 \
             org.freedesktop.Sdk/x86_64/24.08 \
             org.electronjs.Electron2.BaseApp/x86_64/24.08
 
       - name: Prepare pnpm / auth
-        shell: pwsh
+        shell: bash
         run: |
-          Remove-Item -Path .npmrc -ErrorAction Ignore
-          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
-          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
-          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: apps/ytmdesktop2/out
+
+      - name: Verify compile output
+        shell: bash
+        run: test -f apps/ytmdesktop2/out/main/index.js
 
       - name: Pack Linux Flatpak
         run: pnpm release:pack:linux:flatpak
@@ -412,11 +504,13 @@ jobs:
           cache: true
           install: false
 
-      - name: Download compile artifact
-        uses: actions/download-artifact@v4
+      - if: needs.compile.outputs.version_ok == 'true'
+        name: set app version
+        uses: jossef/action-set-json-field@v2.2
         with:
-          name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          file: apps/ytmdesktop2/package.json
+          field: version
+          value: ${{ needs.compile.outputs.version }}
 
       - name: update apt and install utils
         run: |
@@ -435,29 +529,39 @@ jobs:
           # https://documentation.ubuntu.com/lxd/en/latest/howto/network_bridge_firewalld/
           sudo iptables -I DOCKER-USER -j ACCEPT || true
           sudo iptables -P FORWARD ACCEPT || true
-          # newgrp does not work in Actions; refresh group via sudo --user
+          # newgrp does not work in Actions; sg refreshes group without stripping env
           # https://github.com/actions/runner-images/issues/9932
-          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxc info
+          sg lxd -c 'lxc info'
 
       - name: Prepare pnpm / auth
-        shell: pwsh
+        shell: bash
         run: |
-          Remove-Item -Path .npmrc -ErrorAction Ignore
-          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
-          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
-          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pack Linux Snap
+      - name: Download compile artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}
+          path: apps/ytmdesktop2/out
+
+      - name: Verify compile output
         shell: bash
-        run: |
-          # Pick up lxd group membership from prior usermod (newgrp is a no-op in Actions)
-          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- pnpm release:pack:linux:snap
+        run: test -f apps/ytmdesktop2/out/main/index.js
+
+      - name: Pack Linux Snap
+        # sg lxd keeps GH_TOKEN/PATH; sudo --user often drops secrets via env_reset.
+        run: sg lxd -c 'pnpm release:pack:linux:snap'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
@@ -484,63 +588,59 @@ jobs:
 
       - name: Parse version from tag
         id: version
-        shell: pwsh
+        shell: bash
         run: |
-          $tag = "${{ github.ref_name }}"
-          $version = if ($tag.StartsWith("v")) { $tag.Substring(1) } else { $tag }
-          Write-Host "Tag=$tag Version=$version"
-          "tag=$tag" >> $env:GITHUB_OUTPUT
-          "version=$version" >> $env:GITHUB_OUTPUT
+          tag="${{ github.ref_name }}"
+          version="${tag#v}"
+          echo "Tag=$tag Version=$version"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Build release notes from commits
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
+        shell: bash
         run: |
-          $tag = "${{ steps.version.outputs.tag }}"
-          $prev = ""
-          try {
-            $releases = gh release list --exclude-drafts --limit 20 --json tagName | ConvertFrom-Json
-            $prev = ($releases | Where-Object { $_.tagName -ne $tag } | Select-Object -First 1).tagName
-          } catch {
-            $prev = ""
-          }
+          tag="${{ steps.version.outputs.tag }}"
+          prev=""
+          if prev=$(gh release list --exclude-drafts --limit 20 --json tagName --jq ".[] | select(.tagName != \"$tag\") | .tagName" | head -n1); then
+            :
+          else
+            prev=""
+          fi
 
-          if ([string]::IsNullOrWhiteSpace($prev)) {
-            $prev = (git describe --tags --abbrev=0 "$($tag)^" 2>$null | Out-String).Trim()
-            if ($LASTEXITCODE -ne 0) { $prev = "" }
-          }
+          if [ -z "$prev" ]; then
+            prev=$(git describe --tags --abbrev=0 "${tag}^" 2>/dev/null || true)
+          fi
 
-          if ([string]::IsNullOrWhiteSpace($prev)) {
-            Write-Host "No previous published release — listing all commits reachable from $tag"
-            $lines = @(git log --pretty=tformat:"- %s (%h)" $tag)
-          }
-          else {
-            Write-Host "Commits: $prev..$tag"
-            $lines = @(git log --pretty=tformat:"- %s (%h)" "$prev..$tag")
-          }
+          if [ -z "$prev" ]; then
+            echo "No previous published release — listing all commits reachable from $tag"
+            git log --pretty=tformat:"- %s (%h)" "$tag" > release-notes-commits.txt || true
+          else
+            echo "Commits: $prev..$tag"
+            git log --pretty=tformat:"- %s (%h)" "$prev..$tag" > release-notes-commits.txt || true
+          fi
 
-          if ($lines.Count -eq 0 -or ($lines.Count -eq 1 -and [string]::IsNullOrWhiteSpace($lines[0]))) {
-            $lines = @("- No commits listed for this range.")
-          }
+          if [ ! -s release-notes-commits.txt ]; then
+            echo "- No commits listed for this range." > release-notes-commits.txt
+          fi
 
-          # git log as string[] must be joined explicitly — "$array" uses spaces, not newlines.
-          $commits = ($lines | ForEach-Object { $_.TrimEnd() }) -join "`n"
-          $body = "## Changes`n`n$commits`n"
-          [System.IO.File]::WriteAllText(
-            (Join-Path (Get-Location) "release-notes.md"),
-            $body,
-            [System.Text.UTF8Encoding]::new($false))
-          Get-Content release-notes.md -Raw
+          {
+            echo "## Changes"
+            echo
+            cat release-notes-commits.txt
+            echo
+          } > release-notes.md
+          cat release-notes.md
 
       - name: Set draft release title and notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
+        shell: bash
         run: |
-          $tag = "${{ steps.version.outputs.tag }}"
-          $version = "${{ steps.version.outputs.version }}"
-          gh release edit $tag `
-            --draft `
-            --title "v$version - " `
+          tag="${{ steps.version.outputs.tag }}"
+          version="${{ steps.version.outputs.version }}"
+          gh release edit "$tag" \
+            --draft \
+            --title "v$version - " \
             --notes-file release-notes.md
