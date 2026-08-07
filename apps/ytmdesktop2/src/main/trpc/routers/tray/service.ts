@@ -1,9 +1,9 @@
 import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
-import { createTrayNativeImage } from "@main/domain/trayIcon";
 import { createTrayMenu } from "@main/domain/trayMenu";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import TrayViewProvider from "@main/trpc/routers/trayView/service";
 import { App, Menu, Tray } from "electron";
+import TracIconPath from "~/build/favicon.ico?asset";
 
 export default class TrayProvider extends BaseProvider implements AfterInit, OnDestroy {
 	get settingsInstance(): SettingsProvider {
@@ -39,26 +39,15 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 	}
 
 	async initializeTray() {
-		// AfterInit can re-run on window reload — reuse tray so macOS menu bar does not flicker/drop.
-		if (this._tray && !this._tray.isDestroyed()) {
-			this.buildMenu();
-			return this._tray;
-		}
-
-		const icon = createTrayNativeImage();
-		if (icon.isEmpty()) {
-			this.logger.error("Tray icon NativeImage is empty — menu bar icon will be invisible");
-		}
-
-		this._tray = new Tray(icon);
-		this._tray.setToolTip("YouTube Music for Desktop");
+		if (this._tray && !this._tray.isDestroyed()) this._tray.destroy();
+		this._tray = new Tray(TracIconPath);
+		this._tray.setToolTip(`YouTube Music for Desktop`);
 		// Do not setContextMenu — macOS would steal left-click for the menu.
 		this.buildMenu();
 		this._tray.setIgnoreDoubleClickEvents(true);
 		this._tray.on("click", () => {
 			void this.trayView.toggle();
 		});
-		// right-click + Ctrl+click (macOS) → context menu
 		this._tray.on("right-click", (_ev, bounds) => {
 			const menu = this._menu ?? this.buildMenu();
 			this._tray.popUpContextMenu(menu, bounds);
