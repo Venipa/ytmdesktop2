@@ -103,14 +103,48 @@ snapcraft:
   publish:
     - provider: github
   core24:
+    category: music
+    title: YouTube Music for Desktop
+    description: Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.
     confinement: strict
     grade: stable
     summary: YouTube Music for Desktop
-    description: Unofficial YouTube Music desktop client with Discord RPC, Last.fm, and local API.
     # core24 allows Wayland by default; set forceX11: true to disable
     useLXD: true
+    # Custom plugs skip EB default browser-support allow-sandbox:true (manual review).
+    # Gnome extension still supplies desktop/wayland/opengl/etc.
     plugs:
       - browser-support
+      - home
+      - network
+      - audio-playback
+      - documents-ytmdesktop:
+          interface: personal-files
+          write:
+            - $HOME/Documents/ytmdesktop
+      - discord-ipc:
+          interface: system-files
+          write:
+            - /run/user/*/discord-ipc-0
+            - /run/user/*/discord-ipc-1
+            - /run/user/*/discord-ipc-2
+            - /run/user/*/discord-ipc-3
+            - /run/user/*/discord-ipc-4
+            - /run/user/*/discord-ipc-5
+            - /run/user/*/discord-ipc-6
+            - /run/user/*/discord-ipc-7
+            - /run/user/*/discord-ipc-8
+            - /run/user/*/discord-ipc-9
+            - /run/user/*/snap.discord/discord-ipc-0
+            - /run/user/*/snap.discord/discord-ipc-1
+            - /run/user/*/snap.discord/discord-ipc-2
+            - /run/user/*/snap.discord/discord-ipc-3
+            - /run/user/*/snap.discord/discord-ipc-4
+            - /run/user/*/snap.discord/discord-ipc-5
+            - /run/user/*/snap.discord/discord-ipc-6
+            - /run/user/*/snap.discord/discord-ipc-7
+            - /run/user/*/snap.discord/discord-ipc-8
+            - /run/user/*/snap.discord/discord-ipc-9
     executableArgs:
       - --no-sandbox
     slots:

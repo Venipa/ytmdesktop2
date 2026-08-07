@@ -21,7 +21,9 @@ function getIPCPath(id: number): string {
 	}
 
 	const dirtyPrefix = process.env.XDG_RUNTIME_DIR || process.env.TMPDIR || process.env.TMP || process.env.TEMP || "/tmp";
-	const prefix = dirtyPrefix.replace(/\/$/, "");
+	// Snaps remap XDG_RUNTIME_DIR to .../snap.<name>; Discord IPC lives on the host runtime dir
+	// (.../discord-ipc-N) or under .../snap.discord/ when Discord itself is a snap.
+	const prefix = dirtyPrefix.replace(/\/$/, "").replace(/\/snap\.[^/]+$/, "");
 	const discordSnapDir = "snap.discord";
 
 	if (directoryExists(`${prefix}/${discordSnapDir}`)) {
