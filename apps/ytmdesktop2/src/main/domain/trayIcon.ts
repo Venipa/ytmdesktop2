@@ -64,10 +64,20 @@ function loadTrayImage(assetPath: string): NativeImage {
 
 function sizeForTray(img: NativeImage): NativeImage {
 	if (img.isEmpty()) return img;
-	const size = platform.isMacOS ? 32 : 24;
-	const { width, height } = img.getSize();
-	if (width === size && height === size) return img;
-	return img.resize({ width: size, height: size });
+
+	if (platform.isMacOS) {
+		// Menu bar expects ~16pt. A bare 32×32 NativeImage is treated as 32pt and fills the bar.
+		const oneX = img.resize({ width: 16, height: 16 });
+		const twoX = img.resize({ width: 32, height: 32 });
+		try {
+			oneX.addRepresentation({ scaleFactor: 2, buffer: twoX.toPNG() });
+		} catch (err) {
+			log.warn("tray @2x representation failed", err);
+		}
+		return oneX;
+	}
+
+	return img.resize({ width: 24, height: 24 });
 }
 
 /**
