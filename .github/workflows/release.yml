@@ -151,14 +151,6 @@ jobs:
         name: Cleanup Apple secrets
         run: rm -rf .secrets
       - if: startsWith(matrix.os, 'ubuntu')
-        name: Upload snap artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: linux-snap
-          path: apps/ytmdesktop2/dist/*.snap
-          if-no-files-found: error
-          retention-days: 5
-      - if: startsWith(matrix.os, 'ubuntu')
         name: Upload release source maps to sentry
         continue-on-error: true
         env:
@@ -180,42 +172,6 @@ jobs:
 
           # Create new deploy for this Sentry release
           sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_DEPLOY_ENVIRONMENT
-
-  publish-snap:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref_type == 'tag'
-    steps:
-      - name: Download snap artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: linux-snap
-          path: artifacts
-
-      - name: Install snapcraft
-        run: sudo snap install snapcraft --classic
-
-      - name: Publish snap to Snap Store
-        env:
-          SNAP_CSC_LINK: ${{ secrets.SNAP_CSC_LINK }}
-          CHANNEL: ${{ contains(github.ref_name, '-rc.') && 'candidate' || 'stable' }}
-        run: |
-          set -euo pipefail
-          if [ -z "${SNAP_CSC_LINK:-}" ]; then
-            echo "::error::SNAP_CSC_LINK secret is required (snapcraft export-login - | base64 -w0)"
-            exit 1
-          fi
-          export SNAPCRAFT_STORE_CREDENTIALS="$(printf '%s' "$SNAP_CSC_LINK" | base64 -d)"
-          shopt -s nullglob
-          snaps=(artifacts/*.snap)
-          if [ ${#snaps[@]} -eq 0 ]; then
-            echo "::error::No .snap files found in artifacts"
-            exit 1
-          fi
-          for snap in "${snaps[@]}"; do
-            echo "Uploading $snap → $CHANNEL"
-            snapcraft upload --release="$CHANNEL" "$snap"
-          done
 
   finalize-release:
     needs: build

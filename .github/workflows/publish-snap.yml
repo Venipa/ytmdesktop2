@@ -1,0 +1,66 @@
+name: Publish Snap to Snap Store
+
+# Runs when a GitHub release is published (draft → published).
+# .snap assets are already attached by electron-builder during the tag build.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish-snap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release tag is a version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          # Match release.yml getVersion: optional leading v + semver (incl. prerelease / build)
+          version="${TAG#v}"
+          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]]; then
+            echo "::error::Tag '$TAG' is not a desktop app version (expected vX.Y.Z or vX.Y.Z-rc.N). Skipping Snap Store publish."
+            exit 1
+          fi
+          echo "Tag $TAG → version $version OK"
+
+      - name: Download .snap from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --dir artifacts \
+            --pattern "*.snap"
+          shopt -s nullglob
+          snaps=(artifacts/*.snap)
+          if [ ${#snaps[@]} -eq 0 ]; then
+            echo "::error::No .snap assets on release $TAG"
+            exit 1
+          fi
+          ls -la artifacts/*.snap
+
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Publish snap to Snap Store
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_TOKEN }}
+          # -rc. tags → candidate; GitHub prerelease flag also maps to candidate
+          CHANNEL: ${{ (github.event.release.prerelease || contains(github.event.release.tag_name, '-rc.')) && 'candidate' || 'stable' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SNAPCRAFT_STORE_CREDENTIALS:-}" ]; then
+            echo "::error::SNAPCRAFT_TOKEN secret is required (snapcraft export-login -)"
+            exit 1
+          fi
+          shopt -s nullglob
+          for snap in artifacts/*.snap; do
+            echo "Uploading $snap → $CHANNEL"
+            snapcraft upload --release="$CHANNEL" "$snap"
+          done
