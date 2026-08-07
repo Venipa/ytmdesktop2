@@ -40,7 +40,7 @@
 		"@trpc/client": "10.45.4",
 		"@trpc/react-query": "10.45.4",
 		"@trpc/server": "10.45.4",
-		"@venipa/xosms": "0.7.3",
+		"@venipa/xosms": "0.8.3",
 		"cnfast": "^0.1.0",
 		"crypto-js": "^4.2.0",
 		"date-fns": "^2.29.1",

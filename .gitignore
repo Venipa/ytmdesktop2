@@ -42,3 +42,6 @@ routeTree.gen.ts
 # Private docs for deployment docs
 .github/*.md
 .cursor/rules/discord-release-notes.mdc
+
+# Tanstack Router tmp files
+**/.tanstack/tmp/

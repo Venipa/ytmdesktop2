@@ -18,18 +18,16 @@ jobs:
         node-version: [24.14.0]
 
     steps:
-      - uses: pnpm/action-setup@v5
-        with:
-          version: 11
       - name: Check out Git repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+      - uses: pnpm/setup@v2
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: "pnpm"
+          version: 11
+          runtime: node@${{ matrix.node-version }}
+          cache: true
+          install: false
         # install dbus-1 dep for xosms
       - if: matrix.os == 'ubuntu-latest'
         name: update apt and install utils
@@ -52,9 +50,9 @@ jobs:
 
       - if: matrix.os == 'windows-2025-vs2026'
         name: install windows deps
-        uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
+        uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.5
         with:
-          sdk-version: 19041
+          sdk-version: 20348
 
       # windows-2025-vs2026 ships VS 2026 (18.x). node-gyp <12.1 cannot detect it
       # (@electron/rebuild used to pull node-gyp@11 → install-app-deps fails on @parcel/watcher).
@@ -64,7 +62,7 @@ jobs:
 
       - if: github.ref_type == 'tag'
         id: getVersion
-        uses: actions/github-script@v7.0.1
+        uses: actions/github-script@v9
         env:
           REF_NAME: ${{ github.ref_name }}
         with:
@@ -159,7 +157,7 @@ jobs:
     if: github.ref_type == 'tag'
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 

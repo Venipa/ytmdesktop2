@@ -1,6 +1,6 @@
 import type { ProgressInfo } from "@shared/utils/updater";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRightIcon, CheckCircle2Icon, DownloadIcon, RefreshCwIcon } from "lucide-react";
+import { ArrowDownCircleIcon, ArrowRightIcon, CheckCircle2Icon, DownloadIcon, RefreshCwIcon } from "lucide-react";
 import _prettyBytes from "pretty-bytes";
 import { ReleaseTimeline } from "@/components/release-notes";
 import { Badge } from "@/components/ui/badge";
@@ -47,18 +47,14 @@ function UpdateActions(props: {
 			) : null}
 
 			{isDownloading ? (
-				<Button className="w-full" disabled>
-					<span data-icon="inline-start">
-						<Spinner />
-					</span>
+				<Button variant="secondary" className="w-full" size={"xl"} disabled>
+					<Spinner size={"sm"} />
 					Downloading…
 				</Button>
 			) : downloaded && !installing ? (
 				<div className="flex w-full flex-col gap-2">
-					<Button className="w-full" onClick={() => onInstall(true)}>
-						<span data-icon="inline-start">
-							<CheckCircle2Icon />
-						</span>
+					<Button variant="accent" className="w-full" size={"xl"} onClick={() => onInstall(true)}>
+						<CheckCircle2Icon />
 						Install now
 					</Button>
 					{!isMacOS ? (
@@ -74,10 +70,8 @@ function UpdateActions(props: {
 				</div>
 			) : (
 				<div className="flex w-full flex-col gap-2">
-					<Button className="w-full" onClick={() => onInstall(isMacOS)}>
-						<span data-icon="inline-start">
-							<DownloadIcon />
-						</span>
+					<Button variant="accent" className="w-full" size={"xl"} onClick={() => onInstall(isMacOS)}>
+						<ArrowDownCircleIcon />
 						{isMacOS ? "Download & install" : "Download"}
 					</Button>
 					<Button variant="outline" className="w-full" onClick={() => window.close()}>

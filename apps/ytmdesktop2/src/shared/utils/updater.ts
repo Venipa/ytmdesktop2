@@ -38,6 +38,8 @@ export const UPDATE_CHANNEL_LABELS: Record<UpdateChannel, string> = {
 	alpha: "Alpha",
 };
 
+const allowedChannels = Object.keys(UPDATE_CHANNEL_LABELS) as UpdateChannel[];
+
 function cleanSemver(version: string): string | null {
 	return semver.clean(version.replace(/^v/i, ""), { loose: true });
 }
@@ -55,7 +57,7 @@ export function getVersionChannel(version: string): UpdateChannel | null {
 	if (!pre?.length) return "stable";
 	const id = String(pre[0]).toLowerCase();
 	if (id === "rc") return "beta";
-	if (id === "a") return "alpha";
+	if (id === "a" || id === "alpha") return "alpha";
 	return null;
 }
 
@@ -70,17 +72,17 @@ export function isVersionAllowedOnChannel(version: string, channel: UpdateChanne
 	if (!kind) return false;
 	if (channel === "stable") return kind === "stable";
 	if (channel === "beta") return kind === "beta" || kind === "stable";
-	return kind === "alpha" || kind === "beta" || kind === "stable";
+	return allowedChannels.includes(kind);
 }
 
 export function parseUpdateChannel(value: unknown): UpdateChannel {
-	if (value === "beta" || value === "alpha" || value === "stable") return value;
+	if (allowedChannels.includes(value as UpdateChannel)) return value as UpdateChannel;
 	return "stable";
 }
 
 /** electron-updater channel string for a user channel. */
 export function electronUpdaterChannelFor(channel: UpdateChannel): string {
 	if (channel === "beta") return "rc";
-	if (channel === "alpha") return "a";
+	if (channel === "alpha") return "alpha";
 	return "latest";
 }
