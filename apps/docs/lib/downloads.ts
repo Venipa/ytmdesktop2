@@ -28,6 +28,8 @@ export type DownloadKind =
   | 'macos-pkg'
   | 'linux-appimage'
   | 'linux-deb'
+  | 'linux-flatpak'
+  | 'linux-snap'
   | 'other';
 
 export interface DownloadLabel {
@@ -89,7 +91,7 @@ function isLikelyMacZip(name: string): boolean {
   if (!lower.endsWith('.zip')) return false;
   if (lower.includes('source') || lower.includes('sources')) return false;
   if (lower.includes('mac') || lower.includes('darwin') || lower.includes('osx')) return true;
-  // This project's Linux artifacts are AppImage/deb — remaining arch zips are mac builds.
+  // Linux ships AppImage/deb/flatpak/snap — remaining arch zips are mac builds.
   if (/-arm64\.zip$/.test(lower) || /-x64\.zip$/.test(lower) || /-universal\.zip$/.test(lower)) {
     return true;
   }
@@ -163,6 +165,26 @@ export function getDownloadLabel(asset: ReleaseAsset): DownloadLabel {
     };
   }
 
+  if (name.endsWith('.flatpak')) {
+    return {
+      kind: 'linux-flatpak',
+      platform: 'linux',
+      arch,
+      title: 'Linux Flatpak',
+      description: asset.name,
+    };
+  }
+
+  if (name.endsWith('.snap')) {
+    return {
+      kind: 'linux-snap',
+      platform: 'linux',
+      arch,
+      title: 'Linux Snap',
+      description: asset.name,
+    };
+  }
+
   return {
     kind: 'other',
     platform: null,
@@ -180,6 +202,8 @@ export function listUserDownloads(assets: ReleaseAsset[]): ReleaseAsset[] {
     'macos-zip',
     'linux-appimage',
     'linux-deb',
+    'linux-flatpak',
+    'linux-snap',
   ];
 
   return assets
