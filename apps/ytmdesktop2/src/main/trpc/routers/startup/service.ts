@@ -30,9 +30,6 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 		app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 		if (isDevelopment) app.commandLine.appendSwitch("disable-web-security");
 		app.commandLine.appendSwitch("high-dpi-support", "1");
-		if (!platform.isWindows)
-			// todo: testing on other os platforms
-			app.commandLine.appendSwitch("force-device-scale-factor", "1");
 		if (platform.isLinux && GTK_VERSION) this.app.commandLine.appendSwitch("gtk-version", GTK_VERSION);
 		if (platform.isLinux) this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
 		// better gpu performance - for faster blur effect

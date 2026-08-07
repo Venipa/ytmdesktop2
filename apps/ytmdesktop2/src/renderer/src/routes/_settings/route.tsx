@@ -2,6 +2,7 @@ import {
 	RiAlbumLine,
 	RiArrowRightSLine,
 	RiCodeSSlashLine,
+	RiComputerLine,
 	RiDashboardLine,
 	RiDiscordLine,
 	RiGithubFill,
@@ -9,6 +10,7 @@ import {
 	RiInformationLine,
 	RiKey2Line,
 	RiMusic2Line,
+	RiPaletteLine,
 	RiQrCodeLine,
 	RiServerLine,
 	RiSettings3Line,
@@ -50,7 +52,6 @@ const tabs = [
 	{ to: "/player", label: "Player", icon: RiMusic2Line },
 	{ to: "/discord", label: "Discord", icon: RiDiscordLine },
 	{ to: "/lastfm", label: "Last.fm", icon: RiAlbumLine },
-	{ to: "/themes", label: "Themes", icon: RiCodeSSlashLine },
 	{ to: "/about", label: "About", icon: RiInformationLine },
 ] as const;
 
@@ -64,6 +65,11 @@ const apiIntegrationSubs = [
 	{ to: "/api-integrations/streamdeck", label: "Stream Deck", icon: RiDashboardLine },
 ] as const;
 
+const appearanceSubs = [
+	{ to: "/appearance/themes", label: "Themes", icon: RiCodeSSlashLine },
+	{ to: "/appearance/display", label: "Display", icon: RiComputerLine },
+] as const;
+
 const socials = [
 	{ href: "https://github.com/Venipa/ytmdesktop2", label: "GitHub", icon: RiGithubFill },
 	{ href: "https://youtube-music.app", label: "Website", icon: RiGlobalLine },
@@ -72,7 +78,8 @@ const socials = [
 type SettingsTabTo =
 	| (typeof tabs)[number]["to"]
 	| (typeof apiCoreSubs)[number]["to"]
-	| (typeof apiIntegrationSubs)[number]["to"];
+	| (typeof apiIntegrationSubs)[number]["to"]
+	| (typeof appearanceSubs)[number]["to"];
 
 /** Avoid Link+useRender compose — breaks first click with hash history. */
 const SettingsNavItem = memo(function SettingsNavItem({
@@ -172,6 +179,37 @@ const ApiIntegrationsNav = memo(function ApiIntegrationsNav() {
 	);
 });
 
+const AppearanceNav = memo(function AppearanceNav() {
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const isSectionActive = pathname.startsWith("/appearance");
+	const [open, setOpen] = useState(isSectionActive);
+
+	useEffect(() => {
+		if (isSectionActive) setOpen(true);
+	}, [isSectionActive]);
+
+	return (
+		<SidebarMenuItem>
+			<Collapsible open={open} onOpenChange={setOpen} className="group/collapsible w-full">
+				<CollapsibleTrigger render={<SidebarMenuButton isActive={isSectionActive} />}>
+					<RiPaletteLine />
+					<span>Appearance</span>
+					<RiArrowRightSLine
+						className={cn("ml-auto transition-transform duration-150 ease-out", open && "rotate-90")}
+					/>
+				</CollapsibleTrigger>
+				<CollapsibleContent>
+					<SidebarMenuSub>
+						{appearanceSubs.map((item) => (
+							<SettingsNavSubItem key={item.to} {...item} />
+						))}
+					</SidebarMenuSub>
+				</CollapsibleContent>
+			</Collapsible>
+		</SidebarMenuItem>
+	);
+});
+
 function SettingsLayout() {
 	useEffect(() => {
 		document.title = "YouTube Music - Settings";
@@ -202,6 +240,7 @@ function SettingsLayout() {
 										<SettingsNavItem key={tab.to} to={tab.to} label={tab.label} icon={tab.icon} />
 									))}
 									<ApiIntegrationsNav />
+									<AppearanceNav />
 									{tabs.slice(4).map((tab) => (
 										<SettingsNavItem key={tab.to} to={tab.to} label={tab.label} icon={tab.icon} />
 									))}

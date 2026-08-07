@@ -1,3 +1,4 @@
+import { applyZoomToWebContents, TOOLBAR_HEIGHT } from "@main/domain/uiZoom";
 import { defaultUrl, isDevelopment, isProdDebug, isProduction } from "@main/infra/devUtils";
 import { toChromeUserAgent } from "@main/infra/userAgent";
 import { serverMain } from "@main/ipc/serverEvents";
@@ -145,11 +146,12 @@ export class WindowManager {
 				this.mainWindow.contentView.addChildView(view);
 				const [width, height] = this.mainWindow.getSize();
 				view.setBounds({
-					y: 40,
+					y: TOOLBAR_HEIGHT,
 					x: 0,
-					height: height - 40,
+					height: height - TOOLBAR_HEIGHT,
 					width,
 				});
+				applyZoomToWebContents(view.webContents);
 
 				this.setupYoutubeViewEvents(view);
 			},
@@ -169,9 +171,9 @@ export class WindowManager {
 
 				this.mainWindow.contentView.addChildView(view);
 				this.mainWindow.contentView.addChildView(this.loadingView!);
-				const [width, height] = this.mainWindow.getSize();
+				const [width] = this.mainWindow.getSize();
 				view.setBounds({
-					height: 40,
+					height: TOOLBAR_HEIGHT,
 					width,
 					x: 0,
 					y: 0,
@@ -285,20 +287,19 @@ export class WindowManager {
 	private updateViewBounds() {
 		if (!this.mainWindow || !this.views) return;
 
-		let [winWidth, winHeight] = this.mainWindow.getContentSize();
-		const youtubeBounds = this.views.youtubeView.getBounds();
-		const toolbarBounds = this.views.toolbarView.getBounds();
-		logger.debug("updateViewBounds", { winWidth, winHeight, youtubeBounds, toolbarBounds });
-		winWidth = winWidth;
-		winHeight = winHeight;
+		const [winWidth, winHeight] = this.mainWindow.getContentSize();
+		logger.debug("updateViewBounds", { winWidth, winHeight, toolbarH: TOOLBAR_HEIGHT });
 		this.views.toolbarView.setBounds({
-			...toolbarBounds,
+			x: 0,
+			y: 0,
 			width: winWidth,
+			height: TOOLBAR_HEIGHT,
 		});
 		this.views.youtubeView.setBounds({
-			...youtubeBounds,
+			x: 0,
+			y: TOOLBAR_HEIGHT,
 			width: winWidth,
-			height: winHeight - toolbarBounds.height,
+			height: winHeight - TOOLBAR_HEIGHT,
 		});
 	}
 	private async initializeWindowState(bounds: { width: number; height: number }) {

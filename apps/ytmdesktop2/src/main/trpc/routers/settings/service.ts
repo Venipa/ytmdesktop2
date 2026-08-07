@@ -1,4 +1,5 @@
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/core/baseProvider";
+import { clampZoomFactor, setZoomFactorState } from "@main/domain/uiZoom";
 import { defaultUri, defaultUrl, isDevelopment } from "@main/infra/devUtils";
 import { serverMain } from "@main/ipc/serverEvents";
 import { stringifyJson } from "@main/lib/json";
@@ -31,6 +32,7 @@ const defaultSettings = {
 		enableStatisticsAndErrorTracing: true,
 		disableHardwareAccel: false,
 		enableTaskbarProgress: true,
+		zoomFactor: 1,
 	},
 	volumeRatio: {
 		enabled: true,
@@ -128,7 +130,9 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 		serverMain.handle("settingsProvider.update", (ev, ...args) => this._onEventUpdate(ev, ...args));
 	}
 
-	async BeforeStart() {}
+	async BeforeStart() {
+		setZoomFactorState(this.get("app.zoomFactor", 1));
+	}
 
 	get instance() {
 		return _settingsStore.store;
@@ -139,7 +143,10 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 	}
 
 	set(key: string, value: unknown) {
-		const nextValue = value ?? null;
+		let nextValue = value ?? null;
+		if (key === "app.zoomFactor") {
+			nextValue = clampZoomFactor(nextValue);
+		}
 		const prevValue = this.get(key);
 		if (stringifyJson(prevValue) === stringifyJson(nextValue)) return this;
 

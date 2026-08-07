@@ -1,8 +1,10 @@
 import { version as releaseVersion } from "node:os";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
+import { applyYoutubeZoom, applyZoomToWebContents, clampZoomFactor } from "@main/domain/uiZoom";
 import { isDevelopment } from "@main/infra/devUtils";
 import { setSentryEnabled } from "@main/infra/sentry";
 import { serverMain } from "@main/ipc/serverEvents";
+import { getYoutubeView, onMusicReload } from "@main/lifecycle";
 import { trackService } from "@main/trpc/routers/track";
 import { centerWindowOnParent, createAppDialogWindow, createAppWindow, WindowOptions } from "@main/windows/windowUtils";
 import { stripUndefined } from "@shared/utils/object";
@@ -12,6 +14,10 @@ import { clamp, debounce } from "lodash-es";
 const STATE_PAUSE_TIME = 30e4;
 const TEST_RESTART_NEEDED_DIALOG = isDevelopment && process.env.TEST_RESTART_NEEDED_DIALOG === "1";
 
+onMusicReload(() => {
+	applyZoomToWebContents(getYoutubeView()?.webContents);
+});
+
 export default class AppProvider extends BaseProvider implements AfterInit, BeforeStart {
 	private appLock: boolean = false;
 	private settingsWindowOpenPromise: Promise<BrowserWindow> | null = null;
@@ -19,6 +25,7 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 	private restartWindow: BrowserWindow | null = null;
 	private _blurTimestamp: Date | null = null;
 	private _blurAfkHandle: any;
+	private zoomWired = false;
 
 	constructor(private _app: App) {
 		super("app");
@@ -73,6 +80,15 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 			(value) => this.__toggleSentryLogging("app.enableStatisticsAndErrorTracing", !!value),
 			{ debounce: 10000 },
 		);
+
+		if (!this.zoomWired) {
+			this.zoomWired = true;
+			this.getProvider("settings").onSettingChange("app.zoomFactor", (value) => {
+				applyYoutubeZoom(clampZoomFactor(value));
+			});
+		}
+
+		applyYoutubeZoom(this.getProvider("settings").get("app.zoomFactor", 1));
 
 		if (TEST_RESTART_NEEDED_DIALOG) {
 			void this.handleRestartNeeded(null);
