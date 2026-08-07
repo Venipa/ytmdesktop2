@@ -55,11 +55,17 @@ jobs:
       # outputs.ok is the string "true"/"false" — bare `if: outputs.ok` is truthy for "false".
       - if: github.ref_type == 'tag' && steps.getVersion.outputs.ok == 'true'
         name: set app version
-        uses: jossef/action-set-json-field@v2.2
-        with:
-          file: apps/ytmdesktop2/package.json
-          field: version
-          value: ${{ steps.getVersion.outputs.value }}
+        shell: bash
+        env:
+          APP_VERSION: ${{ steps.getVersion.outputs.value }}
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const p = 'apps/ytmdesktop2/package.json';
+          const text = fs.readFileSync(p, 'utf8');
+          const next = text.replace(/("version"\s*:\s*")[^"]*(")/, `$1${process.env.APP_VERSION}$2`);
+          fs.writeFileSync(p, next);
+          EOF
 
       - name: Prepare pnpm / auth
         shell: bash
@@ -92,7 +98,7 @@ jobs:
 
       # Wildcard → artifact root is out contents. Download into apps/ytmdesktop2/out.
       - name: Upload compile artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out/**
@@ -148,11 +154,17 @@ jobs:
 
       - if: needs.compile.outputs.version_ok == 'true'
         name: set app version
-        uses: jossef/action-set-json-field@v2.2
-        with:
-          file: apps/ytmdesktop2/package.json
-          field: version
-          value: ${{ needs.compile.outputs.version }}
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.compile.outputs.version }}
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const p = 'apps/ytmdesktop2/package.json';
+          const text = fs.readFileSync(p, 'utf8');
+          const next = text.replace(/("version"\s*:\s*")[^"]*(")/, `$1${process.env.APP_VERSION}$2`);
+          fs.writeFileSync(p, next);
+          EOF
 
       - name: Prepare pnpm / auth
         shell: pwsh
@@ -181,7 +193,7 @@ jobs:
 
       # After install — shared vite out from compile job.
       - name: Download compile artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
@@ -221,11 +233,17 @@ jobs:
 
       - if: needs.compile.outputs.version_ok == 'true'
         name: set app version
-        uses: jossef/action-set-json-field@v2.2
-        with:
-          file: apps/ytmdesktop2/package.json
-          field: version
-          value: ${{ needs.compile.outputs.version }}
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.compile.outputs.version }}
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const p = 'apps/ytmdesktop2/package.json';
+          const text = fs.readFileSync(p, 'utf8');
+          const next = text.replace(/("version"\s*:\s*")[^"]*(")/, `$1${process.env.APP_VERSION}$2`);
+          fs.writeFileSync(p, next);
+          EOF
 
       - name: Prepare pnpm / auth
         shell: bash
@@ -244,7 +262,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download compile artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
@@ -300,11 +318,17 @@ jobs:
 
       - if: needs.compile.outputs.version_ok == 'true'
         name: set app version
-        uses: jossef/action-set-json-field@v2.2
-        with:
-          file: apps/ytmdesktop2/package.json
-          field: version
-          value: ${{ needs.compile.outputs.version }}
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.compile.outputs.version }}
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const p = 'apps/ytmdesktop2/package.json';
+          const text = fs.readFileSync(p, 'utf8');
+          const next = text.replace(/("version"\s*:\s*")[^"]*(")/, `$1${process.env.APP_VERSION}$2`);
+          fs.writeFileSync(p, next);
+          EOF
 
       - name: update apt and install utils
         run: |
@@ -328,7 +352,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download compile artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
@@ -366,11 +390,17 @@ jobs:
 
       - if: needs.compile.outputs.version_ok == 'true'
         name: set app version
-        uses: jossef/action-set-json-field@v2.2
-        with:
-          file: apps/ytmdesktop2/package.json
-          field: version
-          value: ${{ needs.compile.outputs.version }}
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.compile.outputs.version }}
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const p = 'apps/ytmdesktop2/package.json';
+          const text = fs.readFileSync(p, 'utf8');
+          const next = text.replace(/("version"\s*:\s*")[^"]*(")/, `$1${process.env.APP_VERSION}$2`);
+          fs.writeFileSync(p, next);
+          EOF
 
       - name: update apt and install utils
         run: |
@@ -394,7 +424,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download compile artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
@@ -431,11 +461,17 @@ jobs:
 
       - if: needs.compile.outputs.version_ok == 'true'
         name: set app version
-        uses: jossef/action-set-json-field@v2.2
-        with:
-          file: apps/ytmdesktop2/package.json
-          field: version
-          value: ${{ needs.compile.outputs.version }}
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.compile.outputs.version }}
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const p = 'apps/ytmdesktop2/package.json';
+          const text = fs.readFileSync(p, 'utf8');
+          const next = text.replace(/("version"\s*:\s*")[^"]*(")/, `$1${process.env.APP_VERSION}$2`);
+          fs.writeFileSync(p, next);
+          EOF
 
       - name: update apt and install utils
         run: |
@@ -469,7 +505,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download compile artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
@@ -506,11 +542,17 @@ jobs:
 
       - if: needs.compile.outputs.version_ok == 'true'
         name: set app version
-        uses: jossef/action-set-json-field@v2.2
-        with:
-          file: apps/ytmdesktop2/package.json
-          field: version
-          value: ${{ needs.compile.outputs.version }}
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.compile.outputs.version }}
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const p = 'apps/ytmdesktop2/package.json';
+          const text = fs.readFileSync(p, 'utf8');
+          const next = text.replace(/("version"\s*:\s*")[^"]*(")/, `$1${process.env.APP_VERSION}$2`);
+          fs.writeFileSync(p, next);
+          EOF
 
       - name: update apt and install utils
         run: |
@@ -550,7 +592,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download compile artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
