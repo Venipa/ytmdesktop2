@@ -23,6 +23,10 @@ export type WindowOptions = {
 	maximizeable?: boolean;
 	minimizeable?: boolean;
 	show?: boolean;
+	/** Electron BrowserWindow `type` (e.g. macOS `panel` for tray popups). */
+	type?: Electron.BrowserWindowConstructorOptions["type"];
+	/** Open detached DevTools (defaults to true in development). */
+	devtools?: boolean;
 };
 const log = createLogger("main");
 export function parseScriptPath(p: string) {
@@ -41,9 +45,11 @@ export function centerWindowOnParent(win: BrowserWindow, parent?: BrowserWindow 
 
 export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	// eslint-disable-next-line prefer-const
-	let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top, showTaskBar, minimizeable, maximizeable, show } = appOptions ?? {};
+	let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top, showTaskBar, minimizeable, maximizeable, show, type, devtools } =
+		appOptions ?? {};
 	if (!path) path = "/";
 	const shouldShow = show ?? true;
+	const shouldOpenDevtools = devtools ?? (isDevelopment || isProdDebug);
 	// Create hidden so we can position relative to parent before first paint (avoids primary-display flash).
 	const win = new BrowserWindow({
 		width: width ?? 800,
@@ -56,13 +62,14 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 		minimizable: minimizeable === true,
 		maximizable: maximizeable === true,
 		backgroundColor: "#000000",
-		fullscreenable: !maxWidth && !maxWidth,
+		fullscreenable: !maxWidth && !maxHeight,
 		icon: appIconPath,
 		frame: false,
 		parent,
 		modal: parent && top === true,
 		skipTaskbar: showTaskBar === false,
 		darkTheme: true,
+		...(type ? { type } : {}),
 		webPreferences: {
 			// Use pluginOptions.nodeIntegration, leave this alone
 			// See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
@@ -74,7 +81,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	});
 
 	await loadUrlOfWindow(win, path);
-	if (isDevelopment || isProdDebug) win.webContents.openDevTools({ mode: "detach" });
+	if (shouldOpenDevtools) win.webContents.openDevTools({ mode: "detach" });
 	win.webContents.setWindowOpenHandler(({ url }) => {
 		if (url.startsWith("http")) {
 			shell.openExternal(url);

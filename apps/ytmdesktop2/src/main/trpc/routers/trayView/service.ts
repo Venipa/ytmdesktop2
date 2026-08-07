@@ -1,4 +1,6 @@
+import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
+import { showOnActiveDesktop } from "@main/domain/showOnActiveDesktop";
 import { positionNearTray } from "@main/domain/trayPosition";
 import TrayProvider from "@main/trpc/routers/tray/service";
 import { createAppWindow } from "@main/windows/windowUtils";
@@ -11,13 +13,15 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	private _ready: Promise<BrowserWindow> | null = null;
 	/** Suppress reopen when tray click causes blur→hide then click→toggle. */
 	private _blurHiddenAt = 0;
+	/** Ignore blur while showOnActiveDesktop toggles visibility. */
+	private _suppressBlurUntil = 0;
 
 	constructor(private app: App) {
 		super("trayView");
 	}
 
 	async AfterInit() {
-		void this.ensureWindow();
+		void this.ensureWindow().catch((err) => this.logger.error("trayView pre-warm failed", err));
 	}
 
 	private get trayProvider(): TrayProvider {
@@ -28,6 +32,10 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		const win = this.windowContext.views.trayViewWindow;
 		if (!win || win.isDestroyed()) return null;
 		return win;
+	}
+
+	private suppressBlur(ms = 300) {
+		this._suppressBlurUntil = Date.now() + ms;
 	}
 
 	private async ensureWindow(): Promise<BrowserWindow> {
@@ -48,6 +56,10 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 				showTaskBar: false,
 				minimizeable: false,
 				maximizeable: false,
+				// Detached DevTools steals focus → blur closes the popup instantly.
+				devtools: false,
+				// macOS panel → MoveToActiveSpace-friendly tray popup behavior.
+				...(platform.isMacOS ? { type: "panel" as const } : {}),
 			});
 
 			win.setAlwaysOnTop(true, "pop-up-menu");
@@ -65,6 +77,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			// Outside click / focus loss closes popup (all platforms + dev).
 			win.on("blur", () => {
 				if (win.isDestroyed() || !win.isVisible()) return;
+				if (Date.now() < this._suppressBlurUntil) return;
 				win.hide();
 				this._blurHiddenAt = Date.now();
 				this.emitState(false);
@@ -83,6 +96,9 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 
 		try {
 			return await this._ready;
+		} catch (err) {
+			this.windowContext.views.trayViewWindow = undefined;
+			throw err;
 		} finally {
 			this._ready = null;
 		}
@@ -94,19 +110,23 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 
 	private position(win: BrowserWindow) {
 		const tray = this.trayProvider?.Tray;
-		if (!tray) return;
+		if (!tray || tray.isDestroyed()) return;
 		positionNearTray(win, tray, { width: TRAY_VIEW_WIDTH, height: TRAY_VIEW_HEIGHT });
+	}
+
+	private present(win: BrowserWindow) {
+		this.position(win);
+		showOnActiveDesktop(win, { suppressBlur: (ms) => this.suppressBlur(ms) });
+		// Re-assert after workspace dance (some DEs drop always-on-top).
+		if (!win.isDestroyed()) {
+			win.setAlwaysOnTop(true, "pop-up-menu");
+			win.moveTop();
+		}
 	}
 
 	async open(): Promise<number> {
 		const win = await this.ensureWindow();
-		this.position(win);
-		if (!win.isVisible()) {
-			win.show();
-			win.moveTop();
-		} else {
-			win.focus();
-		}
+		this.present(win);
 		this.emitState(true);
 		return win.id;
 	}
@@ -139,9 +159,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			this.emitState(false);
 			return null;
 		}
-		this.position(win);
-		win.show();
-		win.moveTop();
+		this.present(win);
 		this.emitState(true);
 		return win.id;
 	}

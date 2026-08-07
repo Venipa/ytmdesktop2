@@ -15,7 +15,7 @@ function isEmptyTrayBounds(bounds: Electron.Rectangle): boolean {
  * otherwise below (macOS menu bar). Falls back to cursor when getBounds() is empty (some Linux DEs).
  */
 export function positionNearTray(win: BrowserWindow, tray: Tray, size: TrayPopupSize): void {
-	if (!win || win.isDestroyed()) return;
+	if (!win || win.isDestroyed() || !tray || tray.isDestroyed()) return;
 
 	const { width, height } = size;
 	const trayBounds = tray.getBounds();
