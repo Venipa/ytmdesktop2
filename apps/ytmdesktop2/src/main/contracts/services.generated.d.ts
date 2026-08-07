@@ -16,6 +16,7 @@ import type themesProvider from "@routers/themes/service";
 import type touchbarProvider from "@routers/touchbar/service";
 import type { TrackService as trackProvider } from "@routers/track/service";
 import type trayProvider from "@routers/tray/service";
+import type trayViewProvider from "@routers/trayView/service";
 import type updateProvider from "@routers/update/service";
 import type volumeRatioProvider from "@routers/volumeRatio/service";
 import type winControlProvider from "@routers/winControl/service";
@@ -39,6 +40,7 @@ export interface ServiceTypeMap {
   "touchbar": touchbarProvider;
   "track": trackProvider;
   "tray": trayProvider;
+  "trayView": trayViewProvider;
   "update": updateProvider;
   "volumeRatio": volumeRatioProvider;
   "winControl": winControlProvider;

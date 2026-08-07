@@ -102,8 +102,14 @@ const miniplayerRouter = router({
 	onState: publicProcedure.subscription(() => emptySub<any>()),
 });
 
-const trayRouter = router({
-	taskView: publicProcedure.mutation((): any => undefined),
+const trayRouter = router({});
+
+const trayViewRouter = router({
+	toggle: publicProcedure.mutation((): any => undefined),
+	open: publicProcedure.mutation((): any => undefined),
+	hide: publicProcedure.mutation((): any => undefined),
+	openMain: publicProcedure.mutation((): any => undefined),
+	onState: publicProcedure.subscription(() => emptySub<any>()),
 });
 
 const themesRouter = router({
@@ -148,6 +154,7 @@ export const appRouter = router({
 	navigation: navigationRouter,
 	miniplayer: miniplayerRouter,
 	tray: trayRouter,
+	trayView: trayViewRouter,
 	themes: themesRouter,
 	lastfm: lastfmRouter,
 	window: windowRouter,

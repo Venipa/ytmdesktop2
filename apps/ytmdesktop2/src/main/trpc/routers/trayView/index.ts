@@ -1,0 +1,1 @@
+export { trayViewRouter } from "./router";

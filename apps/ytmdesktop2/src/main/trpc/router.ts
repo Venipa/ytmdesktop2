@@ -12,6 +12,7 @@ import { settingsRouter } from "@main/trpc/routers/settings";
 import { themesRouter } from "@main/trpc/routers/themes";
 import { trackRouter } from "@main/trpc/routers/track";
 import { trayRouter } from "@main/trpc/routers/tray";
+import { trayViewRouter } from "@main/trpc/routers/trayView";
 import { updateRouter } from "@main/trpc/routers/update";
 import { windowRouter } from "@main/trpc/routers/window";
 import { router } from "@shared/trpc/trpc";
@@ -31,6 +32,7 @@ export const appRouter = router({
 	navigation: navigationRouter,
 	miniplayer: miniplayerRouter,
 	tray: trayRouter,
+	trayView: trayViewRouter,
 	themes: themesRouter,
 	lastfm: lastfmRouter,
 	window: windowRouter,
