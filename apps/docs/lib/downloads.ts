@@ -20,6 +20,53 @@ export interface LatestRelease {
 
 export type DownloadPlatform = 'windows' | 'macos' | 'linux';
 export type CpuArch = 'arm64' | 'x64' | 'universal' | 'unknown';
+export type ReleaseChannel = 'stable' | 'beta' | 'alpha';
+
+export const RELEASE_CHANNELS: readonly ReleaseChannel[] = ['stable', 'beta', 'alpha'] as const;
+
+export const RELEASE_CHANNEL_LABELS: Record<ReleaseChannel, string> = {
+  stable: 'Stable',
+  beta: 'Beta',
+  alpha: 'Alpha',
+};
+
+/**
+ * Classify a version-like string into a channel.
+ * - stable: no prerelease id
+ * - beta: `-rc.<n>`
+ * - alpha: `-a.<n>` / `-alpha.<n>`
+ */
+export function getReleaseChannel(version: string): ReleaseChannel | null {
+  const match = version.match(/(\d+\.\d+\.\d+)(?:-([0-9A-Za-z]+))?/);
+  if (!match) return null;
+
+  const preId = match[2]?.toLowerCase();
+  if (!preId) return 'stable';
+  if (preId === 'rc') return 'beta';
+  if (preId === 'a' || preId === 'alpha') return 'alpha';
+  return null;
+}
+
+/**
+ * Resolve channel from tag, release name, and GitHub prerelease flag.
+ * Handles mismatched tags (e.g. tag `v1.2.1` named `v1.2.1-rc.0`, prerelease=true).
+ */
+export function resolveReleaseChannel(release: {
+  tag_name: string;
+  name?: string | null;
+  prerelease?: boolean;
+}): ReleaseChannel | null {
+  const fromTag = getReleaseChannel(release.tag_name);
+  if (fromTag === 'beta' || fromTag === 'alpha') return fromTag;
+
+  const fromName = release.name ? getReleaseChannel(release.name) : null;
+  if (fromName === 'beta' || fromName === 'alpha') return fromName;
+
+  // Bare tags marked prerelease on GitHub are not stable.
+  if (release.prerelease) return null;
+  if (fromTag === 'stable') return 'stable';
+  return null;
+}
 
 export type DownloadKind =
   | 'windows-setup'
@@ -302,12 +349,12 @@ export function formatReleaseDate(isoDate: string): string {
   }).format(new Date(isoDate));
 }
 
-export function getReleaseNotes(body: string | null, maxItems = 6): string[] {
+export function getReleaseNotes(body: string | null, maxItems: number | null = 6): string[] {
   if (!body) {
     return [];
   }
 
-  return body
+  const notes = body
     .replace(/```[\s\S]*?```/g, '')
     .replace(/\r\n/g, '\n')
     .split('\n')
@@ -319,6 +366,7 @@ export function getReleaseNotes(body: string | null, maxItems = 6): string[] {
         .replace(/[*_`~]/g, '')
         .trim(),
     )
-    .filter((line) => line.length > 0 && !/^changes$/i.test(line))
-    .slice(0, maxItems);
+    .filter((line) => line.length > 0 && !/^changes$/i.test(line));
+
+  return maxItems == null ? notes : notes.slice(0, maxItems);
 }

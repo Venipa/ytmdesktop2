@@ -1,12 +1,9 @@
 import {
   type LatestRelease,
-  type ReleaseAsset,
-  getLatestReleaseUrl,
+  type ReleaseChannel,
+  RELEASE_CHANNELS,
   getRepositoryUrl,
-  getReleasesUrl,
-  groupDownloadsByPlatform,
-  listUserDownloads,
-  pickPrimaryDownload,
+  resolveReleaseChannel,
 } from './downloads';
 import { repoBranch, repoName, repoOwner } from './shared';
 
@@ -16,6 +13,7 @@ export type {
   DownloadPlatform,
   LatestRelease,
   ReleaseAsset,
+  ReleaseChannel,
 } from './downloads';
 
 export {
@@ -23,12 +21,16 @@ export {
   formatReleaseDate,
   getDownloadLabel,
   getLatestReleaseUrl,
+  getReleaseChannel,
   getReleaseNotes,
   getRepositoryUrl,
   getReleasesUrl,
   groupDownloadsByPlatform,
   listUserDownloads,
   pickPrimaryDownload,
+  resolveReleaseChannel,
+  RELEASE_CHANNELS,
+  RELEASE_CHANNEL_LABELS,
 } from './downloads';
 
 interface GitHubReleaseResponse {
@@ -87,27 +89,37 @@ export function getTreeUrl(path: string): string {
   return `${getRepositoryUrl()}/tree/${repoBranch}/${normalized}`;
 }
 
+export type ChannelReleases = Record<ReleaseChannel, LatestRelease | null>;
+
 export async function getLatestRelease(): Promise<LatestRelease | null> {
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`,
-      {
-        headers: githubHeaders(),
-        next: { revalidate: 3600 },
-      },
-    );
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return mapRelease((await response.json()) as GitHubReleaseResponse);
-  } catch {
-    return null;
-  }
+  const byChannel = await getLatestReleasesByChannel();
+  return byChannel.stable;
 }
 
-/** Fetch published releases (skips drafts). Paginated. */
+/**
+ * Latest published release per channel (stable / beta-rc / alpha).
+ * Uses the releases list API so prereleases are included (unlike /releases/latest).
+ * Channel comes from tag, then name, and never treats GitHub prereleases as stable.
+ */
+export async function getLatestReleasesByChannel(): Promise<ChannelReleases> {
+  const result: ChannelReleases = {
+    stable: null,
+    beta: null,
+    alpha: null,
+  };
+
+  const releases = await listReleases({ includePrereleases: true, maxPages: 5 });
+  for (const release of releases) {
+    const channel = resolveReleaseChannel(release);
+    if (!channel || result[channel]) continue;
+    result[channel] = release;
+    if (RELEASE_CHANNELS.every((key) => result[key])) break;
+  }
+
+  return result;
+}
+
+/** Fetch published releases (skips drafts). Paginated. Includes prereleases by default. */
 export async function listReleases(options?: {
   maxPages?: number;
   includePrereleases?: boolean;

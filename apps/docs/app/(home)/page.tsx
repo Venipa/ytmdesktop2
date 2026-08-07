@@ -15,8 +15,8 @@ import { buttonVariants } from 'fumadocs-ui/components/ui/button';
 import { ReleaseDownloadPanel } from '@/components/release-download-panel';
 import { cn } from '@/lib/cn';
 import {
-  getLatestRelease,
   getLatestReleaseUrl,
+  getLatestReleasesByChannel,
   getRepositoryUrl,
   groupDownloadsByPlatform,
   pickPrimaryDownload,
@@ -92,7 +92,8 @@ const features = [
 ] as const;
 
 export default async function HomePage() {
-  const release = await getLatestRelease();
+  const releases = await getLatestReleasesByChannel();
+  const release = releases.stable ?? releases.beta ?? releases.alpha;
   const groups = release ? groupDownloadsByPlatform(release.assets) : null;
   const anyAsset =
     (groups &&
@@ -192,7 +193,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <ReleaseDownloadPanel release={release} />
+          <ReleaseDownloadPanel releases={releases} />
         </div>
       </section>
 
