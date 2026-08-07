@@ -119,15 +119,16 @@ class ThumbnailCache {
 	}
 
 	/** Prefer youtubeView session so CDN sees logged-in cookies + chrome UA. */
-	private resolveYoutubeContext(): { session: Session; userAgent: string; referrer: string } {
+	private resolveYoutubeContext(): { session: Session; userAgent: string; referrer: string; chromeVersion: string } {
 		const view = getYoutubeView();
 		const wc = view?.webContents;
 		const ses = wc && !wc.isDestroyed() ? wc.session : electronSession.defaultSession;
 		const userAgent =
 			(wc && !wc.isDestroyed() && wc.getUserAgent()) || app.userAgentFallback || "Mozilla/5.0";
-		const referrer =
-			(wc && !wc.isDestroyed() && wc.getURL()?.startsWith("http") && wc.getURL()) || `${defaultUrl}/`;
-		return { session: ses, userAgent, referrer };
+		const chromeVersion = process.versions.chrome?.split(".")[0] || "150";
+		// Origin-only referrer — full watch?v=… URLs trip Chromium
+		// "invalid referrer" → net::ERR_BLOCKED_BY_CLIENT on googleusercontent.
+		return { session: ses, userAgent, referrer: `${defaultUrl}/`, chromeVersion };
 	}
 
 	private keyFor(url: string): string {
@@ -174,25 +175,41 @@ class ThumbnailCache {
 			return null;
 		}
 	}
-
+  private getPlatform(): string {
+		return process.platform === "darwin" ? "macOS" : process.platform === "linux" ? "Linux" : "Windows";
+	}
 	private async fetchAndStore(key: string, url: string): Promise<CacheEntry> {
-		const { session: ses, userAgent, referrer } = this.resolveYoutubeContext();
-		const headers: Record<string, string> = {
-			"User-Agent": userAgent,
-			Referer: referrer,
-			Origin: defaultUrl,
-			Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-			"Accept-Language": "en-US,en;q=0.9",
+		const { session: ses, userAgent, referrer, chromeVersion } = this.resolveYoutubeContext();
+		// Mirror browser <img> request from music.youtube.com (see DevTools copy-as-curl).
+		// Do NOT use fetch mode:"no-cors" — opaque body can't be cached. Spoof Sec-Fetch-* instead.
+		const init: RequestInit & { bypassCustomProtocolHandlers?: boolean } = {
+			bypassCustomProtocolHandlers: true,
+			referrer,
+			referrerPolicy: "strict-origin-when-cross-origin",
+			headers: {
+				Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+				"Accept-Language": "en-GB",
+				"User-Agent": userAgent,
+				Referer: referrer,
+				Priority: "i",
+				"Sec-CH-UA": `"Not;A=Brand";v="8", "Chromium";v="${chromeVersion}"`,
+				"Sec-CH-UA-Mobile": "?0",
+				"Sec-CH-UA-Platform": `"${this.getPlatform()}"`,
+				"Sec-Fetch-Dest": "image",
+				"Sec-Fetch-Mode": "no-cors",
+				"Sec-Fetch-Site": "cross-site",
+				"Sec-Fetch-Storage-Access": "active",
+			},
 		};
 
 		// Prefer session.fetch (cookies). Fall back to net.fetch if session call fails
 		// (e.g. nested protocol / partition edge cases in packaged builds).
 		let res: Response;
 		try {
-			res = await ses.fetch(url, { headers, bypassCustomProtocolHandlers: true });
+			res = await ses.fetch(url, init);
 		} catch (err) {
 			log.warn("session.fetch failed, trying net.fetch", url, err);
-			res = await net.fetch(url, { headers, bypassCustomProtocolHandlers: true });
+			res = await net.fetch(url, init);
 		}
 
 		if (!res.ok) {
