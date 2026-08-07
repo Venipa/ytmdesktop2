@@ -3,7 +3,8 @@ import { cva } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
 import { clamp } from "lodash-es";
 import { ArrowLeftIcon } from "lucide-react";
-import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ApiIcon from "@/assets/icons/chip.svg?react";
 import DiscordIcon from "@/assets/icons/discord-rpc.svg?react";
 import LastFMIcon from "@/assets/icons/lastfm.svg?react";
@@ -48,6 +49,160 @@ function formatTime(seconds: number): string {
 	const { hours, minutes, seconds: secs } = intervalToDuration({ start: 0, end: elapsed * 1000 });
 	const parts = [hours, minutes, secs].filter((p, i) => (i === 0 ? Boolean(p) : true)).map(zeroPad);
 	return parts.join(":");
+}
+
+const ART_EASE = [0.16, 1, 0.3, 1] as const;
+const ART_DURATION = 0.28;
+
+/** Preload image; only expose src once decode-ready. */
+function useReadyImage(src: string | null | undefined): string | null {
+	const [ready, setReady] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!src) {
+			setReady((prev) => (prev === null ? prev : null));
+			return;
+		}
+		let cancelled = false;
+		const img = new Image();
+		img.crossOrigin = "anonymous";
+		const done = () => {
+			if (!cancelled) setReady((prev) => (prev === src ? prev : src));
+		};
+		img.onload = done;
+		img.onerror = done;
+		img.src = src;
+		if (img.complete) done();
+		return () => {
+			cancelled = true;
+			img.onload = null;
+			img.onerror = null;
+		};
+	}, [src]);
+
+	return ready;
+}
+
+/**
+ * Commit art + accent together when the image for `thumbnail` is ready,
+ * so cover/bleed fades and color lerps start in the same frame.
+ */
+function useAlignedArtDisplay(thumbnail: string | null | undefined, liveAccent: string | null): { src: string | null; accent: string | null } {
+	const loadedSrc = useReadyImage(thumbnail);
+	const [display, setDisplay] = useState<{ src: string | null; accent: string | null }>({ src: null, accent: null });
+
+	useLayoutEffect(() => {
+		const commit = (src: string | null, accent: string | null) => {
+			setDisplay((prev) => (prev.src === src && prev.accent === accent ? prev : { src, accent }));
+		};
+
+		if (!thumbnail) {
+			commit(null, null);
+			return;
+		}
+		// Still decoding next cover — keep previous art+accent on screen.
+		if (loadedSrc !== thumbnail) return;
+
+		// Accent already known — swap art + color together.
+		if (liveAccent) {
+			commit(loadedSrc, liveAccent);
+			return;
+		}
+
+		// Image ready first — brief wait so vibrant/playState accent can catch up.
+		const timer = window.setTimeout(() => commit(loadedSrc, liveAccent), 80);
+		return () => clearTimeout(timer);
+	}, [thumbnail, loadedSrc, liveAccent]);
+
+	return display;
+}
+
+function TrayBleedArt({ src, accent }: { src: string | null; accent: string | null }) {
+	return (
+		<div className="pointer-events-none absolute inset-0" aria-hidden>
+			<AnimatePresence mode="wait">
+				{src ? (
+					<motion.div
+						key={src}
+						className="absolute inset-0"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: ART_DURATION, ease: ART_EASE }}
+					>
+						<div className="absolute inset-0 scale-110 bg-cover bg-center" style={{ backgroundImage: `url(${src})` }} />
+						<div className="absolute inset-0 scale-125 bg-cover bg-center opacity-70 blur-2xl" style={{ backgroundImage: `url(${src})` }} />
+					</motion.div>
+				) : (
+					<motion.div
+						key="empty-bleed"
+						className="absolute inset-0 bg-muted/30"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: ART_DURATION, ease: ART_EASE }}
+					/>
+				)}
+			</AnimatePresence>
+			{/* Accent wash — same duration/ease as pill; color follows displayAccent */}
+			<motion.div
+				className="absolute inset-0"
+				initial={false}
+				animate={{
+					backgroundColor: accent ?? "var(--accent)",
+					opacity: accent ? 0.25 : 0,
+				}}
+				transition={{ duration: ART_DURATION, ease: ART_EASE }}
+			/>
+			<div className="absolute inset-0 bg-background/70" />
+		</div>
+	);
+}
+
+function TrayAccentPill({ accent }: { accent: string | null }) {
+	return (
+		<div className="relative z-10 flex w-3 shrink-0 items-stretch justify-center py-2.5 ml-1" aria-hidden>
+			<motion.div
+				className="w-1.5 rounded-full bg-accent"
+				initial={false}
+				animate={{ backgroundColor: accent ?? "var(--accent)" }}
+				transition={{ duration: ART_DURATION, ease: ART_EASE }}
+			/>
+		</div>
+	);
+}
+
+function TrayCoverArt({ src }: { src: string | null }) {
+	return (
+		<div className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-muted/80 ring-1 ring-border/50 shadow-sm">
+			<AnimatePresence mode="wait">
+				{src ? (
+					<motion.img
+						key={src}
+						src={src}
+						alt=""
+						draggable={false}
+						className="absolute inset-0 size-full object-cover"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: ART_DURATION, ease: ART_EASE }}
+					/>
+				) : (
+					<motion.div
+						key="empty-cover"
+						className="absolute inset-0 flex size-full items-center justify-center text-[9px] font-medium tracking-wide text-muted-foreground"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: ART_DURATION, ease: ART_EASE }}
+					>
+						YTM
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</div>
+	);
 }
 
 const chromeButtonVariants = cva(
@@ -162,7 +317,8 @@ function TrayViewPage() {
 	const artist = track?.video?.author ?? "";
 	const hasLike = typeof playState?.liked === "boolean";
 	const hasDislike = typeof playState?.disliked === "boolean";
-	const accent = trackAccent || playState?.accent || null;
+	const liveAccent = trackAccent || playState?.accent || null;
+	const { src: artSrc, accent: displayAccent } = useAlignedArtDisplay(thumbnail, liveAccent);
 
 	useEffect(() => {
 		if (!thumbnail) {
@@ -181,7 +337,9 @@ function TrayViewPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [thumbnail, utils.track.accent]);
+		// utils.track.accent identity churns every render — only re-fetch on thumbnail.
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+	}, [thumbnail]);
 
 	const time = useMemo((): { current: string; end: string; pct: number } | null => {
 		const progress = playState?.progress;
@@ -315,48 +473,15 @@ function TrayViewPage() {
 
 	return (
 		<div className="absolute inset-0 flex overflow-hidden border border-border bg-background text-foreground shadow-sm">
-			{/* Full-bleed art, opacified */}
-			<div className="pointer-events-none absolute inset-0" aria-hidden>
-				{thumbnail ? (
-					<>
-						<div
-							className="absolute inset-0 scale-110 bg-cover bg-center"
-							style={{ backgroundImage: `url(${thumbnail})` }}
-						/>
-						<div
-							className="absolute inset-0 scale-125 bg-cover bg-center opacity-70 blur-2xl"
-							style={{ backgroundImage: `url(${thumbnail})` }}
-						/>
-						{accent ? <div className="absolute inset-0 opacity-25" style={{ backgroundColor: accent }} /> : null}
-						<div className="absolute inset-0 bg-background/70" />
-					</>
-				) : (
-					<div className="absolute inset-0 bg-muted/30" />
-				)}
-			</div>
-
-			{/* Accent pill rail */}
-			<div className="relative z-10 flex w-3 shrink-0 items-stretch justify-center py-2.5 ml-1" aria-hidden>
-				<div
-					className="w-1.5 rounded-full bg-accent"
-					style={accent ? { backgroundColor: accent } : undefined}
-				/>
-			</div>
+			<TrayBleedArt src={artSrc} accent={displayAccent} />
+			<TrayAccentPill accent={displayAccent} />
 
 			<div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
 				<div className="relative z-10 flex min-h-0 flex-1">
 					{/* Player column */}
 					<div className="flex min-w-0 flex-1 flex-col px-3 pt-3 pb-2">
 						<div className="flex items-start gap-2.5">
-							<div className="size-16 shrink-0 overflow-hidden rounded-lg bg-muted/80 ring-1 ring-border/50 shadow-sm">
-								{thumbnail ? (
-									<img src={thumbnail} alt="" className="size-full object-cover" draggable={false} />
-								) : (
-									<div className="flex size-full items-center justify-center text-[9px] font-medium tracking-wide text-muted-foreground">
-										YTM
-									</div>
-								)}
-							</div>
+							<TrayCoverArt src={artSrc} />
 
 							<div className="min-w-0 flex-1 pt-0.5">
 								<p className="truncate text-base leading-tight font-semibold">{title}</p>
@@ -415,7 +540,7 @@ function TrayViewPage() {
 									className="absolute inset-y-0 left-0 rounded-full bg-accent transition-[width] duration-100 ease-out"
 									style={{
 										width: `${time?.pct ?? 0}%`,
-										...(accent ? { backgroundColor: accent } : {}),
+										...(displayAccent ? { backgroundColor: displayAccent } : {}),
 									}}
 								/>
 								{/* Hover preview — imperative width, no transition */}
@@ -449,7 +574,17 @@ function TrayViewPage() {
 						<div className="mt-auto flex justify-center pt-2">
 							<div className="flex items-center gap-0.5 rounded-full border border-border/50 bg-background/50 p-1 shadow-sm backdrop-blur-md">
 								{hasLike ? (
-									<PlayerButton active={!!playState?.liked} disabled={trackBusy || !track} aria-label="Like" onClick={likeToggle}>
+									<PlayerButton
+										active={!!playState?.liked}
+										disabled={trackBusy || !track}
+										aria-label="Like"
+										style={
+											playState?.liked && displayAccent
+												? { color: displayAccent }
+												: undefined
+										}
+										onClick={likeToggle}
+									>
 										<LikeIcon />
 									</PlayerButton>
 								) : null}
@@ -461,10 +596,10 @@ function TrayViewPage() {
 									disabled={trackBusy || !track}
 									aria-label={playing ? "Pause" : "Play"}
 									style={
-										accent
+										displayAccent
 											? {
-													backgroundColor: `color-mix(in oklab, ${accent} 28%, transparent)`,
-													color: accent,
+													backgroundColor: `color-mix(in oklab, ${displayAccent} 28%, transparent)`,
+													color: displayAccent,
 												}
 											: undefined
 									}
@@ -476,7 +611,17 @@ function TrayViewPage() {
 									<NextIcon />
 								</PlayerButton>
 								{hasDislike ? (
-									<PlayerButton active={!!playState?.disliked} disabled={trackBusy || !track} aria-label="Dislike" onClick={dislikeToggle}>
+									<PlayerButton
+										active={!!playState?.disliked}
+										disabled={trackBusy || !track}
+										aria-label="Dislike"
+										style={
+											playState?.disliked && displayAccent
+												? { color: displayAccent }
+												: undefined
+										}
+										onClick={dislikeToggle}
+									>
 										<LikeIcon className="rotate-180" />
 									</PlayerButton>
 								) : null}

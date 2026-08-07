@@ -1,6 +1,6 @@
 {
 	"name": "ytmdesktop2",
-  "description": "Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.",
+	"description": "Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.",
 	"version": "0.0.0",
 	"private": false,
 	"author": "Venipa <admin@venipa.net>",
@@ -63,6 +63,7 @@
 		"hono": "^4.13.0",
 		"lodash-es": "^4.17.21",
 		"lucide-react": "^1.28.0",
+		"motion": "^13.0.0",
 		"next-themes": "^0.4.6",
 		"node-fetch": "^2.6.7",
 		"node-vibrant": "^3.2.1-alpha.1",
