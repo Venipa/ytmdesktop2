@@ -1,8 +1,9 @@
 import { defaultUrl, isDevelopment, isProdDebug, isProduction } from "@main/infra/devUtils";
+import { toChromeUserAgent } from "@main/infra/userAgent";
 import { serverMain } from "@main/ipc/serverEvents";
 import { logger } from "@shared/utils/console";
 import translations from "@translations/index";
-import { BrowserWindow, BrowserWindowConstructorOptions, WebContentsView } from "electron";
+import { app, BrowserWindow, BrowserWindowConstructorOptions, WebContentsView } from "electron";
 import { debounce } from "lodash-es";
 import { join } from "path";
 import appIconPath from "~/build/favicon.ico?asset";
@@ -38,6 +39,7 @@ export class WindowManager {
 	private views: WindowViews | null = null;
 	private loadingView: WebContentsView | null = null;
 	private isGoogleLoginProcessing = false;
+	private userAgentResolved: string | null = null;
 
 	constructor(private readonly userAgent?: string) {}
 
@@ -88,7 +90,21 @@ export class WindowManager {
 		});
 	}
 
-	private setupWindowUserAgent() {}
+	private setupWindowUserAgent() {
+		if (!this.mainWindow) return;
+
+		const chromeUa = this.userAgent ?? toChromeUserAgent(this.mainWindow.webContents.getUserAgent());
+		this.userAgentResolved = chromeUa;
+		app.userAgentFallback = chromeUa;
+		this.mainWindow.webContents.setUserAgent(chromeUa);
+		logger.debug("chrome user-agent", chromeUa);
+	}
+
+	private applyChromeUserAgent(view: WebContentsView) {
+		const chromeUa = this.userAgentResolved ?? this.userAgent ?? toChromeUserAgent(view.webContents.getUserAgent());
+		this.userAgentResolved = chromeUa;
+		view.webContents.setUserAgent(chromeUa);
+	}
 
 	private async setupViews() {
 		if (!this.mainWindow) return;
@@ -125,6 +141,7 @@ export class WindowManager {
 			(view) => {
 				if (!this.mainWindow) return;
 
+				this.applyChromeUserAgent(view);
 				this.mainWindow.contentView.addChildView(view);
 				const [width, height] = this.mainWindow.getSize();
 				view.setBounds({
