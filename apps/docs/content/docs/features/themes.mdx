@@ -9,22 +9,35 @@ Pick a bundled theme or inject your own SCSS/CSS to restyle the embedded YouTube
 
 ## Setup
 
-1. Open **Settings → Themes**.
-2. Choose **Default** (bundled) or **Custom** and point at a `.scss` / `.sass` / `.css` file.
-3. Reload / apply — changes target the YouTube Music view.
+1. Open **Settings → Appearance → Themes**.
+2. Turn on **Enable Themes**.
+3. Choose **Default** (bundled) or **Custom** and point at a `.scss` / `.sass` / `.css` file.
+4. Reload / apply — changes target the YouTube Music view.
 
 For Custom, the default file location (if unset) is under your Documents folder: `ytmdesktop/custom.scss`.
+
+## Chrome options
+
+These inject independently of which theme is selected (including when Themes is off for the stylesheet itself — chrome layers still follow their own toggles):
+
+| Option | What it does |
+| --- | --- |
+| **Enable Thumbnail Background** | Soft album-art backdrop behind the player page |
+| **Enable Blur** | Glass blur on the player page, bar, dialogs, and thumbnail soften |
+
+**Enable Blur** defaults off after upgrade (migration) for smoother performance — backdrop blur is GPU-heavy. Turn it on if you want the frosted look.
 
 ## Tips
 
 - Prefer SCSS/CSS that targets YouTube Music DOM carefully — upstream UI changes can break selectors.
 - Enable **Update on Changes** when editing a custom file to live-reload.
-- Toggle **Enable Blur** off if the player feels sluggish — backdrop blur is GPU-heavy.
+- If the player feels sluggish, leave **Enable Blur** off.
 - Keep a backup of working themes before large edits.
 
 ## Related
 
 <Cards>
+  <Card title="Display" href="/docs/features/display" />
   <Card title="All features" href="/docs/features" />
   <Card title="Mini player" href="/docs/features/mini-player" />
 </Cards>

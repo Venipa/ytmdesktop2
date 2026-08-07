@@ -1,0 +1,37 @@
+---
+title: Tray view
+description: Compact now-playing popup from the system tray
+---
+
+The tray view is a small always-on-top popup anchored to the system tray (or menu bar). Click the tray icon to open it without restoring the main window.
+
+![Tray view popup](/images/features-trayview.png)
+
+## Setup
+
+1. Keep the app running in the tray (enable **Minimize to tray on close** under Settings if you want close → tray).
+2. Click the YTMDesktop2 tray icon.
+3. Use transport controls, seek, like/dislike, and quick toggles for Discord, Last.fm, and the local API.
+4. Open the main window or Settings from the popup, or press **Escape** / click away to dismiss.
+
+The popup positions itself near the tray icon and clamps to the current display work area. On multi-desktop setups it prefers the active desktop when shown.
+
+## Seek tooltip
+
+Hover or drag the progress thumb to see the exact timestamp in a tooltip while scrubbing.
+
+![Tray view progress tooltip](/images/features-trayview-with-progress_tooltip.png)
+
+## Tips
+
+- Pair with **Minimize to tray on close** for a tray-first workflow.
+- Need a longer-lived window? Use the [mini player](/docs/features/mini-player) instead — tray view is meant for quick glances.
+- Tray icon artwork follows platform conventions (including template icons on macOS).
+
+## Related
+
+<Cards>
+  <Card title="Mini player" href="/docs/features/mini-player" />
+  <Card title="DPI & scaling" href="/docs/features/dpi" />
+  <Card title="All features" href="/docs/features" />
+</Cards>

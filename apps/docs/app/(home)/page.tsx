@@ -5,11 +5,14 @@ import {
   Disc3Icon,
   DownloadIcon,
   Gamepad2Icon,
+  LayoutPanelTopIcon,
+  MonitorIcon,
   MonitorSmartphoneIcon,
   PaletteIcon,
   RadioIcon,
   ScrollTextIcon,
   StarIcon,
+  ZoomInIcon,
 } from 'lucide-react';
 import { buttonVariants } from 'fumadocs-ui/components/ui/button';
 import { ReleaseDownloadPanel } from '@/components/release-download-panel';
@@ -34,60 +37,92 @@ import {
 
 const features = [
   {
-    title: 'Last.fm scrobbling',
-    description: 'Scrobble what you play and keep your listening history in sync.',
-    href: `${docsRoute}/features/lastfm/`,
-    icon: Disc3Icon,
-    image: '/images/feature-lastfm.jpg',
-  },
-  {
-    title: 'Discord Rich Presence',
-    description: 'Show friends the track and artist you are listening to.',
-    href: `${docsRoute}/features/discord/`,
-    icon: RadioIcon,
-    image: '/images/features-rpc2.png',
+    title: 'Tray view',
+    description: 'Quick now-playing popup anchored to the system tray.',
+    href: `${docsRoute}/features/tray-view/`,
+    icon: LayoutPanelTopIcon,
+    image: '/images/features-trayview.png',
+    className: 'sm:col-span-2 lg:col-span-2 lg:row-span-2',
   },
   {
     title: 'Mini player',
-    description: 'Compact always-on-top controls when you need a smaller window.',
+    description: 'Always-on-top controls in a compact window.',
     href: `${docsRoute}/features/mini-player/`,
     icon: MonitorSmartphoneIcon,
     image: '/images/feature-miniplayer.jpg',
+    className: '',
+  },
+  {
+    title: 'Discord',
+    description: 'Show friends what you are listening to.',
+    href: `${docsRoute}/features/discord/`,
+    icon: RadioIcon,
+    image: '/images/features-rpc2.png',
+    className: '',
   },
   {
     title: 'Themes',
-    description: 'Theme YouTube Music with bundled or custom stylesheets.',
+    description: 'Bundled or custom styles, thumbnail background, and glass blur.',
     href: `${docsRoute}/features/themes/`,
     icon: PaletteIcon,
     image: '/images/player-full-2.png',
+    className: 'sm:col-span-2 lg:col-span-2',
+  },
+  {
+    title: 'Display zoom',
+    description: 'Scale YouTube Music from 80% to 150%.',
+    href: `${docsRoute}/features/display/`,
+    icon: ZoomInIcon,
+    image: '/images/player-full.png',
+    className: '',
+  },
+  {
+    title: 'DPI & scaling',
+    description: 'High-DPI chrome with OS display scale.',
+    href: `${docsRoute}/features/dpi/`,
+    icon: MonitorIcon,
+    image: '/images/bg-4.jpg',
+    className: '',
   },
   {
     title: 'OBS overlays',
-    description: 'Browser sources powered by the local API for now-playing overlays.',
+    description: 'Browser sources from the local API.',
     href: `${docsRoute}/features/obs/`,
     icon: RadioIcon,
     image: '/images/bg-5.jpg',
+    className: '',
   },
   {
     title: 'Local API',
-    description: 'HTTP endpoints for automation, auth clients, and integrations.',
+    description: 'HTTP endpoints for automation.',
     href: `${docsRoute}/api/`,
     icon: BookOpenIcon,
     image: '/images/bg-6.jpg',
+    className: '',
+  },
+  {
+    title: 'Last.fm',
+    description: 'Scrobble tracks and sync Now Playing.',
+    href: `${docsRoute}/features/lastfm/`,
+    icon: Disc3Icon,
+    image: '/images/feature-lastfm.jpg',
+    className: 'sm:col-span-2 lg:col-span-2',
   },
   {
     title: 'Stream Deck',
-    description: 'Control playback from an Elgato Stream Deck plugin.',
+    description: 'Playback controls on Elgato hardware.',
     href: `${docsRoute}/integrations/streamdeck/`,
     icon: Gamepad2Icon,
     image: '/images/bg-7.jpg',
+    className: '',
   },
   {
     title: 'Changelog',
-    description: 'Browse every published GitHub release and notes in one place.',
+    description: 'Published GitHub releases and notes.',
     href: changelogRoute,
     icon: ScrollTextIcon,
     image: '/images/bg-8.jpg',
+    className: '',
   },
 ] as const;
 
@@ -201,31 +236,32 @@ export default async function HomePage() {
         <div className="mb-8 max-w-2xl">
           <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">Features</h2>
           <p className="mt-2 text-fd-muted-foreground text-pretty">
-            Everything in one desktop client — integrations, theming, overlays, and hardware
-            controls.
+            Everything in one desktop client — tray view, theming, DPI-aware scaling, overlays, and
+            hardware controls.
           </p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4 lg:auto-rows-[14rem] lg:gap-4">
           {features.map((item) => (
             <Link
               key={item.title}
               href={item.href}
-              className="group relative overflow-hidden rounded-2xl border bg-fd-card transition-colors hover:border-fd-primary/40"
+              className={cn(
+                'group relative isolate flex h-full min-h-[14rem] flex-col overflow-hidden rounded-2xl border bg-fd-card transition-[border-color,transform] duration-300 hover:-translate-y-0.5 hover:border-fd-primary/40',
+                item.className,
+              )}
             >
-              <div className="relative h-28 overflow-hidden">
-                <Image
-                  src={assetPath(item.image)}
-                  alt=""
-                  fill
-                  className="object-cover opacity-70 transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 640px) 100vw, 25vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-fd-card via-fd-card/40 to-transparent" />
-              </div>
-              <div className="relative p-5 pt-2">
-                <item.icon className="mb-3 size-5 text-fd-primary" />
-                <h3 className="font-medium tracking-tight">{item.title}</h3>
-                <p className="mt-1.5 text-sm text-fd-muted-foreground text-pretty">
+              <Image
+                src={assetPath(item.image)}
+                alt=""
+                fill
+                className="object-cover object-center opacity-70 transition-transform duration-500 ease-out group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-fd-card from-35% via-fd-card/70 to-fd-card/15" />
+              <div className="relative z-[1] mt-auto flex flex-col gap-1.5 p-4 sm:p-5">
+                <item.icon className="size-5 text-fd-primary" />
+                <h3 className="font-medium tracking-tight text-balance">{item.title}</h3>
+                <p className="text-sm leading-snug text-fd-muted-foreground text-pretty">
                   {item.description}
                 </p>
               </div>
@@ -247,8 +283,8 @@ export default async function HomePage() {
         <div className="flex flex-col justify-center gap-4 p-6 md:p-10">
           <h2 className="text-2xl font-semibold tracking-tight">Built for desktop listening</h2>
           <p className="text-fd-muted-foreground text-pretty">
-            Native window chrome, tray controls, and integrations that stay out of the way while
-            YouTube Music plays.
+            Native window chrome, tray controls, Appearance settings for themes and YouTube zoom,
+            and integrations that stay out of the way while YouTube Music plays.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link

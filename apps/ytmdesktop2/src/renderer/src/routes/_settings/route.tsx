@@ -47,13 +47,13 @@ export const Route = createFileRoute("/_settings")({
 	component: SettingsLayout,
 });
 
-const tabs = [
-	{ to: "/", label: "Generic", icon: RiSettings3Line },
-	{ to: "/player", label: "Player", icon: RiMusic2Line },
-	{ to: "/discord", label: "Discord", icon: RiDiscordLine },
-	{ to: "/lastfm", label: "Last.fm", icon: RiAlbumLine },
-	{ to: "/about", label: "About", icon: RiInformationLine },
-] as const;
+const tabs = {
+	generic: { to: "/", label: "Generic", icon: RiSettings3Line },
+	player: { to: "/player", label: "Player", icon: RiMusic2Line },
+	discord: { to: "/discord", label: "Discord", icon: RiDiscordLine },
+	lastfm: { to: "/lastfm", label: "Last.fm", icon: RiAlbumLine },
+	about: { to: "/about", label: "About", icon: RiInformationLine },
+} as const;
 
 const apiCoreSubs = [
 	{ to: "/api-integrations/api", label: "API", icon: RiServerLine },
@@ -76,7 +76,7 @@ const socials = [
 ] as const;
 
 type SettingsTabTo =
-	| (typeof tabs)[number]["to"]
+	| (typeof tabs)[keyof typeof tabs]["to"]
 	| (typeof apiCoreSubs)[number]["to"]
 	| (typeof apiIntegrationSubs)[number]["to"]
 	| (typeof appearanceSubs)[number]["to"];
@@ -236,14 +236,13 @@ function SettingsLayout() {
 							<SidebarGroupLabel>Preferences</SidebarGroupLabel>
 							<SidebarGroupContent>
 								<SidebarMenu className="flex flex-col gap-1">
-									{tabs.slice(0, 4).map((tab) => (
-										<SettingsNavItem key={tab.to} to={tab.to} label={tab.label} icon={tab.icon} />
-									))}
-									<ApiIntegrationsNav />
+									<SettingsNavItem {...tabs.generic} />
+									<SettingsNavItem {...tabs.player} />
 									<AppearanceNav />
-									{tabs.slice(4).map((tab) => (
-										<SettingsNavItem key={tab.to} to={tab.to} label={tab.label} icon={tab.icon} />
-									))}
+									<SettingsNavItem {...tabs.discord} />
+									<SettingsNavItem {...tabs.lastfm} />
+									<ApiIntegrationsNav />
+									<SettingsNavItem {...tabs.about} />
 								</SidebarMenu>
 							</SidebarGroupContent>
 						</SidebarGroup>

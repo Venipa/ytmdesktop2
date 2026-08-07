@@ -1,0 +1,33 @@
+---
+title: DPI & scaling
+description: High-DPI displays and YouTube Music zoom
+---
+
+YTMDesktop2 enables Chromium **high-DPI support** so the app tracks OS display scaling on Windows, macOS, and Linux. Toolbar, settings, tray view, and mini player stay crisp at the OS scale.
+
+## OS display scaling
+
+Leave Windows / macOS / Linux display scale at your preferred value (100%, 125%, 150%, 200%, …). The app follows it for chrome and popups. No extra app setting is required for DPI.
+
+If the UI looks blurry or tiny:
+
+- Confirm OS scaling for that monitor.
+- Avoid forcing software rendering — leave **Disable Hardware Acceleration** off unless you are debugging GPU issues (Settings → app options).
+
+## YouTube Music zoom
+
+Separately from OS DPI, you can scale **only** the embedded YouTube Music view:
+
+1. Open **Settings → Appearance → Display**.
+2. Set **YouTube zoom** from **80%** to **150%** (5% steps).
+3. Changes apply live. Toolbar and other chrome stay at 100% (still OS-scaled).
+
+See [Display](/docs/features/display) for the short zoom-only guide.
+
+## Related
+
+<Cards>
+  <Card title="Display" href="/docs/features/display" />
+  <Card title="Tray view" href="/docs/features/tray-view" />
+  <Card title="All features" href="/docs/features" />
+</Cards>
