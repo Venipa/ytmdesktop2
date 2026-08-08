@@ -1,4 +1,4 @@
-type DialogAction = "close" | "ok";
+export type DialogAction = "close" | "ok" | "play" | "queue";
 type DialogCallback = (action: DialogAction) => void;
 
 const callbacks = new Map<number, DialogCallback>();

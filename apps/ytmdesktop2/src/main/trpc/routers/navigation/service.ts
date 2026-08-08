@@ -1,20 +1,25 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
 import { defaultUrl } from "@main/infra/devUtils";
-import { parseMusicUrlById } from "@shared/track/trackData";
+import { createSendHandler } from "@main/ipc/ipc";
 import { App } from "electron";
 
 export default class NavigationProvider extends BaseProvider implements AfterInit {
 	private lastNavigationIsSameOrigin = true;
+	private guardsWired = false;
 
 	constructor(private app: App) {
 		super("navigation");
 	}
 
 	async AfterInit() {
-		this.views.youtubeView.webContents.on("did-navigate-in-page", async (_ev, url) => {
+		if (this.guardsWired) return;
+		const view = this.views.youtubeView;
+		if (!view || view.webContents.isDestroyed()) return;
+		this.guardsWired = true;
+		view.webContents.on("did-navigate-in-page", async (_ev, url) => {
 			await this.handleNavigationGuards(url);
 		});
-		this.views.youtubeView.webContents.on("did-navigate", async (_ev, url) => {
+		view.webContents.on("did-navigate", async (_ev, url) => {
 			await this.handleNavigationGuards(url);
 		});
 	}
@@ -84,11 +89,40 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 		await this.views.youtubeView.webContents.loadURL(defaultUrl);
 	}
 
-	/** Open a song in the YouTube Music view by video id. */
-	async openWatch(videoId: string) {
+	/**
+	 * Open a song via YTM in-page `yt-navigate` (upstream remoteControl navigate).
+	 */
+	async openWatch(videoId: string, playlistId?: string) {
 		const view = this.views.youtubeView;
-		if (!view || view.webContents.isDestroyed()) return;
-		await view.webContents.loadURL(parseMusicUrlById(videoId));
+		if (!view || view.webContents.isDestroyed()) {
+			this.logger.warn("openWatch skipped — youtube view missing");
+			return;
+		}
+		if (!(await this.isYtmReady())) {
+			this.logger.warn("openWatch skipped — ytm not ready", videoId);
+			return;
+		}
+		await createSendHandler(view, "plugins:api:cmd:navigate", { timeout: 15000 })({
+			videoId,
+			...(playlistId ? { playlistId } : {}),
+		});
+	}
+
+	/** Append to current YTM queue (upstream companion queueAdd). */
+	async queueAdd(videoId: string, playlistId?: string) {
+		const view = this.views.youtubeView;
+		if (!view || view.webContents.isDestroyed()) {
+			this.logger.warn("queueAdd skipped — youtube view missing");
+			return;
+		}
+		if (!(await this.isYtmReady())) {
+			this.logger.warn("queueAdd skipped — ytm not ready", videoId);
+			return;
+		}
+		await createSendHandler(view, "plugins:api:cmd:queue_add", { timeout: 15000 })({
+			videoId,
+			...(playlistId ? { playlistId } : {}),
+		});
 	}
 
 	toggleDevTools() {

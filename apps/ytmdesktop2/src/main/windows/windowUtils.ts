@@ -311,7 +311,9 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	}
 	return win;
 }
-export async function createAppDialogWindow<Action extends "close" | "ok">(appOptions?: Partial<WindowOptions> & { onResponse?: (action: Action) => void }) {
+export async function createAppDialogWindow<Action extends string = "close" | "ok">(
+	appOptions?: Partial<WindowOptions> & { onResponse?: (action: Action) => void },
+) {
 	const win = await createAppWindow(appOptions);
 	const onResponse = appOptions?.onResponse;
 	if (onResponse) {

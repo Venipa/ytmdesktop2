@@ -89,6 +89,13 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 			store.set("themes.blur", false);
 		},
 	},
+	{
+		hook(store) {
+			const current = (store.store as SettingsStore)?.player?.deepLinkOpen;
+			if (current === "ask" || current === "play") return;
+			store.set("player.deepLinkOpen", "ask");
+		},
+	},
 ];
 
 export default migrations;

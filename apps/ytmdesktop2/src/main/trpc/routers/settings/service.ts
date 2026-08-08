@@ -40,6 +40,8 @@ const defaultSettings = {
 	},
 	player: {
 		skipDisliked: false,
+		/** `ask` = confirm dialog; `play` = open watch immediately */
+		deepLinkOpen: "ask" as "ask" | "play",
 		res: {
 			enabled: false,
 			prefer: "auto",

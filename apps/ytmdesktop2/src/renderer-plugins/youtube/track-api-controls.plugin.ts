@@ -116,6 +116,102 @@ const trackControls = {
 		playerApi.setVolume(next);
 		return { volume: playerApi.getVolume() };
 	},
+	/**
+	 * In-page YTM navigation (same as upstream ytmdesktop `remoteControl:execute` → `navigate`).
+	 * Dispatches `yt-navigate` with a watchEndpoint — no full page reload.
+	 */
+	navigate: (data?: { videoId?: string; playlistId?: string }) => {
+		const videoId = data?.videoId?.trim();
+		if (!videoId) throw new Error("videoId required");
+		const watchEndpoint: { videoId: string; playlistId?: string } = { videoId };
+		const playlistId = data?.playlistId?.trim();
+		if (playlistId) watchEndpoint.playlistId = playlistId;
+		document.dispatchEvent(
+			new CustomEvent("yt-navigate", {
+				detail: {
+					endpoint: { watchEndpoint },
+				},
+			}),
+		);
+		return { ok: true as const, videoId, playlistId: playlistId || null };
+	},
+	/**
+	 * Add to YTM queue (upstream companion `queueAdd` / queueadd.script.js).
+	 * Uses `yt-service-request` → `queueAddEndpoint`, then store `ADD_ITEMS` when available.
+	 */
+	queueAdd: async (data?: { videoId?: string; playlistId?: string; index?: number }) => {
+		const videoId = data?.videoId?.trim();
+		if (!videoId) throw new Error("videoId required");
+		const playlistId = data?.playlistId?.trim() || undefined;
+		const bar = document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as HTMLElement & {
+			store?: { getState: () => any; dispatch: (a: unknown) => void };
+		};
+		if (!bar) throw new Error("player bar not found");
+
+		const store =
+			(window as any).__YTMD_HOOK__?.ytmStore ??
+			bar.store ??
+			(document.querySelector("ytmusic-app") as { store?: typeof bar.store } | null)?.store ??
+			null;
+
+		const index =
+			typeof data?.index === "number" && Number.isFinite(data.index)
+				? data.index
+				: (store?.getState?.()?.queue?.items?.length ?? 0);
+
+		await new Promise<void>((resolve, reject) => {
+			const returnValue: any[] = [];
+			bar.dispatchEvent(
+				new CustomEvent("yt-action", {
+					bubbles: true,
+					cancelable: false,
+					composed: true,
+					detail: {
+						actionName: "yt-service-request",
+						args: [
+							bar,
+							{
+								queueAddEndpoint: {
+									queueTarget: {
+										videoId,
+										...(playlistId ? { playlistId } : {}),
+									},
+								},
+							},
+						],
+						optionalAction: false,
+						returnValue,
+					},
+				}),
+			);
+			const ajax = returnValue[0]?.ajaxPromise;
+			if (!ajax?.then) {
+				reject(new Error("queueAddEndpoint not accepted"));
+				return;
+			}
+			ajax.then(
+				(response: any) => {
+					const items = response?.data?.queueDatas?.map((d: any) => d.content);
+					if (store && Array.isArray(items) && items.length) {
+						store.dispatch({
+							type: "ADD_ITEMS",
+							payload: {
+								nextQueueItemId: store.getState().queue.nextQueueItemId,
+								index,
+								items,
+								shuffleEnabled: store.getState().queue.shuffleEnabled,
+								shouldAssignIds: true,
+							},
+						});
+					}
+					resolve();
+				},
+				() => reject(new Error("queueAdd request failed")),
+			);
+		});
+
+		return { ok: true as const, videoId, playlistId: playlistId ?? null, index };
+	},
 };
 
 export default definePlugin(
@@ -143,6 +239,8 @@ export default definePlugin(
 			volume: async ({ playerApi }, data?: { volume?: number }) => trackControls.volume(playerApi, data),
 			volumeUp: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeUp(playerApi, data),
 			volumeDown: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeDown(playerApi, data),
+			navigate: async (_ctx, data?: { videoId?: string; playlistId?: string }) => trackControls.navigate(data),
+			queueAdd: async (_ctx, data?: { videoId?: string; playlistId?: string; index?: number }) => trackControls.queueAdd(data),
 		},
 	},
 );

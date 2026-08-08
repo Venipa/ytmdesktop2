@@ -56,8 +56,14 @@ export class BaseProvider<TView extends WebContentsView = WebContentsView> {
 		if (!this.views.youtubeView) return false;
 		if (this.views.youtubeView.webContents.isDestroyed()) return false;
 		if (this.views.youtubeView.webContents.isCrashed()) return false;
-		if (this.views.youtubeView.webContents.isLoading()) await new Promise<void>((resolve) => this.views.youtubeView.webContents.on("did-finish-load", resolve));
-		const isReady = await this.views.youtubeView.webContents.executeJavaScript(`(window && window.isYTMLoaded && window.isYTMLoaded() && window.domUtils.playerApi().isReady())`);
+		if (this.views.youtubeView.webContents.isLoading()) {
+			await new Promise<void>((resolve) => {
+				this.views.youtubeView.webContents.once("did-finish-load", () => resolve());
+			});
+		}
+		const isReady = await this.views.youtubeView.webContents.executeJavaScript(
+			`(window && window.isYTMLoaded && window.isYTMLoaded() && window.domUtils.playerApi().isReady())`,
+		);
 		this.logger.debug("YTM ready:", isReady, { retryCount });
 		if (!isReady && retryCount > 20) throw new Error("YTM was not able to initialize");
 		if (!isReady) return await waitMs(500).then(() => this._ytmReady(retryCount + 1));

@@ -42,6 +42,24 @@ function PlayerSettingsPage() {
 						<SettingsCheckbox configKey="app.enableTaskbarProgress" description="Show playback progress on the taskbar.">
 							Enable Taskbar Progress
 						</SettingsCheckbox>
+						<SettingsSelect
+							configKey="player.deepLinkOpen"
+							defaultValue="ask"
+							label="When opening a shared link"
+							description="How ytmd:// share links behave when the app receives them."
+							options={[
+								{
+									value: "ask",
+									label: "Ask first",
+									description: "Choose play now, add to queue, or cancel",
+								},
+								{
+									value: "play",
+									label: "Play immediately",
+									description: "Start the track without a confirmation dialog",
+								},
+							]}
+						/>
 					</FieldGroup>
 				</CardContent>
 			</Card>

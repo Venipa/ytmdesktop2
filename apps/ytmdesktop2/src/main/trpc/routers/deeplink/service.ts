@@ -1,97 +1,191 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
-import {
-	findYtmdProtocolArg,
-	parseYtmdProtocolUrl,
-	YTMD_PROTOCOL,
-} from "@shared/protocol/ytmdProtocol";
-import { App } from "electron";
+import { createAppDialogWindow } from "@main/windows/windowUtils";
+import { YtmdLink } from "@shared/protocol/ytmdProtocol";
+import { stripUndefined } from "@shared/utils/object";
+import { App, BrowserWindow } from "electron";
 import path from "node:path";
 
+type PendingWatch = { videoId: string; playlistId?: string };
+type DeeplinkAction = "close" | "play" | "queue";
+
+const DIALOG_WIDTH = 420;
+const DIALOG_HEIGHT = 280;
+
 /**
- * Owns `ytmd://` registration + dispatch (open-url / argv / second-instance).
- * Navigates via NavigationProvider; does not own single-instance lock.
+ * Registers `ytmd://`. Mode from `player.deepLinkOpen`: ask (dialog) or play (instant).
+ * Single-instance lock stays on AppProvider.
  */
 export default class DeeplinkProvider extends BaseProvider implements BeforeStart, AfterInit {
 	private ready = false;
-	private pendingUrl: string | null = null;
-	private coldStartArgConsumed = false;
+	private queue: string | null = null;
+	private busy = false;
+	private dialog: BrowserWindow | null = null;
 
 	constructor(private _app: App) {
 		super("deeplink");
 	}
 
 	async BeforeStart() {
-		this.registerProtocolClient();
+		this.register();
 		this._app.on("open-url", (event, url) => {
 			event.preventDefault();
-			void this.handle(url);
+			void this.enqueue(url);
 		});
-		this._app.on("second-instance", (_event, commandLine) => {
-			const url = findYtmdProtocolArg(commandLine);
-			if (url) void this.handle(url);
+		this._app.on("second-instance", (_event, argv) => {
+			const url = YtmdLink.fromArgv(argv);
+			if (url) void this.enqueue(url);
 		});
 	}
 
 	async AfterInit() {
-		await this.flush();
+		this.ready = true;
+		if (!this.queue) this.queue = YtmdLink.fromArgv(process.argv);
+		await this.drain();
 	}
 
-	/** Public entry for tests / future callers. */
-	async handle(url: string): Promise<boolean> {
-		const action = parseYtmdProtocolUrl(url);
-		if (!action) {
+	private async enqueue(url: string) {
+		if (!YtmdLink.parse(url)) {
 			this.logger.debug("ignored deeplink", url);
-			return false;
-		}
-		if (!this.ready) {
-			this.pendingUrl = url;
-			this.logger.debug("queued deeplink until ready", url);
-			return true;
-		}
-		this.focusMainWindow();
-		if (action.type === "watch") {
-			this.logger.info("deeplink openWatch", action.videoId);
-			await this.getProvider("navigation").openWatch(action.videoId);
-		}
-		return true;
-	}
-
-	private async flush() {
-		const queued = this.pendingUrl;
-		this.pendingUrl = null;
-
-		if (!this.ready) {
-			this.ready = true;
-			const cold = !this.coldStartArgConsumed ? findYtmdProtocolArg(process.argv) : null;
-			this.coldStartArgConsumed = true;
-			const url = queued ?? cold;
-			if (url) await this.handle(url);
 			return;
 		}
-
-		if (queued) await this.handle(queued);
+		this.queue = url;
+		if (this.ready) await this.drain();
 	}
 
-	private registerProtocolClient() {
+	private async drain() {
+		if (!this.ready || this.busy) return;
+		const url = this.queue;
+		this.queue = null;
+		if (!url) return;
+
+		const pending = YtmdLink.parse(url);
+		if (!pending) return;
+
+		this.busy = true;
 		try {
-			if (this._app.isDefaultProtocolClient(YTMD_PROTOCOL)) return;
+			this.focusMain();
+			const mode = this.getProvider("settings").get<"ask" | "play">("player.deepLinkOpen", "ask");
+			if (mode === "play") {
+				await this.applyChoice("play", pending);
+			} else {
+				await this.prompt(pending);
+			}
+		} catch (err) {
+			this.logger.error("deeplink failed", url, err);
+		} finally {
+			this.busy = false;
+			if (this.queue) void this.drain();
+		}
+	}
+
+	/** Open confirm dialog; resolve after play / queue / cancel / window close. */
+	private prompt(pending: PendingWatch): Promise<void> {
+		const parent = this.windowContext?.main;
+		if (!parent || parent.isDestroyed()) {
+			this.logger.warn("deeplink prompt skipped — no main window");
+			return Promise.resolve();
+		}
+
+		const shareUrl = YtmdLink.watch(pending.videoId, pending.playlistId);
+		const qs = new URLSearchParams(
+			stripUndefined({
+				videoId: pending.videoId,
+				playlistId: pending.playlistId,
+				url: shareUrl,
+			}),
+		);
+
+		return new Promise<void>((resolve) => {
+			let settled = false;
+			const finish = (action: DeeplinkAction) => {
+				if (settled) return;
+				settled = true;
+				const win = this.dialog;
+				this.dialog = null;
+				if (win && !win.isDestroyed()) win.close();
+				void this.applyChoice(action, pending).finally(resolve);
+			};
+
+			void createAppDialogWindow<DeeplinkAction>({
+				parent,
+				path: `/deeplink?${qs.toString()}`,
+				width: DIALOG_WIDTH,
+				height: DIALOG_HEIGHT,
+				minWidth: DIALOG_WIDTH,
+				maxWidth: DIALOG_WIDTH,
+				minHeight: DIALOG_HEIGHT,
+				maxHeight: DIALOG_HEIGHT,
+				maximizeable: false,
+				minimizeable: false,
+				showTaskBar: true,
+				top: true,
+				show: false,
+				onResponse: (action) => finish(action),
+			}).then((win) => {
+				if (settled) {
+					if (!win.isDestroyed()) win.close();
+					return;
+				}
+				this.dialog = win;
+				win.on("closed", () => {
+					this.dialog = null;
+					if (!settled) {
+						settled = true;
+						resolve();
+					}
+				});
+				win.show();
+				win.focus();
+			}).catch((err) => {
+				this.logger.error("deeplink dialog open failed", err);
+				if (!settled) {
+					settled = true;
+					resolve();
+				}
+			});
+		});
+	}
+
+	private async applyChoice(action: DeeplinkAction, pending: PendingWatch) {
+		const nav = this.getProvider("navigation");
+		try {
+			if (action === "play") {
+				this.logger.info("deeplink play", pending.videoId, pending.playlistId ?? null);
+				await nav.openWatch(pending.videoId, pending.playlistId);
+				return;
+			}
+			if (action === "queue") {
+				this.logger.info("deeplink queueAdd", pending.videoId, pending.playlistId ?? null);
+				await nav.queueAdd(pending.videoId, pending.playlistId);
+				return;
+			}
+			this.logger.debug("deeplink cancelled", pending.videoId);
+		} catch (err) {
+			this.logger.error("deeplink action failed", action, pending.videoId, err);
+		}
+	}
+
+	private register() {
+		try {
 			if (process.defaultApp) {
 				if (process.argv.length >= 2) {
-					this.logger.info(`register protocol '${YTMD_PROTOCOL}' (dev)`);
-					this._app.setAsDefaultProtocolClient(YTMD_PROTOCOL, process.execPath, [
+					this.logger.info(`register ${YtmdLink.scheme} (dev)`);
+					this._app.setAsDefaultProtocolClient(YtmdLink.scheme, process.execPath, [
 						path.resolve(process.argv[1]!),
 					]);
 				}
 				return;
 			}
-			this.logger.info(`register protocol '${YTMD_PROTOCOL}'`);
-			this._app.setAsDefaultProtocolClient(YTMD_PROTOCOL);
+			if (!this._app.isDefaultProtocolClient(YtmdLink.scheme)) {
+				this.logger.info(`register ${YtmdLink.scheme}`);
+				this._app.setAsDefaultProtocolClient(YtmdLink.scheme);
+			}
 		} catch (err) {
-			this.logger.error("failed to register protocol client", err);
+			this.logger.error("protocol register failed", err);
 		}
 	}
 
-	private focusMainWindow() {
+	private focusMain() {
 		const wnd = this.windowContext?.main;
 		if (!wnd || wnd.isDestroyed()) return;
 		if (wnd.isMinimized()) wnd.restore();

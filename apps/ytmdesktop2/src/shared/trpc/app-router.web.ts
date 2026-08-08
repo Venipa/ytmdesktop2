@@ -135,7 +135,7 @@ const windowRouter = router({
 	mainState: publicProcedure.query((): any => null),
 	stayOnTop: publicProcedure.mutation((): any => false),
 	isStayOnTop: publicProcedure.query((): any => false),
-	dialogResponse: publicProcedure.input(z.enum(["close", "ok"])).mutation((): any => false),
+	dialogResponse: publicProcedure.input(z.enum(["close", "ok", "play", "queue"])).mutation((): any => false),
 	onState: publicProcedure.subscription(() => emptySub<any>()),
 	onMainState: publicProcedure.subscription(() => emptySub<any>()),
 });

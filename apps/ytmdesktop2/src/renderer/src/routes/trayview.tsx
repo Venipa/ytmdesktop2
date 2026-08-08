@@ -1,5 +1,5 @@
 import { toAppThumbUrl } from "@shared/media/appThumbUrl";
-import { parseYtmdWatchUrlById } from "@shared/protocol/ytmdProtocol";
+import { YtmdLink } from "@shared/protocol/ytmdProtocol";
 import { createFileRoute } from "@tanstack/react-router";
 import { cva } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
@@ -324,7 +324,8 @@ function TrayViewPage() {
 	const playing = !!playState?.playing;
 	const title = track?.video?.title ?? "Nothing playing";
 	const artist = track?.video?.author ?? "";
-	const videoId = track?.video?.videoId ?? null;	const hasLike = typeof playState?.liked === "boolean";
+	const videoId = track?.video?.videoId ?? null;
+	const hasLike = typeof playState?.liked === "boolean";
 	const hasDislike = typeof playState?.disliked === "boolean";
 	const liveAccent = trackAccent || playState?.accent || null;
 	const { src: artSrc, accent: displayAccent } = useAlignedArtDisplay(thumbnail, liveAccent);
@@ -415,7 +416,7 @@ function TrayViewPage() {
 	async function handleCopyYtmdLink() {
 		if (!videoId) return;
 		try {
-			await navigator.clipboard.writeText(parseYtmdWatchUrlById(videoId));
+			await navigator.clipboard.writeText(YtmdLink.share(videoId, track?.context?.urlCanonical));
 			setLinkCopied(true);
 			if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current);
 			linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 1500);
