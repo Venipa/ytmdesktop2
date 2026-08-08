@@ -136,6 +136,7 @@ const lastfmRouter = router({
 	status: publicProcedure.query((): any => null),
 	profile: publicProcedure.mutation((): any => undefined),
 	authorize: publicProcedure.mutation((): any => undefined),
+	reauth: publicProcedure.mutation((): any => undefined),
 	toggle: publicProcedure.input(z.boolean()).mutation((): any => undefined),
 	onStatus: publicProcedure.subscription(() => emptySub<any>()),
 	onSubmitState: publicProcedure.subscription(() => emptySub<"start" | "change" | boolean | null>()),
