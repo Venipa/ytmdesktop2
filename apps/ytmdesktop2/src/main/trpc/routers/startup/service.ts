@@ -29,6 +29,8 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 		app.commandLine.appendSwitch("disable-background-timer-throttling");
 		app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 		if (isDevelopment) app.commandLine.appendSwitch("disable-web-security");
+		// OS HiDPI / deviceScaleFactor (Retina, Windows 125%/150%). Do not force-device-scale-factor —
+		// that freezes layout at 1× and breaks high-DPI. Page zoom for app chrome is locked separately.
 		app.commandLine.appendSwitch("high-dpi-support", "1");
 		if (platform.isLinux && GTK_VERSION) this.app.commandLine.appendSwitch("gtk-version", GTK_VERSION);
 		if (platform.isLinux) this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");

@@ -1,4 +1,4 @@
-import { bindYoutubeWebContents, TOOLBAR_HEIGHT } from "@main/domain/uiZoom";
+import { applyYoutubeZoom, bindYoutubeWebContents, TOOLBAR_HEIGHT } from "@main/domain/uiZoom";
 import { defaultUrl, isDevelopment, isProdDebug, isProduction } from "@main/infra/devUtils";
 import { toChromeUserAgent } from "@main/infra/userAgent";
 import { serverMain } from "@main/ipc/serverEvents";
@@ -254,6 +254,7 @@ export class WindowManager {
 			this.mainWindow.contentView.removeChildView(this.loadingView);
 			this.mainWindow.contentView.addChildView(this.views.toolbarView);
 			this._youtubeReady = true;
+			applyYoutubeZoom();
 		};
 		const handleLoadStart = debounce(() => {
 			if (!this.mainWindow || !this.loadingView || !this.views) return;

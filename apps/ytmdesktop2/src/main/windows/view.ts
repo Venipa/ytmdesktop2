@@ -1,3 +1,4 @@
+import { lockAppChromeZoom } from "@main/domain/uiZoom";
 import { defaultUrl, isDevelopment, isProduction } from "@main/infra/devUtils";
 import { toChromeUserAgent } from "@main/infra/userAgent";
 import translations from "@translations/index";
@@ -21,6 +22,7 @@ export const createApiView = async <T extends WebContentsView>(path: string, pos
 		},
 	}) as T;
 	view.webContents.setBackgroundThrottling(false);
+	lockAppChromeZoom(view.webContents);
 	await loadUrlOfWebContents(view.webContents, path);
 	if (postFunc) await Promise.resolve(postFunc(view));
 	const wnd = BrowserWindow.fromWebContents(view.webContents);

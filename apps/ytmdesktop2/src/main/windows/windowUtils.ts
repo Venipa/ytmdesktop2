@@ -1,4 +1,5 @@
 import { platform } from "@electron-toolkit/utils";
+import { lockAppChromeZoom } from "@main/domain/uiZoom";
 import { isDevelopment, isProdDebug } from "@main/infra/devUtils";
 import { createYmlStore } from "@main/lib/store/createYmlStore";
 import { attachTrpcWindow } from "@main/trpc/handler";
@@ -81,6 +82,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	});
 
 	await loadUrlOfWindow(win, path);
+	lockAppChromeZoom(win.webContents);
 	if (shouldOpenDevtools) win.webContents.openDevTools({ mode: "detach" });
 	win.webContents.setWindowOpenHandler(({ url }) => {
 		if (url.startsWith("http")) {
@@ -221,14 +223,11 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 	};
 	state = ensureVisibleOnSomeDisplay(restore());
 
-	const { width: dWidth, height: dHeight, scaleFactor } = calculateSizeWithScaleFactor(state.x, state.y, state.width, state.height);
-	if (scaleFactor !== 1) {
-		state.width = dWidth;
-		state.height = dHeight;
-		log.debug("restoreWindowStateWithScale", state, { scaleFactor });
-	} else {
-		log.debug("restoreWindowState", state, { scaleFactor });
-	}
+	// Electron getBounds/setBounds use DIP already — do not divide by display.scaleFactor
+	// (that shrunk windows on Windows 125%/150% HiDPI).
+	log.debug("restoreWindowState", state, {
+		displayScaleFactor: platform.isWindows ? screen.getDisplayNearestPoint({ x: state.x, y: state.y }).scaleFactor : 1,
+	});
 	win.on("close", saveState);
 	return { state, saveState };
 }
