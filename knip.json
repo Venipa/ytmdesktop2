@@ -1,0 +1,12 @@
+{
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"workspaces": {
+		"apps/ytmdesktop2": {
+			"project": [
+				"**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx,css,scss,sass,mdx}",
+				"!**/components/**",
+				"!**/scripts/**"
+			]
+		}
+	}
+}
