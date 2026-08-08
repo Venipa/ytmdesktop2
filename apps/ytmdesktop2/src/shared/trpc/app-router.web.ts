@@ -52,7 +52,16 @@ const appServiceRouter = router({
 	openSettings: publicProcedure.mutation((): any => undefined),
 	closeWindow: publicProcedure.input(z.string().optional()).mutation((): any => undefined),
 	restartNeeded: publicProcedure
-		.input(z.object({ message: z.string().optional(), icon: z.string().optional() }).optional())
+		.input(
+			z
+				.object({
+					message: z.string().optional(),
+					icon: z.string().optional(),
+					width: z.number().positive().optional(),
+					height: z.number().positive().optional(),
+				})
+				.optional(),
+		)
 		.mutation((): any => undefined),
 });
 

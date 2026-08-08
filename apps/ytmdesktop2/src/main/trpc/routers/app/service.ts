@@ -1,5 +1,6 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { applyYoutubeZoom, applyZoomToWebContents, clampZoomFactor } from "@main/domain/uiZoom";
+import { requestAppRelaunch } from "@main/handlers/quitHandler";
 import { isDevelopment } from "@main/infra/devUtils";
 import { setSentryEnabled } from "@main/infra/sentry";
 import { serverMain } from "@main/ipc/serverEvents";
@@ -8,11 +9,31 @@ import { trackService } from "@main/trpc/routers/track";
 import { centerWindowOnParent, createAppDialogWindow, createAppWindow, shortcutOnWindow, WindowOptions } from "@main/windows/windowUtils";
 import { stripUndefined } from "@shared/utils/object";
 import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
-import { clamp, debounce } from "lodash-es";
+import { debounce } from "lodash-es";
 import { version as releaseVersion } from "node:os";
 
 const STATE_PAUSE_TIME = 30e4;
 const TEST_RESTART_NEEDED_DIALOG = isDevelopment && process.env.TEST_RESTART_NEEDED_DIALOG === "1";
+
+/** Settings that only take effect after a full app restart. */
+type RestartDialogOptions = {
+  message?: string;
+  icon?: string;
+  width?: number;
+  height?: number;
+};
+
+const DEFAULT_RESTART_DIALOG_WIDTH = 400;
+const DEFAULT_RESTART_DIALOG_HEIGHT = 260;
+
+const SETTINGS_REQUIRING_RESTART: Record<string, RestartDialogOptions> = {
+  "app.disableHardwareAccel": {
+    message: "Hardware acceleration changes require a restart to apply.",
+    icon: "warning",
+    width: 400,
+    height: 260,
+  },
+};
 
 onMusicReload(() => {
   applyZoomToWebContents(getYoutubeView()?.webContents);
@@ -23,9 +44,11 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
   private settingsWindowOpenPromise: Promise<BrowserWindow> | null = null;
   private _windowMap = new Map<string, BrowserWindow>();
   private restartWindow: BrowserWindow | null = null;
+  private restartWindowOpenPromise: Promise<BrowserWindow> | null = null;
   private _blurTimestamp: Date | null = null;
   private _blurAfkHandle: any;
   private zoomWired = false;
+  private restartKeysWired = false;
 
   constructor(private _app: App) {
     super("app");
@@ -86,6 +109,19 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
       this.getProvider("settings").onSettingChange("app.zoomFactor", (value) => {
         applyYoutubeZoom(clampZoomFactor(value));
       });
+    }
+
+    if (!this.restartKeysWired) {
+      this.restartKeysWired = true;
+      this.getProvider("settings").onSettingChange(
+        Object.keys(SETTINGS_REQUIRING_RESTART),
+        (_value, _prevValue, key) => {
+          const meta = SETTINGS_REQUIRING_RESTART[key];
+          if (!meta) return;
+          void this.handleRestartNeeded(null, meta);
+        },
+        { debounce: 300 },
+      );
     }
 
     applyYoutubeZoom(this.getProvider("settings").get("app.zoomFactor", 1));
@@ -222,21 +258,34 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
     return releaseVersion()?.toLowerCase().startsWith("windows 11");
   }
 
-  async handleRestartNeeded(ev: unknown, { message, icon }: { message?: string; icon?: string } = {}) {
-    if (this.restartWindow) {
+  async handleRestartNeeded(_ev: unknown, opts: RestartDialogOptions = {}) {
+    const { message, icon } = opts;
+    const width = opts.width ?? DEFAULT_RESTART_DIALOG_WIDTH;
+    const height = opts.height ?? DEFAULT_RESTART_DIALOG_HEIGHT;
+
+    if (this.restartWindow && !this.restartWindow.isDestroyed()) {
       this.restartWindow.show();
+      this.restartWindow.focus();
       return;
     }
+    if (this.restartWindowOpenPromise) {
+      const pending = await this.restartWindowOpenPromise;
+      if (pending && !pending.isDestroyed()) {
+        pending.show();
+        pending.focus();
+      }
+      return;
+    }
+    this.restartWindow = null;
     const parent = this.windowContext.main;
-    const parentHeight = parent.getBounds().height;
-    const height = clamp(parentHeight, 300, clamp(parentHeight - 48, 300, 300));
-    this.restartWindow = await createAppDialogWindow({
-      parent: this.windowContext.main,
+    if (!parent || parent.isDestroyed()) return;
+    this.restartWindowOpenPromise = createAppDialogWindow({
+      parent,
       path: ["/restart?", new URLSearchParams(stripUndefined({ message, icon })).toString()].filter(Boolean).join(""),
       height,
-      width: 400,
-      minWidth: 400,
-      maxWidth: 400,
+      width,
+      minWidth: width,
+      maxWidth: width,
       minHeight: height,
       maxHeight: height,
       maximizeable: false,
@@ -246,15 +295,21 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
       show: false,
       onResponse: (action) => {
         this.logger.debug("restartWindow response", action);
-        this.restartWindow?.close();
+        const win = this.restartWindow;
         this.restartWindow = null;
-        if (action === "ok") {
-          this.app.relaunch();
-          this.app.exit();
-        }
+        if (win && !win.isDestroyed()) win.close();
+        if (action === "ok") void requestAppRelaunch();
       },
     });
-    this.restartWindow.show();
+    try {
+      this.restartWindow = await this.restartWindowOpenPromise;
+      this.restartWindow.on("closed", () => {
+        this.restartWindow = null;
+      });
+      this.restartWindow.show();
+    } finally {
+      this.restartWindowOpenPromise = null;
+    }
   }
 
   async handleOpenFile(ev: IpcMainInvokeEvent, path: string) {

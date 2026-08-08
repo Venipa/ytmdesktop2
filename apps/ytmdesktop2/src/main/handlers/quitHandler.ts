@@ -11,8 +11,36 @@ let isQuitRequested = false;
 let isForceQuitRequested = false;
 let isCleanupRunning = false;
 let cleanupPromise: Promise<void> | null = null;
+let services: ServiceCollection | null = null;
+
+async function ensureCleanup() {
+	if (!cleanupPromise) {
+		cleanupPromise = (async () => {
+			services?.getTypedProvider("settings")?.saveToDrive();
+			if (services) {
+				await services.exec("OnDestroy");
+				await runLifecycle("destroy");
+			}
+		})().catch((error) => {
+			console.error("Error while running app cleanup during quit", error);
+		});
+	}
+	return cleanupPromise;
+}
+
+/** Persist settings, destroy providers, then relaunch. Skips tray minimize. */
+export async function requestAppRelaunch() {
+	if (isCleanupRunning || isQuitRequested) return;
+	isCleanupRunning = true;
+	isForceQuitRequested = true;
+	await ensureCleanup();
+	isQuitRequested = true;
+	app.relaunch();
+	app.exit(0);
+}
 
 export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serviceCollection: ServiceCollection) {
+	services = serviceCollection;
 	const getSettingsProvider = () => serviceCollection.getTypedProvider("settings");
 	const getUpdateProvider = () => serviceCollection.getTypedProvider("update");
 	const isUpdaterQuitRequested = () => !!getUpdateProvider()?.updateQueuedForInstall;
@@ -27,19 +55,6 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 	};
 
 	const shouldMinimizeToTray = (forceQuit: boolean) => isMinimizeToTrayEnabled() && !forceQuit && !isUpdaterQuitRequested();
-
-	const ensureCleanup = async () => {
-		if (!cleanupPromise) {
-			cleanupPromise = (async () => {
-				getSettingsProvider()?.saveToDrive();
-				await serviceCollection.exec("OnDestroy");
-				await runLifecycle("destroy");
-			})().catch((error) => {
-				console.error("Error while running app cleanup during quit", error);
-			});
-		}
-		return cleanupPromise;
-	};
 
 	const requestQuit = async (forceQuit: boolean = false) => {
 		if (shouldMinimizeToTray(forceQuit)) {

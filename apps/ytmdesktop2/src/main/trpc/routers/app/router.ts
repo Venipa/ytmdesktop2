@@ -29,6 +29,15 @@ export const appServiceRouter = router({
 		BrowserWindow.fromWebContents(ctx.event.sender as Electron.WebContents)?.close();
 	}),
 	restartNeeded: publicProcedure
-		.input(z.object({ message: z.string().optional(), icon: z.string().optional() }).optional())
+		.input(
+			z
+				.object({
+					message: z.string().optional(),
+					icon: z.string().optional(),
+					width: z.number().positive().optional(),
+					height: z.number().positive().optional(),
+				})
+				.optional(),
+		)
 		.mutation(({ ctx, input }): Promise<void> => provider(ctx, "app").handleRestartNeeded(null, input ?? {})),
 });

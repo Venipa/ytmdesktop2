@@ -1,5 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
 import { SettingsInlineEditor } from "@/components/settings-inline-editor";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { FieldGroup } from "@/components/ui/field";
 import { useSettingsState } from "@/hooks/use-settings";
 import { trpc } from "@/lib/trpc";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo } from "react";
 
 export const Route = createFileRoute("/_settings/api-integrations/api")({
 	component: ApiSettingsPage,
@@ -42,7 +42,7 @@ function ApiSettingsPage() {
 							defaultValue={13091}
 							placeholder="9999-39999"
 							label="API Port"
-							hint="Port between 9999 and 39999. Restart needed if API already running."
+							hint="Port between 9999 and 39999. API will restart once changed."
 							updateMessage="API port updated"
 							min={9999}
 							max={39999}
