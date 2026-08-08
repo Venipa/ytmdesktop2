@@ -25,7 +25,9 @@ pnpm install
 pnpm docs:dev
 ```
 
-Open http://localhost:3000
+Open http://localhost:3000 (no basePath).
+
+When `NEXT_PUBLIC_URL` is unset, OG/meta use `http://localhost:3000/...` instead of production Pages. Set `NEXT_PUBLIC_URL` (or `GITHUB_PAGES=true` via `build:pages`) to mirror the `/repo` deploy prefix.
 
 Env file: `apps/docs/.env.docs.local` (gitignored). Loaded via `next.config.mjs` / `build:pages`.
 

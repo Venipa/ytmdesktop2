@@ -83,7 +83,9 @@ export const changelogRoute = '/changelog';
 
 export const siteUrl =
   readEnv('NEXT_PUBLIC_URL') ??
-  `https://${repoOwner.toLowerCase()}.github.io/${repoName}`;
+  (process.env.GITHUB_PAGES === 'true'
+    ? `https://${repoOwner.toLowerCase()}.github.io/${repoName}`
+    : 'http://localhost:3000');
 
 export const brandColor = '#8B1CC3';
 export const brandColorRgb = '139, 28, 195';

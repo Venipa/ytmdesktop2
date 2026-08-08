@@ -16,6 +16,7 @@
     "fumadocs-ui": "^16.14.0",
     "lucide-react": "^1.28.0",
     "next": "^16.3.0",
+    "node-vibrant": "^4.0.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

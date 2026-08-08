@@ -52,7 +52,10 @@ const repoBranch = readEnv('REPO_BRANCH') ?? 'master';
 const repoStars = readEnv('REPO_STARS') ?? '';
 
 const isGithubPages = process.env.GITHUB_PAGES === 'true';
-if (isGithubPages && !process.env.NEXT_PUBLIC_URL) {
+
+// Static Pages builds need a site URL for basePath (/repo). Local `next dev` stays
+// at `/` so routes work; shared.siteUrl uses localhost when NEXT_PUBLIC_URL is unset.
+if (isGithubPages && !readEnv('NEXT_PUBLIC_URL')) {
   process.env.NEXT_PUBLIC_URL = `https://local.pages/${repoName}`;
 }
 

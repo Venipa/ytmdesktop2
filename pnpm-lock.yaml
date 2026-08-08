@@ -32,6 +32,9 @@ importers:
       next:
         specifier: ^16.3.0
         version: 16.3.0(@babel/core@7.29.0(supports-color@8.1.1))(@opentelemetry/api@1.9.0)(@types/node@24.12.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.98.0)
+      node-vibrant:
+        specifier: ^4.0.4
+        version: 4.0.4(encoding@0.1.13)
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -10033,7 +10036,7 @@ snapshots:
     dependencies:
       '@types/http-cache-semantics': 4.2.0
       '@types/keyv': 3.1.4
-      '@types/node': 24.12.0
+      '@types/node': 24.13.3
       '@types/responselike': 1.0.3
 
   '@types/connect@3.4.36':
@@ -10127,7 +10130,7 @@ snapshots:
 
   '@types/responselike@1.0.3':
     dependencies:
-      '@types/node': 24.12.0
+      '@types/node': 24.13.3
 
   '@types/semver@7.5.8': {}
 

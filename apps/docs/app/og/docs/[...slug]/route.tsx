@@ -9,10 +9,15 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
   const page = source.getPage(slug.slice(0, -1));
   if (!page) notFound();
 
+  const og = page.data.og;
+
   return createOgImage({
     title: page.data.title,
     description: page.data.description,
     logo: 'svg',
+    image: og?.image,
+    imageType: og?.type ?? 'screenshot',
+    color: og?.color,
   });
 }
 
