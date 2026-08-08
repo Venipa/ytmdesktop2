@@ -21,10 +21,6 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Venipa/ytmdesktop2?style=for-the-badge)](https://github.com/Venipa/ytmdesktop2/releases/latest)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Venipa/ytmdesktop2?style=for-the-badge)
 
-<p align="center">
-  <img src="./screenshots/screenshot.jpg" alt="app" />
-</p>
-
 ## Features
 
 ### Last.FM (Scrobble)
