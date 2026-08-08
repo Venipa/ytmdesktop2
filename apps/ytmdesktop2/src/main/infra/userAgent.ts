@@ -32,6 +32,24 @@ export function toChromeUserAgent(fromUserAgent: string, chromeVersion: string =
 	return ua;
 }
 
+/**
+ * Firefox UA used pre-v1.0 for Google sign-in (`brickGoogleUA`).
+ * Google's embedded-Chromium / Electron checks reject Chrome-like UAs;
+ * this Firefox string was the working login workaround.
+ */
+export function getGoogleLoginUserAgent(): string {
+	switch (process.platform) {
+		case "darwin":
+			return "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.7; rv:139.0) Gecko/20100101 Firefox/139.0";
+		case "linux":
+			return "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0";
+		case "win32":
+		default:
+			// Classic brickGoogleUA from v0.11 / early 1.x era
+			return "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0";
+	}
+}
+
 function getPlatformUaFragment(): string {
 	switch (process.platform) {
 		case "darwin":

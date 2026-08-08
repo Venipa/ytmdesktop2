@@ -1,6 +1,6 @@
 import { lockAppChromeZoom } from "@main/domain/uiZoom";
 import { defaultUrl, isDevelopment, isProduction } from "@main/infra/devUtils";
-import { toChromeUserAgent } from "@main/infra/userAgent";
+import { getGoogleLoginUserAgent } from "@main/infra/userAgent";
 import translations from "@translations/index";
 import { BrowserWindow, BrowserWindowConstructorOptions, ipcMain, shell, WebContentsView, WebContentsViewConstructorOptions, WebPreferences } from "electron";
 import { join } from "path";
@@ -107,7 +107,7 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
 	const loginView = new WebContentsView({
 		webPreferences,
 	});
-	loginView.webContents.setUserAgent(toChromeUserAgent(loginView.webContents.getUserAgent()));
+	loginView.webContents.setUserAgent(getGoogleLoginUserAgent());
 	popup.contentView.addChildView(loginView, 0);
 	loginView.setBounds({ height: height - noticeHeight, width, x: 0, y: noticeHeight });
 	loginView.webContents.setWindowOpenHandler(({ url }) => {
