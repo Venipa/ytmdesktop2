@@ -1,5 +1,6 @@
 import definePlugin from "@plugins/utils";
 import type { PlayerApi } from "ytm-client-api";
+import { readLikeStatus } from "./ytm-like-status";
 import {
 	dispatchQueueAddItems,
 	resolveYtmApp,
@@ -98,18 +99,6 @@ function playbackSnapshot(playerApi: PlayerApi, playing?: boolean) {
 	};
 }
 
-function readLikeStatus(): { liked: boolean; disliked: boolean } {
-	const el = document.querySelector<HTMLElement>("#like-button-renderer, ytmusic-like-button-renderer");
-	const status = (el?.getAttribute("like-status") || el?.getAttribute("like_status") || "").toUpperCase();
-	if (status === "LIKE" || status === "DISLIKE" || status === "INDIFFERENT") {
-		return { liked: status === "LIKE", disliked: status === "DISLIKE" };
-	}
-	const likePressed = document.querySelector<HTMLElement>("#like-button-renderer #button-shape-like.like button")?.getAttribute("aria-pressed") === "true";
-	const dislikePressed =
-		document.querySelector<HTMLElement>("#like-button-renderer #button-shape-dislike.dislike button")?.getAttribute("aria-pressed") === "true";
-	return { liked: likePressed, disliked: dislikePressed };
-}
-
 const trackControls = {
 	toggle: (player: PlayerApi) => {
 		const state = player.getPlayerStateObject();
@@ -182,6 +171,7 @@ const trackControls = {
 		}
 		return disliked;
 	},
+	likeState: () => readLikeStatus(),
 	volume: (playerApi: PlayerApi, data?: { volume?: number }) => {
 		if (typeof data?.volume === "number" && Number.isFinite(data.volume)) {
 			playerApi.setVolume(Math.max(0, Math.min(100, data.volume)));
@@ -382,6 +372,7 @@ export default definePlugin(
 			seek: async ({ playerApi }, data?: SeekPayload) => trackControls.seek(playerApi, data),
 			like: async (_ctx, liked: boolean) => trackControls.like(liked),
 			dislike: async (_ctx, disliked: boolean) => trackControls.dislike(disliked),
+			likeState: async () => trackControls.likeState(),
 			volume: async ({ playerApi }, data?: { volume?: number }) => trackControls.volume(playerApi, data),
 			volumeUp: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeUp(playerApi, data),
 			volumeDown: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeDown(playerApi, data),

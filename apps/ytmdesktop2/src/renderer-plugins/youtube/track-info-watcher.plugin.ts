@@ -3,6 +3,8 @@ import definePlugin from "@plugins/utils";
 const VIDEO_DATA_LOADED_TYPES = new Set(["dataupdated", "dataloaded", "newdata"]);
 const FIRST_TRACK_POLL_MS = 50;
 const FIRST_TRACK_POLL_MAX_MS = 8_000;
+const ALBUM_POLL_MS = 100;
+const ALBUM_POLL_MAX_MS = 3_000;
 
 type PlainThumb = { url: string; width: number; height: number };
 
@@ -103,6 +105,15 @@ export default definePlugin(
 			domUtils.ensureDomLoaded(() => {
 				const getPlayer = () => domUtils.playerApi() ?? playerApi;
 				let lastKey: string | null = null;
+				let disposed = false;
+				let firstPollTimer: ReturnType<typeof setTimeout> | null = null;
+				let albumPollTimer: ReturnType<typeof setTimeout> | null = null;
+
+				const clearAlbumPoll = () => {
+					if (albumPollTimer === null) return;
+					clearTimeout(albumPollTimer);
+					albumPollTimer = null;
+				};
 
 				const readAlbum = (): { id: string; title: string } | undefined => {
 					const currentItem = document.querySelector<any>("ytmusic-app-layout>ytmusic-player-bar")?.currentItem;
@@ -119,6 +130,24 @@ export default definePlugin(
 					};
 				};
 
+				const armAlbumPoll = (videoId: string) => {
+					clearAlbumPoll();
+					const startedAt = Date.now();
+					const tick = () => {
+						if (disposed) return;
+						const player = getPlayer();
+						const currentId = player?.getPlayerResponse?.()?.videoDetails?.videoId;
+						if (String(currentId ?? "") !== videoId) return;
+						if (readAlbum()) {
+							pushTrackInfo();
+							return;
+						}
+						if (Date.now() - startedAt >= ALBUM_POLL_MAX_MS) return;
+						albumPollTimer = setTimeout(tick, ALBUM_POLL_MS);
+					};
+					albumPollTimer = setTimeout(tick, ALBUM_POLL_MS);
+				};
+
 				const pushTrackInfo = (): boolean => {
 					const player = getPlayer();
 					if (!player) return false;
@@ -133,6 +162,11 @@ export default definePlugin(
 					try {
 						api.emit("track:info-req", payload);
 						lastKey = key;
+						if (payload.video.musicVideoType === "MUSIC_VIDEO_TYPE_ATV" && !payload.music) {
+							armAlbumPoll(payload.video.videoId);
+						} else {
+							clearAlbumPoll();
+						}
 						return true;
 					} catch (err) {
 						log.error("Failed to emit track:info-req", err);
@@ -148,15 +182,32 @@ export default definePlugin(
 					pushTrackInfo();
 				};
 
-				getPlayer()?.addEventListener("onVideoDataChange", handleVideoDataChange);
+				const player = getPlayer();
+				player?.addEventListener("onVideoDataChange", handleVideoDataChange);
 
 				const startedAt = Date.now();
 				const pollFirst = () => {
+					if (disposed) return;
 					if (pushTrackInfo()) return;
 					if (Date.now() - startedAt >= FIRST_TRACK_POLL_MAX_MS) return;
-					setTimeout(pollFirst, FIRST_TRACK_POLL_MS);
+					firstPollTimer = setTimeout(pollFirst, FIRST_TRACK_POLL_MS);
 				};
 				pollFirst();
+
+				window.addEventListener(
+					"beforeunload",
+					() => {
+						disposed = true;
+						if (firstPollTimer !== null) clearTimeout(firstPollTimer);
+						clearAlbumPoll();
+						try {
+							getPlayer()?.removeEventListener?.("onVideoDataChange", handleVideoDataChange);
+						} catch {
+							/* player may already be gone */
+						}
+					},
+					{ once: true },
+				);
 			});
 		},
 	},

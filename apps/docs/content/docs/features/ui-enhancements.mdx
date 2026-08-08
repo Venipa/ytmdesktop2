@@ -27,6 +27,7 @@ These plugins load with the music view. No toggle.
 ## Tips
 
 - Toast auto-dismiss applies to all open paper toasts (liked music, library saves, and similar), not only the like confirmation.
+- **Skip disliked songs** runs on track change only — disliking the song that is already playing does not skip it mid-track. Like/dislike for tray and media controls comes from the renderer like watcher (`track:like-state`).
 - Performance fixes run in the YouTube Music webview only; they do not change app chrome or tray view.
 - Plugin source lives under `apps/ytmdesktop2/src/renderer-plugins/youtube/`.
 

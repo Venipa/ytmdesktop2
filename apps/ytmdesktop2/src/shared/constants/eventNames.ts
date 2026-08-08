@@ -38,6 +38,7 @@ export const API_AUTH_EVENTS = {
 const IPC_EVENT_NAMES = {
 	SERVER_SETTINGS_CHANGE: "settingsProvider.change",
 	TRACK_CHANGE: "track:change",
+	TRACK_LIKE_STATE: "track:like-state",
 	TRACK_PLAYSTATE: "track:play-state",
 	TRACK_PLAYSTATE_PROGRESS: "track:play-state-progress",
 	TRACK_CONTROL: "track:control",

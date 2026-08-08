@@ -104,6 +104,8 @@ export class TrackService {
 	private lastTrackContentKey: string | null = null;
 	private lastStateEmitKey: string | null = null;
 	private pendingScrobble: { track: TrackData; videoId: string; maxProgress: number } | null = null;
+	/** Seed only — UI truth is `_trackState`. LRU, capped with trackCollection. */
+	private _likeByTrack = new Map<string, { liked: boolean; disliked: boolean }>();
 	private _ipcBound = false;
 	private _styleBound = false;
 
@@ -112,6 +114,7 @@ export class TrackService {
 	/** Last.fm: half duration or 4 minutes, whichever shorter; tracks <30s skipped. */
 	private static readonly SCROBBLE_MIN_DURATION_SEC = 30;
 	private static readonly SCROBBLE_MAX_WAIT_SEC = 240;
+	private static readonly LIKE_CACHE_MAX = 24;
 
 	private readonly logger = createLogger("services").child("track");
 
@@ -151,6 +154,7 @@ export class TrackService {
 		this._ipcBound = true;
 		// No debounce on track info — watcher already dedupes; UI must stay instant
 		serverMain.on("track:info-req", (ev, data) => void this.onTrackInfo(ev, data));
+		serverMain.on(IPC_EVENT_NAMES.TRACK_LIKE_STATE, (ev, data) => this.onLikeState(ev, data));
 		serverMain.on("track:title-change", debounce(this.onTitleChange.bind(this), 25));
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE, debounce(this.onPlayStateChange.bind(this), 50));
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, debounce(this.onPlayStateProgress.bind(this), 50));
@@ -197,13 +201,15 @@ export class TrackService {
 			if (state.liked === resolved && (!resolved || !state.disliked)) return;
 			state.liked = resolved;
 			if (resolved) state.disliked = false;
+			if (state.id) this.rememberLike(state.id, state.liked, state.disliked);
 		});
-		// Verify from DOM after YTM finishes updating aria-pressed.
+		// Renderer like-watcher emits settled DOM state; cmd is backup if observer lags.
 		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
 			this.setTrackState((state) => {
 				if (state.liked === isLiked && state.disliked === isDLiked) return;
 				state.liked = isLiked;
 				state.disliked = isDLiked;
+				if (state.id) this.rememberLike(state.id, isLiked, isDLiked);
 			});
 		});
 		return resolved;
@@ -220,12 +226,14 @@ export class TrackService {
 			if (state.disliked === resolved && (!resolved || !state.liked)) return;
 			state.disliked = resolved;
 			if (resolved) state.liked = false;
+			if (state.id) this.rememberLike(state.id, state.liked, state.disliked);
 		});
 		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
 			this.setTrackState((state) => {
 				if (state.liked === isLiked && state.disliked === isDLiked) return;
 				state.liked = isLiked;
 				state.disliked = isDLiked;
+				if (state.id) this.rememberLike(state.id, isLiked, isDLiked);
 			});
 		});
 		return resolved;
@@ -351,29 +359,59 @@ export class TrackService {
 	}
 
 	async currentSongLikeState(): Promise<[boolean, boolean]> {
-		const youtubeView = getYoutubeView();
-		if (!youtubeView) return [false, false];
 		try {
-			// Prefer like-status on the renderer — aria-pressed on dislike is unreliable in YTM.
-			const status = await youtubeView.webContents.executeJavaScript(
-				`(() => {
-					const el = document.querySelector("#like-button-renderer, ytmusic-like-button-renderer");
-					return (el?.getAttribute("like-status") || el?.getAttribute("like_status") || "").toUpperCase();
-				})()`,
-			);
-			if (typeof status === "string" && status.length > 0) {
-				return [status === "LIKE", status === "DISLIKE"];
-			}
-			const values = await youtubeView.webContents.executeJavaScript(
-				`[
-          document.querySelector("#like-button-renderer #button-shape-like.like button")?.getAttribute("aria-pressed"),
-          document.querySelector("#like-button-renderer #button-shape-dislike.dislike button")?.getAttribute("aria-pressed")
-        ]`,
-			);
-			return [(values?.[0] === "true"), (values?.[1] === "true")] as [boolean, boolean];
+			const status = await this.executeCommand<{ liked?: boolean; disliked?: boolean }>("like_state");
+			return [!!status?.liked, !!status?.disliked];
 		} catch {
 			return [false, false];
 		}
+	}
+
+	onLikeState(_ev: unknown, data: { videoId?: string; liked?: boolean; disliked?: boolean }) {
+		const videoId = data?.videoId ? String(data.videoId) : "";
+		if (!videoId) return;
+		if (this._activeTrackId && this._activeTrackId !== videoId) return;
+		const liked = !!data.liked;
+		const disliked = !!data.disliked;
+		this.rememberLike(videoId, liked, disliked);
+		this.setTrackState((state) => {
+			if (state.id && state.id !== videoId) return;
+			if (!state.id) state.id = videoId;
+			if (state.liked === liked && state.disliked === disliked) return;
+			state.liked = liked;
+			state.disliked = disliked;
+		});
+	}
+
+	/** LRU seed for like/dislike — protects active id, max LIKE_CACHE_MAX. */
+	private rememberLike(videoId: string, liked: boolean, disliked: boolean): void {
+		if (this._likeByTrack.has(videoId)) this._likeByTrack.delete(videoId);
+		this._likeByTrack.set(videoId, { liked, disliked });
+		this.pruneLikeCache();
+	}
+
+	private pruneLikeCache(): void {
+		const protectId = this._activeTrackId;
+		while (this._likeByTrack.size > TrackService.LIKE_CACHE_MAX) {
+			const oldest = this._likeByTrack.keys().next().value as string | undefined;
+			if (!oldest) break;
+			if (protectId && oldest === protectId) {
+				const victim = [...this._likeByTrack.keys()].find((id) => id !== protectId);
+				if (!victim) break;
+				this._likeByTrack.delete(victim);
+				continue;
+			}
+			this._likeByTrack.delete(oldest);
+		}
+	}
+
+	private likeDefaults(videoId: string): { liked: boolean; disliked: boolean } {
+		const cached = this._likeByTrack.get(videoId);
+		if (!cached) return { liked: false, disliked: false };
+		// Touch LRU on read so active track stays warm
+		this._likeByTrack.delete(videoId);
+		this._likeByTrack.set(videoId, cached);
+		return cached;
 	}
 
 	getTrackDuration(): number | null {
@@ -423,26 +461,19 @@ export class TrackService {
 		this.pushTrackToViews(track, needsLastFm);
 
 		if (stateOutOfSync) {
+			const like = this.likeDefaults(videoId);
 			this.setTrackState({
 				id: videoId,
 				playing: this.playing,
 				duration: Number(duration ?? 0),
-				liked: false,
-				disliked: false,
+				liked: like.liked,
+				disliked: like.disliked,
 				progress: 0,
 				uiProgress: 0,
 				startedAt: Date.now() / 1000,
 				percentage: 0,
 				eventType: "state",
 				accent: null,
-			});
-			void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
-				this.setTrackState((state) => {
-					if (state.id !== videoId) return;
-					if (state.liked === isLiked && state.disliked === isDLiked) return;
-					state.liked = isLiked;
-					state.disliked = isDLiked;
-				});
 			});
 		}
 	}
@@ -474,26 +505,19 @@ export class TrackService {
 		this.lastTrackContentKey = key;
 
 		this.pushTrackToViews(td, needsLastFm);
+		const like = this.likeDefaults(trackId);
 		this.setTrackState({
 			id: trackId,
 			playing: this.playing,
 			duration: this.getTrackDuration() ?? 0,
-			liked: false,
-			disliked: false,
+			liked: like.liked,
+			disliked: like.disliked,
 			progress: 0,
 			uiProgress: 0,
 			startedAt: Date.now() / 1000,
 			percentage: 0,
 			eventType: "state",
 			accent: null,
-		});
-
-		const [isLiked, isDLiked] = await this.currentSongLikeState();
-		this.setTrackState((state) => {
-			if (state.id !== trackId) return;
-			if (state.liked === isLiked && state.disliked === isDLiked) return;
-			state.liked = isLiked;
-			state.disliked = isDLiked;
 		});
 	}
 
@@ -656,13 +680,6 @@ export class TrackService {
 
 		this.maybeScrobbleFromProgress(progress, duration);
 		void this.updateMediaTimeline(duration, progress, isPlaying);
-		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
-			this.setTrackState((state) => {
-				if (state.liked === isLiked && state.disliked === isDLiked) return;
-				state.liked = isLiked;
-				state.disliked = isDLiked;
-			});
-		});
 	}
 
 	private async updateMediaTimeline(_duration: number, progressSeconds: number, isPlaying: boolean) {

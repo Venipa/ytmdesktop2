@@ -7,19 +7,45 @@ export default definePlugin(
 		displayName: "Track Change Watcher",
 	},
 	({ domUtils }) => {
-		let destroyStyle: () => void;
-		async function handleThumbnail(_ev, value: string) {
-			if (destroyStyle) destroyStyle();
-			if (value) destroyStyle = await domUtils.createStyle(`:root { --ytmd-thumbnail-url: ${value}; }`); // ! todo: add working css for track change watcher
-		}
-		let destroyAccent: () => void;
-		async function handleAccent(_ev, value: string) {
-			if (destroyAccent) destroyAccent();
-			if (value) destroyAccent = await domUtils.createStyle(`:root { --ytmd-thumbnail-accent: ${value}; }`); // ! todo: add working css for track change watcher
-		}
-		domUtils.ensureDomLoaded(() => {
-			window.ipcRenderer.on("css.thumbnail", handleThumbnail);
-			window.ipcRenderer.on("css.thumbnail-accent", handleAccent);
-		});
+		let thumbGen = 0;
+		let accentGen = 0;
+		let destroyThumb: (() => void) | undefined;
+		let destroyAccent: (() => void) | undefined;
+
+		const handleThumbnail = async (_ev: unknown, value: string) => {
+			const gen = ++thumbGen;
+			destroyThumb?.();
+			destroyThumb = undefined;
+			if (!value) return;
+			const destroy = await domUtils.createStyle(`:root { --ytmd-thumbnail-url: ${value}; }`);
+			if (gen !== thumbGen) {
+				destroy();
+				return;
+			}
+			destroyThumb = destroy;
+		};
+
+		const handleAccent = async (_ev: unknown, value: string) => {
+			const gen = ++accentGen;
+			destroyAccent?.();
+			destroyAccent = undefined;
+			if (!value) return;
+			const destroy = await domUtils.createStyle(`:root { --ytmd-thumbnail-accent: ${value}; }`);
+			if (gen !== accentGen) {
+				destroy();
+				return;
+			}
+			destroyAccent = destroy;
+		};
+
+		window.ipcRenderer.on("css.thumbnail", handleThumbnail);
+		window.ipcRenderer.on("css.thumbnail-accent", handleAccent);
+
+		return () => {
+			window.ipcRenderer.off("css.thumbnail", handleThumbnail);
+			window.ipcRenderer.off("css.thumbnail-accent", handleAccent);
+			destroyThumb?.();
+			destroyAccent?.();
+		};
 	},
 );
