@@ -1,0 +1,61 @@
+---
+title: Browser userscript
+description: Open ytmd:// from music.youtube.com / youtube.com via Tampermonkey
+---
+
+The **YTMDesktop Open Links** userscript soft-opens actionable YouTube Music / YouTube / youtu.be pages in the desktop app via `ytmd://` when you load or SPA-navigate to them.
+
+It does **not** intercept link clicks — browsing in the tab stays normal.
+
+## Install
+
+1. Install [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/).
+2. Build the script from the monorepo:
+
+```bash
+pnpm userscript:build
+```
+
+3. Open `packages/userscript/dist/ytmdesktop-userscript.user.js` in the browser and confirm install.
+
+Matched hosts: `music.youtube.com`, `youtube.com`, `m.youtube.com`, `youtu.be`.
+
+YTMDesktop2 must be installed (or the `ytmd://` protocol registered) so the OS hands the URL to the app.
+
+## Behavior
+
+| Event | Action |
+| --- | --- |
+| Page load / SPA navigate | If **auto-open** is on and the URL is actionable, soft-open `ytmd://…` (tab stays) |
+| Link click | Unchanged — browser follows https as usual |
+
+Actionable paths: watch (`?v=`), playlist (`?list=`), channel (`/channel/UC…`), `@handle`, `/shorts/…`, `/embed/…`, and youtu.be `/{videoId}`. Home, search, and browse are skipped.
+
+Transform is the same address-bar trick as [shared links](/docs/features/shared-links): `https://` → `ytmd://` on convertible hosts.
+
+## Tampermonkey menu
+
+Open the Tampermonkey / Violentmonkey menu on a matched page:
+
+| Command | Effect |
+| --- | --- |
+| **YTMDesktop: Auto-open on load — ON/OFF** | Toggle automatic open on load/navigate (persisted) |
+| **YTMDesktop: Open this page now** | Open the current URL as `ytmd://` even when auto-open is off |
+
+Default: auto-open **on**.
+
+## Develop
+
+```bash
+pnpm userscript:dev
+```
+
+See [`packages/userscript/README.md`](https://github.com/Venipa/ytmdesktop2/blob/master/packages/userscript/README.md) in the repo.
+
+## Related
+
+<Cards>
+  <Card title="Shared links" href="/docs/features/shared-links" />
+  <Card title="Tray view" href="/docs/features/tray-view" />
+  <Card title="All features" href="/docs/features" />
+</Cards>

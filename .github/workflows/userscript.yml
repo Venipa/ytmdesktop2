@@ -1,0 +1,58 @@
+name: Build userscript
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "packages/userscript/**"
+      - ".github/workflows/userscript.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read # @venipa/* on GitHub Packages (if resolved via lockfile)
+
+concurrency:
+  group: userscript-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build userscript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v2
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+
+      - name: Configure GitHub Packages auth
+        run: |
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } > .npmrc
+
+      - name: Install userscript dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm install --frozen-lockfile --filter ytmdesktop-userscript...
+
+      - name: Build userscript
+        run: pnpm --filter ytmdesktop-userscript build
+
+      - name: Upload userscript artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ytmdesktop-userscript.user.js
+          path: packages/userscript/dist/ytmdesktop-userscript.user.js
+          if-no-files-found: error
+          retention-days: 30

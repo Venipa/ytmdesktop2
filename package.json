@@ -2,6 +2,9 @@
 	"name": "ytmdesktop2-workspace",
 	"version": "0.0.0",
 	"private": true,
+	"author": "Venipa <admin@venipa.net>",
+	"homepage": "https://youtube-music.app",
+  "description": "Unofficial YouTube Music Desktop App for Windows, Mac and Linux | Monorepo",
 	"scripts": {
 		"format": "pnpm --filter ytmdesktop2 format",
 		"lint": "pnpm --filter ytmdesktop2 lint",
@@ -30,6 +33,9 @@
 		"streamdeck:build": "pnpm --filter ytmdesktop2-streamdeck build",
 		"streamdeck:icons": "pnpm --filter ytmdesktop2-streamdeck icons",
 		"streamdeck:pack": "pnpm --filter ytmdesktop2-streamdeck run pack",
+		"userscript:dev": "pnpm --filter ytmdesktop-userscript dev",
+		"userscript:build": "pnpm --filter ytmdesktop-userscript build",
+
 		"docs:dev": "pnpm --filter ytmdesktop2-docs dev",
 		"docs:build": "pnpm --filter ytmdesktop2-docs build",
 		"docs:build:pages": "pnpm --filter ytmdesktop2-docs build:pages",

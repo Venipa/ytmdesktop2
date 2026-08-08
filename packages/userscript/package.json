@@ -1,0 +1,25 @@
+{
+	"name": "ytmdesktop-userscript",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Tampermonkey userscript — open YouTube / YouTube Music links via ytmd://",
+	"author": "Venipa <admin@venipa.net>",
+	"homepage": "https://youtube-music.app",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Venipa/ytmdesktop2",
+		"directory": "packages/userscript"
+	},
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc --noEmit && vite build",
+		"preview": "vite preview"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.3",
+		"vite": "^8.2.1",
+		"vite-plugin-monkey": "^8.1.0"
+	}
+}

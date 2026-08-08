@@ -1,5 +1,5 @@
 {
   "title": "Features",
-  "pages": ["index", "lastfm", "discord", "mini-player", "tray-view", "shared-links", "ui-enhancements", "themes", "display", "dpi", "obs"],
+  "pages": ["index", "lastfm", "discord", "mini-player", "tray-view", "shared-links", "userscript", "ui-enhancements", "themes", "display", "dpi", "obs"],
   "defaultOpen": true
 }
