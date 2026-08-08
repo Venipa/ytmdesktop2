@@ -418,6 +418,8 @@ Open artist/channel. Need `channelId` (UC…) and/or `handle` (with or without `
 
 Append to current queue. Send **either** `videoId` **or** `playlistId` (not both — if both, `videoId` wins).
 
+Video add needs an active queue context (play something first). Uses `/music/get_queue` + store update.
+
 ```json
 { "videoId": "dQw4w9WgXcQ" }
 ```

@@ -32,7 +32,7 @@ function DeeplinkPage() {
 		kind === "playlist" ? "Open playlist?" : kind === "channel" ? "Open channel?" : "Open shared link?";
 	const blurb =
 		kind === "playlist"
-			? "Play this playlist now, or open the playlist page."
+			? "Play now, add the playlist to your queue, or open the playlist page."
 			: kind === "channel"
 				? "Open this artist or channel page in the app."
 				: "Choose how to open this YouTube Music link in the app.";
@@ -76,6 +76,10 @@ function DeeplinkPage() {
 						<Button variant="accent" size="xl" className="w-full" disabled={busy || !canPlaylist} onClick={() => choose("play")}>
 							<PlayIcon />
 							Play playlist
+						</Button>
+						<Button variant="outline" size="xl" className="w-full" disabled={busy || !canPlaylist} onClick={() => choose("queue")}>
+							<ListPlusIcon />
+							Add to queue
 						</Button>
 						<Button variant="outline" size="xl" className="w-full" disabled={busy || !canPlaylist} onClick={() => choose("open")}>
 							<ListMusicIcon />

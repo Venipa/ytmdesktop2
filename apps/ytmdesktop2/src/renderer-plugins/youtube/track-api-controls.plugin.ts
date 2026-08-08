@@ -1,5 +1,11 @@
 import definePlugin from "@plugins/utils";
 import type { PlayerApi } from "ytm-client-api";
+import {
+	dispatchQueueAddItems,
+	resolveYtmApp,
+	resolveYtmStore,
+	type YtmStoreLike,
+} from "./ytm-store";
 
 type SeekPayload = { time?: number; type?: "seek" };
 
@@ -17,27 +23,6 @@ function playlistBrowseId(playlistId: string): string {
 	if (!id) return id;
 	if (/^(VL|OLAK|RD|MP)/i.test(id)) return id;
 	return `VL${id}`;
-}
-
-type YtmStoreLike = {
-	getState: () => { queue?: { items?: unknown[]; nextQueueItemId?: number; shuffleEnabled?: boolean } };
-	dispatch: (action: unknown) => void;
-};
-
-function resolveYtmStore(): YtmStoreLike | null {
-	const fromHook = (window as unknown as { __YTMD_HOOK__?: { ytmStore?: YtmStoreLike } }).__YTMD_HOOK__?.ytmStore;
-	if (fromHook?.getState && fromHook?.dispatch) return fromHook;
-	const selectors = ["ytmusic-app", "ytmusic-app-layout>ytmusic-player-bar", "ytmusic-player-bar"] as const;
-	for (const selector of selectors) {
-		const store = (document.querySelector(selector) as { store?: YtmStoreLike } | null)?.store;
-		if (store?.getState && store?.dispatch) {
-			if (!(window as unknown as { __YTMD_HOOK__?: unknown }).__YTMD_HOOK__) {
-				(window as unknown as { __YTMD_HOOK__: { ytmStore: YtmStoreLike } }).__YTMD_HOOK__ = { ytmStore: store };
-			}
-			return store;
-		}
-	}
-	return null;
 }
 
 function dispatchYtNavigate(endpoint: Record<string, unknown>): void {
@@ -235,22 +220,13 @@ const trackControls = {
 		return { ok: true as const, endpoint };
 	},
 	/**
-	 * Add to YTM queue (upstream companion `queueAdd` / queueadd.script.js).
-	 * Uses `yt-service-request` → `queueAddEndpoint`, then store `ADD_ITEMS` when available.
-	 *
-	 * Upstream rule: pass **either** `videoId` **or** `playlistId`, never both
-	 * (both → API 400 `browse_id` / INVALID_ARGUMENT).
+	 * Add to YTM queue. Video → `/music/get_queue` + `ADD_ITEMS`.
+	 * Playlist-only → service endpoint (video XOR playlist).
 	 */
 	queueAdd: async (data?: { videoId?: string; playlistId?: string; index?: number }) => {
 		const videoId = data?.videoId?.trim() || undefined;
-		const playlistIdOnly = data?.playlistId?.trim() || undefined;
-		// Upstream companion: XOR — both → YTM 400 browse_id INVALID_ARGUMENT.
-		const videoIdFinal = videoId;
-		const playlistId = videoIdFinal ? undefined : playlistIdOnly;
-		if (!videoIdFinal && !playlistId) throw new Error("videoId or playlistId required");
-
-		const bar = document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as HTMLElement | null;
-		if (!bar) throw new Error("player bar not found");
+		const playlistId = videoId ? undefined : data?.playlistId?.trim() || undefined;
+		if (!videoId && !playlistId) throw new Error("videoId or playlistId required");
 
 		const store = resolveYtmStore();
 		const index =
@@ -258,65 +234,13 @@ const trackControls = {
 				? data.index
 				: (store?.getState?.()?.queue?.items?.length ?? 0);
 
-		const queueTarget = videoIdFinal ? { videoId: videoIdFinal } : { playlistId: playlistId! };
+		if (videoId) {
+			await queueAddVideo(videoId, index, store);
+			return { ok: true as const, videoId, playlistId: null, index, storeHooked: !!store };
+		}
 
-		await new Promise<void>((resolve, reject) => {
-			const returnValue: any[] = [];
-			bar.dispatchEvent(
-				new CustomEvent("yt-action", {
-					bubbles: true,
-					cancelable: false,
-					composed: true,
-					detail: {
-						actionName: "yt-service-request",
-						args: [
-							bar,
-							{
-								queueAddEndpoint: {
-									queueTarget,
-								},
-							},
-						],
-						optionalAction: false,
-						returnValue,
-					},
-				}),
-			);
-			const ajax = returnValue[0]?.ajaxPromise;
-			if (!ajax?.then) {
-				reject(new Error("queueAddEndpoint not accepted"));
-				return;
-			}
-			ajax.then(
-				(response: any) => {
-					const items = response?.data?.queueDatas?.map((d: any) => d.content);
-					const liveStore = resolveYtmStore() ?? store;
-					if (liveStore && Array.isArray(items) && items.length) {
-						const queue = liveStore.getState()?.queue;
-						liveStore.dispatch({
-							type: "ADD_ITEMS",
-							payload: {
-								nextQueueItemId: queue?.nextQueueItemId,
-								index,
-								items,
-								shuffleEnabled: queue?.shuffleEnabled,
-								shouldAssignIds: true,
-							},
-						});
-					}
-					resolve();
-				},
-				(err: unknown) => reject(err instanceof Error ? err : new Error("queueAdd request failed")),
-			);
-		});
-
-		return {
-			ok: true as const,
-			videoId: videoIdFinal ?? null,
-			playlistId: playlistId ?? null,
-			index,
-			storeHooked: !!resolveYtmStore(),
-		};
+		await queueAddPlaylist(playlistId!, index, store);
+		return { ok: true as const, videoId: null, playlistId, index, storeHooked: !!store };
 	},
 	queueList: async () => {
 		const store = resolveYtmStore();
@@ -325,14 +249,94 @@ const trackControls = {
 		return { items, count: items.length, storeHooked: !!store };
 	},
 	queueClear: async (playerApi: PlayerApi) => {
+		const store = resolveYtmStore();
+		if (store?.dispatch) {
+			store.dispatch({ type: "CLEAR" });
+			return { ok: true as const };
+		}
 		if (typeof playerApi.clearQueue === "function") {
 			playerApi.clearQueue();
-		} else {
-			throw new Error("clearQueue not available");
+			return { ok: true as const };
 		}
-		return { ok: true as const };
+		throw new Error("clearQueue not available");
 	},
 };
+
+/** Video queue via Innertube get_queue (queueAddEndpoint 400s on current YTM). */
+async function queueAddVideo(videoId: string, index: number, store: YtmStoreLike | null): Promise<void> {
+	const liveStore = store ?? resolveYtmStore();
+	const queueContextParams = liveStore?.getState?.()?.queue?.queueContextParams;
+	const fetch = resolveYtmApp()?.networkManager?.fetch;
+	if (!liveStore || !queueContextParams || typeof fetch !== "function") {
+		throw new Error("queueAdd failed — play a track first (queue context missing)");
+	}
+
+	const result = await fetch("/music/get_queue", {
+		queueContextParams,
+		queueInsertPosition: "INSERT_AT_END",
+		videoIds: [videoId],
+	});
+	const items = result?.queueDatas?.map((d) => d.content).filter(Boolean) ?? [];
+	if (!items.length) throw new Error("queueAdd failed — get_queue returned no items");
+	dispatchQueueAddItems(liveStore, items, index);
+}
+
+/** Playlist-only via yt-service-request (XOR playlistId, never with videoId). */
+async function queueAddPlaylist(playlistId: string, index: number, store: YtmStoreLike | null): Promise<void> {
+	const bar = document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as HTMLElement | null;
+	if (!bar) throw new Error("player bar not found");
+
+	await new Promise<void>((resolve, reject) => {
+		const returnValue: any[] = [];
+		bar.dispatchEvent(
+			new CustomEvent("yt-action", {
+				bubbles: true,
+				cancelable: false,
+				composed: true,
+				detail: {
+					actionName: "yt-service-request",
+					args: [
+						bar,
+						{
+							queueAddEndpoint: {
+								queueTarget: { playlistId },
+								queueInsertPosition: "INSERT_AT_END",
+							},
+						},
+					],
+					optionalAction: false,
+					returnValue,
+				},
+			}),
+		);
+		const ajax = returnValue[0]?.ajaxPromise;
+		if (!ajax?.then) {
+			reject(new Error("queueAddEndpoint not accepted"));
+			return;
+		}
+		ajax.then(
+			(response: any) => {
+				const items = response?.data?.queueDatas?.map((d: any) => d.content).filter(Boolean) ?? [];
+				const liveStore = resolveYtmStore() ?? store;
+				if (liveStore) dispatchQueueAddItems(liveStore, items, index);
+				resolve();
+			},
+			(err: unknown) => reject(new Error(formatYtmAjaxError(err))),
+		);
+	});
+}
+
+function formatYtmAjaxError(err: unknown): string {
+	if (err instanceof Error && err.message) return err.message;
+	if (typeof err === "string" && err.trim()) return err;
+	try {
+		const json = JSON.stringify(err);
+		if (json && json !== "{}") return json;
+	} catch {
+		/* ignore */
+	}
+	return "queueAdd request failed";
+}
 
 function summarizeQueueItem(item: unknown, index: number): { index: number; videoId?: string; title?: string } {
 	const root = item as Record<string, any> | null;

@@ -1,6 +1,7 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
 import { defaultUrl } from "@main/infra/devUtils";
 import { createSendHandler } from "@main/ipc/ipc";
+import { emitAppToast, friendlyQueueAddError } from "@main/lib/appToast";
 import { type YtmdParsed, YtmdLink } from "@shared/protocol/ytmdProtocol";
 import { App } from "electron";
 
@@ -156,7 +157,13 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 			throw new Error("videoId or playlistId required");
 		}
 		await this.requireYtmReady("queueAdd");
-		await createSendHandler(view, "plugins:api:cmd:queue_add", { timeout: 15000 })(target);
+		try {
+			await createSendHandler(view, "plugins:api:cmd:queue_add", { timeout: 15000 })(target);
+			emitAppToast(this.windowContext, { type: "success", message: "Added to queue" });
+		} catch (err) {
+			emitAppToast(this.windowContext, { type: "error", message: friendlyQueueAddError(err) });
+			throw err;
+		}
 	}
 
 	/** Current YTM queue snapshot (ids/titles when store hooked). */
@@ -170,7 +177,7 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 		)();
 	}
 
-	/** Clear upcoming queue via playerApi.clearQueue. */
+	/** Clear upcoming queue (store CLEAR, else playerApi.clearQueue). */
 	async queueClear(): Promise<{ ok: true }> {
 		const view = this.requireYoutubeView("queueClear");
 		await this.requireYtmReady("queueClear");

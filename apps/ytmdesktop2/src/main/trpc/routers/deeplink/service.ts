@@ -1,4 +1,5 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
+import { emitAppToast } from "@main/lib/appToast";
 import { createAppDialogWindow } from "@main/windows/windowUtils";
 import { type YtmdParsed, YtmdLink } from "@shared/protocol/ytmdProtocol";
 import { stripUndefined } from "@shared/utils/object";
@@ -8,7 +9,7 @@ import path from "node:path";
 type DeeplinkAction = "close" | "play" | "queue" | "open";
 
 const DIALOG_WIDTH = 420;
-const DIALOG_HEIGHT = 300;
+const DIALOG_HEIGHT = 340;
 
 /**
  * Registers `ytmd://`. Mode from `player.deepLinkOpen`: ask (dialog) or play (instant).
@@ -168,6 +169,7 @@ export default class DeeplinkProvider extends BaseProvider implements BeforeStar
 		try {
 			if (action === "close") {
 				this.logger.debug("deeplink cancelled", pending.type);
+				emitAppToast(this.windowContext, { type: "info", message: "Shared link cancelled" });
 				return;
 			}
 
@@ -175,11 +177,11 @@ export default class DeeplinkProvider extends BaseProvider implements BeforeStar
 				if (action === "play") {
 					this.logger.info("deeplink play", pending.videoId, pending.playlistId ?? null);
 					await nav.openWatch(pending.videoId, pending.playlistId);
+					emitAppToast(this.windowContext, { type: "success", message: "Playing shared track" });
 					return;
 				}
 				if (action === "queue") {
-					this.logger.info("deeplink queueAdd", pending.videoId, pending.playlistId ?? null);
-					// queueAdd accepts videoId XOR playlistId — never both (YTM 400 browse_id).
+					this.logger.info("deeplink queueAdd", pending.videoId);
 					await nav.queueAdd(pending.videoId);
 					return;
 				}
@@ -190,11 +192,18 @@ export default class DeeplinkProvider extends BaseProvider implements BeforeStar
 				if (action === "play") {
 					this.logger.info("deeplink playlist play", pending.playlistId);
 					await nav.openPlaylist(pending.playlistId, true);
+					emitAppToast(this.windowContext, { type: "success", message: "Playing playlist" });
+					return;
+				}
+				if (action === "queue") {
+					this.logger.info("deeplink playlist queueAdd", pending.playlistId);
+					await nav.queueAdd(undefined, pending.playlistId);
 					return;
 				}
 				if (action === "open") {
 					this.logger.info("deeplink playlist open", pending.playlistId);
 					await nav.openPlaylist(pending.playlistId, false);
+					emitAppToast(this.windowContext, { type: "success", message: "Opened playlist" });
 					return;
 				}
 				return;
@@ -203,9 +212,15 @@ export default class DeeplinkProvider extends BaseProvider implements BeforeStar
 			if (pending.type === "channel" && (action === "open" || action === "play")) {
 				this.logger.info("deeplink channel open", pending.channelId ?? pending.handle);
 				await nav.openChannel({ channelId: pending.channelId, handle: pending.handle });
+				emitAppToast(this.windowContext, { type: "success", message: "Opened channel" });
 			}
 		} catch (err) {
 			this.logger.error("deeplink action failed", action, pending, err);
+			if (action === "queue") return; // navigation.queueAdd already toasts
+			emitAppToast(this.windowContext, {
+				type: "error",
+				message: err instanceof Error && err.message.trim() ? err.message : "Shared link action failed",
+			});
 		}
 	}
 

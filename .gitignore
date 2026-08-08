@@ -45,3 +45,5 @@ routeTree.gen.ts
 
 # Tanstack Router tmp files
 **/.tanstack/tmp/
+# Vitest / CI
+test-results/
