@@ -7,7 +7,7 @@ import { clamp } from "lodash-es";
 
 /**
  * Stable MPRIS D-Bus instance name → `org.mpris.MediaPlayer2.ytmdesktop2`.
- * Must match Flatpak `--own-name` and Snap `mpris` slot name.
+ * Must match Flatpak `--own-name=org.mpris.MediaPlayer2.ytmdesktop2`.
  * Do not use productName/`app.name` (spaces → `YouTube_Music_for_Desktop`) — sandboxes deny that bind.
  */
 const MPRIS_SERVICE_NAME = "ytmdesktop2";

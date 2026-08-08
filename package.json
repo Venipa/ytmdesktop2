@@ -21,7 +21,6 @@
 		"release:pack:linux:core": "pnpm --filter ytmdesktop2 release:pack:linux:core",
 		"release:pack:linux:arm": "pnpm --filter ytmdesktop2 release:pack:linux:arm",
 		"release:pack:linux:flatpak": "pnpm --filter ytmdesktop2 release:pack:linux:flatpak",
-		"release:pack:linux:snap": "pnpm --filter ytmdesktop2 release:pack:linux:snap",
 		"build:unpack": "pnpm --filter ytmdesktop2 build:unpack",
 		"build:win": "pnpm --filter ytmdesktop2 build:win",
 		"build:mac": "pnpm --filter ytmdesktop2 build:mac",

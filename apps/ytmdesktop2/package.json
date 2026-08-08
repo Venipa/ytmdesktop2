@@ -27,7 +27,6 @@
 		"release:pack:linux:core": "cross-env NODE_ENV=production electron-builder --linux appImage deb pacman --x64",
 		"release:pack:linux:arm": "cross-env NODE_ENV=production electron-builder --arm64 --linux -c.linux.target=appImage",
 		"release:pack:linux:flatpak": "cross-env NODE_ENV=production electron-builder --linux flatpak --x64",
-		"release:pack:linux:snap": "cross-env NODE_ENV=production electron-builder --linux snap --x64",
 		"build:unpack": "pnpm build && electron-builder --dir",
 		"build:win": "pnpm build && electron-builder --win",
 		"build:mac": "pnpm build && electron-builder --mac",
