@@ -27,22 +27,13 @@ function playlistBrowseId(playlistId: string): string {
 }
 
 function dispatchYtNavigate(endpoint: Record<string, unknown>): void {
+	// Upstream (ytmdesktop) only fires this event — do not also call ytmusic-app.navigate().
+	// Dual dispatch starts playback but clears main content (empty page behind player).
 	document.dispatchEvent(
 		new CustomEvent("yt-navigate", {
-			bubbles: true,
-			cancelable: true,
-			composed: true,
 			detail: { endpoint },
 		}),
 	);
-	const app = document.querySelector("ytmusic-app") as { navigate?: (endpoint: Record<string, unknown>) => void } | null;
-	if (typeof app?.navigate === "function") {
-		try {
-			app.navigate(endpoint);
-		} catch {
-			/* yt-navigate already fired */
-		}
-	}
 }
 
 function buildNavigateEndpoint(data?: NavigatePayload): Record<string, unknown> {
@@ -54,13 +45,29 @@ function buildNavigateEndpoint(data?: NavigatePayload): Record<string, unknown> 
 	const browseId = data?.browseId?.trim();
 
 	if (videoId) {
-		const watchEndpoint: { videoId: string; playlistId?: string } = { videoId };
+		const watchEndpoint: Record<string, unknown> = {
+			videoId,
+			watchEndpointMusicSupportedConfigs: {
+				watchEndpointMusicConfig: {
+					musicVideoType: "MUSIC_VIDEO_TYPE_ATV",
+				},
+			},
+		};
 		if (playlistId) watchEndpoint.playlistId = playlistId;
 		return { watchEndpoint };
 	}
 
 	if (playlistId && data?.play) {
-		return { watchEndpoint: { playlistId } };
+		return {
+			watchEndpoint: {
+				playlistId,
+				watchEndpointMusicSupportedConfigs: {
+					watchEndpointMusicConfig: {
+						musicVideoType: "MUSIC_VIDEO_TYPE_ATV",
+					},
+				},
+			},
+		};
 	}
 
 	if (playlistId) {
