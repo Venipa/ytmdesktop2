@@ -1,12 +1,3 @@
-import { toAppThumbUrl } from "@shared/media/appThumbUrl";
-import { YtmdLink } from "@shared/protocol/ytmdProtocol";
-import { createFileRoute } from "@tanstack/react-router";
-import { cva } from "class-variance-authority";
-import { intervalToDuration } from "date-fns";
-import { clamp } from "lodash-es";
-import { ArrowLeftIcon, CopyIcon } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ApiIcon from "@/assets/icons/chip.svg?react";
 import DiscordIcon from "@/assets/icons/discord-rpc.svg?react";
 import LastFMIcon from "@/assets/icons/lastfm.svg?react";
@@ -24,6 +15,15 @@ import { useSettingsState } from "@/hooks/use-settings";
 import { useTrack, useTrackState } from "@/hooks/use-track";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { toAppThumbUrl } from "@shared/media/appThumbUrl";
+import { YtmdLink } from "@shared/protocol/ytmdProtocol";
+import { createFileRoute } from "@tanstack/react-router";
+import { cva } from "class-variance-authority";
+import { intervalToDuration } from "date-fns";
+import { clamp } from "lodash-es";
+import { ArrowLeftIcon, CopyIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 export const Route = createFileRoute("/trayview")({
 	component: TrayViewPage,
@@ -182,8 +182,7 @@ function TrayCoverArt({ src }: { src: string | null }) {
 						key={src}
 						src={src}
 						alt=""
-						draggable={false}
-						className="absolute inset-0 size-full object-cover"
+						className="no-drag absolute inset-0 size-full object-cover pointer-events-none"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
@@ -192,7 +191,7 @@ function TrayCoverArt({ src }: { src: string | null }) {
 				) : (
 					<motion.div
 						key="empty-cover"
-						className="absolute inset-0 flex size-full items-center justify-center text-[9px] font-medium tracking-wide text-muted-foreground"
+						className="no-drag absolute inset-0 flex size-full items-center justify-center text-[9px] font-medium tracking-wide text-muted-foreground"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
