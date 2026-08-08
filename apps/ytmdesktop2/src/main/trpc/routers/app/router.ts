@@ -1,8 +1,17 @@
+import { fromIpcEvent } from "@main/trpc/fromIpcEvent";
 import { serverMain } from "@main/ipc/serverEvents";
 import { provider } from "@main/trpc/provider";
 import { publicProcedure, router } from "@shared/trpc/trpc";
+import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import { BrowserWindow } from "electron";
 import { z } from "zod";
+
+const toastPayload = z.object({
+	type: z.enum(["success", "info", "error"]).default("info"),
+	message: z.string().min(1),
+});
+
+export type AppToastPayload = z.infer<typeof toastPayload>;
 
 export const appServiceRouter = router({
 	isWin11: publicProcedure.query(({ ctx }): Promise<boolean> => provider(ctx, "app").handleIsWin11()),
@@ -40,4 +49,5 @@ export const appServiceRouter = router({
 				.optional(),
 		)
 		.mutation(({ ctx, input }): Promise<void> => provider(ctx, "app").handleRestartNeeded(null, input ?? {})),
+	onToast: publicProcedure.subscription(() => fromIpcEvent<AppToastPayload>(IPC_EVENT_NAMES.APP_TOAST)),
 });

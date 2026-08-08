@@ -1,15 +1,14 @@
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { createAppDialogWindow } from "@main/windows/windowUtils";
-import { YtmdLink } from "@shared/protocol/ytmdProtocol";
+import { type YtmdParsed, YtmdLink } from "@shared/protocol/ytmdProtocol";
 import { stripUndefined } from "@shared/utils/object";
 import { App, BrowserWindow } from "electron";
 import path from "node:path";
 
-type PendingWatch = { videoId: string; playlistId?: string };
-type DeeplinkAction = "close" | "play" | "queue";
+type DeeplinkAction = "close" | "play" | "queue" | "open";
 
 const DIALOG_WIDTH = 420;
-const DIALOG_HEIGHT = 280;
+const DIALOG_HEIGHT = 300;
 
 /**
  * Registers `ytmd://`. Mode from `player.deepLinkOpen`: ask (dialog) or play (instant).
@@ -64,12 +63,7 @@ export default class DeeplinkProvider extends BaseProvider implements BeforeStar
 		this.busy = true;
 		try {
 			this.focusMain();
-			const mode = this.getProvider("settings").get<"ask" | "play">("player.deepLinkOpen", "ask");
-			if (mode === "play") {
-				await this.applyChoice("play", pending);
-			} else {
-				await this.prompt(pending);
-			}
+			await this.handleLink(pending);
 		} catch (err) {
 			this.logger.error("deeplink failed", url, err);
 		} finally {
@@ -78,20 +72,41 @@ export default class DeeplinkProvider extends BaseProvider implements BeforeStar
 		}
 	}
 
-	/** Open confirm dialog; resolve after play / queue / cancel / window close. */
-	private prompt(pending: PendingWatch): Promise<void> {
+	private async handleLink(pending: YtmdParsed) {
+		// Explicit `/play` on playlist → start immediately (link intent).
+		if (pending.type === "playlist" && pending.play) {
+			await this.applyChoice("play", pending);
+			return;
+		}
+
+		const mode = this.getProvider("settings").get<"ask" | "play">("player.deepLinkOpen", "ask");
+		if (mode === "play") {
+			await this.applyChoice(pending.type === "watch" ? "play" : "open", pending);
+			return;
+		}
+		await this.prompt(pending);
+	}
+
+	/** Open confirm dialog; resolve after action / window close. */
+	private prompt(pending: YtmdParsed): Promise<void> {
 		const parent = this.windowContext?.main;
 		if (!parent || parent.isDestroyed()) {
 			this.logger.warn("deeplink prompt skipped — no main window");
 			return Promise.resolve();
 		}
 
-		const shareUrl = YtmdLink.watch(pending.videoId, pending.playlistId);
+		const shareUrl = YtmdLink.format(pending);
 		const qs = new URLSearchParams(
 			stripUndefined({
-				videoId: pending.videoId,
-				playlistId: pending.playlistId,
+				kind: pending.type,
 				url: shareUrl,
+				...(pending.type === "watch"
+					? { videoId: pending.videoId, playlistId: pending.playlistId }
+					: {}),
+				...(pending.type === "playlist" ? { playlistId: pending.playlistId, play: pending.play ? "1" : "0" } : {}),
+				...(pending.type === "channel"
+					? { channelId: pending.channelId, handle: pending.handle }
+					: {}),
 			}),
 		);
 
@@ -121,47 +136,76 @@ export default class DeeplinkProvider extends BaseProvider implements BeforeStar
 				top: true,
 				show: false,
 				onResponse: (action) => finish(action),
-			}).then((win) => {
-				if (settled) {
-					if (!win.isDestroyed()) win.close();
-					return;
-				}
-				this.dialog = win;
-				win.on("closed", () => {
-					this.dialog = null;
+			})
+				.then((win) => {
+					if (settled) {
+						if (!win.isDestroyed()) win.close();
+						return;
+					}
+					this.dialog = win;
+					win.on("closed", () => {
+						this.dialog = null;
+						if (!settled) {
+							settled = true;
+							resolve();
+						}
+					});
+					win.show();
+					win.focus();
+				})
+				.catch((err) => {
+					this.logger.error("deeplink dialog open failed", err);
 					if (!settled) {
 						settled = true;
 						resolve();
 					}
 				});
-				win.show();
-				win.focus();
-			}).catch((err) => {
-				this.logger.error("deeplink dialog open failed", err);
-				if (!settled) {
-					settled = true;
-					resolve();
-				}
-			});
 		});
 	}
 
-	private async applyChoice(action: DeeplinkAction, pending: PendingWatch) {
+	private async applyChoice(action: DeeplinkAction, pending: YtmdParsed) {
 		const nav = this.getProvider("navigation");
 		try {
-			if (action === "play") {
-				this.logger.info("deeplink play", pending.videoId, pending.playlistId ?? null);
-				await nav.openWatch(pending.videoId, pending.playlistId);
+			if (action === "close") {
+				this.logger.debug("deeplink cancelled", pending.type);
 				return;
 			}
-			if (action === "queue") {
-				this.logger.info("deeplink queueAdd", pending.videoId, pending.playlistId ?? null);
-				await nav.queueAdd(pending.videoId, pending.playlistId);
+
+			if (pending.type === "watch") {
+				if (action === "play") {
+					this.logger.info("deeplink play", pending.videoId, pending.playlistId ?? null);
+					await nav.openWatch(pending.videoId, pending.playlistId);
+					return;
+				}
+				if (action === "queue") {
+					this.logger.info("deeplink queueAdd", pending.videoId, pending.playlistId ?? null);
+					// queueAdd accepts videoId XOR playlistId — never both (YTM 400 browse_id).
+					await nav.queueAdd(pending.videoId);
+					return;
+				}
 				return;
 			}
-			this.logger.debug("deeplink cancelled", pending.videoId);
+
+			if (pending.type === "playlist") {
+				if (action === "play") {
+					this.logger.info("deeplink playlist play", pending.playlistId);
+					await nav.openPlaylist(pending.playlistId, true);
+					return;
+				}
+				if (action === "open") {
+					this.logger.info("deeplink playlist open", pending.playlistId);
+					await nav.openPlaylist(pending.playlistId, false);
+					return;
+				}
+				return;
+			}
+
+			if (pending.type === "channel" && (action === "open" || action === "play")) {
+				this.logger.info("deeplink channel open", pending.channelId ?? pending.handle);
+				await nav.openChannel({ channelId: pending.channelId, handle: pending.handle });
+			}
 		} catch (err) {
-			this.logger.error("deeplink action failed", action, pending.videoId, err);
+			this.logger.error("deeplink action failed", action, pending, err);
 		}
 	}
 

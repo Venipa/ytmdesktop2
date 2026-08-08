@@ -3,6 +3,105 @@ import type { PlayerApi } from "ytm-client-api";
 
 type SeekPayload = { time?: number; type?: "seek" };
 
+type NavigatePayload = {
+	videoId?: string;
+	playlistId?: string;
+	play?: boolean;
+	channelId?: string;
+	handle?: string;
+	browseId?: string;
+};
+
+function playlistBrowseId(playlistId: string): string {
+	const id = playlistId.trim();
+	if (!id) return id;
+	if (/^(VL|OLAK|RD|MP)/i.test(id)) return id;
+	return `VL${id}`;
+}
+
+type YtmStoreLike = {
+	getState: () => { queue?: { items?: unknown[]; nextQueueItemId?: number; shuffleEnabled?: boolean } };
+	dispatch: (action: unknown) => void;
+};
+
+function resolveYtmStore(): YtmStoreLike | null {
+	const fromHook = (window as unknown as { __YTMD_HOOK__?: { ytmStore?: YtmStoreLike } }).__YTMD_HOOK__?.ytmStore;
+	if (fromHook?.getState && fromHook?.dispatch) return fromHook;
+	const selectors = ["ytmusic-app", "ytmusic-app-layout>ytmusic-player-bar", "ytmusic-player-bar"] as const;
+	for (const selector of selectors) {
+		const store = (document.querySelector(selector) as { store?: YtmStoreLike } | null)?.store;
+		if (store?.getState && store?.dispatch) {
+			if (!(window as unknown as { __YTMD_HOOK__?: unknown }).__YTMD_HOOK__) {
+				(window as unknown as { __YTMD_HOOK__: { ytmStore: YtmStoreLike } }).__YTMD_HOOK__ = { ytmStore: store };
+			}
+			return store;
+		}
+	}
+	return null;
+}
+
+function dispatchYtNavigate(endpoint: Record<string, unknown>): void {
+	document.dispatchEvent(
+		new CustomEvent("yt-navigate", {
+			bubbles: true,
+			cancelable: true,
+			composed: true,
+			detail: { endpoint },
+		}),
+	);
+	const app = document.querySelector("ytmusic-app") as { navigate?: (endpoint: Record<string, unknown>) => void } | null;
+	if (typeof app?.navigate === "function") {
+		try {
+			app.navigate(endpoint);
+		} catch {
+			/* yt-navigate already fired */
+		}
+	}
+}
+
+function buildNavigateEndpoint(data?: NavigatePayload): Record<string, unknown> {
+	const videoId = data?.videoId?.trim();
+	const playlistId = data?.playlistId?.trim();
+	const channelId = data?.channelId?.trim();
+	const handleRaw = data?.handle?.trim();
+	const handle = handleRaw ? (handleRaw.startsWith("@") ? handleRaw.slice(1) : handleRaw) : "";
+	const browseId = data?.browseId?.trim();
+
+	if (videoId) {
+		const watchEndpoint: { videoId: string; playlistId?: string } = { videoId };
+		if (playlistId) watchEndpoint.playlistId = playlistId;
+		return { watchEndpoint };
+	}
+
+	if (playlistId && data?.play) {
+		return { watchEndpoint: { playlistId } };
+	}
+
+	if (playlistId) {
+		return { browseEndpoint: { browseId: playlistBrowseId(playlistId) } };
+	}
+
+	if (channelId) {
+		return {
+			browseEndpoint: {
+				browseId: channelId,
+				canonicalBaseUrl: `/channel/${channelId}`,
+			},
+		};
+	}
+
+	if (handle) {
+		// Handles often lack browseId — urlEndpoint is the reliable in-app path (still via yt-navigate).
+		return { urlEndpoint: { url: `https://music.youtube.com/@${encodeURIComponent(handle)}` } };
+	}
+
+	if (browseId) {
+		return { browseEndpoint: { browseId } };
+	}
+
+	throw new Error("navigate requires videoId, playlistId, channelId, handle, or browseId");
+}
+
 function isPlayingState(playerApi: PlayerApi): boolean {
 	return playerApi.getPlayerState() === 1;
 }
@@ -117,47 +216,49 @@ const trackControls = {
 		return { volume: playerApi.getVolume() };
 	},
 	/**
-	 * In-page YTM navigation (same as upstream ytmdesktop `remoteControl:execute` → `navigate`).
-	 * Dispatches `yt-navigate` with a watchEndpoint — no full page reload.
+	 * In-page YTM navigation via `yt-navigate`.
+	 * - watch: videoId (+ optional playlistId)
+	 * - play playlist: playlistId + play
+	 * - browse playlist: playlistId
+	 * - channel: channelId and/or handle (@…)
 	 */
-	navigate: (data?: { videoId?: string; playlistId?: string }) => {
-		const videoId = data?.videoId?.trim();
-		if (!videoId) throw new Error("videoId required");
-		const watchEndpoint: { videoId: string; playlistId?: string } = { videoId };
-		const playlistId = data?.playlistId?.trim();
-		if (playlistId) watchEndpoint.playlistId = playlistId;
-		document.dispatchEvent(
-			new CustomEvent("yt-navigate", {
-				detail: {
-					endpoint: { watchEndpoint },
-				},
-			}),
-		);
-		return { ok: true as const, videoId, playlistId: playlistId || null };
+	navigate: (data?: {
+		videoId?: string;
+		playlistId?: string;
+		play?: boolean;
+		channelId?: string;
+		handle?: string;
+		browseId?: string;
+	}) => {
+		const endpoint = buildNavigateEndpoint(data);
+		dispatchYtNavigate(endpoint);
+		return { ok: true as const, endpoint };
 	},
 	/**
 	 * Add to YTM queue (upstream companion `queueAdd` / queueadd.script.js).
 	 * Uses `yt-service-request` → `queueAddEndpoint`, then store `ADD_ITEMS` when available.
+	 *
+	 * Upstream rule: pass **either** `videoId` **or** `playlistId`, never both
+	 * (both → API 400 `browse_id` / INVALID_ARGUMENT).
 	 */
 	queueAdd: async (data?: { videoId?: string; playlistId?: string; index?: number }) => {
-		const videoId = data?.videoId?.trim();
-		if (!videoId) throw new Error("videoId required");
-		const playlistId = data?.playlistId?.trim() || undefined;
-		const bar = document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as HTMLElement & {
-			store?: { getState: () => any; dispatch: (a: unknown) => void };
-		};
+		const videoId = data?.videoId?.trim() || undefined;
+		const playlistIdOnly = data?.playlistId?.trim() || undefined;
+		// Upstream companion: XOR — both → YTM 400 browse_id INVALID_ARGUMENT.
+		const videoIdFinal = videoId;
+		const playlistId = videoIdFinal ? undefined : playlistIdOnly;
+		if (!videoIdFinal && !playlistId) throw new Error("videoId or playlistId required");
+
+		const bar = document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as HTMLElement | null;
 		if (!bar) throw new Error("player bar not found");
 
-		const store =
-			(window as any).__YTMD_HOOK__?.ytmStore ??
-			bar.store ??
-			(document.querySelector("ytmusic-app") as { store?: typeof bar.store } | null)?.store ??
-			null;
-
+		const store = resolveYtmStore();
 		const index =
 			typeof data?.index === "number" && Number.isFinite(data.index)
 				? data.index
 				: (store?.getState?.()?.queue?.items?.length ?? 0);
+
+		const queueTarget = videoIdFinal ? { videoId: videoIdFinal } : { playlistId: playlistId! };
 
 		await new Promise<void>((resolve, reject) => {
 			const returnValue: any[] = [];
@@ -172,10 +273,7 @@ const trackControls = {
 							bar,
 							{
 								queueAddEndpoint: {
-									queueTarget: {
-										videoId,
-										...(playlistId ? { playlistId } : {}),
-									},
+									queueTarget,
 								},
 							},
 						],
@@ -192,27 +290,71 @@ const trackControls = {
 			ajax.then(
 				(response: any) => {
 					const items = response?.data?.queueDatas?.map((d: any) => d.content);
-					if (store && Array.isArray(items) && items.length) {
-						store.dispatch({
+					const liveStore = resolveYtmStore() ?? store;
+					if (liveStore && Array.isArray(items) && items.length) {
+						const queue = liveStore.getState()?.queue;
+						liveStore.dispatch({
 							type: "ADD_ITEMS",
 							payload: {
-								nextQueueItemId: store.getState().queue.nextQueueItemId,
+								nextQueueItemId: queue?.nextQueueItemId,
 								index,
 								items,
-								shuffleEnabled: store.getState().queue.shuffleEnabled,
+								shuffleEnabled: queue?.shuffleEnabled,
 								shouldAssignIds: true,
 							},
 						});
 					}
 					resolve();
 				},
-				() => reject(new Error("queueAdd request failed")),
+				(err: unknown) => reject(err instanceof Error ? err : new Error("queueAdd request failed")),
 			);
 		});
 
-		return { ok: true as const, videoId, playlistId: playlistId ?? null, index };
+		return {
+			ok: true as const,
+			videoId: videoIdFinal ?? null,
+			playlistId: playlistId ?? null,
+			index,
+			storeHooked: !!resolveYtmStore(),
+		};
+	},
+	queueList: async () => {
+		const store = resolveYtmStore();
+		const rawItems = store?.getState?.()?.queue?.items ?? [];
+		const items = rawItems.map((item, index) => summarizeQueueItem(item, index));
+		return { items, count: items.length, storeHooked: !!store };
+	},
+	queueClear: async (playerApi: PlayerApi) => {
+		if (typeof playerApi.clearQueue === "function") {
+			playerApi.clearQueue();
+		} else {
+			throw new Error("clearQueue not available");
+		}
+		return { ok: true as const };
 	},
 };
+
+function summarizeQueueItem(item: unknown, index: number): { index: number; videoId?: string; title?: string } {
+	const root = item as Record<string, any> | null;
+	const renderer =
+		root?.playlistPanelVideoRenderer ??
+		root?.playlistPanelVideoWrapperRenderer?.counterpart?.[0]?.counterpartRenderer?.playlistPanelVideoRenderer ??
+		root;
+	const videoId =
+		(typeof renderer?.videoId === "string" && renderer.videoId) ||
+		renderer?.navigationEndpoint?.watchEndpoint?.videoId ||
+		undefined;
+	const title =
+		renderer?.title?.runs?.[0]?.text ||
+		renderer?.title?.simpleText ||
+		renderer?.flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text ||
+		undefined;
+	return {
+		index,
+		...(videoId ? { videoId: String(videoId) } : {}),
+		...(title ? { title: String(title) } : {}),
+	};
+}
 
 export default definePlugin(
 	"track-api-controls",
@@ -239,8 +381,10 @@ export default definePlugin(
 			volume: async ({ playerApi }, data?: { volume?: number }) => trackControls.volume(playerApi, data),
 			volumeUp: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeUp(playerApi, data),
 			volumeDown: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeDown(playerApi, data),
-			navigate: async (_ctx, data?: { videoId?: string; playlistId?: string }) => trackControls.navigate(data),
+			navigate: async (_ctx, data?: NavigatePayload) => trackControls.navigate(data),
 			queueAdd: async (_ctx, data?: { videoId?: string; playlistId?: string; index?: number }) => trackControls.queueAdd(data),
+			queueList: async (_ctx) => trackControls.queueList(),
+			queueClear: async ({ playerApi }) => trackControls.queueClear(playerApi),
 		},
 	},
 );

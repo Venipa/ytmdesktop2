@@ -23,8 +23,22 @@ type TrackCaller = {
 	seek: (input: { time: number; type?: "seek" }) => Promise<{ isPlaying: boolean; time: number }>;
 };
 
+type NavigationCaller = {
+	home: () => Promise<{ ok: true }>;
+	goback: () => Promise<void>;
+	devTools: () => Promise<void>;
+	open: (input: { url: string }) => Promise<{ ok: true; link: unknown }>;
+	watch: (input: { videoId: string; playlistId?: string }) => Promise<{ ok: true }>;
+	playlist: (input: { playlistId: string; play?: boolean }) => Promise<{ ok: true }>;
+	channel: (input: { channelId?: string; handle?: string }) => Promise<{ ok: true }>;
+	queue: (input: { videoId?: string; playlistId?: string }) => Promise<{ ok: true }>;
+	queueList: () => Promise<{ items: { index: number; videoId?: string; title?: string }[]; count: number; storeHooked?: boolean }>;
+	queueClear: () => Promise<{ ok: true }>;
+};
+
 export type MainCaller = {
 	track: TrackCaller;
+	navigation: NavigationCaller;
 };
 
 /**

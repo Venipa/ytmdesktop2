@@ -40,6 +40,14 @@ Auth endpoints (`/auth/*`) never require a token. `GET /` is always public.
 | `POST` | `/track/volume-up` | Yes | Raise volume |
 | `POST` | `/track/volume-down` | Yes | Lower volume |
 | `POST` | `/track/accent` | Yes | Dominant color from artwork |
+| `POST` | `/nav/watch` | Yes | Play song by videoId |
+| `POST` | `/nav/playlist` | Yes | Open / play playlist |
+| `POST` | `/nav/channel` | Yes | Open channel / artist |
+| `POST` | `/nav/queue` | Yes | Add video or playlist to queue |
+| `GET` | `/nav/queue` | Yes | List current queue items |
+| `POST` | `/nav/queue/clear` | Yes | Clear upcoming queue |
+| `POST` | `/nav/open` | Yes | Open ytmd:// or https URL (immediate) |
+| `POST` | `/nav/home` | Yes | Navigate to YouTube Music home |
 | `GET` | `/socket` | Yes* | WebSocket track events |
 | `GET` | `/socket/ping` | No | WebSocket ping/pong |
 
@@ -343,6 +351,100 @@ curl -X POST http://127.0.0.1:13091/track/accent \
 
 ---
 
+## Navigation
+
+Immediate open/queue — same as deeplink **Play** / **Add to queue** / **Open**, **no ask dialog** (HTTP always acts). Auth when required. Mutations respond `{ "ok": true }` unless noted.
+
+### `POST /nav/open`
+
+Parse and act on a `ytmd://` or `https://` URL (music.youtube.com, youtube.com, youtu.be).
+
+```json
+{ "url": "https://youtu.be/dQw4w9WgXcQ" }
+```
+
+```json
+{ "url": "ytmd://youtube.com/watch?v=dQw4w9WgXcQ" }
+```
+
+Response includes the parsed link:
+
+```json
+{ "ok": true, "link": { "type": "watch", "videoId": "dQw4w9WgXcQ" } }
+```
+
+### `POST /nav/home`
+
+Go to YouTube Music home.
+
+### `POST /nav/watch`
+
+Play a song. Radio/mix playlist ids (`RD…`) are stripped.
+
+```json
+{ "videoId": "dQw4w9WgXcQ", "playlistId": "OLAK5uy_…" }
+```
+
+`playlistId` optional (album/playlist context only).
+
+```bash
+curl -X POST http://127.0.0.1:13091/nav/watch \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"videoId":"dQw4w9WgXcQ"}'
+```
+
+### `POST /nav/playlist`
+
+Open playlist page, or start playing when `play` is `true`.
+
+```json
+{ "playlistId": "PL…", "play": true }
+```
+
+### `POST /nav/channel`
+
+Open artist/channel. Need `channelId` (UC…) and/or `handle` (with or without `@`).
+
+```json
+{ "channelId": "UC…" }
+```
+
+```json
+{ "handle": "@ArtistName" }
+```
+
+### `POST /nav/queue`
+
+Append to current queue. Send **either** `videoId` **or** `playlistId` (not both — if both, `videoId` wins).
+
+```json
+{ "videoId": "dQw4w9WgXcQ" }
+```
+
+```json
+{ "playlistId": "PL…" }
+```
+
+### `GET /nav/queue`
+
+Current queue snapshot (needs ytm store hook for ids/titles).
+
+```json
+{
+  "items": [{ "index": 0, "videoId": "…", "title": "…" }],
+  "count": 1,
+  "storeHooked": true
+}
+```
+
+Empty / sparse items when store hook not ready yet.
+### `POST /nav/queue/clear`
+
+Clear upcoming queue via player `clearQueue`.
+
+---
+
 ## WebSocket
 
 ### `GET /socket`
@@ -371,9 +473,10 @@ Simple ping socket — any message gets `Pong!` (no auth).
 | Status | Body | When |
 | --- | --- | --- |
 | `401` | `{ "error": "unauthorized" }` | Missing/invalid token on protected route |
-| `400` | `{ "error": "…" }` | Auth validation / pairing failures |
+| `400` | `{ "error": "…" }` | Auth validation / pairing failures; invalid `/nav/*` body or URL |
 | `404` | `{ "error": "not found" }` | Unknown path |
-| `500` | `{ "error": "failed to do requested operation (…)" }` | Track command threw |
+| `503` | `{ "error": "…" }` | YouTube Music view not ready / missing |
+| `500` | `{ "error": "failed to do requested operation (…)" }` | Track/nav command threw |
 | `500` | `{ "error": "internal error" }` | Unhandled server error |
 
 CORS allows `GET` / `POST` / `OPTIONS` with `Authorization` and `Content-Type` from any origin (local tools / overlays).

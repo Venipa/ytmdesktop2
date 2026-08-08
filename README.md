@@ -35,6 +35,10 @@ Quick now-playing popup from the system tray with transport controls.
 
 ![feature-trayview](./apps/docs/public/images/features-trayview-with-progress_tooltip.png)
 
+### Shared links (`ytmd://`)
+
+Open tracks, playlists, and channels in the app via the `ytmd://` protocol (or by replacing `https://` with `ytmd://` on a music.youtube.com URL). See [`apps/docs/content/docs/features/shared-links.mdx`](./apps/docs/content/docs/features/shared-links.mdx).
+
 ### Discord Rich Presence
 
 <img width="285" height="133" alt="DiscordPTB_rObJDxsJQ8" src="https://github.com/user-attachments/assets/6f6c6836-8916-4a58-940e-e25d632e66ad" />

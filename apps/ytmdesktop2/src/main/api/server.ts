@@ -41,6 +41,26 @@ function extractBearerToken(header: string | undefined): string | null {
 	return value;
 }
 
+/** Map known API failures to HTTP status. */
+function mapApiError(err: unknown): { status: 400 | 503; message: string } | null {
+	if (!err || typeof err !== "object") return null;
+	const e = err as { code?: string; message?: string; name?: string };
+	const message = typeof e.message === "string" && e.message.trim() ? e.message.trim() : null;
+	if (!message) return null;
+	if (/failed — (youtube view missing|ytm not ready)/i.test(message)) {
+		return { status: 503, message };
+	}
+	if (e.code === "BAD_REQUEST" || e.code === "PARSE_ERROR") return { status: 400, message };
+	if (e.name === "TRPCError" && e.code === "BAD_REQUEST") return { status: 400, message };
+	if (/^(unsupported or invalid url|videoId or playlistId required|channelId or handle required)/i.test(message)) {
+		return { status: 400, message };
+	}
+	if (/invalid (input|type|enum|string|url|videoId|playlistId)/i.test(message) || e.name === "ZodError") {
+		return { status: 400, message };
+	}
+	return null;
+}
+
 /**
  * Local HTTP/WS API — Hono + @hono/node-server (bundled into main; keeps `ws` for Node upgrades).
  */
@@ -117,6 +137,34 @@ export async function startApiServer(options: {
 		} catch (err) {
 			log.error(err);
 			return c.json({ error: `failed to do requested operation (${operation})` }, 500);
+		}
+	});
+
+	app.post("/nav/*", requireAuth, async (c) => {
+		const operation = `api${c.req.path}`;
+		try {
+			const body = await c.req.json().catch(() => undefined);
+			return c.json(await onRequest(operation, body));
+		} catch (err) {
+			log.error(err);
+			const mapped = mapApiError(err);
+			return c.json(
+				{ error: mapped ? mapped.message : `failed to do requested operation (${operation})` },
+				mapped?.status ?? 500,
+			);
+		}
+	});
+
+	app.get("/nav/queue", requireAuth, async (c) => {
+		try {
+			return c.json(await onRequest("api/nav/queue/list"));
+		} catch (err) {
+			log.error(err);
+			const mapped = mapApiError(err);
+			return c.json(
+				{ error: mapped ? mapped.message : "failed to do requested operation (api/nav/queue/list)" },
+				mapped?.status ?? 500,
+			);
 		}
 	});
 

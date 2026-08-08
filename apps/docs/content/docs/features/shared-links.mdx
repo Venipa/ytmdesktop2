@@ -1,0 +1,89 @@
+---
+title: Shared links
+description: Open ytmd:// links for tracks, playlists, and channels
+---
+
+YTMDesktop2 registers the **`ytmd://`** protocol so you can open YouTube Music content in the app from the browser address bar, chat, or the tray.
+
+Install a release build (or register the protocol in development) so the OS hands `ytmd://` URLs to YTMDesktop2.
+
+## From a music.youtube.com URL
+
+Replace `https://` with `ytmd://` and press Enter:
+
+| Browser URL | Open in app |
+| --- | --- |
+| `https://music.youtube.com/watch?v=VIDEO_ID` | `ytmd://music.youtube.com/watch?v=VIDEO_ID` |
+| `https://music.youtube.com/playlist?list=PLAYLIST_ID` | `ytmd://music.youtube.com/playlist?list=PLAYLIST_ID` |
+| `https://music.youtube.com/channel/UC…` | `ytmd://music.youtube.com/channel/UC…` |
+| `https://music.youtube.com/@Handle` | `ytmd://music.youtube.com/@Handle` |
+
+## From youtube.com / youtu.be
+
+Same trick — swap `https://` → `ytmd://`:
+
+| Browser URL | Open in app |
+| --- | --- |
+| `https://www.youtube.com/watch?v=VIDEO_ID` | `ytmd://www.youtube.com/watch?v=VIDEO_ID` |
+| `https://youtu.be/VIDEO_ID` | `ytmd://youtu.be/VIDEO_ID` |
+| `https://www.youtube.com/playlist?list=PLAYLIST_ID` | `ytmd://www.youtube.com/playlist?list=PLAYLIST_ID` |
+| `https://www.youtube.com/@Handle` | `ytmd://www.youtube.com/@Handle` |
+
+Also works for `m.youtube.com`, `/shorts/…`, and `/embed/…` (treated as watch).
+
+Optional playlist context on a watch link (`&list=…`) is kept for real playlists/albums. Radio / mix ids (`RD…`, `RDAMVM…`) are stripped — attaching those makes YouTube Music show “Radio is starting…” without playing the track.
+
+## Compact links
+
+Shorter forms work the same way (also used when you copy a share link from the tray):
+
+| Kind | Format |
+| --- | --- |
+| Track | `ytmd://watch/<videoId>` |
+| Track + playlist | `ytmd://watch/<videoId>/<playlistId>` |
+| Playlist page | `ytmd://playlist/<playlistId>` |
+| Play playlist now | `ytmd://playlist/<playlistId>/play` |
+| Channel by id | `ytmd://channel/UC…` |
+| Channel by handle | `ytmd://channel/@Handle` |
+
+`/play` on a playlist link **starts playback immediately** and skips the confirmation dialog.
+
+## What happens when a link opens
+
+Under **Settings → Player → When opening a shared link**:
+
+| Option | Behavior |
+| --- | --- |
+| **Ask first** (default) | Confirm dialog before acting |
+| **Play immediately** | Skip the dialog and run the default action |
+
+### Ask first — dialog choices
+
+| Link type | Actions |
+| --- | --- |
+| Track | **Play now**, **Add to queue**, or **Cancel** |
+| Playlist | **Play playlist**, **Open playlist**, or **Cancel** |
+| Channel | **Open channel** or **Cancel** |
+
+Closing the dialog (or Cancel) shows a short toast so the app does not look like it ignored the link. Successful play / queue / open also toast.
+
+With **Play immediately**, tracks start playing; playlists and channels open their page (use `…/play` on a playlist URL if you want instant playlist playback).
+
+## Tray — copy share link
+
+In the [tray view](/docs/features/tray-view), use the share / copy control on the current track to put a compact `ytmd://watch/…` link on the clipboard (includes a non-radio `list=` from the music page when available).
+
+## Tips
+
+- Second-instance and cold-start argv links are queued and handled after YouTube Music is ready.
+- Invalid or unsupported paths are ignored (for example album `/browse/…` is not mapped yet).
+- Handles that arrive percent-encoded (`%40Name`) are decoded the same as `@Name`.
+
+## Related
+
+<Cards>
+  <Card title="Tray view" href="/docs/features/tray-view" />
+  <Card title="Local API" href="/docs/api/routes" />
+  <Card title="All features" href="/docs/features" />
+  <Card title="Install" href="/docs/install" />
+</Cards>

@@ -34,7 +34,9 @@
 		"biome:lint": "biome lint ./src",
 		"biome:format": "biome format ./src --write",
 		"biome:check": "biome check ./src",
-		"biome:check:apply": "biome check ./src --write"
+		"biome:check:apply": "biome check ./src --write",
+		"test": "pnpm -w exec vitest run apps/ytmdesktop2",
+		"test:watch": "pnpm -w exec vitest apps/ytmdesktop2"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.6.0",

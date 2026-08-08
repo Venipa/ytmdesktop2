@@ -63,6 +63,7 @@ const appServiceRouter = router({
 				.optional(),
 		)
 		.mutation((): any => undefined),
+	onToast: publicProcedure.subscription((): any => undefined),
 });
 
 const apiRouter = router({
@@ -100,12 +101,22 @@ const updateRouter = router({
 });
 
 const navigationRouter = router({
-	home: publicProcedure.mutation((): any => undefined),
+	home: publicProcedure.mutation((): any => ({ ok: true })),
 	goback: publicProcedure.mutation((): any => undefined),
 	devTools: publicProcedure.mutation((): any => undefined),
+	open: publicProcedure.input(z.object({ url: z.string() })).mutation((): any => ({ ok: true, link: null })),
+	watch: publicProcedure.input(z.object({ videoId: z.string(), playlistId: z.string().optional() })).mutation((): any => ({ ok: true })),
+	playlist: publicProcedure.input(z.object({ playlistId: z.string(), play: z.boolean().optional() })).mutation((): any => ({ ok: true })),
+	channel: publicProcedure
+		.input(z.object({ channelId: z.string().optional(), handle: z.string().optional() }))
+		.mutation((): any => ({ ok: true })),
+	queue: publicProcedure
+		.input(z.object({ videoId: z.string().optional(), playlistId: z.string().optional() }))
+		.mutation((): any => ({ ok: true })),
+	queueList: publicProcedure.query((): any => ({ items: [], count: 0 })),
+	queueClear: publicProcedure.mutation((): any => ({ ok: true })),
 	onSameOrigin: publicProcedure.subscription(() => emptySub<boolean>()),
 });
-
 const trayRouter = router({});
 
 const trayViewRouter = router({
@@ -135,7 +146,7 @@ const windowRouter = router({
 	mainState: publicProcedure.query((): any => null),
 	stayOnTop: publicProcedure.mutation((): any => false),
 	isStayOnTop: publicProcedure.query((): any => false),
-	dialogResponse: publicProcedure.input(z.enum(["close", "ok", "play", "queue"])).mutation((): any => false),
+	dialogResponse: publicProcedure.input(z.enum(["close", "ok", "play", "queue", "open"])).mutation((): any => false),
 	onState: publicProcedure.subscription(() => emptySub<any>()),
 	onMainState: publicProcedure.subscription(() => emptySub<any>()),
 });

@@ -32,13 +32,18 @@
 		"streamdeck:pack": "pnpm --filter ytmdesktop2-streamdeck run pack",
 		"docs:dev": "pnpm --filter ytmdesktop2-docs dev",
 		"docs:build": "pnpm --filter ytmdesktop2-docs build",
-		"docs:build:pages": "pnpm --filter ytmdesktop2-docs build:pages"
+		"docs:build:pages": "pnpm --filter ytmdesktop2-docs build:pages",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"license": "MIT",
 	"repository": "https://github.com/Venipa/ytmdesktop2",
-  "engines": {
-    "node": ">=24.14.0",
-    "pnpm": ">=11.0.0"
-  },
-  "packageManager": "pnpm@11.15.1"
+	"engines": {
+		"node": ">=24.14.0",
+		"pnpm": ">=11.0.0"
+	},
+	"packageManager": "pnpm@11.15.1",
+	"devDependencies": {
+		"vitest": "^4.1.10"
+	}
 }

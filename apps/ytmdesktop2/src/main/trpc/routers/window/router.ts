@@ -19,7 +19,7 @@ export const windowRouter = router({
 		if (!window || window.isDestroyed?.()) return false;
 		return !!window.isAlwaysOnTop?.();
 	}),
-	dialogResponse: publicProcedure.input(z.enum(["close", "ok", "play", "queue"])).mutation(({ ctx, input }): boolean => {
+	dialogResponse: publicProcedure.input(z.enum(["close", "ok", "play", "queue", "open"])).mutation(({ ctx, input }): boolean => {
 		const sender = ctx.event.sender as { id?: number };
 		if (typeof sender?.id !== "number") return false;
 		return resolveWindowDialogResponse(sender.id, input);

@@ -20,6 +20,7 @@ export const createApiWorker = async (api: ApiProvider, parent?: BrowserWindow):
 	let handle: ApiServerHandle | null = null;
 
 	const trackCaller = () => createMainCaller().track;
+	const navCaller = () => createMainCaller().navigation;
 	const apiMap: Record<string, (...args: any[]) => Promise<unknown> | unknown> = {
 		"api/routes": () => api.getRoutes(),
 		[API_ROUTES.TRACK_CONTROL_NEXT]: () => trackCaller().next(),
@@ -40,6 +41,18 @@ export const createApiWorker = async (api: ApiProvider, parent?: BrowserWindow):
 		[API_ROUTES.TRACK_CURRENT_STATE]: () => trackCaller().state(),
 		[API_ROUTES.TRACK_LIKE]: (like?: boolean) => trackCaller().like({ liked: !!like }),
 		[API_ROUTES.TRACK_DISLIKE]: (dislike?: boolean) => trackCaller().dislike({ disliked: !!dislike }),
+		[API_ROUTES.NAV_WATCH]: (data?: { videoId: string; playlistId?: string }) =>
+			navCaller().watch(data as { videoId: string; playlistId?: string }),
+		[API_ROUTES.NAV_PLAYLIST]: (data?: { playlistId: string; play?: boolean }) =>
+			navCaller().playlist(data as { playlistId: string; play?: boolean }),
+		[API_ROUTES.NAV_CHANNEL]: (data?: { channelId?: string; handle?: string }) =>
+			navCaller().channel(data as { channelId?: string; handle?: string }),
+		[API_ROUTES.NAV_QUEUE]: (data?: { videoId?: string; playlistId?: string }) =>
+			navCaller().queue(data as { videoId?: string; playlistId?: string }),
+		[API_ROUTES.NAV_QUEUE_LIST]: () => navCaller().queueList(),
+		[API_ROUTES.NAV_QUEUE_CLEAR]: () => navCaller().queueClear(),
+		[API_ROUTES.NAV_OPEN]: (data?: { url: string }) => navCaller().open(data as { url: string }),
+		[API_ROUTES.NAV_HOME]: () => navCaller().home(),
 		[API_ROUTES.AUTH_REQUEST_CODE]: (data?: { appId: string; appName: string; appVersion: string }) =>
 			appAuth.requestCode(data as { appId: string; appName: string; appVersion: string }),
 		[API_ROUTES.AUTH_REQUEST]: (data?: { appId: string; code: string }) => appAuth.requestToken(data as { appId: string; code: string }),

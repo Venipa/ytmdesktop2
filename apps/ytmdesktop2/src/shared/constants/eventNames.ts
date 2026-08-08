@@ -18,6 +18,14 @@ export const API_ROUTES = {
 	TRACK_CONTROL_VOLUME_UP: "api/track/volume-up",
 	TRACK_CONTROL_VOLUME_DOWN: "api/track/volume-down",
 	TRACK_SOCKET: "api/socket",
+	NAV_WATCH: "api/nav/watch",
+	NAV_PLAYLIST: "api/nav/playlist",
+	NAV_CHANNEL: "api/nav/channel",
+	NAV_QUEUE: "api/nav/queue",
+	NAV_QUEUE_LIST: "api/nav/queue/list",
+	NAV_QUEUE_CLEAR: "api/nav/queue/clear",
+	NAV_OPEN: "api/nav/open",
+	NAV_HOME: "api/nav/home",
 	AUTH_REQUEST_CODE: "api/auth/requestcode",
 	AUTH_REQUEST: "api/auth/request",
 } as const;
@@ -42,6 +50,7 @@ const IPC_EVENT_NAMES = {
 	LAST_FM_PROFILE: "lastfm.profile",
 	LAST_FM_TOGGLE: "lastfm.toggle",
 	LAST_FM_SUBMIT_STATE: "lastfm.stateObserver",
+	APP_TOAST: "app.toast",
 	...API_ROUTES,
 } as const;
 export default IPC_EVENT_NAMES;
