@@ -40,8 +40,8 @@ export const discordEmbedFromTrack = (track: TrackData, playing: boolean = true,
 		state: author,
 		state_url: authorUrl,
 		timestamps: {
-			start: playing ? startDate.getTime() : undefined,
-			end: playing ? endDate.getTime() : undefined,
+			start: playing && startDate ? startDate.getTime() : undefined,
+			end: playing && endDate ? endDate.getTime() : undefined,
 		},
 		assets: {
 			large_image: track.video.thumbnail.thumbnails.find((x) => YoutubeMatcher.Thumbnail.test(x.url))?.url ?? "logo",

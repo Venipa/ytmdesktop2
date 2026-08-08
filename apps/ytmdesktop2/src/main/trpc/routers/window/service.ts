@@ -55,7 +55,7 @@ export default class WindowUtilsProvider extends BaseProvider implements AfterIn
 
 	private _toolbarMouseEvent(event: IpcMainEvent, ignore: boolean, options: IgnoreMouseEventsOptions) {
 		const win = BrowserWindow.fromWebContents(event.sender);
-		win.setIgnoreMouseEvents(ignore, options);
+		win?.setIgnoreMouseEvents(ignore, options);
 	}
 	async _getMainWindowState(_ev: IpcMainInvokeEvent) {
 		return this.getMainWindowState();

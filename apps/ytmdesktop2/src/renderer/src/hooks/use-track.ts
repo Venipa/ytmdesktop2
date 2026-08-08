@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 
 export type TrackState = NonNullable<inferRouterOutputs<AppRouter>["track"]["state"]>;
+export type CurrentTrack = inferRouterOutputs<AppRouter>["track"]["current"];
 
 export type TrackProgress = {
 	playing: boolean;
@@ -14,7 +15,7 @@ export type TrackProgress = {
 	eventType: TrackState["eventType"] | null;
 };
 
-function sameTrack(a: TrackData | null, b: TrackData | null): boolean {
+function sameTrack(a: CurrentTrack, b: CurrentTrack): boolean {
 	if (a === b) return true;
 	if (!a || !b) return false;
 	return a.video.videoId === b.video.videoId && a.video.title === b.video.title && a.music?.album === b.music?.album;
@@ -44,14 +45,14 @@ export function useTrack() {
 
 	trpc.track.onTrack.useSubscription(undefined, {
 		onData: (next) => {
-			const value = (next as TrackData | null) ?? null;
-			const prev = (utils.track.current.getData() as TrackData | null) ?? null;
+			const value = (next as CurrentTrack) ?? null;
+			const prev = utils.track.current.getData() ?? null;
 			if (sameTrack(prev, value)) return;
 			utils.track.current.setData(undefined, value);
 		},
 	});
 
-	return (data as TrackData | null) ?? null;
+	return data ?? null;
 }
 
 /**

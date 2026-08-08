@@ -1,33 +1,11 @@
 import { debounce } from "lodash-es";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "@main/trpc/router";
 import { trpc } from "@/lib/trpc";
 
-export type WindowState = {
-	height: number;
-	width: number;
-	x: number;
-	y: number;
-	id: number;
-	maximized: boolean;
-	minimized: boolean;
-	closable: boolean;
-	maximizable: boolean;
-	minimizable: boolean;
-	movable: boolean;
-	resizable: boolean;
-	menuBarVisible: boolean;
-	fullScreen: boolean;
-	fullScreenable: boolean;
-	platform: {
-		isWindows: boolean;
-		isMacOS: boolean;
-		isLinux: boolean;
-	};
-	simpleFullscreen: boolean;
-	autoHideMenuBar: boolean;
-	title: string;
-	navigation: { canGoBack: boolean; index: number };
-};
+export type WindowState = NonNullable<inferRouterOutputs<AppRouter>["window"]["state"]>;
+export type MainWindowState = NonNullable<inferRouterOutputs<AppRouter>["window"]["mainState"]>;
 
 export type UseSettingsStateOptions<T> = {
 	debounce?: number;
@@ -132,10 +110,10 @@ export function useWindowState() {
 	const { data } = trpc.window.state.useQuery();
 	trpc.window.onState.useSubscription(undefined, {
 		onData: (next) => {
-			if (next) utils.window.state.setData(undefined, next);
+			if (next) utils.window.state.setData(undefined, next as WindowState);
 		},
 	});
-	const state = (data as WindowState | undefined) ?? ({} as WindowState);
+	const state = data ?? ({} as WindowState);
 	return [state] as const;
 }
 
@@ -144,9 +122,9 @@ export function useMainWindowState() {
 	const { data } = trpc.window.mainState.useQuery();
 	trpc.window.onMainState.useSubscription(undefined, {
 		onData: (next) => {
-			if (next) utils.window.mainState.setData(undefined, next);
+			if (next) utils.window.mainState.setData(undefined, next as MainWindowState);
 		},
 	});
-	const state = (data as WindowState | undefined) ?? ({} as WindowState);
+	const state = data ?? ({} as MainWindowState);
 	return [state] as const;
 }

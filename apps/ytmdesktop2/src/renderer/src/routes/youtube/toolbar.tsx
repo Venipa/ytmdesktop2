@@ -24,7 +24,10 @@ function YoutubeToolbarPage() {
 	const { goback } = useNavigation();
 
 	const title = useMemo(() => track?.video?.title ?? null, [track]);
-  const canGoBack = useMemo(() => state?.navigation?.canGoBack ?? false, [state?.navigation]);
+	const canGoBack = useMemo(() => {
+		const nav = state?.navigation;
+		return typeof nav === "object" && nav ? nav.canGoBack : false;
+	}, [state?.navigation]);
 
 	return (
 		<div className="h-full overflow-hidden">

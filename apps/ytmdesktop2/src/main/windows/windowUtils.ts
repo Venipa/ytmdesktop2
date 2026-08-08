@@ -440,7 +440,7 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 	// Electron getBounds/setBounds use DIP already — do not divide by display.scaleFactor
 	// (that shrunk windows on Windows 125%/150% HiDPI).
 	log.debug("restoreWindowState", state, {
-		displayScaleFactor: platform.isWindows ? screen.getDisplayNearestPoint({ x: state.x, y: state.y }).scaleFactor : 1,
+		displayScaleFactor: platform.isWindows && state ? screen.getDisplayNearestPoint({ x: state.x, y: state.y }).scaleFactor : 1,
 	});
 	win.on("close", saveState);
 	return { state, saveState };

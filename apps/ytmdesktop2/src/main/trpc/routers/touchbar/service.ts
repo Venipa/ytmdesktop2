@@ -39,6 +39,8 @@ const emoteColorsOff = {
 	shuffle: null,
 	volume: null,
 };
+/** Electron typings say `string`; runtime clears with null/undefined. */
+const touchBarBg = (color: string | null | undefined): string => (color ?? undefined) as string;
 export default class TouchbarProvider extends BaseProvider implements AfterInit {
 	constructor() {
 		super("touchbar");
@@ -71,23 +73,23 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 			});
 			const likeButton = new TouchBar.TouchBarButton({
 				label: emotes.like,
-				backgroundColor: trackState?.liked ? emoteColors.like : emoteColorsOff.like,
+				backgroundColor: touchBarBg(trackState?.liked ? emoteColors.like : emoteColorsOff.like),
 				click: () => {
 					track()
 						.like({ liked: true })
 						.then((liked) => {
-							likeButton.backgroundColor = liked ? "#202020" : null;
+							likeButton.backgroundColor = touchBarBg(liked ? "#202020" : null);
 						});
 				},
 			});
 			const dislikeButton = new TouchBar.TouchBarButton({
 				label: emotes.dislike,
-				backgroundColor: trackState?.disliked ? emoteColors.dislike : emoteColorsOff.dislike,
+				backgroundColor: touchBarBg(trackState?.disliked ? emoteColors.dislike : emoteColorsOff.dislike),
 				click: () => {
 					track()
 						.dislike({ disliked: true })
 						.then((disliked) => {
-							dislikeButton.backgroundColor = disliked ? "#202020" : null;
+							dislikeButton.backgroundColor = touchBarBg(disliked ? "#202020" : null);
 						});
 				},
 			});
@@ -99,7 +101,7 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 						.then((repeat) => {
 							const on = !!repeat;
 							repeatButton.label = on ? emotes.repeatOn : emotes.repeatOff;
-							repeatButton.backgroundColor = on ? emoteColors.repeat : emoteColorsOff.repeat;
+							repeatButton.backgroundColor = touchBarBg(on ? emoteColors.repeat : emoteColorsOff.repeat);
 						});
 				},
 			});
@@ -111,7 +113,7 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 						.then((shuffle) => {
 							const on = !!shuffle;
 							shuffleButton.label = on ? emotes.shuffleOn : emotes.shuffleOff;
-							shuffleButton.backgroundColor = on ? emoteColors.shuffle : emoteColorsOff.shuffle;
+							shuffleButton.backgroundColor = touchBarBg(on ? emoteColors.shuffle : emoteColorsOff.shuffle);
 						});
 				},
 			});
@@ -128,13 +130,13 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 					track()
 						.like({ liked: true })
 						.then((liked) => {
-							likeButton.backgroundColor = liked ? emoteColors.like : emoteColorsOff.like;
+							likeButton.backgroundColor = touchBarBg(liked ? emoteColors.like : emoteColorsOff.like);
 						}),
 				() =>
 					track()
 						.dislike({ disliked: true })
 						.then((disliked) => {
-							dislikeButton.backgroundColor = disliked ? emoteColors.dislike : emoteColorsOff.dislike;
+							dislikeButton.backgroundColor = touchBarBg(disliked ? emoteColors.dislike : emoteColorsOff.dislike);
 						}),
 			];
 			const buttons = new TouchBar.TouchBarSegmentedControl({
@@ -196,8 +198,8 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 			this.logger.debug("Setting touchbar", !!touchBar);
 			trackService.onTrackStateChange(
 				(state) => {
-					likeButton.backgroundColor = state.liked ? emoteColors.like : emoteColorsOff.like;
-					dislikeButton.backgroundColor = state.disliked ? emoteColors.dislike : emoteColorsOff.dislike;
+					likeButton.backgroundColor = touchBarBg(state.liked ? emoteColors.like : emoteColorsOff.like);
+					dislikeButton.backgroundColor = touchBarBg(state.disliked ? emoteColors.dislike : emoteColorsOff.dislike);
 					pausePlayButton.label = state.playing ? emotes.pause : emotes.play;
 					this.windowContext.main.setTouchBar(touchBar);
 				},
@@ -216,8 +218,8 @@ export default class TouchbarProvider extends BaseProvider implements AfterInit 
 					height: 23,
 				});
 				const { liked, disliked } = (await track().state()) ?? {};
-				likeButton.backgroundColor = liked ? emoteColors.like : emoteColorsOff.like;
-				dislikeButton.backgroundColor = disliked ? emoteColors.dislike : emoteColorsOff.dislike;
+				likeButton.backgroundColor = touchBarBg(liked ? emoteColors.like : emoteColorsOff.like);
+				dislikeButton.backgroundColor = touchBarBg(disliked ? emoteColors.dislike : emoteColorsOff.dislike);
 				this.windowContext.main.setTouchBar(touchBar);
 			});
 			this.windowContext.main.setTouchBar(touchBar);
