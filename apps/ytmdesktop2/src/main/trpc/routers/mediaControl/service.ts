@@ -95,6 +95,21 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 		}
 	}
 
+	/**
+	 * Apply a batch of MediaPlayer mutations, then flush once.
+	 * Linux MPRIS only publishes PropertiesChanged on `update()` — setters only queue.
+	 * Keep this path on Windows/macOS too (noop-safe there).
+	 */
+	private syncOsMediaPlayer(apply: (player: MediaServiceProvider) => void): void {
+		if (!this._mediaProvider) return;
+		try {
+			apply(this._mediaProvider);
+			this._mediaProvider.update();
+		} catch (error) {
+			this.logger.error("Error syncing OS media player:", error);
+		}
+	}
+
 	async AfterInit() {
 		try {
 			this._mediaProvider = new MediaServiceProvider(this.app.name, this.app.name);
@@ -102,18 +117,21 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 				throw new Error("Failed to create media provider");
 			}
 
-			// macOS NowPlaying Toggle requires can_play || can_pause — defaults are false.
-			this._mediaProvider.playButtonEnabled = true;
-			this._mediaProvider.pauseButtonEnabled = true;
-			this._mediaProvider.seekEnabled = true;
-			this._mediaProvider.previousButtonEnabled = true;
-			this._mediaProvider.nextButtonEnabled = true;
-
 			this._mediaProvider.addEventListener("buttonpressed", this.onKeyPressedBound);
 			this._mediaProvider.addEventListener("positionchanged", this.onPosChangeBound);
 			this._mediaProvider.addEventListener("positionseeked", this.onPosSeekBound);
 
-			await this._mediaProvider.activate();
+			this._mediaProvider.activate();
+
+			// Buttons must be enabled + flushed before playerctl play/pause works.
+			// macOS NowPlaying Toggle also needs can_play || can_pause (defaults false).
+			this.syncOsMediaPlayer((player) => {
+				player.playButtonEnabled = true;
+				player.pauseButtonEnabled = true;
+				player.seekEnabled = true;
+				player.previousButtonEnabled = true;
+				player.nextButtonEnabled = true;
+			});
 
 			if (!this.mediaProviderEnabled()) {
 				this.xosmsLog.warn("XOSMS is disabled", ":: Status:", `Provider: ${!!this._mediaProvider}, Enabled: ${this.mediaProviderEnabled()}`);
@@ -144,30 +162,28 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 	private applyTrackState(state: TrackState) {
 		if (!this.mediaProviderEnabled()) return;
 
-		try {
+		this.syncOsMediaPlayer((player) => {
 			const trackData = trackService.trackData;
 			const isPlaying = !!state.playing;
 
 			if (!trackData || !state.id) {
-				this._mediaProvider!.playbackStatus = MediaPlayerPlaybackStatus.Stopped;
-				this._mediaProvider!.playButtonEnabled = true;
-				this._mediaProvider!.pauseButtonEnabled = false;
-			} else {
-				this._mediaProvider!.playbackStatus = isPlaying ? MediaPlayerPlaybackStatus.Playing : MediaPlayerPlaybackStatus.Paused;
-				this._mediaProvider!.playButtonEnabled = !isPlaying;
-				this._mediaProvider!.pauseButtonEnabled = isPlaying;
-
-				const duration = Number(state.duration || trackData.meta?.duration || 0);
-				const progress = Number(state.progress ?? state.uiProgress ?? 0);
-				if (duration > 0) {
-					// Completes xosms track transition so SetPosition scrub events are accepted
-					this._mediaProvider!.setTimeline(duration, clamp(progress, 0, duration));
-				}
+				player.playbackStatus = MediaPlayerPlaybackStatus.Stopped;
+				player.playButtonEnabled = true;
+				player.pauseButtonEnabled = false;
+				return;
 			}
-			this._mediaProvider!.update();
-		} catch (error) {
-			this.logger.error("Error applying track state to OS media controls:", error);
-		}
+
+			player.playbackStatus = isPlaying ? MediaPlayerPlaybackStatus.Playing : MediaPlayerPlaybackStatus.Paused;
+			player.playButtonEnabled = !isPlaying;
+			player.pauseButtonEnabled = isPlaying;
+
+			const duration = Number(state.duration || trackData.meta?.duration || 0);
+			const progress = Number(state.progress ?? state.uiProgress ?? 0);
+			if (duration > 0) {
+				// Completes xosms track transition so SetPosition scrub events are accepted
+				player.setTimeline(duration, clamp(progress, 0, duration));
+			}
+		});
 	}
 
 	private mediaProviderEnabled() {
@@ -184,28 +200,35 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 			const duration = Number(trackData.meta?.duration || 0);
 			const progress = Number(trackService.trackState?.progress ?? 0);
 
-			this._mediaProvider!.mediaType = MediaPlayerMediaType.Music;
-			this._mediaProvider!.playbackStatus = playing ? MediaPlayerPlaybackStatus.Playing : MediaPlayerPlaybackStatus.Paused;
-			this._mediaProvider!.artist = trackData.video.author ?? "";
-			this._mediaProvider!.albumTitle = albumTitle;
-			this._mediaProvider!.playButtonEnabled = !playing;
-			this._mediaProvider!.pauseButtonEnabled = playing;
+			// Resolve thumbnail before the sync batch so one update() covers metadata + art + timeline.
+			const thumbnail = albumThumbnail
+				? await MediaPlayerThumbnail.create(MediaPlayerThumbnailType.Uri, albumThumbnail)
+				: null;
 
-			if (albumThumbnail) {
-				this._mediaProvider!.setThumbnail(await MediaPlayerThumbnail.create(MediaPlayerThumbnailType.Uri, albumThumbnail));
-			}
+			if (!this.mediaProviderEnabled()) return;
 
-			this._mediaProvider!.title = trackData.video.title;
-			this._mediaProvider!.trackId = trackData.video.videoId;
-			this._mediaProvider!.previousButtonEnabled = true;
-			this._mediaProvider!.nextButtonEnabled = true;
-			this._mediaProvider!.seekEnabled = true;
-			this._mediaProvider!.update();
+			this.syncOsMediaPlayer((player) => {
+				player.mediaType = MediaPlayerMediaType.Music;
+				player.playbackStatus = playing ? MediaPlayerPlaybackStatus.Playing : MediaPlayerPlaybackStatus.Paused;
+				player.artist = trackData.video.author ?? "";
+				player.albumTitle = albumTitle;
+				player.playButtonEnabled = !playing;
+				player.pauseButtonEnabled = playing;
+				player.title = trackData.video.title;
+				player.trackId = trackData.video.videoId;
+				player.previousButtonEnabled = true;
+				player.nextButtonEnabled = true;
+				player.seekEnabled = true;
 
-			// trackId bumps revision + zeros duration; setTimeline unlocks scrub acceptance
-			if (duration > 0) {
-				this._mediaProvider!.setTimeline(duration, clamp(progress, 0, duration));
-			}
+				if (thumbnail) {
+					player.setThumbnail(thumbnail);
+				}
+
+				// trackId bumps revision + zeros duration; setTimeline must land in same flush
+				if (duration > 0) {
+					player.setTimeline(duration, clamp(progress, 0, duration));
+				}
+			});
 
 			this.logger.debug(this._mediaProvider!.title, this._mediaProvider!.mediaType === 1 ? "music" : "other", this._mediaProvider!.trackId);
 		} catch (error) {
