@@ -21,6 +21,7 @@ export default definePlugin(
 		exec({ api, log }) {
 			let lastKey = "";
 			let watchVideoId: string | null = null;
+			let baseline = "";
 			let pollTimer: ReturnType<typeof setTimeout> | null = null;
 			let attrObserver: MutationObserver | null = null;
 			let observedEl: HTMLElement | null = null;
@@ -47,10 +48,18 @@ export default definePlugin(
 				return true;
 			};
 
+			/** Only trust status after attr leaves hop baseline (avoids stale LIKE flash). */
+			const statusReady = (): boolean => {
+				const raw = readRawLikeStatus();
+				if (raw === "") return false;
+				return raw !== baseline;
+			};
+
 			const onAttrChange = () => {
 				const videoId = readPlayerVideoId() ?? watchVideoId;
-				if (!videoId) return;
-				emitSettled(videoId);
+				if (!videoId || videoId !== watchVideoId) return;
+				if (!statusReady()) return;
+				if (emitSettled(videoId)) clearPoll();
 			};
 
 			const bindAttrObserver = (): boolean => {
@@ -68,7 +77,7 @@ export default definePlugin(
 				clearPoll();
 				watchVideoId = videoId;
 				const startedAt = Date.now();
-				const baseline = readRawLikeStatus();
+				baseline = readRawLikeStatus();
 				bindAttrObserver();
 
 				const tick = () => {
@@ -79,13 +88,18 @@ export default definePlugin(
 						clearPoll();
 						return;
 					}
-					const raw = readRawLikeStatus();
-					const mutated = raw !== "" && raw !== baseline;
-					if ((mutated || Date.now() - startedAt >= MAX_WAIT_MS) && emitSettled(videoId)) {
+
+					const ready = statusReady();
+					const timedOut = Date.now() - startedAt >= MAX_WAIT_MS;
+
+					// Prefer mutated status. Timeout + unchanged baseline = same status as previous
+					// track (e.g. LIKE→LIKE) — safe to emit; timeout + still baseline when we
+					// expected change is also "emit current" after wait.
+					if ((ready || timedOut) && emitSettled(videoId)) {
 						clearPoll();
 						return;
 					}
-					if (Date.now() - startedAt >= MAX_WAIT_MS) {
+					if (timedOut) {
 						clearPoll();
 						return;
 					}

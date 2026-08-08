@@ -298,6 +298,10 @@ function TrayViewPage() {
 	const [apiEnabled, setApiEnabled] = useSettingsState<boolean>("api.enabled", false);
 	const [linkCopied, setLinkCopied] = useState(false);
 	const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const [contentHovered, setContentHovered] = useState(false);
+	const [chromeTooltipOpen, setChromeTooltipOpen] = useState(false);
+	/** Portaled tooltips leave the tray DOM — keep chrome up while a chrome tooltip is open. */
+	const chromeVisible = contentHovered || chromeTooltipOpen;
 
 	const { mutateAsync: next } = trpc.track.next.useMutation();
 	const { mutateAsync: prev } = trpc.track.prev.useMutation();
@@ -494,57 +498,70 @@ function TrayViewPage() {
 	}
 
 	return (
-		<div className="absolute inset-0 flex overflow-hidden border border-border bg-background text-foreground shadow-sm">
+		<div
+			className="absolute inset-0 flex overflow-hidden border border-border bg-background text-foreground shadow-sm"
+			onMouseEnter={() => setContentHovered(true)}
+			onMouseLeave={() => setContentHovered(false)}
+		>
 			<TrayBleedArt src={artSrc} accent={displayAccent} />
 			<TrayAccentPill accent={displayAccent} />
 
 			<div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
 				<div className="relative z-10 flex min-h-0 flex-1">
 					{/* Player column */}
-					<div className="flex min-w-0 flex-1 flex-col px-3 pt-3 pb-2">
+					<div className="relative flex min-w-0 flex-1 flex-col px-3 pt-3 pb-2">
+						{/* Chrome: fade in while pointer over content (or chrome tooltip open) */}
+						<div
+							className={cn(
+								"absolute top-2 right-2 z-20 flex items-center gap-0.5 rounded-md bg-background/60 p-0.5 shadow-sm backdrop-blur-sm",
+								"transition-[opacity,transform] duration-200 ease-out",
+								chromeVisible
+									? "pointer-events-auto translate-y-0 opacity-100"
+									: "pointer-events-none -translate-y-0.5 opacity-0",
+							)}
+						>
+							<Tooltip onOpenChange={setChromeTooltipOpen}>
+								<TooltipTrigger
+									render={
+										<ChromeButton
+											aria-label={linkCopied ? "Copied" : "Copy ytmd link"}
+											disabled={!videoId}
+											onClick={() => void handleCopyYtmdLink()}
+										>
+											<CopyIcon />
+										</ChromeButton>
+									}
+								/>
+								<TooltipContent side="bottom">{linkCopied ? "Copied" : "Copy ytmd link"}</TooltipContent>
+							</Tooltip>
+							<Tooltip onOpenChange={setChromeTooltipOpen}>
+								<TooltipTrigger
+									render={
+										<ChromeButton aria-label="Back to app" onClick={() => void openMain()}>
+											<ArrowLeftIcon />
+										</ChromeButton>
+									}
+								/>
+								<TooltipContent side="bottom">Back to app</TooltipContent>
+							</Tooltip>
+							<Tooltip onOpenChange={setChromeTooltipOpen}>
+								<TooltipTrigger
+									render={
+										<ChromeButton aria-label="Settings" onClick={() => void handleSettings()}>
+											<SettingsIcon />
+										</ChromeButton>
+									}
+								/>
+								<TooltipContent side="bottom">Settings</TooltipContent>
+							</Tooltip>
+						</div>
+
 						<div className="flex items-start gap-2.5">
 							<TrayCoverArt src={artSrc} />
 
 							<div className="min-w-0 flex-1 pt-0.5">
 								<p className="truncate text-base leading-tight font-semibold">{title}</p>
 								{artist ? <p className="mt-0.5 truncate text-sm text-muted-foreground">{artist}</p> : null}
-							</div>
-
-							<div className="flex shrink-0 items-center gap-0.5">
-								<Tooltip>
-									<TooltipTrigger
-										render={
-											<ChromeButton
-												aria-label={linkCopied ? "Copied" : "Copy ytmd link"}
-												disabled={!videoId}
-												onClick={() => void handleCopyYtmdLink()}
-											>
-												<CopyIcon />
-											</ChromeButton>
-										}
-									/>
-									<TooltipContent side="bottom">{linkCopied ? "Copied" : "Copy ytmd link"}</TooltipContent>
-								</Tooltip>
-								<Tooltip>
-									<TooltipTrigger
-										render={
-											<ChromeButton aria-label="Back to app" onClick={() => void openMain()}>
-												<ArrowLeftIcon />
-											</ChromeButton>
-										}
-									/>
-									<TooltipContent side="bottom">Back to app</TooltipContent>
-								</Tooltip>
-								<Tooltip>
-									<TooltipTrigger
-										render={
-											<ChromeButton aria-label="Settings" onClick={() => void handleSettings()}>
-												<SettingsIcon />
-											</ChromeButton>
-										}
-									/>
-									<TooltipContent side="bottom">Settings</TooltipContent>
-								</Tooltip>
 							</div>
 						</div>
 

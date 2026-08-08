@@ -95,7 +95,8 @@ const stateEmitKey = (state: TrackState): string =>
 	].join("|");
 
 export class TrackService {
-	private _activeTrackId: string | null = null;
+	/** Heard title/id before TrackData + chrome (`_trackState.id`) catch up. */
+	private _pendingTrackId: string | null = null;
 	private _trackState: TrackState | null = null;
 	private _trackDataCache: TrackEntry | null = null;
 	private _currentPallete: { id: string; color: string } | null = null;
@@ -104,8 +105,6 @@ export class TrackService {
 	private lastTrackContentKey: string | null = null;
 	private lastStateEmitKey: string | null = null;
 	private pendingScrobble: { track: TrackData; videoId: string; maxProgress: number } | null = null;
-	/** Seed only — UI truth is `_trackState`. LRU, capped with trackCollection. */
-	private _likeByTrack = new Map<string, { liked: boolean; disliked: boolean }>();
 	private _ipcBound = false;
 	private _styleBound = false;
 
@@ -114,7 +113,6 @@ export class TrackService {
 	/** Last.fm: half duration or 4 minutes, whichever shorter; tracks <30s skipped. */
 	private static readonly SCROBBLE_MIN_DURATION_SEC = 30;
 	private static readonly SCROBBLE_MAX_WAIT_SEC = 240;
-	private static readonly LIKE_CACHE_MAX = 24;
 
 	private readonly logger = createLogger("services").child("track");
 
@@ -142,11 +140,17 @@ export class TrackService {
 		return !!this.trackState?.playing;
 	}
 
+	/** Lookup id: pending ahead of chrome, else state. */
+	private get lookupTrackId(): string | null {
+		return this._pendingTrackId ?? this._trackState?.id ?? null;
+	}
+
 	get trackData(): TrackEntry | null {
-		if (this._trackDataCache?.id === this._activeTrackId) {
+		const id = this.lookupTrackId;
+		if (this._trackDataCache?.id === id) {
 			return this._trackDataCache;
 		}
-		return (this._trackDataCache = this._activeTrackId ? (trackCollection.findById(this._activeTrackId) ?? null) : null);
+		return (this._trackDataCache = id ? (trackCollection.findById(id) ?? null) : null);
 	}
 
 	bindIpcListeners(): void {
@@ -191,50 +195,24 @@ export class TrackService {
 
 	async postTrackLike(_ev: unknown, like: boolean): Promise<boolean | null> {
 		// Emit intent immediately so tray view updates before YTM DOM settles.
-		this.setTrackState((state) => {
-			state.liked = like;
-			if (like) state.disliked = false;
-		});
+		this.patchTrackState(like ? { liked: true, disliked: false } : { liked: false });
 		const liked = await this.executeCommand<boolean>("like", like);
 		const resolved = typeof liked === "boolean" ? liked : like;
-		this.setTrackState((state) => {
-			if (state.liked === resolved && (!resolved || !state.disliked)) return;
-			state.liked = resolved;
-			if (resolved) state.disliked = false;
-			if (state.id) this.rememberLike(state.id, state.liked, state.disliked);
-		});
+		this.patchTrackState(resolved ? { liked: true, disliked: false } : { liked: false });
 		// Renderer like-watcher emits settled DOM state; cmd is backup if observer lags.
 		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
-			this.setTrackState((state) => {
-				if (state.liked === isLiked && state.disliked === isDLiked) return;
-				state.liked = isLiked;
-				state.disliked = isDLiked;
-				if (state.id) this.rememberLike(state.id, isLiked, isDLiked);
-			});
+			this.patchTrackState({ liked: isLiked, disliked: isDLiked });
 		});
 		return resolved;
 	}
 
 	async postTrackDisLike(_ev: unknown, dislike: boolean): Promise<boolean | null> {
-		this.setTrackState((state) => {
-			state.disliked = dislike;
-			if (dislike) state.liked = false;
-		});
+		this.patchTrackState(dislike ? { disliked: true, liked: false } : { disliked: false });
 		const disliked = await this.executeCommand<boolean>("dislike", dislike);
 		const resolved = typeof disliked === "boolean" ? disliked : dislike;
-		this.setTrackState((state) => {
-			if (state.disliked === resolved && (!resolved || !state.liked)) return;
-			state.disliked = resolved;
-			if (resolved) state.liked = false;
-			if (state.id) this.rememberLike(state.id, state.liked, state.disliked);
-		});
+		this.patchTrackState(resolved ? { disliked: true, liked: false } : { disliked: false });
 		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
-			this.setTrackState((state) => {
-				if (state.liked === isLiked && state.disliked === isDLiked) return;
-				state.liked = isLiked;
-				state.disliked = isDLiked;
-				if (state.id) this.rememberLike(state.id, isLiked, isDLiked);
-			});
+			this.patchTrackState({ liked: isLiked, disliked: isDLiked });
 		});
 		return resolved;
 	}
@@ -310,10 +288,10 @@ export class TrackService {
 		});
 	}
 
-	setTrackState(fn: TrackState | ((d: TrackState) => void | TrackState)) {
+	private ensureTrackState(): TrackState {
 		if (!this._trackState) {
 			this._trackState = {
-				id: this._activeTrackId ?? "",
+				id: "",
 				playing: false,
 				progress: 0,
 				duration: 0,
@@ -325,26 +303,79 @@ export class TrackService {
 				accent: null,
 			};
 		}
+		return this._trackState;
+	}
+
+	private commitTrackState(prevId: string): void {
 		const state = this._trackState;
-		const prevId = state.id;
-		const isFunc = typeof fn === "function";
-		const ret = isFunc ? fn(state) : fn;
-		const isVoid = ret === void 0 || ret === undefined;
-
-		if (!isVoid) {
-			this._trackState = ret as TrackState;
-		}
-		if (typeof this._trackState.percentage === "number") this._trackState.percentage = clamp(this._trackState.percentage, 0, 100);
-		if (prevId !== this._trackState.id) {
-			this.logger.debug("title id change", prevId, "=>", this._trackState.id);
+		if (!state) return;
+		if (typeof state.percentage === "number") state.percentage = clamp(state.percentage, 0, 100);
+		if (prevId !== state.id) {
+			this.logger.debug("title id change", prevId, "=>", state.id);
 			(this.getProvider("discord") as { updateTrackProgress?: (a: boolean, b: number, c: boolean) => void })?.updateTrackProgress?.(true, 0, true);
+			if (this._pendingTrackId && this._pendingTrackId === state.id) {
+				this._pendingTrackId = null;
+			}
 		}
-
-		const key = stateEmitKey(this._trackState);
+		const key = stateEmitKey(state);
 		if (key === this.lastStateEmitKey) return;
 		this.lastStateEmitKey = key;
 		// Shallow clone — in-place mutation keeps same ref; React setState skips via Object.is.
-		events.emit("track:state-change", { ...this._trackState });
+		events.emit("track:state-change", { ...state });
+	}
+
+	/**
+	 * Merge into play-chrome store.
+	 * New `id` → reset progress/accent/likes (unless patch supplies likes); preserve `playing` unless patched.
+	 * Same `id` → shallow merge; omitted fields stay.
+	 */
+	patchTrackState(patch: Partial<TrackState>): void {
+		const state = this.ensureTrackState();
+		const prevId = state.id;
+		const nextId = patch.id !== undefined ? String(patch.id) : state.id;
+		const idChanged = nextId !== state.id;
+
+		if (idChanged) {
+			state.id = nextId;
+			state.progress = patch.progress ?? 0;
+			state.uiProgress = patch.uiProgress ?? 0;
+			state.percentage = patch.percentage ?? 0;
+			state.startedAt = patch.startedAt ?? Date.now() / 1000;
+			state.accent = patch.accent !== undefined ? patch.accent : null;
+			state.liked = patch.liked ?? false;
+			state.disliked = patch.disliked ?? false;
+			if (patch.duration !== undefined) state.duration = patch.duration;
+			if (patch.eventType !== undefined) state.eventType = patch.eventType;
+			if (patch.playing !== undefined) state.playing = patch.playing;
+		} else {
+			if (patch.playing !== undefined) state.playing = patch.playing;
+			if (patch.progress !== undefined) state.progress = patch.progress;
+			if (patch.uiProgress !== undefined) state.uiProgress = patch.uiProgress;
+			if (patch.duration !== undefined) state.duration = patch.duration;
+			if (patch.liked !== undefined) state.liked = patch.liked;
+			if (patch.disliked !== undefined) state.disliked = patch.disliked;
+			if (patch.startedAt !== undefined) state.startedAt = patch.startedAt;
+			if (patch.percentage !== undefined) state.percentage = patch.percentage;
+			if (patch.eventType !== undefined) state.eventType = patch.eventType;
+			if (patch.accent !== undefined) state.accent = patch.accent;
+		}
+
+		this.commitTrackState(prevId);
+	}
+
+	/** In-place mutator for play/progress/accent. Object form → `patchTrackState`. */
+	setTrackState(fn: TrackState | ((d: TrackState) => void | TrackState)) {
+		if (typeof fn !== "function") {
+			this.patchTrackState(fn);
+			return;
+		}
+		const state = this.ensureTrackState();
+		const prevId = state.id;
+		const ret = fn(state);
+		if (ret !== undefined) {
+			this._trackState = ret as TrackState;
+		}
+		this.commitTrackState(prevId);
 	}
 
 	async getActiveTrackByDOM(): Promise<string | null> {
@@ -370,48 +401,12 @@ export class TrackService {
 	onLikeState(_ev: unknown, data: { videoId?: string; liked?: boolean; disliked?: boolean }) {
 		const videoId = data?.videoId ? String(data.videoId) : "";
 		if (!videoId) return;
-		if (this._activeTrackId && this._activeTrackId !== videoId) return;
-		const liked = !!data.liked;
-		const disliked = !!data.disliked;
-		this.rememberLike(videoId, liked, disliked);
-		this.setTrackState((state) => {
-			if (state.id && state.id !== videoId) return;
-			if (!state.id) state.id = videoId;
-			if (state.liked === liked && state.disliked === disliked) return;
-			state.liked = liked;
-			state.disliked = disliked;
-		});
-	}
-
-	/** LRU seed for like/dislike — protects active id, max LIKE_CACHE_MAX. */
-	private rememberLike(videoId: string, liked: boolean, disliked: boolean): void {
-		if (this._likeByTrack.has(videoId)) this._likeByTrack.delete(videoId);
-		this._likeByTrack.set(videoId, { liked, disliked });
-		this.pruneLikeCache();
-	}
-
-	private pruneLikeCache(): void {
-		const protectId = this._activeTrackId;
-		while (this._likeByTrack.size > TrackService.LIKE_CACHE_MAX) {
-			const oldest = this._likeByTrack.keys().next().value as string | undefined;
-			if (!oldest) break;
-			if (protectId && oldest === protectId) {
-				const victim = [...this._likeByTrack.keys()].find((id) => id !== protectId);
-				if (!victim) break;
-				this._likeByTrack.delete(victim);
-				continue;
-			}
-			this._likeByTrack.delete(oldest);
-		}
-	}
-
-	private likeDefaults(videoId: string): { liked: boolean; disliked: boolean } {
-		const cached = this._likeByTrack.get(videoId);
-		if (!cached) return { liked: false, disliked: false };
-		// Touch LRU on read so active track stays warm
-		this._likeByTrack.delete(videoId);
-		this._likeByTrack.set(videoId, cached);
-		return cached;
+		const stateId = this._trackState?.id;
+		const pendingId = this._pendingTrackId;
+		if (videoId !== stateId && videoId !== pendingId) return;
+		// Likes only apply to chrome when state.id matches — never set state.id from like IPC.
+		if (!stateId || stateId !== videoId) return;
+		this.patchTrackState({ liked: !!data.liked, disliked: !!data.disliked });
 	}
 
 	getTrackDuration(): number | null {
@@ -438,36 +433,35 @@ export class TrackService {
 			music: musicObject,
 		} as TrackData;
 
-		trackCollection.addOrUpdate(videoId, track, this._activeTrackId);
+		trackCollection.addOrUpdate(videoId, track, this.lookupTrackId);
 		this._trackDataCache = null;
 
-		const knownActive = !this._activeTrackId || this._activeTrackId === videoId;
+		const knownActive =
+			(!this._pendingTrackId && !this._trackState?.id) ||
+			this._pendingTrackId === videoId ||
+			this._trackState?.id === videoId;
 		const isActive = knownActive || (await this.getActiveTrackByDOM()) === videoId;
 		if (!isActive) return;
 
 		const key = trackContentKey(track);
 		const contentChanged = key !== this.lastTrackContentKey;
 		const stateOutOfSync = !this._trackState || this._trackState.id !== videoId;
-		// Title-change often sets _activeTrackId before info arrives — still a new track for Last.fm
+		// Title-change often sets pending before info arrives — still a new track for Last.fm
 		const needsLastFm = videoId !== this.lastLastFmTrackId;
 
 		// Same payload already fanned out — skip (no tRPC / Last.fm spam)
 		if (!contentChanged && !stateOutOfSync && !needsLastFm) return;
 
-		this._activeTrackId = videoId;
+		this._pendingTrackId = videoId;
 		this.lastTrackContentKey = key;
 
-		// Always Last.fm when id not yet submitted — do NOT key off isTrackChange vs _activeTrackId
+		// Always Last.fm when id not yet submitted — do NOT key off isTrackChange vs pending
 		this.pushTrackToViews(track, needsLastFm);
 
 		if (stateOutOfSync) {
-			const like = this.likeDefaults(videoId);
-			this.setTrackState({
+			this.patchTrackState({
 				id: videoId,
-				playing: this.playing,
 				duration: Number(duration ?? 0),
-				liked: like.liked,
-				disliked: like.disliked,
 				progress: 0,
 				uiProgress: 0,
 				startedAt: Date.now() / 1000,
@@ -475,6 +469,9 @@ export class TrackService {
 				eventType: "state",
 				accent: null,
 			});
+			// likes come from track-like-watcher only — immediate like_state reads stale DOM
+		} else if (this._pendingTrackId === videoId) {
+			this._pendingTrackId = null;
 		}
 	}
 
@@ -487,10 +484,11 @@ export class TrackService {
 	}
 
 	private async onActiveTrack(trackId: string) {
-		if (this._activeTrackId === trackId && this._trackState?.id === trackId) return;
+		if (this._pendingTrackId === trackId && this._trackState?.id === trackId) return;
+		if (!this._pendingTrackId && this._trackState?.id === trackId) return;
 
 		this.log(`active track:`, trackId);
-		this._activeTrackId = trackId;
+		this._pendingTrackId = trackId;
 		this._trackDataCache = null;
 		const td = this.trackData;
 		// Wait for onTrackInfo when payload not ready — never clear pending id
@@ -501,17 +499,16 @@ export class TrackService {
 
 		const key = trackContentKey(td);
 		const needsLastFm = trackId !== this.lastLastFmTrackId;
-		if (key === this.lastTrackContentKey && !needsLastFm && this._trackState?.id === trackId) return;
+		if (key === this.lastTrackContentKey && !needsLastFm && this._trackState?.id === trackId) {
+			this._pendingTrackId = null;
+			return;
+		}
 		this.lastTrackContentKey = key;
 
 		this.pushTrackToViews(td, needsLastFm);
-		const like = this.likeDefaults(trackId);
-		this.setTrackState({
+		this.patchTrackState({
 			id: trackId,
-			playing: this.playing,
 			duration: this.getTrackDuration() ?? 0,
-			liked: like.liked,
-			disliked: like.disliked,
 			progress: 0,
 			uiProgress: 0,
 			startedAt: Date.now() / 1000,
@@ -519,6 +516,7 @@ export class TrackService {
 			eventType: "state",
 			accent: null,
 		});
+		// likes come from track-like-watcher only — immediate like_state reads stale DOM
 	}
 
 	/**
@@ -713,7 +711,7 @@ export class TrackService {
 
 	private maybeScrobbleFromProgress(progressSec: number, durationSec: number) {
 		if (!this.pendingScrobble) return;
-		if (this.pendingScrobble.videoId !== this._activeTrackId) return;
+		if (this.pendingScrobble.videoId !== this.lookupTrackId) return;
 		this.pendingScrobble.maxProgress = Math.max(this.pendingScrobble.maxProgress, progressSec);
 		if (!this.crossedScrobbleThreshold(progressSec, durationSec)) return;
 		this.tryScrobblePending("progress");
