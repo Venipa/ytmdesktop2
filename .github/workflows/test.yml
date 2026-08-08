@@ -1,0 +1,68 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v2
+        with:
+          runtime: node@24.14.0
+          cache: true
+          install: false
+
+      - name: Prepare pnpm / auth
+        shell: bash
+        run: |
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run vitest
+        run: pnpm test
+
+      - name: Upload JUnit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-junit
+          path: test-results/junit.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish test report
+        if: always()
+        uses: dorny/test-reporter@v3
+        with:
+          name: Vitest
+          path: test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
