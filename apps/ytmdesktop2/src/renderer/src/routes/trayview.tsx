@@ -1,9 +1,10 @@
 import { toAppThumbUrl } from "@shared/media/appThumbUrl";
+import { parseYtmdWatchUrlById } from "@shared/protocol/ytmdProtocol";
 import { createFileRoute } from "@tanstack/react-router";
 import { cva } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
 import { clamp } from "lodash-es";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, CopyIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ApiIcon from "@/assets/icons/chip.svg?react";
@@ -295,6 +296,8 @@ function TrayViewPage() {
 	const { enabled: lastFmEnabled, toggleLastFM, lastFM, lastFMLoading, isBusy: lastFmBusy } = useLastFm();
 	const { enabled: discordEnabled, toggle: toggleDiscord, loading: discordLoading, connected: discordConnected, error: discordError } = useDiscord();
 	const [apiEnabled, setApiEnabled] = useSettingsState<boolean>("api.enabled", false);
+	const [linkCopied, setLinkCopied] = useState(false);
+	const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const { mutateAsync: next } = trpc.track.next.useMutation();
 	const { mutateAsync: prev } = trpc.track.prev.useMutation();
@@ -311,11 +314,17 @@ function TrayViewPage() {
 		document.title = "YouTube Music - Tray";
 	}, []);
 
+	useEffect(() => {
+		return () => {
+			if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current);
+		};
+	}, []);
+
 	const thumbnail = toAppThumbUrl(track?.meta?.thumbnail);
 	const playing = !!playState?.playing;
 	const title = track?.video?.title ?? "Nothing playing";
 	const artist = track?.video?.author ?? "";
-	const hasLike = typeof playState?.liked === "boolean";
+	const videoId = track?.video?.videoId ?? null;	const hasLike = typeof playState?.liked === "boolean";
 	const hasDislike = typeof playState?.disliked === "boolean";
 	const liveAccent = trackAccent || playState?.accent || null;
 	const { src: artSrc, accent: displayAccent } = useAlignedArtDisplay(thumbnail, liveAccent);
@@ -401,6 +410,18 @@ function TrayViewPage() {
 	async function handleSettings() {
 		await hideTrayView();
 		await openSettings();
+	}
+
+	async function handleCopyYtmdLink() {
+		if (!videoId) return;
+		try {
+			await navigator.clipboard.writeText(parseYtmdWatchUrlById(videoId));
+			setLinkCopied(true);
+			if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current);
+			linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 1500);
+		} catch {
+			setLinkCopied(false);
+		}
 	}
 
 	const [seekHovering, setSeekHovering] = useState(false);
@@ -489,6 +510,20 @@ function TrayViewPage() {
 							</div>
 
 							<div className="flex shrink-0 items-center gap-0.5">
+								<Tooltip>
+									<TooltipTrigger
+										render={
+											<ChromeButton
+												aria-label={linkCopied ? "Copied" : "Copy ytmd link"}
+												disabled={!videoId}
+												onClick={() => void handleCopyYtmdLink()}
+											>
+												<CopyIcon />
+											</ChromeButton>
+										}
+									/>
+									<TooltipContent side="bottom">{linkCopied ? "Copied" : "Copy ytmd link"}</TooltipContent>
+								</Tooltip>
 								<Tooltip>
 									<TooltipTrigger
 										render={

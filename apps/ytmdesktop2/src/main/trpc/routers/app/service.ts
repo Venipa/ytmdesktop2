@@ -78,19 +78,15 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
     if (process.platform !== "darwin") {
       this.appLock = this._app.requestSingleInstanceLock();
       if (!this.appLock) {
-        this.app.exit();
-      } else {
-        this.app.on("second-instance", () => {
-          const wnd = this.windowContext.main;
-          if (!wnd) return;
-          if (wnd.isMinimized()) wnd.restore();
-          if (!wnd.isVisible()) {
-            wnd.show();
-            wnd.setSkipTaskbar(false);
-          }
-          wnd.focus();
-        });
+        this.logger.error(
+          "single-instance lock failed — another ytmdesktop2 process holds it (installed build or stale electron). exiting.",
+        );
+        this.app.exit(0);
+        return;
       }
+      this.app.on("second-instance", () => {
+        this.focusMainWindow();
+      });
     }
   }
 
@@ -129,6 +125,17 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
     if (TEST_RESTART_NEEDED_DIALOG) {
       void this.handleRestartNeeded(null);
     }
+  }
+
+  private focusMainWindow() {
+    const wnd = this.windowContext?.main;
+    if (!wnd || wnd.isDestroyed()) return;
+    if (wnd.isMinimized()) wnd.restore();
+    if (!wnd.isVisible()) {
+      wnd.show();
+      wnd.setSkipTaskbar(false);
+    }
+    wnd.focus();
   }
 
   private get isPlaying() {

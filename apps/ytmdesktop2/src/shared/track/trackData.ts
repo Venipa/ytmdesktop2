@@ -94,3 +94,5 @@ export interface TrackData {
 export const parseMusicUrlById = (id: string) => `https://music.youtube.com/watch?v=${id}&feature=share`;
 export const parseMusicChannelById = (id: string) => `https://music.youtube.com/channel/${id}?feature=share`;
 export const parseMusicAlbumById = (ident: string) => `https://music.youtube.com/browse/${encodeURIComponent(ident)}?feature=share`;
+
+export { parseYtmdWatchUrlById } from "@shared/protocol/ytmdProtocol";

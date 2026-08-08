@@ -25,6 +25,10 @@ asarUnpack:
   - "**/*icon*.icns"
   - "**/*.icns"
   - "**/assets/**"
+protocols:
+  - name: YouTube Music for Desktop
+    schemes:
+      - ytmd
 win:
   executableName: ytmdesktop
   artifactName: ${name}-${version}-setup.${ext}
@@ -87,6 +91,8 @@ linux:
   maintainer: youtube-music.app
   category: AudioVideo
   icon: build/icon.icns
+  mimeTypes:
+    - x-scheme-handler/ytmd
 # Override EB defaults (http-parser is AUR-only; breaks Arch/CachyOS installs).
 pacman:
   # Arch package names cannot contain spaces (extraMetadata.name is the product title).

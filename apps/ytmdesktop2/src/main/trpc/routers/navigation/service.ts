@@ -1,5 +1,6 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
 import { defaultUrl } from "@main/infra/devUtils";
+import { parseMusicUrlById } from "@shared/track/trackData";
 import { App } from "electron";
 
 export default class NavigationProvider extends BaseProvider implements AfterInit {
@@ -81,6 +82,13 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 	}
 	async goHome() {
 		await this.views.youtubeView.webContents.loadURL(defaultUrl);
+	}
+
+	/** Open a song in the YouTube Music view by video id. */
+	async openWatch(videoId: string) {
+		const view = this.views.youtubeView;
+		if (!view || view.webContents.isDestroyed()) return;
+		await view.webContents.loadURL(parseMusicUrlById(videoId));
 	}
 
 	toggleDevTools() {

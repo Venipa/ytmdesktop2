@@ -53,10 +53,13 @@ export function initializeCustomElectronEnvironment() {
 		process.exit(0);
 	}
 
+	// Isolate dev from installed build — same userData = shared SingleInstanceLock → silent app.exit().
 	if (!isProduction) {
+		const appData = app.getPath("appData");
+		app.setPath("userData", path.join(appData, "ytmdesktop2-dev"));
 		app.commandLine.appendSwitch("disable-web-security"); // disable cors (also disables other security features, allows webpack eval) - dev only
 		app.commandLine.appendSwitch("disable-site-isolation-trials");
-		console.log({ env: import.meta.env, isDev: is.dev });
+		console.log({ env: import.meta.env, isDev: is.dev, userData: app.getPath("userData") });
 	}
 	process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
 
