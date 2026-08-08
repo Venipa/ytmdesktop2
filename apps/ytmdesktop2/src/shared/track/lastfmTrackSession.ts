@@ -85,3 +85,14 @@ export function trackNeedsLastFmPush(args: {
 	}
 	return false;
 }
+
+/** Last.fm drops idle Now Playing — refresh after this pause on resume. */
+export const LASTFM_NP_REFRESH_AFTER_PAUSE_MS = 90_000;
+
+/** True when pause was long enough that Last.fm likely cleared Now Playing. */
+export function shouldRefreshLastFmNowPlaying(
+	pausedMs: number,
+	thresholdMs: number = LASTFM_NP_REFRESH_AFTER_PAUSE_MS,
+): boolean {
+	return Number.isFinite(pausedMs) && pausedMs >= thresholdMs;
+}

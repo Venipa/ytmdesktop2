@@ -5,6 +5,7 @@ import {
 	preferLastFmTrack,
 	relatedIdsIntersect,
 	relatedVideoIds,
+	shouldRefreshLastFmNowPlaying,
 	trackNeedsLastFmPush,
 } from "./lastfmTrackSession";
 
@@ -183,5 +184,11 @@ describe("lastfmTrackSession smoke — Song↔Video", () => {
 				cloneTrack,
 			}),
 		).toBe(true);
+	});
+
+	test("refresh NP after long pause threshold", () => {
+		expect(shouldRefreshLastFmNowPlaying(89_999)).toBe(false);
+		expect(shouldRefreshLastFmNowPlaying(90_000)).toBe(true);
+		expect(shouldRefreshLastFmNowPlaying(Number.NaN)).toBe(false);
 	});
 });

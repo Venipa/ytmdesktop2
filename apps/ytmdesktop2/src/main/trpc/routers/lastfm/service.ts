@@ -294,13 +294,14 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		return this.getState();
 	}
 
-	async handleTrackStart(track: TrackData) {
+	async handleTrackStart(track: TrackData, opts?: { force?: boolean }) {
 		if (!this.client?.isConnected()) {
 			this.logger.debug("lastfm.handleTrackStart", track.video.videoId, "not connected");
 			return;
 		}
 		const videoId = track.video.videoId;
-		if (this.lastNowPlayingId === videoId) {
+		// force: resume after long pause — Last.fm drops Now Playing while idle
+		if (!opts?.force && this.lastNowPlayingId === videoId) {
 			this.logger.debug("lastfm.handleTrackStart skip duplicate", videoId);
 			return;
 		}

@@ -7,8 +7,12 @@ import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import type { TrackData } from "@shared/track/trackData";
 import {
 	decideLastFmSession,
+	preferLastFmTrack,
 	relatedIdsIntersect,
+	relatedVideoIds,
+	shouldRefreshLastFmNowPlaying,
 	trackNeedsLastFmPush,
+	LASTFM_NP_REFRESH_AFTER_PAUSE_MS,
 } from "@shared/track/lastfmTrackSession";
 import { createLogger } from "@shared/utils/console";
 import { observable } from "@trpc/server/observable";
@@ -112,6 +116,8 @@ export class TrackService {
 	private lastTrackContentKey: string | null = null;
 	private lastStateEmitKey: string | null = null;
 	private pendingScrobble: { track: TrackData; videoId: string; relatedIds: Set<string>; maxProgress: number } | null = null;
+	/** Wall-clock when playback last went paused — resume after long idle re-pushes Last.fm NP. */
+	private lastFmPausedAt: number | null = null;
 	private _ipcBound = false;
 	private _styleBound = false;
 
@@ -660,6 +666,7 @@ export class TrackService {
 		try {
 			this.lastLastFmTrackId = preferredId;
 			this.lastLastFmRelatedIds = new Set(relatedIds);
+			this.lastFmPausedAt = null;
 			this.pendingScrobble = {
 				track: preferredTrack,
 				videoId: preferredId,
@@ -718,10 +725,29 @@ export class TrackService {
 		return this.getProvider("lastfm") as
 			| {
 					getState: () => { connected: boolean; processing: boolean; error?: boolean };
-					handleTrackStart: (track: TrackData) => Promise<void>;
+					handleTrackStart: (track: TrackData, opts?: { force?: boolean }) => Promise<void>;
 					handleTrackChange: (track: TrackData) => void;
 			  }
 			| undefined;
+	}
+
+	/** Same listen session still active — re-push Now Playing without new scrobble timer. */
+	private async refreshLastFmNowPlaying(reason: string, meta?: { pausedMs?: number }) {
+		const lastfm = this.getLastFm();
+		if (!lastfm) return;
+		const lastfmState = lastfm.getState();
+		if (!lastfmState.connected || lastfmState.processing) return;
+		const td = this.trackData;
+		if (!td?.video?.videoId) return;
+		const related = relatedVideoIds(td);
+		if (!related.some((id) => this.lastLastFmRelatedIds.has(id))) return;
+		const track =
+			this.pendingScrobble?.track ?? preferLastFmTrack(td, (id) => trackCollection.findById(id), clone);
+		this.logger.debug("lastfm refresh now-playing", track.video.videoId, {
+			reason,
+			...(meta?.pausedMs != null && { pausedMs: meta.pausedMs }),
+		});
+		await lastfm.handleTrackStart(track, { force: true });
 	}
 
 	/** Half duration or 4min (Last.fm). Null = track too short to scrobble. */
@@ -756,6 +782,7 @@ export class TrackService {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
 		const progress = Number(progressSeconds) || 0;
+		const wasPlaying = this._trackState?.playing;
 
 		this.setTrackState((state) => {
 			state.playing = isPlaying;
@@ -765,6 +792,19 @@ export class TrackService {
 			state.duration = duration;
 			state.eventType = "state";
 		});
+
+		if (!isPlaying) {
+			if (wasPlaying !== false) this.lastFmPausedAt = Date.now();
+		} else {
+			const pausedAt = this.lastFmPausedAt;
+			this.lastFmPausedAt = null;
+			if (wasPlaying === false && pausedAt != null) {
+				const pausedMs = Date.now() - pausedAt;
+				if (shouldRefreshLastFmNowPlaying(pausedMs, LASTFM_NP_REFRESH_AFTER_PAUSE_MS)) {
+					void this.refreshLastFmNowPlaying("resume-after-pause", { pausedMs });
+				}
+			}
+		}
 
 		this.maybeScrobbleFromProgress(progress, duration);
 		void this.updateMediaTimeline(duration, progress, isPlaying);
