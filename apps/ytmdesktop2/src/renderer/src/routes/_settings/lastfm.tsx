@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +11,7 @@ export const Route = createFileRoute("/_settings/lastfm")({
 });
 
 function LastFmSettingsPage() {
-	const { lastFM, enabled, isBusy, toggleLastFM } = useLastFm();
+	const { lastFM, enabled, isBusy, toggleLastFM, reauthLastFM } = useLastFm();
 
 	const statusLabel = lastFM.connected
 		? lastFM.name
@@ -45,16 +46,21 @@ function LastFmSettingsPage() {
 						}}
 					/>
 				</Field>
-				<p
-					className={cn(
-						"text-xs",
-						lastFM.connected && "text-green-500",
-						lastFM.error && !lastFM.connected && "text-destructive",
-						!lastFM.connected && !lastFM.error && "text-muted-foreground",
-					)}
-				>
-					Status: {statusLabel}
-				</p>
+				<div className="flex flex-wrap items-center justify-between gap-2">
+					<p
+						className={cn(
+							"text-xs",
+							lastFM.connected && "text-green-500",
+							lastFM.error && !lastFM.connected && "text-destructive",
+							!lastFM.connected && !lastFM.error && "text-muted-foreground",
+						)}
+					>
+						Status: {statusLabel}
+					</p>
+					<Button type="button" size="sm" variant="outline" disabled={isBusy} onClick={() => void reauthLastFM()}>
+						{lastFM.processing ? "Authorizing…" : "Re-authenticate"}
+					</Button>
+				</div>
 			</CardContent>
 		</Card>
 	);

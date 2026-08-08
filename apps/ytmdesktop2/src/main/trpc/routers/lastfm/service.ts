@@ -25,6 +25,10 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	private authProgress = false;
 	private authWindow: BrowserWindow | null = null;
 	private authPollTimer: ReturnType<typeof setInterval> | null = null;
+	/** `reauth` cancel keeps enabled=true; first-time connect cancel flips off. */
+	private authMode: "connect" | "reauth" | null = null;
+	/** Reauth enables setting without letting toggle handler start a second auth. */
+	private skipNextEnableAuth = false;
 
 	constructor(private app: App) {
 		super("lastfm");
@@ -60,21 +64,42 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	async AfterInit() {
 		if (!this.views.toolbarView?.webContents.isLoading()) this.sendState();
 		this.views.toolbarView.webContents.on("did-finish-load", () => this.sendState());
-		// No debounce — disable must clear session / close auth immediately
+		// No debounce — enable/disable must react immediately
 		this.getProvider("settings").onSettingChange("lastfm.enabled", (value) => void this.__onToggleEnabled(!!value));
 	}
 
 	private async __onToggleEnabled(enabled: boolean) {
 		if (!this.client) return;
 		if (enabled) {
-			if (this.client.isConnected() || this.authProgress) {
+			if (this.skipNextEnableAuth) {
+				this.skipNextEnableAuth = false;
 				this.sendState();
 				return;
+			}
+			if (this.authProgress) {
+				this.sendState();
+				return;
+			}
+			if (this.client.isConnected()) {
+				const stillValid = await this.client.validateSession();
+				if (stillValid) {
+					this.sendState();
+					return;
+				}
+				this.logger.warn("lastfm in-memory session expired — clearing");
+				await this.clearStoredSession();
+			} else {
+				const restored = await this.restoreAndValidateSession();
+				if (restored) {
+					this.logger.debug("lastfm re-enabled with stored session");
+					this.sendState();
+					return;
+				}
 			}
 			await this.handleLastFMAuth();
 			return;
 		}
-		await this.disconnect();
+		this.pauseIntegration();
 	}
 
 	private stopAuthPoll() {
@@ -84,8 +109,8 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		}
 	}
 
-	/** Tear down auth window, session, and stored credentials. */
-	async disconnect() {
+	/** Disable scrobbling; keep session/credentials for quick re-enable. */
+	private pauseIntegration() {
 		this.stopAuthPoll();
 		if (this.authWindow && !this.authWindow.isDestroyed()) {
 			this.authWindow.close();
@@ -94,18 +119,53 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		this.authProgress = false;
 		this.lastNowPlayingId = null;
 		this.lastScrobbledId = null;
+		this.sendState();
+	}
+
+	private async clearStoredSession() {
 		if (this.client) {
 			this.client.setAuthorize({ token: null, session: null });
 		}
 		const settings = this.getProvider("settings");
 		settings.set("lastfm.name", null);
 		await Promise.all([secureStore.delete(LASTFM_KEYTAR_SESSION), secureStore.delete(LASTFM_KEYTAR_TOKEN)]);
+	}
+
+	/** Load session from store and ping Last.fm. False → need interactive auth. */
+	private async restoreAndValidateSession(): Promise<boolean> {
+		if (!this.client) return false;
+		const session = await secureStore.get<string>(LASTFM_KEYTAR_SESSION);
+		if (!session) return false;
+		const lastfm = this.getProvider("settings").get<LastFMSettings>("lastfm");
+		this.client.setAuthorize({
+			token: null,
+			session,
+			name: lastfm?.name ?? null,
+		});
+		const valid = await this.client.validateSession();
+		if (!valid) {
+			this.logger.warn("lastfm stored session invalid — need re-auth");
+			await this.clearStoredSession();
+			return false;
+		}
+		const name = this.client.getName();
+		if (name) {
+			this.getProvider("settings").set("lastfm.name", name);
+		}
+		return true;
+	}
+
+	/** Full logout — wipe session (unused by toggle; kept for explicit disconnect). */
+	async disconnect() {
+		this.pauseIntegration();
+		await this.clearStoredSession();
 		this.sendState();
 	}
 
-	private async authorizeSession() {
+	private async authorizeSession(mode: "connect" | "reauth" = "connect") {
 		if (!this.client) return;
 		if (this.authProgress) return;
+		this.authMode = mode;
 		await this.client.authorize();
 		const win = new BrowserWindow({
 			width: 480,
@@ -160,8 +220,10 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			this.stopAuthPoll();
 			this.authWindow = null;
 			this.authProgress = false;
-			// Auth cancelled without session — flip enabled back off
-			if (!this.client?.isConnected()) {
+			const modeAtClose = this.authMode;
+			this.authMode = null;
+			// First-time connect cancelled — flip enabled off. Reauth cancel keeps enabled.
+			if (!this.client?.isConnected() && modeAtClose !== "reauth") {
 				settings.set("lastfm.enabled", false);
 			}
 			this.sendState();
@@ -191,13 +253,38 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		return await shell.openExternal(`https://www.last.fm/user/${encodeURIComponent(username)}/`);
 	}
 	async handleLastFMAuth() {
-		return await this.authorizeSession()
+		return await this.authorizeSession("connect")
 			.then(() => true)
 			.catch((err) => {
 				this.logger.error(err);
+				this.authMode = null;
 				return false;
 			});
 	}
+
+	/** Wipe session and open Last.fm auth (account switch / fix expired). */
+	async handleLastFMReauth() {
+		if (!this.client) return false;
+		if (this.authProgress) return false;
+		this.lastNowPlayingId = null;
+		this.lastScrobbledId = null;
+		await this.clearStoredSession();
+		const settings = this.getProvider("settings");
+		if (!settings.get<LastFMSettings>("lastfm")?.enabled) {
+			this.skipNextEnableAuth = true;
+			settings.set("lastfm.enabled", true);
+			settings.saveToDrive();
+		}
+		this.sendState();
+		return await this.authorizeSession("reauth")
+			.then(() => true)
+			.catch((err) => {
+				this.logger.error(err);
+				this.authMode = null;
+				return false;
+			});
+	}
+
 	async handleLastFMToggle(_, state: boolean) {
 		if (state === undefined) return null;
 		const settings = this.getProvider("settings");

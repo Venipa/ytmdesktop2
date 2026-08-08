@@ -26,15 +26,17 @@ export function useLastFm() {
 	const status: LastFmStatus = isSuccess ? (data as LastFmStatus) : EMPTY_STATUS;
 	const lastFM: LastFmStatus = {
 		...status,
-		// Gate by enabled so disable flips UI immediately even if IPC lags
+		// Gate connected by enabled so disable flips UI immediately even if IPC lags
 		connected: enabled && !!status.connected,
-		processing: enabled && !!status.processing,
+		// Keep raw processing — auth window can run while enabled setting catches up
+		processing: !!status.processing,
 	};
 
 	trpc.lastfm.onStatus.useSubscription(undefined, {
 		onData: (next) => {
+			if (!next.processing) setLastFMLoading(false);
 			if (!enabledRef.current) {
-				utils.lastfm.status.setData(undefined, { ...next, connected: false, processing: false });
+				utils.lastfm.status.setData(undefined, { ...next, connected: false });
 				return;
 			}
 			utils.lastfm.status.setData(undefined, next);
@@ -59,9 +61,8 @@ export function useLastFm() {
 	const { mutateAsync: profile } = trpc.lastfm.profile.useMutation({
 		onSettled: () => setLastFMLoading(false),
 	});
-	const { mutateAsync: authorize } = trpc.lastfm.authorize.useMutation({
-		onSettled: () => setLastFMLoading(false),
-	});
+	const { mutateAsync: authorize, isPending: authorizePending } = trpc.lastfm.authorize.useMutation();
+	const { mutateAsync: reauth, isPending: reauthPending } = trpc.lastfm.reauth.useMutation();
 
 	const authorizeLastFM = useCallback(() => {
 		if (lastFM?.connected) {
@@ -72,6 +73,11 @@ export function useLastFm() {
 		void authorize();
 	}, [lastFM?.connected, profile, authorize]);
 
+	const reauthLastFM = useCallback(() => {
+		setLastFMLoading(true);
+		void reauth();
+	}, [reauth]);
+
 	const toggleLastFM = useCallback(
 		(next: boolean) => {
 			setEnabled(next);
@@ -80,16 +86,19 @@ export function useLastFm() {
 		[setEnabled],
 	);
 
+	const isBusy = lastFMLoading || authorizePending || reauthPending || !!status.processing;
+
 	return {
 		lastFMState,
 		setFmState,
 		lastFM,
 		lastFMLoading,
 		authorizeLastFM,
+		reauthLastFM,
 		toggleLastFM,
 		enabled,
 		setEnabled,
 		togglePending: false,
-		isBusy: lastFMLoading || !!lastFM.processing,
+		isBusy,
 	};
 }

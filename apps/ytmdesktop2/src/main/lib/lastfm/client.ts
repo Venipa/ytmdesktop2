@@ -139,6 +139,24 @@ export class LastFMClient {
 		}
 	}
 
+	/** True if session key still accepted by Last.fm (error 9 = expired). */
+	async validateSession(): Promise<boolean> {
+		if (!this.session) return false;
+		try {
+			const data = await this.callMethod<{ user?: { name?: string } }>(
+				"user.getInfo",
+				"GET",
+				{ sk: this.session },
+				{ expectError: true },
+			);
+			if (data.user?.name) this.sessionName = data.user.name;
+			this.lastError = null;
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
 	async updateNowPlaying(track: { artist: string; track: string; album?: string; duration?: number }) {
 		if (!this.session) throw new Error("Invalid session");
 		return await this.callMethod("track.updateNowPlaying", "POST", {

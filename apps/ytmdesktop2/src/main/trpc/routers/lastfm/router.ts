@@ -15,6 +15,7 @@ export const lastfmRouter = router({
 	status: publicProcedure.query(({ ctx }) => provider(ctx, "lastfm").handleLastFMState()),
 	profile: publicProcedure.mutation(({ ctx }) => provider(ctx, "lastfm").handleLastFMProfile()),
 	authorize: publicProcedure.mutation(({ ctx }) => provider(ctx, "lastfm").handleLastFMAuth()),
+	reauth: publicProcedure.mutation(({ ctx }) => provider(ctx, "lastfm").handleLastFMReauth()),
 	toggle: publicProcedure.input(z.boolean()).mutation(({ ctx, input }) => provider(ctx, "lastfm").handleLastFMToggle(null, input)),
 	onStatus: publicProcedure.subscription(() => fromIpcEvent<LastFmStatus>(IPC_EVENT_NAMES.LAST_FM_STATUS)),
 	onSubmitState: publicProcedure.subscription(() =>
