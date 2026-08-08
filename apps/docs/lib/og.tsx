@@ -691,7 +691,7 @@ export async function createHomeOgImage() {
     getLogoDataUrl('png'),
     getPublicImageDataUrl(DEFAULT_OG_IMAGE),
     loadOgFonts(),
-    extractOgTheme(DEFAULT_OG_IMAGE),
+    extractOgTheme(DEFAULT_OG_IMAGE, '#4a0f22'),
   ]);
 
   return new ImageResponse(

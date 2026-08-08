@@ -15,6 +15,8 @@
 Beautiful Youtube Music desktop app that includes several customizations for users and developers.
 </p>
 
+<img align="center" src="./apps/docs/public/images/opengraph-banner.png" alt="og image" />
+
 [![Discord](https://img.shields.io/discord/834826233195003944?color=%237289DA&label=discord&logo=discord&logoColor=%23ffffff&style=for-the-badge)](https://discord.gg/dq4bZMhMjT)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Venipa/ytmdesktop2?style=for-the-badge)](https://github.com/Venipa/ytmdesktop2/releases/latest)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Venipa/ytmdesktop2?style=for-the-badge)
@@ -34,6 +36,8 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 ### Tray View
 
 Quick now-playing popup from the system tray with transport controls.
+
+![feature-trayview](./apps/docs/public/images/features-trayview-with-progress_tooltip.png)
 
 ### Discord Rich Presence
 
