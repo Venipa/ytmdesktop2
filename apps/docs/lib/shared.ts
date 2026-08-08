@@ -90,7 +90,7 @@ export const brandColorRgb = '139, 28, 195';
 
 export const appTagline = 'YouTube Music, on your desktop';
 export const appDescription =
-  'A beautiful YouTube Music desktop app with Last.fm, Discord RPC, tray view, themes, DPI-aware scaling, mini player, OBS overlays, and Stream Deck.';
+  'A beautiful YouTube Music desktop app with Last.fm, Discord RPC, tray view, themes, DPI-aware scaling, OBS overlays, and Stream Deck.';
 
 export const docsDescription = `Documentation for ${appName} — features, install, API, Stream Deck, and changelog.`;
 

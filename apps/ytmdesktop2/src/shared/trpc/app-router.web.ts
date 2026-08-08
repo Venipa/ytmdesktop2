@@ -97,11 +97,6 @@ const navigationRouter = router({
 	onSameOrigin: publicProcedure.subscription(() => emptySub<boolean>()),
 });
 
-const miniplayerRouter = router({
-	open: publicProcedure.mutation((): any => undefined),
-	onState: publicProcedure.subscription(() => emptySub<any>()),
-});
-
 const trayRouter = router({});
 
 const trayViewRouter = router({
@@ -152,7 +147,6 @@ export const appRouter = router({
 	auth: authRouter,
 	update: updateRouter,
 	navigation: navigationRouter,
-	miniplayer: miniplayerRouter,
 	tray: trayRouter,
 	trayView: trayViewRouter,
 	themes: themesRouter,

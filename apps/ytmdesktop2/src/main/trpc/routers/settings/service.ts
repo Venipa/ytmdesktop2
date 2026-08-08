@@ -1,5 +1,5 @@
 import { AfterInit, BaseProvider, BeforeStart, OnDestroy } from "@main/core/baseProvider";
-import { clampZoomFactor, setZoomFactorState } from "@main/domain/uiZoom";
+import { applyYoutubeZoom, clampZoomFactor, setZoomFactorState } from "@main/domain/uiZoom";
 import { defaultUri, defaultUrl, isDevelopment } from "@main/infra/devUtils";
 import { serverMain } from "@main/ipc/serverEvents";
 import { stringifyJson } from "@main/lib/json";
@@ -149,7 +149,11 @@ export default class SettingsProvider extends BaseProvider implements OnDestroy,
 			nextValue = clampZoomFactor(nextValue);
 		}
 		const prevValue = this.get(key);
-		if (stringifyJson(prevValue) === stringifyJson(nextValue)) return this;
+		if (stringifyJson(prevValue) === stringifyJson(nextValue)) {
+			// Store unchanged — still re-apply zoom (Chromium / view can drift).
+			if (key === "app.zoomFactor") applyYoutubeZoom(nextValue);
+			return this;
+		}
 
 		_settingsStore.set(key, nextValue);
 		this.onChange.next(_settingsStore.store);

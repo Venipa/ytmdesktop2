@@ -1,4 +1,4 @@
-import { applyZoomToWebContents, TOOLBAR_HEIGHT } from "@main/domain/uiZoom";
+import { bindYoutubeWebContents, TOOLBAR_HEIGHT } from "@main/domain/uiZoom";
 import { defaultUrl, isDevelopment, isProdDebug, isProduction } from "@main/infra/devUtils";
 import { toChromeUserAgent } from "@main/infra/userAgent";
 import { serverMain } from "@main/ipc/serverEvents";
@@ -151,7 +151,7 @@ export class WindowManager {
 					height: height - TOOLBAR_HEIGHT,
 					width,
 				});
-				applyZoomToWebContents(view.webContents);
+				bindYoutubeWebContents(view.webContents);
 
 				this.setupYoutubeViewEvents(view);
 			},

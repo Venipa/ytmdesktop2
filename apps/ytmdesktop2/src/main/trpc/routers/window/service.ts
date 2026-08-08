@@ -12,7 +12,7 @@ export default class WindowUtilsProvider extends BaseProvider implements AfterIn
 		this.bindIpc();
 	}
 	private bindIpc() {
-		// Preload interactive elements send this channel (youtube / miniplayer chrome)
+		// Preload interactive elements send this channel (youtube chrome)
 		serverMain.on("set-ignore-mouse-events", (event: IpcMainEvent, ignore: boolean, options: IgnoreMouseEventsOptions) =>
 			this._toolbarMouseEvent(event, ignore, options),
 		);

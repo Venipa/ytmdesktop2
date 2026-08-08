@@ -31,10 +31,9 @@ Beautiful Youtube Music desktop app that includes several customizations for use
 
 ![feature-lastfm2](https://user-images.githubusercontent.com/17952364/212539540-c1efc587-1047-4748-9583-64b609a1ec97.jpg)
 
-### Mini Player (Beta)
+### Tray View
 
-![explorer_JVI8CNSAaY](https://github.com/user-attachments/assets/599e34fc-d47f-42f4-8650-8fdcc20f259d)
-
+Quick now-playing popup from the system tray with transport controls.
 
 ### Discord Rich Presence
 

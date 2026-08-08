@@ -7,7 +7,6 @@ import type discordProvider from "@routers/discord/service";
 import type eventProvider from "@routers/event/service";
 import type lastfmProvider from "@routers/lastfm/service";
 import type mediaControlProvider from "@routers/mediaControl/service";
-import type miniPlayerProvider from "@routers/miniPlayer/service";
 import type navigationProvider from "@routers/navigation/service";
 import type settingsProvider from "@routers/settings/service";
 import type shortcutProvider from "@routers/shortcut/service";
@@ -31,7 +30,6 @@ export interface ServiceTypeMap {
   "event": eventProvider;
   "lastfm": lastfmProvider;
   "mediaControl": mediaControlProvider;
-  "miniPlayer": miniPlayerProvider;
   "navigation": navigationProvider;
   "settings": settingsProvider;
   "shortcut": shortcutProvider;

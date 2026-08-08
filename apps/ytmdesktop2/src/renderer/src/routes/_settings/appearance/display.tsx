@@ -14,15 +14,21 @@ const ZOOM_MAX_PERCENT = 150;
 const ZOOM_STEP_PERCENT = 5;
 
 function DisplaySettingsPage() {
-	const [zoomFactor, setZoomFactor, { isPending }] = useSettingsState("app.zoomFactor", 1, { debounce: 100 });
+	const [zoomFactor, setZoomFactor, { isPending }] = useSettingsState("app.zoomFactor", 1);
 	const percent = Math.round(zoomFactor * 100);
+
+	const setZoomPercent = (raw: number) => {
+		const stepped = Math.round(raw / ZOOM_STEP_PERCENT) * ZOOM_STEP_PERCENT;
+		const clamped = Math.min(ZOOM_MAX_PERCENT, Math.max(ZOOM_MIN_PERCENT, stepped));
+		setZoomFactor(clamped / 100);
+	};
 
 	return (
 		<Card>
 			<CardHeader>
 				<CardTitle>Display</CardTitle>
 				<CardDescription>
-					Scale the YouTube Music page only. Toolbar, settings, and miniplayer stay at 100%; OS display scaling still applies.
+					Scale the YouTube Music page only. Toolbar, settings, and tray view stay at 100%; OS display scaling still applies.
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
@@ -42,7 +48,7 @@ function DisplaySettingsPage() {
 							onValueChange={(value) => {
 								const next = Array.isArray(value) ? value[0] : value;
 								if (typeof next !== "number" || !Number.isFinite(next)) return;
-								setZoomFactor(next / 100);
+								setZoomPercent(next);
 							}}
 						/>
 						<FieldDescription>80% to 150%. Applies live to the YouTube Music view only.</FieldDescription>
@@ -52,7 +58,7 @@ function DisplaySettingsPage() {
 								size="sm"
 								variant="outline"
 								disabled={isPending || percent === 100}
-								onClick={() => setZoomFactor(1)}
+								onClick={() => setZoomPercent(100)}
 							>
 								Reset to 100%
 							</Button>

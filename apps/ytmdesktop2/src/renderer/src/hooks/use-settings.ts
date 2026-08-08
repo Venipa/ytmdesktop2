@@ -1,5 +1,5 @@
 import { debounce } from "lodash-es";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 
 export type WindowState = {
@@ -73,15 +73,29 @@ export function useSettingsState<T>(key: string, defaultValue: T, options: UseSe
 	onPersistedRef.current = onPersisted;
 
 	const { mutateAsync: update, isLoading: isMutating } = trpc.settings.update.useMutation();
+	const updateRef = useRef(update);
+	updateRef.current = update;
 
+	// Stable debounce — do not recreate when `update` identity changes (drops pending writes).
 	const persist = useMemo(() => {
 		const write = (next: T) => {
-			void update({ key, value: next }).then(() => {
+			void updateRef.current({ key, value: next }).then(() => {
 				onPersistedRef.current?.(next);
 			});
 		};
-		return typeof debounceMs === "number" && debounceMs > 0 ? debounce(write, debounceMs) : write;
-	}, [key, update, debounceMs]);
+		if (typeof debounceMs === "number" && debounceMs > 0) {
+			return debounce(write, debounceMs, { maxWait: Math.max(debounceMs * 3, 250) });
+		}
+		return write;
+	}, [key, debounceMs]);
+
+	useEffect(() => {
+		return () => {
+			if (typeof persist === "function" && "cancel" in persist && typeof persist.cancel === "function") {
+				persist.cancel();
+			}
+		};
+	}, [persist]);
 
 	const { data, isLoading: isQueryLoading, isSuccess } = trpc.settings.get.useQuery(queryInput);
 	const value = resolveSettingValue(isSuccess ? data : undefined, defaultValue, map);

@@ -1,1 +1,0 @@
-export { miniplayerRouter } from "./router";

@@ -10,7 +10,7 @@ YTMDesktop2 caches YouTube Music album art on disk and serves it to app chrome o
 | Surface | Role |
 | --- | --- |
 | [Tray view](/docs/features/tray-view) | Cover art in the tray popup (`toAppThumbUrl`) |
-| [Mini player](/docs/features/mini-player) | Cover art in the compact window (`toAppThumbUrl`) |
+| [Mini player](/docs/features/mini-player) (removed in 1.4.0) | Cover art in the compact window (`toAppThumbUrl`) |
 | Track accent | Palette / accent color from the cached image buffer |
 | macOS Touch Bar | Artwork bytes via `getBuffer` |
 
@@ -18,20 +18,20 @@ The embedded YouTube Music webview does **not** use this cache — it loads CDN 
 
 ## Why it exists
 
-Tray view and mini player are separate windows from the YouTube Music webview. Loading CDN URLs directly often fails without the logged-in session cookies and browser-like headers. The cache:
+Tray view is a separate window from the YouTube Music webview. Loading CDN URLs directly often fails without the logged-in session cookies and browser-like headers. The cache:
 
 1. Fetches thumbs through the YouTube Music session (cookies, user agent, referer).
 2. Stores image bytes under the app user-data folder.
-3. Serves them back to tray view, mini player, and other app UI over `ytmd-thumb://`.
+3. Serves them back to tray view and other app UI over `ytmd-thumb://`.
 
-## How tray view and mini player load art
+## How tray view loads art
 
-Both map remote URLs with `toAppThumbUrl()`:
+Remote URLs are mapped with `toAppThumbUrl()`:
 
 - HTTPS thumbs on `googleusercontent.com`, `ggpht.com`, or `ytimg.com` → `ytmd-thumb://i/<base64url>`
 - Anything else stays as the original URL
 
-The main process handles `ytmd-thumb` on the default session (shared by tray / mini player) and returns cached bytes, or fetches once then caches.
+The main process handles `ytmd-thumb` on the default session (shared by tray view) and returns cached bytes, or fetches once then caches.
 
 ## Storage
 

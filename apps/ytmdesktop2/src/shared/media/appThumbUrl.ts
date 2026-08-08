@@ -45,7 +45,7 @@ function fromBase64Url(value: string): string {
 }
 
 /**
- * Map remote thumb → `ytmd-thumb://i/<base64url>` for tray/miniplayer/etc.
+ * Map remote thumb → `ytmd-thumb://i/<base64url>` for tray view / app chrome.
  * Path encoding avoids `=` / `&` breaking query parsing (CDN size suffixes).
  */
 export function toAppThumbUrl(url: string | null | undefined): string | null {

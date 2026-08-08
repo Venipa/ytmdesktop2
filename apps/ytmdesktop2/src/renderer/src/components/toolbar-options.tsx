@@ -3,15 +3,12 @@ import DevIcon from "@/assets/icons/chip.svg?react";
 import RPCIcon from "@/assets/icons/discord-rpc.svg?react";
 import HomeIcon from "@/assets/icons/home.svg?react";
 import LastFMIcon from "@/assets/icons/lastfm.svg?react";
-import MiniPlayerIcon from "@/assets/icons/mini-player.svg?react";
 import RefreshIcon from "@/assets/icons/refresh.svg?react";
 import { Spinner } from "@/components/ui/spinner";
 import { useDiscord } from "@/hooks/use-discord";
 import { useLastFm } from "@/hooks/use-lastfm";
-import { useMiniPlayer } from "@/hooks/use-miniplayer";
 import { useNavigation } from "@/hooks/use-navigation";
 import { useSettingsState } from "@/hooks/use-settings";
-import { useTrackState } from "@/hooks/use-track";
 import { useUpdater } from "@/hooks/use-updater";
 import { trpc } from "@/lib/trpc";
 
@@ -19,8 +16,6 @@ export function ToolbarOptions() {
 	const { lastFM, lastFMState, lastFMLoading, authorizeLastFM } = useLastFm();
 	const { connected: discordConnected, loading: discordLoading, error: discordConnectionError, enabled: discordEnabled, toggle: toggleDiscord } = useDiscord();
 	const { isHome, home, devTools } = useNavigation();
-	const { state: miniPlayer, open: openMiniPlayer } = useMiniPlayer();
-	const playState = useTrackState();
 	const { updateInfo, downloaded: updateDownloaded, checking: updateChecking, status, check } = useUpdater();
 	const [isDev] = useSettingsState<boolean>("app.enableDev", false);
 	const { mutateAsync: openWindow } = trpc.app.openWindow.useMutation();
@@ -64,14 +59,6 @@ export function ToolbarOptions() {
 					<DevIcon />
 				</button>
 			)}
-			<button
-				type="button"
-				className={`control-button relative size-4 ${miniPlayer ? (miniPlayer.active ? "opacity-100" : "opacity-70") : ""}`}
-				disabled={!playState}
-				onClick={() => void openMiniPlayer()}
-			>
-				<MiniPlayerIcon />
-			</button>
 			<button type="button" className="control-button relative" onClick={toggleDiscord}>
 				<RPCIcon
 					className={

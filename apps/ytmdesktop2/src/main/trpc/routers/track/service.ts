@@ -186,7 +186,7 @@ export class TrackService {
 	}
 
 	async postTrackLike(_ev: unknown, like: boolean): Promise<boolean | null> {
-		// Emit intent immediately so tray/miniplayer update before YTM DOM settles.
+		// Emit intent immediately so tray view updates before YTM DOM settles.
 		this.setTrackState((state) => {
 			state.liked = like;
 			if (like) state.disliked = false;
@@ -505,7 +505,7 @@ export class TrackService {
 		const track = clone(trackRef);
 		track.meta.startedAt = Date.now() / 1000;
 
-		// Immediate — subscribers (toolbar / miniplayer) get data now
+		// Immediate — subscribers (toolbar / tray view) get data now
 		events.emit("track:change", track);
 
 		const windows = getAppWindows();

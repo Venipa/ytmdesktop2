@@ -1,25 +1,8 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import {
-  BookOpenIcon,
-  Disc3Icon,
-  DownloadIcon,
-  Gamepad2Icon,
-  LayoutPanelTopIcon,
-  MonitorIcon,
-  MonitorSmartphoneIcon,
-  PaletteIcon,
-  RadioIcon,
-  ScrollTextIcon,
-  StarIcon,
-  ZoomInIcon,
-} from 'lucide-react';
-import { buttonVariants } from 'fumadocs-ui/components/ui/button';
 import { ReleaseDownloadPanel } from '@/components/release-download-panel';
 import { cn } from '@/lib/cn';
 import {
-  getLatestReleaseUrl,
   getLatestReleasesByChannel,
+  getLatestReleaseUrl,
   getRepositoryUrl,
   groupDownloadsByPlatform,
   pickPrimaryDownload,
@@ -34,6 +17,22 @@ import {
   formatStarCount,
   repoStars,
 } from '@/lib/shared';
+import { buttonVariants } from 'fumadocs-ui/components/ui/button';
+import {
+  BookOpenIcon,
+  Disc3Icon,
+  DownloadIcon,
+  Gamepad2Icon,
+  LayoutPanelTopIcon,
+  MonitorIcon,
+  PaletteIcon,
+  RadioIcon,
+  ScrollTextIcon,
+  StarIcon,
+  ZoomInIcon,
+} from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
 
 const features = [
   {
@@ -45,19 +44,19 @@ const features = [
     className: 'sm:col-span-2 lg:col-span-2 lg:row-span-2',
   },
   {
-    title: 'Mini player',
-    description: 'Always-on-top controls in a compact window.',
-    href: `${docsRoute}/features/mini-player/`,
-    icon: MonitorSmartphoneIcon,
-    image: '/images/feature-miniplayer.jpg',
-    className: '',
-  },
-  {
     title: 'Discord',
     description: 'Show friends what you are listening to.',
     href: `${docsRoute}/features/discord/`,
     icon: RadioIcon,
     image: '/images/features-rpc2.png',
+    className: '',
+  },
+  {
+    title: 'Stream Deck',
+    description: 'Playback controls on Elgato hardware.',
+    href: `${docsRoute}/integrations/streamdeck/`,
+    icon: Gamepad2Icon,
+    image: '/images/bg-7.jpg',
     className: '',
   },
   {
@@ -82,7 +81,7 @@ const features = [
     href: `${docsRoute}/features/dpi/`,
     icon: MonitorIcon,
     image: '/images/bg-4.jpg',
-    className: '',
+    className: 'sm:col-span-2 lg:col-span-2',
   },
   {
     title: 'OBS overlays',
@@ -107,14 +106,6 @@ const features = [
     icon: Disc3Icon,
     image: '/images/feature-lastfm.jpg',
     className: 'sm:col-span-2 lg:col-span-2',
-  },
-  {
-    title: 'Stream Deck',
-    description: 'Playback controls on Elgato hardware.',
-    href: `${docsRoute}/integrations/streamdeck/`,
-    icon: Gamepad2Icon,
-    image: '/images/bg-7.jpg',
-    className: '',
   },
   {
     title: 'Changelog',

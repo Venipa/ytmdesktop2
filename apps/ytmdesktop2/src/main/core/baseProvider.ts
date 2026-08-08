@@ -32,7 +32,6 @@ export class BaseProvider<TView extends WebContentsView = WebContentsView> {
 		youtubeView: TView;
 		toolbarView: TView;
 		settingsWindow?: BrowserWindow;
-		miniPlayerWindow?: BrowserWindow;
 		trayViewWindow?: BrowserWindow;
 	}>;
 	get logger() {
