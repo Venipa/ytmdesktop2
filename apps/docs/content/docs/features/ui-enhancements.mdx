@@ -1,0 +1,39 @@
+---
+title: UI enhancements
+description: Client plugins that fix YouTube Music UI quirks and improve playback UX
+---
+
+YTMDesktop2 injects small **renderer plugins** into the YouTube Music page. Some fix UI quirks; others improve playback. Most run automatically — a few have settings under **Settings → Player**.
+
+## Always on
+
+These plugins load with the music view. No toggle.
+
+| Plugin | What it does |
+| --- | --- |
+| **YTM Toast Fix** (`ytm-toast-fix`) | YouTube Music “Saved to liked music” (and similar) paper toasts stay open until you dismiss them. The plugin closes open `tp-yt-paper-toast` toasts after **3 seconds**. |
+| **YouTube Performance Fixes** (`youtube-performance-fixes`) | Lowers background CPU use in the embedded player (CPU tamer + related patches; same idea as community YouTube Music clients). |
+| **Cast button hide** | Hides the Chromecast control in the music chrome (not useful in this desktop shell). |
+
+## Settings → Player
+
+| Setting | Plugin / behavior |
+| --- | --- |
+| **Skip disliked songs** | Auto-skips tracks you have disliked (experimental). |
+| **Exponential volume ratio** | Exponential volume curve instead of linear. |
+| **Customize player video settings** | Preferred resolution (720p–4K) when available. |
+| **Replace share links with ytmd://** | Rewrites the YTM share dialog URL — see [Shared links](/docs/features/shared-links). |
+
+## Tips
+
+- Toast auto-dismiss applies to all open paper toasts (liked music, library saves, and similar), not only the like confirmation.
+- Performance fixes run in the YouTube Music webview only; they do not change app chrome or tray view.
+- Plugin source lives under `apps/ytmdesktop2/src/renderer-plugins/youtube/`.
+
+## Related
+
+<Cards>
+  <Card title="Shared links" href="/docs/features/shared-links" />
+  <Card title="Tray view" href="/docs/features/tray-view" />
+  <Card title="All features" href="/docs/features" />
+</Cards>
