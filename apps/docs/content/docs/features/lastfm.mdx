@@ -22,6 +22,7 @@ Connect your Last.fm account so YTMDesktop2 can update **Now Playing** and scrob
 ## Notes
 
 - Switching tracks mid-listen abandons a pending scrobble unless the threshold was already crossed.
+- Song ↔ Music Video toggles count as one listen (YTM counterpart pair). Last.fm prefers the song (ATV) when both exist; otherwise the video.
 - Last.fm updates are debounced so rapid skipping does not spam the API.
 - Auth tokens are kept in an [encrypted store](/docs/internals/encrypted-stores) — clearing app data or the key file requires re-auth.
 - Toggle Last.fm off anytime without losing your login — turn it back on to resume (re-auth only if the session expired).

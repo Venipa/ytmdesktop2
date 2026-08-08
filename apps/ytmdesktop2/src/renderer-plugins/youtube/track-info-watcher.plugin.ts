@@ -19,13 +19,70 @@ function pickThumbs(raw: any): PlainThumb[] {
 		.filter((t) => !!t.url);
 }
 
+function rendererVideoId(renderer: unknown): string | null {
+	if (!renderer || typeof renderer !== "object") return null;
+	const r = renderer as Record<string, any>;
+	const id = r.videoId ?? r.navigationEndpoint?.watchEndpoint?.videoId;
+	return typeof id === "string" && id ? id : null;
+}
+
+/** Song↔video pair from YTM playlistPanelVideoWrapperRenderer; null if absent/odd shape. */
+function counterpartFromWrapper(wrapper: unknown, activeVideoId: string): string | null {
+	if (!wrapper || typeof wrapper !== "object") return null;
+	const root = wrapper as Record<string, any>;
+	const wrapped = root.playlistPanelVideoWrapperRenderer ?? root;
+	const primary = wrapped?.primaryRenderer?.playlistPanelVideoRenderer;
+	const counterpart = wrapped?.counterpart?.[0]?.counterpartRenderer?.playlistPanelVideoRenderer;
+	const primaryId = rendererVideoId(primary);
+	const counterpartId = rendererVideoId(counterpart);
+	if (!primaryId || !counterpartId) return null;
+	if (primaryId === activeVideoId) return counterpartId;
+	if (counterpartId === activeVideoId) return primaryId;
+	return null;
+}
+
+/** Soft-fail counterpart lookup — player bar then queue DOM. */
+function readCounterpartVideoId(activeVideoId: string): string | null {
+	try {
+		const bar = document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as any;
+		const currentItem = bar?.currentItem;
+		if (currentItem) {
+			const fromWrapper = counterpartFromWrapper(currentItem, activeVideoId);
+			if (fromWrapper) return fromWrapper;
+			const nested = currentItem.playlistPanelVideoWrapperRenderer;
+			if (nested) {
+				const fromNested = counterpartFromWrapper(nested, activeVideoId);
+				if (fromNested) return fromNested;
+			}
+			const flatCounterpart =
+				currentItem.counterpart?.[0]?.counterpartRenderer?.playlistPanelVideoRenderer ?? currentItem.counterpart?.[0];
+			const flatId = rendererVideoId(flatCounterpart);
+			if (flatId && flatId !== activeVideoId) return flatId;
+		}
+
+		const nodes = document.querySelectorAll(
+			"ytmusic-player-queue-item, ytmusic-playlist-panel-video-wrapper-renderer, ytmusic-player-queue ytmusic-player-queue-item",
+		);
+		for (const node of nodes) {
+			const data = (node as any).data ?? (node as any).__data?.data;
+			if (!data) continue;
+			const found = counterpartFromWrapper(data, activeVideoId);
+			if (found) return found;
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
 /** Plain IPC-safe payload — no Polymer / circular refs. */
 function buildTrackInfoPayload(videoData: any, album?: { id: string; title: string }) {
 	const details = videoData.videoDetails;
 	const micro = videoData.microformat?.microformatDataRenderer;
+	const videoId = String(details.videoId);
 	return {
 		video: {
-			videoId: String(details.videoId),
+			videoId,
 			title: String(details.title ?? ""),
 			lengthSeconds: String(details.lengthSeconds ?? ""),
 			channelId: String(details.channelId ?? ""),
@@ -87,11 +144,12 @@ function buildTrackInfoPayload(videoData: any, album?: { id: string; title: stri
 			details.musicVideoType === "MUSIC_VIDEO_TYPE_ATV" && album
 				? { album: album.title, albumId: album.id }
 				: null,
+		counterpartVideoId: readCounterpartVideoId(videoId),
 	};
 }
 
 function contentKey(payload: ReturnType<typeof buildTrackInfoPayload>): string {
-	return `${payload.video.videoId}|${payload.music?.album ?? ""}|${payload.video.title}|${payload.video.lengthSeconds}`;
+	return `${payload.video.videoId}|${payload.music?.album ?? ""}|${payload.video.title}|${payload.video.lengthSeconds}|${payload.counterpartVideoId ?? ""}`;
 }
 
 export default definePlugin(

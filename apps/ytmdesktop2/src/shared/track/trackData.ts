@@ -79,6 +79,8 @@ export interface TrackMicroFormatData {
 interface TrackMeta {
 	thumbnail?: string;
 	isAudioExclusive: boolean;
+	/** Song↔music-video pair id when YTM exposes a counterpart switcher. */
+	counterpartVideoId?: string | null;
 	startedAt: number;
 	duration: number;
 }

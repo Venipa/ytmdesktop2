@@ -5,6 +5,11 @@ import { getAppWindows, getLifecycleContext, getYoutubeView, onAfterInit, requir
 import { thumbnailCache } from "@main/services/thumbnailCache";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import type { TrackData } from "@shared/track/trackData";
+import {
+	decideLastFmSession,
+	relatedIdsIntersect,
+	trackNeedsLastFmPush,
+} from "@shared/track/lastfmTrackSession";
 import { createLogger } from "@shared/utils/console";
 import { observable } from "@trpc/server/observable";
 import { ipcMain } from "electron";
@@ -79,7 +84,7 @@ const parseTrackDuration = (td: TrackData): number | null => {
 };
 
 const trackContentKey = (track: TrackData): string =>
-	`${track.video.videoId}|${track.music?.album ?? ""}|${track.video.title}|${track.meta?.duration ?? ""}`;
+	`${track.video.videoId}|${track.music?.album ?? ""}|${track.video.title}|${track.meta?.duration ?? ""}|${track.meta?.counterpartVideoId ?? ""}`;
 
 const stateEmitKey = (state: TrackState): string =>
 	[
@@ -102,9 +107,11 @@ export class TrackService {
 	private _currentPallete: { id: string; color: string } | null = null;
 	private trackChangeTimeout: NodeJS.Timeout | null = null;
 	private lastLastFmTrackId: string | null = null;
+	/** Song + music-video counterpart ids for the active Last.fm listen session. */
+	private lastLastFmRelatedIds: Set<string> = new Set();
 	private lastTrackContentKey: string | null = null;
 	private lastStateEmitKey: string | null = null;
-	private pendingScrobble: { track: TrackData; videoId: string; maxProgress: number } | null = null;
+	private pendingScrobble: { track: TrackData; videoId: string; relatedIds: Set<string>; maxProgress: number } | null = null;
 	private _ipcBound = false;
 	private _styleBound = false;
 
@@ -414,18 +421,22 @@ export class TrackService {
 		return td ? parseTrackDuration(td) : null;
 	}
 
-	async onTrackInfo(_ev: unknown, ytTrack: TrackData) {
+	async onTrackInfo(_ev: unknown, ytTrack: TrackData & { counterpartVideoId?: string | null }) {
 		if (!ytTrack?.video?.videoId) return;
 
 		const videoId = String(ytTrack.video.videoId);
 		const musicObject = ytTrack.music?.album ? { album: String(ytTrack.music.album) } : undefined;
 		const duration = parseTrackDuration(ytTrack);
+		const counterpartRaw = ytTrack.meta?.counterpartVideoId ?? ytTrack.counterpartVideoId;
+		const counterpartVideoId =
+			typeof counterpartRaw === "string" && counterpartRaw && counterpartRaw !== videoId ? counterpartRaw : null;
 		const track = {
 			video: ytTrack.video,
 			context: ytTrack.context,
 			meta: {
 				thumbnail: (ytTrack?.video?.thumbnail?.thumbnails ?? ytTrack?.context?.thumbnail?.thumbnails)?.sort(firstBy((d) => d.height, "desc"))[0]?.url,
 				isAudioExclusive: ytTrack?.video?.musicVideoType === "MUSIC_VIDEO_TYPE_ATV",
+				counterpartVideoId,
 				startedAt: Date.now() / 1000,
 				duration,
 				isAlbum: !!musicObject,
@@ -446,8 +457,7 @@ export class TrackService {
 		const key = trackContentKey(track);
 		const contentChanged = key !== this.lastTrackContentKey;
 		const stateOutOfSync = !this._trackState || this._trackState.id !== videoId;
-		// Title-change often sets pending before info arrives — still a new track for Last.fm
-		const needsLastFm = videoId !== this.lastLastFmTrackId;
+		const needsLastFm = this.trackNeedsLastFm(track);
 
 		// Same payload already fanned out — skip (no tRPC / Last.fm spam)
 		if (!contentChanged && !stateOutOfSync && !needsLastFm) return;
@@ -498,7 +508,7 @@ export class TrackService {
 		}
 
 		const key = trackContentKey(td);
-		const needsLastFm = trackId !== this.lastLastFmTrackId;
+		const needsLastFm = this.trackNeedsLastFm(td);
 		if (key === this.lastTrackContentKey && !needsLastFm && this._trackState?.id === trackId) {
 			this._pendingTrackId = null;
 			return;
@@ -549,8 +559,8 @@ export class TrackService {
 		const prev = this.pendingExternal;
 		this.pendingExternal = {
 			track,
-			// Keep Last.fm intent if any queued push for this settle window asked for it
-			updateLastFm: updateLastFm || (!!prev?.updateLastFm && prev.track.video.videoId === track.video.videoId),
+			// Keep Last.fm intent across debounce — same id or song↔video counterpart
+			updateLastFm: updateLastFm || (!!prev?.updateLastFm && relatedIdsIntersect(prev.track, track)),
 		};
 		this.flushExternalTrackPush();
 	}
@@ -583,8 +593,53 @@ export class TrackService {
 			return;
 		}
 
+		const decision = decideLastFmSession({
+			track,
+			lastRelatedIds: this.lastLastFmRelatedIds,
+			pending: this.pendingScrobble
+				? { track: this.pendingScrobble.track, relatedIds: this.pendingScrobble.relatedIds }
+				: null,
+			findById: (id) => trackCollection.findById(id),
+			cloneTrack: clone,
+		});
+
+		if (decision.type === "same-session-keep" || decision.type === "same-session-settled" || decision.type === "upgrade-atv") {
+			for (const id of decision.relatedIds) this.lastLastFmRelatedIds.add(id);
+			if (this.pendingScrobble) {
+				for (const id of decision.relatedIds) this.pendingScrobble.relatedIds.add(id);
+			}
+		}
+
+		if (decision.type === "same-session-keep") {
+			this.logger.debug("lastfm same session skip", videoId);
+			return;
+		}
+
+		if (decision.type === "same-session-settled") {
+			this.logger.debug("lastfm same session already settled", videoId);
+			return;
+		}
+
+		if (decision.type === "upgrade-atv") {
+			if (!this.pendingScrobble) return;
+			const maxProgress = this.pendingScrobble.maxProgress;
+			const startedAt = this.pendingScrobble.track.meta.startedAt;
+			const upgraded = clone(decision.preferred);
+			upgraded.meta.startedAt = startedAt;
+			this.pendingScrobble.track = upgraded;
+			this.pendingScrobble.videoId = decision.preferred.video.videoId;
+			this.pendingScrobble.maxProgress = maxProgress;
+			this.lastLastFmTrackId = decision.preferred.video.videoId;
+			await lastfm.handleTrackStart(upgraded);
+			this.logger.debug("lastfm upgrade to ATV", decision.preferred.video.videoId, { lastfmState });
+			return;
+		}
+
+		const preferredTrack = decision.preferred;
+		const relatedIds = decision.relatedIds;
+
 		// New track — flush previous only if it already crossed scrobble threshold
-		if (this.pendingScrobble && this.pendingScrobble.videoId !== videoId) {
+		if (this.pendingScrobble) {
 			const prev = this.pendingScrobble;
 			const duration = Number(prev.track.meta.duration) || 0;
 			if (this.crossedScrobbleThreshold(prev.maxProgress, duration)) {
@@ -599,28 +654,40 @@ export class TrackService {
 			}
 		}
 
-		if (videoId === this.lastLastFmTrackId) return;
+		const preferredId = preferredTrack.video.videoId;
+		if (preferredId === this.lastLastFmTrackId) return;
 
 		try {
-			this.lastLastFmTrackId = videoId;
-			this.pendingScrobble = { track, videoId, maxProgress: 0 };
-			await lastfm.handleTrackStart(track);
-			this.logger.debug("lastfm.handleTrackStart", videoId, { lastfmState });
+			this.lastLastFmTrackId = preferredId;
+			this.lastLastFmRelatedIds = new Set(relatedIds);
+			this.pendingScrobble = {
+				track: preferredTrack,
+				videoId: preferredId,
+				relatedIds: new Set(relatedIds),
+				maxProgress: 0,
+			};
+			await lastfm.handleTrackStart(preferredTrack);
+			this.logger.debug("lastfm.handleTrackStart", preferredId, {
+				lastfmState,
+				playingId: videoId,
+				preferredAudio: !!preferredTrack.meta.isAudioExclusive,
+			});
 
 			if (this.trackChangeTimeout) clearTimeout(this.trackChangeTimeout);
-			const waitMs = this.scrobbleWaitMs(Number(track.meta.duration) || 0);
+			const waitMs = this.scrobbleWaitMs(Number(preferredTrack.meta.duration) || 0);
 			if (waitMs == null) {
-				this.logger.debug("lastfm scrobble timer skipped — duration too short", videoId, track.meta.duration);
+				this.logger.debug("lastfm scrobble timer skipped — duration too short", preferredId, preferredTrack.meta.duration);
 				return;
 			}
 			// Wall-clock backup only — must still have listened past threshold (pause ≠ scrobble)
+			const sessionIds = [...relatedIds];
 			this.trackChangeTimeout = setTimeout(() => {
 				this.trackChangeTimeout = null;
 				const pending = this.pendingScrobble;
-				if (!pending || pending.videoId !== videoId) return;
+				if (!pending || !sessionIds.some((id) => pending.relatedIds.has(id))) return;
 				const duration = Number(pending.track.meta.duration) || 0;
 				if (!this.crossedScrobbleThreshold(pending.maxProgress, duration)) {
-					this.logger.debug("lastfm timer skip — threshold not met", videoId, {
+					this.logger.debug("lastfm timer skip — threshold not met", pending.videoId, {
 						progress: pending.maxProgress,
 						duration,
 					});
@@ -630,9 +697,21 @@ export class TrackService {
 			}, waitMs);
 		} catch (error) {
 			this.lastLastFmTrackId = null;
+			this.lastLastFmRelatedIds.clear();
 			this.pendingScrobble = null;
 			this.logger.error("Failed to update lastfm:", error);
 		}
+	}
+
+	/** True when Last.fm needs a push: new related set, new counterpart id, or ATV upgrade. */
+	private trackNeedsLastFm(track: TrackData): boolean {
+		return trackNeedsLastFmPush({
+			track,
+			lastRelatedIds: this.lastLastFmRelatedIds,
+			pending: this.pendingScrobble,
+			findById: (id) => trackCollection.findById(id),
+			cloneTrack: clone,
+		});
 	}
 
 	private getLastFm() {
@@ -722,9 +801,12 @@ export class TrackService {
 
 	private maybeScrobbleFromProgress(progressSec: number, durationSec: number) {
 		if (!this.pendingScrobble) return;
-		if (this.pendingScrobble.videoId !== this.lookupTrackId) return;
+		const activeId = this.lookupTrackId;
+		if (!activeId || !this.pendingScrobble.relatedIds.has(activeId)) return;
 		this.pendingScrobble.maxProgress = Math.max(this.pendingScrobble.maxProgress, progressSec);
-		if (!this.crossedScrobbleThreshold(progressSec, durationSec)) return;
+		// Threshold against preferred Last.fm track duration (ATV may differ from playing MV)
+		const scrobbleDuration = Number(this.pendingScrobble.track.meta.duration) || durationSec;
+		if (!this.crossedScrobbleThreshold(progressSec, scrobbleDuration)) return;
 		this.tryScrobblePending("progress");
 	}
 
