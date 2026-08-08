@@ -67,6 +67,16 @@ describe("YtmdLink.resolve", () => {
 		});
 	});
 
+	test("toYtmd compact rewrite", () => {
+		expect(YtmdLink.toYtmd("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe("ytmd://watch/dQw4w9WgXcQ");
+		expect(YtmdLink.toYtmd("https://youtu.be/dQw4w9WgXcQ")).toBe("ytmd://watch/dQw4w9WgXcQ");
+		expect(YtmdLink.toYtmd("https://example.com/watch?v=dQw4w9WgXcQ")).toBeNull();
+		// YTM share panel URL includes tracking `si=`
+		expect(YtmdLink.toYtmd("https://music.youtube.com/watch?v=i5WFoQjPAss&si=bCGoYN4b-_wCsQeQ")).toBe(
+			"ytmd://watch/i5WFoQjPAss",
+		);
+	});
+
 	test("rejects junk", () => {
 		expect(YtmdLink.resolve("ytmd://watch/short")).toBeNull();
 		expect(YtmdLink.resolve("https://example.com/watch?v=dQw4w9WgXcQ")).toBeNull();

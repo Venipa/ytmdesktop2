@@ -50,7 +50,7 @@ Shorter forms work the same way (also used when you copy a share link from the t
 
 ## What happens when a link opens
 
-Under **Settings → Player → When opening a shared link**:
+Under **Settings → Player → Shared links → When opening a shared link**:
 
 | Option | Behavior |
 | --- | --- |
@@ -72,6 +72,12 @@ With **Play immediately**, tracks start playing; playlists and channels open the
 ## Tray — copy share link
 
 In the [tray view](/docs/features/tray-view), use the share / copy control on the current track to put a compact `ytmd://watch/…` link on the clipboard (includes a non-radio `list=` from the music page when available).
+
+## Replace share links in YouTube Music
+
+Under **Settings → Player → Shared links → Replace share links with ytmd://** (on by default), the YouTube Music share dialog (`input#share-url`) is rewritten to a compact `ytmd://` link before you hit Copy — so the clipboard gets an app deep link instead of `music.youtube.com`.
+
+Turn it off to keep the original https share URLs.
 
 ## Tips
 

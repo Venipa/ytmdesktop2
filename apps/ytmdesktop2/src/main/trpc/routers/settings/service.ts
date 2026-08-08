@@ -42,6 +42,8 @@ const defaultSettings = {
 		skipDisliked: false,
 		/** `ask` = confirm dialog; `play` = open watch immediately */
 		deepLinkOpen: "ask" as "ask" | "play",
+		/** Rewrite YTM “Copy link” clipboard URLs to `ytmd://` */
+		replaceShareLinks: true,
 		res: {
 			enabled: false,
 			prefer: "auto",

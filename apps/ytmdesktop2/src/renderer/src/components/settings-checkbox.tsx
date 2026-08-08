@@ -31,21 +31,39 @@ export function SettingsCheckbox({
 		onPersisted: updateMessage ? () => toast.success(updateMessage) : undefined,
 	});
 
+	const apply = (checked: boolean) => {
+		if (isPending || checked === value) return;
+		setValue(checked);
+		onChange?.(checked);
+	};
+
 	return (
-		<Field orientation="horizontal" data-disabled={isPending || undefined} className={cn("items-start", className)}>
+		<Field
+			orientation="horizontal"
+			data-disabled={isPending || undefined}
+			className={cn(
+				"-mx-2 items-start rounded-lg px-2 py-2 transition-colors duration-150 ease-out",
+				"cursor-pointer hover:bg-muted/50 active:bg-muted/70",
+				"data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent data-disabled:active:bg-transparent",
+				className,
+			)}
+			onClick={(event) => {
+				const target = event.target as HTMLElement | null;
+				if (target?.closest("a, button, [role='link']")) return;
+				apply(!value);
+			}}
+		>
 			<FieldContent>
-				<FieldLabel htmlFor={id}>{children}</FieldLabel>
+				{/* No htmlFor — row onClick owns the toggle (avoids double-fire with Switch). */}
+				<FieldLabel className="pointer-events-none cursor-pointer">{children}</FieldLabel>
 				{description ? <FieldDescription>{description}</FieldDescription> : null}
 			</FieldContent>
 			<Switch
 				id={id}
 				checked={value}
 				disabled={isPending}
-				onCheckedChange={(checked) => {
-					if (checked === value) return;
-					setValue(checked);
-					onChange?.(checked);
-				}}
+				onClick={(event) => event.stopPropagation()}
+				onCheckedChange={apply}
 			/>
 		</Field>
 	);

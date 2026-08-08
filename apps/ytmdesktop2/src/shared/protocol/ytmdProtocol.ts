@@ -70,6 +70,15 @@ export class YtmdLink {
 	}
 
 	/**
+	 * Rewrite a convertible https URL to compact `ytmd://` (or null if unsupported).
+	 * Used when intercepting YouTube Music “Copy link”.
+	 */
+	static toYtmd(url: string): string | null {
+		const link = YtmdLink.resolve(url);
+		return link ? YtmdLink.format(link) : null;
+	}
+
+	/**
 	 * Parse `ytmd://` or raw `https://` music/youtube/youtu.be URL into a link.
 	 * Prefer for API `/nav/open` and tools that may pass either form.
 	 */

@@ -42,6 +42,17 @@ function PlayerSettingsPage() {
 						<SettingsCheckbox configKey="app.enableTaskbarProgress" description="Show playback progress on the taskbar.">
 							Enable Taskbar Progress
 						</SettingsCheckbox>
+					</FieldGroup>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Shared links</CardTitle>
+					<CardDescription>How ytmd:// links open and how YouTube Music share URLs are rewritten.</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<FieldGroup>
 						<SettingsSelect
 							configKey="player.deepLinkOpen"
 							defaultValue="ask"
@@ -60,6 +71,13 @@ function PlayerSettingsPage() {
 								},
 							]}
 						/>
+						<SettingsCheckbox
+							configKey="player.replaceShareLinks"
+							defaultValue={true}
+							description="Rewrite the share dialog URL to ytmd:// so Copy opens this app."
+						>
+							Replace share links with ytmd://
+						</SettingsCheckbox>
 					</FieldGroup>
 				</CardContent>
 			</Card>
