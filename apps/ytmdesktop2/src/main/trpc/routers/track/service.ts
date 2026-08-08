@@ -613,9 +613,20 @@ export class TrackService {
 				this.logger.debug("lastfm scrobble timer skipped — duration too short", videoId, track.meta.duration);
 				return;
 			}
+			// Wall-clock backup only — must still have listened past threshold (pause ≠ scrobble)
 			this.trackChangeTimeout = setTimeout(() => {
-				this.tryScrobblePending("timer");
 				this.trackChangeTimeout = null;
+				const pending = this.pendingScrobble;
+				if (!pending || pending.videoId !== videoId) return;
+				const duration = Number(pending.track.meta.duration) || 0;
+				if (!this.crossedScrobbleThreshold(pending.maxProgress, duration)) {
+					this.logger.debug("lastfm timer skip — threshold not met", videoId, {
+						progress: pending.maxProgress,
+						duration,
+					});
+					return;
+				}
+				this.tryScrobblePending("timer");
 			}, waitMs);
 		} catch (error) {
 			this.lastLastFmTrackId = null;

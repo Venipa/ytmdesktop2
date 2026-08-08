@@ -1,10 +1,9 @@
-import { Buffer } from "buffer";
-import { enc, lib } from "crypto-js";
+import { randomBytes } from "node:crypto";
+
 /**
- * Generates a random string of a given size
+ * Generates a random string of a given size (base64 alphabet).
  */
 export function generateRandom(size: number): string {
-	const bits = (size + 1) * 6;
-	const buffer = Buffer.from(lib.WordArray.random(Math.ceil(bits / 8)).toString(enc.Hex), "hex");
-	return buffer.toString("base64", 0, size);
+	const byteLength = Math.ceil(((size + 1) * 6) / 8);
+	return randomBytes(byteLength).toString("base64").slice(0, size);
 }

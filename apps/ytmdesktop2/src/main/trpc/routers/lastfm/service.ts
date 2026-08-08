@@ -1,24 +1,16 @@
 import { AfterInit, BaseProvider, OnInit } from "@main/core/baseProvider";
-import { parseJson, stringifyJson } from "@main/lib/json";
+import { stringifyJson } from "@main/lib/json";
 import { LASTFM_KEYTAR_SESSION, LASTFM_KEYTAR_TOKEN } from "@main/lib/keytar";
 import { LastFMClient } from "@main/lib/lastfm";
 import secureStore from "@main/lib/secureStore";
 import { appIconPath } from "@main/windows/windowUtils";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import { TrackData } from "@shared/track/trackData";
-import { escapeHTML } from "@shared/utils/string";
 import { App, BrowserWindow, shell } from "electron";
 import { LastFMSettings } from "ytmd";
 
-export interface LastFMUserState {
-	siteSection: string;
-	pageType: string;
-	pageName: string;
-	nativeEventTracking: boolean;
-	userState: string;
-	userType: string;
-	userId: string;
-}
+const AUTH_POLL_MS = 1500;
+
 const lastFmClient =
 	(import.meta.env.VITE_LASTFM_SECRET &&
 		new LastFMClient({
@@ -32,6 +24,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	private lastScrobbledId: string | null = null;
 	private authProgress = false;
 	private authWindow: BrowserWindow | null = null;
+	private authPollTimer: ReturnType<typeof setInterval> | null = null;
 
 	constructor(private app: App) {
 		super("lastfm");
@@ -46,23 +39,18 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		}
 		const lastfm = this.getProvider("settings").get("lastfm") as LastFMSettings;
 		if (lastfm.enabled) {
-			const creds = await secureStore.getAll();
-			const lastFMState = creds.reduce(
-				(acc, r) => {
-					if (r.account === LASTFM_KEYTAR_TOKEN) acc.token = r.password;
-					else if (r.account === LASTFM_KEYTAR_SESSION) acc.session = r.password;
-					return acc;
-				},
-				{} as any as { token: string; session: string },
-			);
-			if (lastFMState.session) {
+			const session = await secureStore.get<string>(LASTFM_KEYTAR_SESSION);
+			if (session) {
+				// Session key alone is enough for signed write calls — drop leftover auth token
 				this.client.setAuthorize({
-					token: lastFMState.token,
-					session: lastFMState.session,
-					name: lastfm.name ? encodeURIComponent(lastfm.name!) : "",
+					token: null,
+					session,
+					name: lastfm.name ?? null,
 				});
-				this.logger.debug("restored lastfm session", { name: lastfm.name, hasToken: !!lastFMState.token });
+				void secureStore.delete(LASTFM_KEYTAR_TOKEN);
+				this.logger.debug("restored lastfm session", { name: lastfm.name });
 			} else {
+				const creds = await secureStore.getAll();
 				this.logger.warn("lastfm.enabled but no session in secureStore — re-auth required", {
 					credentialAccounts: creds.map((c) => c.account),
 				});
@@ -89,8 +77,16 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		await this.disconnect();
 	}
 
+	private stopAuthPoll() {
+		if (this.authPollTimer) {
+			clearInterval(this.authPollTimer);
+			this.authPollTimer = null;
+		}
+	}
+
 	/** Tear down auth window, session, and stored credentials. */
 	async disconnect() {
+		this.stopAuthPoll();
 		if (this.authWindow && !this.authWindow.isDestroyed()) {
 			this.authWindow.close();
 		}
@@ -110,7 +106,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	private async authorizeSession() {
 		if (!this.client) return;
 		if (this.authProgress) return;
-		const token = await this.client.authorize();
+		await this.client.authorize();
 		const win = new BrowserWindow({
 			width: 480,
 			height: 600,
@@ -132,36 +128,36 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		});
 		this.authWindow = win;
 		await win.loadURL(this.client.getUserAuthorizeUrl());
-		const hasSuccessInfo = () => win.webContents.executeJavaScript(`!!document.querySelector("#mantle_skin .alert.alert-success")`);
 		const settings = this.getProvider("settings");
-		win.webContents.on("did-navigate", async (ev, url, code, status) => {
-			this.logger.debug(`[URL]> ${url}, ${code}, ${status}`);
-			if (await hasSuccessInfo()) {
-				const { userState }: LastFMUserState = await win.webContents
-					.executeJavaScript(`document.getElementById("tlmdata")?.dataset?.tealiumData`)
-					.then(parseJson<LastFMUserState>)
-					.catch(() => ({}) as any);
-				this.logger.debug(`[Auth]> User: ${stringifyJson(userState)}`);
-				if (userState === "authenticated") {
-					await secureStore.set(LASTFM_KEYTAR_TOKEN, token);
-					const sessionToken = await this.client.getSession();
-					if (sessionToken) {
-						await secureStore.set(LASTFM_KEYTAR_SESSION, sessionToken);
-						if (!win.isDestroyed()) win.close();
-					}
+		let authSettled = false;
 
-					this.logger.debug(`[Auth]> Authenticated: ${sessionToken}`);
-					settings.set("lastfm.enabled", true);
-					settings.set("lastfm.name", escapeHTML(this.client.getName() || null));
-					settings.saveToDrive();
-				}
-			}
+		const finishAuth = async (sessionToken: string) => {
+			if (authSettled) return;
+			authSettled = true;
+			this.stopAuthPoll();
+			await secureStore.set(LASTFM_KEYTAR_SESSION, sessionToken);
+			await secureStore.delete(LASTFM_KEYTAR_TOKEN);
+			this.logger.debug(`[Auth]> Authenticated: ${sessionToken.slice(0, 6)}…`);
+			settings.set("lastfm.enabled", true);
+			settings.set("lastfm.name", this.client!.getName() || null);
+			settings.saveToDrive();
+			if (!win.isDestroyed()) win.close();
 			this.sendState();
-		});
+		};
+
+		// Poll auth.getSession — no DOM scrape of Last.fm success page
+		this.authPollTimer = setInterval(() => {
+			if (!this.client || win.isDestroyed()) return;
+			void this.client.tryGetSession().then((sessionToken) => {
+				if (sessionToken) void finishAuth(sessionToken);
+			});
+		}, AUTH_POLL_MS);
+
 		win.show();
 		this.authProgress = true;
 		this.sendState();
 		win.once("closed", () => {
+			this.stopAuthPoll();
 			this.authWindow = null;
 			this.authProgress = false;
 			// Auth cancelled without session — flip enabled back off
@@ -191,13 +187,14 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	async handleLastFMProfile() {
 		if (!this.client?.isConnected()) return;
 		const username = this.client.getName() || this.getProvider("settings")?.instance.lastfm.name;
-		return await shell.openExternal(`https://www.last.fm/user/${escapeHTML(username)}/`);
+		if (!username) return;
+		return await shell.openExternal(`https://www.last.fm/user/${encodeURIComponent(username)}/`);
 	}
 	async handleLastFMAuth() {
 		return await this.authorizeSession()
 			.then(() => true)
 			.catch((err) => {
-				console.error(err);
+				this.logger.error(err);
 				return false;
 			});
 	}
@@ -233,10 +230,12 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			.then(stringifyJson)
 			.then((d) => this.logger.debug(d))
 			.then(() => {
+				this.sendState();
 				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
 			})
 			.catch((err) => {
 				this.logger.error(err);
+				this.sendState();
 				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
 			});
 	}
@@ -265,10 +264,12 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			.then(stringifyJson)
 			.then((d) => this.logger.debug(d))
 			.then(() => {
+				this.sendState();
 				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
 			})
 			.catch((err) => {
 				this.logger.error(err);
+				this.sendState();
 				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
 			});
 	}

@@ -121,9 +121,6 @@ importers:
       cnfast:
         specifier: ^0.1.0
         version: 0.1.0
-      crypto-js:
-        specifier: ^4.2.0
-        version: 4.2.0
       date-fns:
         specifier: ^2.29.1
         version: 2.30.0
@@ -142,9 +139,6 @@ importers:
       encryption.js:
         specifier: ^2.0.4
         version: 2.0.4(typescript@5.9.3)
-      got:
-        specifier: ^11.8.6
-        version: 11.8.6
       hono:
         specifier: ^4.13.0
         version: 4.13.0
@@ -160,9 +154,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      node-fetch:
-        specifier: ^2.6.7
-        version: 2.7.0(encoding@0.1.13)
       node-vibrant:
         specifier: ^4.0.4
         version: 4.0.4(encoding@0.1.13)
@@ -248,9 +239,6 @@ importers:
       '@tanstack/router-plugin':
         specifier: ^1.167.18
         version: 1.168.23(@tanstack/react-router@1.170.18(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(esbuild@0.27.4)(rolldown@1.2.2)(rollup@4.59.0)(supports-color@8.1.1)(vite@7.3.1(@types/node@24.12.0)(jiti@2.7.0)(lightningcss@1.33.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.49.1)(yaml@2.8.2))
-      '@types/crypto-js':
-        specifier: ^4.2.2
-        version: 4.2.2
       '@types/events':
         specifier: ^3.0.0
         version: 3.0.3
@@ -260,9 +248,6 @@ importers:
       '@types/node':
         specifier: ^24.12.0
         version: 24.12.0
-      '@types/node-fetch':
-        specifier: ^2.6.2
-        version: 2.6.13
       '@types/react':
         specifier: ^19.2.10
         version: 19.2.18
@@ -3122,9 +3107,6 @@ packages:
   '@types/connect@3.4.36':
     resolution: {integrity: sha512-P63Zd/JUGq+PdrM1lv0Wv5SBYeA2+CORvbrXbngriYY0jzLUWfQMQQxOhjONEz/wlHOAxOdY7CY65rgQdTjq2w==}
 
-  '@types/crypto-js@4.2.2':
-    resolution: {integrity: sha512-sDOLlVbHhXpAUAL0YHDUUwDZf3iN4Bwi4W6a0W0b+QcAezUbRtH4FVb+9J4h+XFPW7l/gQ9F8qC7P+Ec4k8QVQ==}
-
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
 
@@ -3172,9 +3154,6 @@ packages:
 
   '@types/mysql@2.15.26':
     resolution: {integrity: sha512-DSLCOXhkvfS5WNNPbfn2KdICAmk8lLc+/PNvnPnF7gOdMZCxopXduqv0OQ13y/yA/zXTSikZZqVgybUxOEg6YQ==}
-
-  '@types/node-fetch@2.6.13':
-    resolution: {integrity: sha512-QGpRVpzSaUs30JBSGPjOg4Uveu384erbHBoT1zeONvyCfwQxIkUshLAOqN/k9EjGviPRmWTTe6aH2qySWKTVSw==}
 
   '@types/node@16.9.1':
     resolution: {integrity: sha512-QpLcX9ZSsq3YYUUnD3nFDY8H7wctAhQj/TFKL8Ya8v5fMm3CFXxo8zStsLAl780ltoYoo1WvKUVGBQK+1ifr7g==}
@@ -4074,10 +4053,6 @@ packages:
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
-
-  crypto-js@4.2.0:
-    resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
-    deprecated: Active development of CryptoJS has been discontinued. This library is no longer maintained.
 
   cssesc@3.0.0:
     resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
@@ -10174,8 +10149,6 @@ snapshots:
     dependencies:
       '@types/node': 24.13.3
 
-  '@types/crypto-js@4.2.2': {}
-
   '@types/debug@4.1.12':
     dependencies:
       '@types/ms': 2.1.0
@@ -10223,11 +10196,6 @@ snapshots:
   '@types/mysql@2.15.26':
     dependencies:
       '@types/node': 24.13.3
-
-  '@types/node-fetch@2.6.13':
-    dependencies:
-      '@types/node': 24.12.0
-      form-data: 4.0.5
 
   '@types/node@16.9.1': {}
 
@@ -11166,8 +11134,6 @@ snapshots:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
-
-  crypto-js@4.2.0: {}
 
   cssesc@3.0.0: {}
 

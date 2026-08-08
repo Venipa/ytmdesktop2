@@ -1,147 +1,190 @@
 import { createHash } from "crypto";
-import { enc, MD5 } from "crypto-js";
-import got, { Got, Method } from "got";
-import fetch from "node-fetch";
+
+const API_ROOT = "https://ws.audioscrobbler.com/2.0/";
+const USER_AGENT = "ytmd (github.com/Venipa/ytmdesktop2)";
+
+type HttpMethod = "GET" | "POST";
+
+interface LastFmApiErrorBody {
+	error?: number;
+	message?: string;
+}
+
 export class LastFMClient {
-	private client: Got;
 	private token: string | null = null;
 	private session: string | null = null;
 	private sessionName: string | null = null;
 	private lastError: unknown = null;
-	constructor(private key: { api: string; secret: string }) {
-		this.client = got.extend({
-			prefixUrl: "https://ws.audioscrobbler.com/2.0/",
-			headers: {
-				"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0",
-			},
-			hooks: {
-				beforeRequest: [
-					(options) => {
-						if (!options.searchParams) options.searchParams = new URLSearchParams();
-						if (!options.searchParams.has("api_key")) options.searchParams.set("api_key", this.key.api);
-						if (this.token) {
-							options.searchParams.set("token", this.token);
-							let requestSourceData = "";
-							const requestSourceHashable = ["api_key", "method", "token"];
-							options.searchParams.sort();
-							for (const [key, value] of options.searchParams.entries()) {
-								if (requestSourceHashable.includes(key)) requestSourceData += key + value;
-							}
-							requestSourceData += this.key.secret;
-							options.searchParams.set("api_sig", createHash("md5").update(requestSourceData).digest("hex"));
-						}
-						options.searchParams.set("format", "json");
-						console.log("[API::LASTFM@BeforeRequest]", options, "params:", {
-							...options.searchParams,
-						});
-					},
-				],
-			},
-		});
+
+	constructor(private key: { api: string; secret: string }) {}
+
+	private md5(value: string): string {
+		return createHash("md5").update(value, "utf8").digest("hex");
 	}
-	private async callMethod<T = any>(
-		method: string,
-		type: Method = "post",
-		payload: Partial<{
-			body: Record<string | number, any>;
-			query: Record<string | number, any>;
-		}> = {},
-	) {
-		const query = Object.assign({}, payload.query || {}, { method });
-		const searchParams = new URLSearchParams(query);
-		// const request = this.client
-		//   .extend({ method: type })[type.toLowerCase()] as GotRequestFunction;
-		// return await request('', {
-		//   ...(payload.body ? {body: JSON.stringify(payload.body)} : {}),
-		//   searchParams: new URLSearchParams(query)
-		// })
-		//   .json<T>()
 
-		searchParams.set("api_key", this.key.api);
-		if (this.token) {
-			searchParams.set("token", this.token);
-
-			let requestSourceData = "";
-			searchParams.sort();
-			for (const [key, value] of searchParams.entries()) {
-				requestSourceData += key + value;
-			}
-			requestSourceData += this.key.secret;
-			searchParams.set("api_sig", MD5(requestSourceData).toString(enc.Hex));
+	/** Sign all params except `format` / `callback` (Last.fm auth spec). */
+	private buildSignedParams(params: Record<string, string>): URLSearchParams {
+		const sortedKeys = Object.keys(params).sort();
+		let sigBase = "";
+		for (const key of sortedKeys) {
+			if (key === "format" || key === "callback") continue;
+			sigBase += key + params[key];
 		}
+		sigBase += this.key.secret;
+		const searchParams = new URLSearchParams(params);
+		searchParams.set("api_sig", this.md5(sigBase));
 		searchParams.set("format", "json");
-		this.lastError = null;
-		return await fetch(`https://ws.audioscrobbler.com/2.0/?${searchParams.toString()}`, {
-			method: type.toLowerCase(),
-			headers: {
-				"user-agent": "ytmd (github.com/Venipa/ytmdesktop2)",
-			},
-		})
-			.then((r) => (r.ok ? (r.json() as Promise<T>) : Promise.reject(r)))
-			.catch((err) => {
-				this.lastError = err;
-				return Promise.reject(err);
-			});
+		return searchParams;
 	}
+
+	private toParamRecord(extra: Record<string, string | number | undefined>): Record<string, string> {
+		const params: Record<string, string> = {
+			api_key: this.key.api,
+		};
+		for (const [key, value] of Object.entries(extra)) {
+			if (value === undefined || value === null) continue;
+			params[key] = String(value);
+		}
+		return params;
+	}
+
+	private async callMethod<T>(
+		method: string,
+		httpMethod: HttpMethod,
+		extra: Record<string, string | number | undefined> = {},
+		options: { includeToken?: boolean; expectError?: boolean } = {},
+	): Promise<T> {
+		const params = this.toParamRecord({ ...extra, method });
+		if (options.includeToken) {
+			if (!this.token) throw new Error("Invalid token");
+			params.token = this.token;
+		}
+
+		const needsSig = method !== "auth.getToken";
+		const searchParams = needsSig
+			? this.buildSignedParams(params)
+			: (() => {
+					const sp = new URLSearchParams(params);
+					sp.set("format", "json");
+					return sp;
+				})();
+
+		if (!options.expectError) this.lastError = null;
+
+		const init: RequestInit =
+			httpMethod === "POST"
+				? {
+						method: "POST",
+						headers: {
+							"user-agent": USER_AGENT,
+							"content-type": "application/x-www-form-urlencoded",
+						},
+						body: searchParams.toString(),
+					}
+				: {
+						method: "GET",
+						headers: { "user-agent": USER_AGENT },
+					};
+
+		const url = httpMethod === "POST" ? API_ROOT : `${API_ROOT}?${searchParams.toString()}`;
+
+		try {
+			const response = await fetch(url, init);
+			const data = (await response.json()) as T & LastFmApiErrorBody;
+			const apiError = data && typeof data === "object" && data.error != null;
+			if (!response.ok || apiError) {
+				const err = apiError
+					? Object.assign(new Error(data.message || `Last.fm error ${data.error}`), { code: data.error })
+					: Object.assign(new Error(`Last.fm HTTP ${response.status}`), { response });
+				if (!options.expectError) this.lastError = err;
+				throw err;
+			}
+			this.lastError = null;
+			return data;
+		} catch (err) {
+			if (!options.expectError) this.lastError = err;
+			throw err;
+		}
+	}
+
 	async authorize() {
-		const token = await this.callMethod<{ token: string }>("auth.getToken", "get").then((d) => d.token);
-		return (this.token = token);
+		const data = await this.callMethod<{ token: string }>("auth.getToken", "GET");
+		return (this.token = data.token);
 	}
+
 	async getSession() {
-		const { session: s } = await this.callMethod<{ session: { name: string; key: string } }>("auth.getSession", "get");
+		const { session: s } = await this.callMethod<{ session: { name: string; key: string } }>("auth.getSession", "GET", {}, { includeToken: true });
 		this.sessionName = s.name;
-		return (this.session = s.key);
+		this.session = s.key;
+		this.token = null;
+		return this.session;
 	}
-	async updateNowPlaying(...tracks: { artist: string; track: string; album?: string; duration?: number }[]) {
-		if (!this.session) throw new Error("Invalid session");
-		return await Promise.resolve(
-			this.callMethod("track.updateNowPlaying", "post", {
-				query: {
-					sk: this.session,
-					...tracks[0],
-				},
-			}),
-		);
+
+	/** Poll while auth window open — null until user approves; does not sticky-error. */
+	async tryGetSession(): Promise<string | null> {
+		try {
+			const { session: s } = await this.callMethod<{ session: { name: string; key: string } }>(
+				"auth.getSession",
+				"GET",
+				{},
+				{ includeToken: true, expectError: true },
+			);
+			this.sessionName = s.name;
+			this.session = s.key;
+			this.token = null;
+			this.lastError = null;
+			return this.session;
+		} catch {
+			return null;
+		}
 	}
-	async scrobble(
-		...tracks: {
-			artist: string;
-			track: string;
-			timestamp: number;
-			album?: string;
-			duration?: number;
-		}[]
-	) {
+
+	async updateNowPlaying(track: { artist: string; track: string; album?: string; duration?: number }) {
 		if (!this.session) throw new Error("Invalid session");
-		return await this.callMethod("track.scrobble", "post", {
-			query: {
-				sk: this.session,
-				...tracks[0],
-			},
+		return await this.callMethod("track.updateNowPlaying", "POST", {
+			sk: this.session,
+			artist: track.artist,
+			track: track.track,
+			...(track.album ? { album: track.album } : {}),
+			...(track.duration != null ? { duration: track.duration } : {}),
 		});
 	}
+
+	async scrobble(track: { artist: string; track: string; timestamp: number; album?: string; duration?: number }) {
+		if (!this.session) throw new Error("Invalid session");
+		return await this.callMethod("track.scrobble", "POST", {
+			sk: this.session,
+			artist: track.artist,
+			track: track.track,
+			timestamp: Math.floor(track.timestamp),
+			...(track.album ? { album: track.album } : {}),
+			...(track.duration != null ? { duration: track.duration } : {}),
+		});
+	}
+
 	getUserAuthorizeUrl() {
-		if (!this.token) {
-			throw new Error("Invalid token");
-		}
+		if (!this.token) throw new Error("Invalid token");
 		return `https://www.last.fm/api/auth?api_key=${this.key.api}&token=${this.token}`;
 	}
+
 	getName() {
 		if (!this.session) return null;
 		return this.sessionName;
 	}
+
 	hasError() {
 		return !!this.lastError;
 	}
+
 	isConnected() {
 		return !!this.session;
 	}
+
 	setAuthorize({ token, session, name }: { token: string | null; session?: string | null; name?: string | null }) {
 		this.token = token ?? null;
 		this.session = session ?? null;
 		if (!this.session) this.sessionName = null;
 		else this.sessionName = name ?? null;
-
 		this.lastError = null;
 	}
 }
