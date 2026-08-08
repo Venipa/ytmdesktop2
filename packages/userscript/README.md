@@ -4,11 +4,17 @@ Tampermonkey / Violentmonkey userscript that opens convertible YouTube Music, Yo
 
 ## Behavior
 
-- **Page load / SPA navigate** — if auto-open is on and the current URL is actionable (watch, playlist, channel, shorts, embed, `@handle`), soft-opens matching `ytmd://` (browser tab stays).
+- **Page load / SPA navigate** — if that host’s setting is on and the URL is actionable (watch, playlist, channel, shorts, embed, `@handle`), soft-opens matching `ytmd://` (browser tab stays).
 - **No click interception** — normal link clicks stay in the browser.
-- **Tampermonkey menu**
-  - **Auto-open on load — ON/OFF** — persist toggle (`GM_setValue`)
-  - **Open this page now** — open current URL as `ytmd://` even when auto-open is off
+- **Tampermonkey menu** — per-host toggles + open now:
+
+| Setting | Default |
+| --- | --- |
+| `music.youtube.com` | ON |
+| `youtube.com` | OFF |
+| `m.youtube.com` | OFF |
+| `youtu.be` | OFF |
+| **Open this page now** | always available (ignores toggles) |
 
 Home, search, and other non-actionable paths are ignored.
 

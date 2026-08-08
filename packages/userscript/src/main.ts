@@ -4,23 +4,52 @@ import {
 	GM_setValue,
 	GM_unregisterMenuCommand,
 } from "vite-plugin-monkey/dist/client";
-import { toYtmd } from "./ytmd";
+import { type HostSite, hostSiteFromUrl, toYtmd } from "./ytmd";
 
 const DEDUPE_MS = 2000;
-const AUTO_OPEN_KEY = "autoOpenOnLoad";
-const AUTO_OPEN_DEFAULT = true;
+
+interface SiteSetting {
+	key: string;
+	label: string;
+	defaultEnabled: boolean;
+}
+
+const SITE_SETTINGS: Record<HostSite, SiteSetting> = {
+	music: {
+		key: "site.music.youtube.com",
+		label: "music.youtube.com",
+		defaultEnabled: true,
+	},
+	youtube: {
+		key: "site.youtube.com",
+		label: "youtube.com",
+		defaultEnabled: false,
+	},
+	mYoutube: {
+		key: "site.m.youtube.com",
+		label: "m.youtube.com",
+		defaultEnabled: false,
+	},
+	youtuBe: {
+		key: "site.youtu.be",
+		label: "youtu.be",
+		defaultEnabled: false,
+	},
+};
+
+const SITE_ORDER: HostSite[] = ["music", "youtube", "mYoutube", "youtuBe"];
 
 let lastOpened: string | null = null;
 let lastOpenedAt = 0;
-let autoOpenMenuId: number | string | undefined;
-let openNowMenuId: number | string | undefined;
+const menuIds: Array<number | string> = [];
 
-function isAutoOpenEnabled(): boolean {
-	return Boolean(GM_getValue(AUTO_OPEN_KEY, AUTO_OPEN_DEFAULT));
+function isSiteEnabled(site: HostSite): boolean {
+	const setting = SITE_SETTINGS[site];
+	return Boolean(GM_getValue(setting.key, setting.defaultEnabled));
 }
 
-function setAutoOpenEnabled(enabled: boolean): void {
-	GM_setValue(AUTO_OPEN_KEY, enabled);
+function setSiteEnabled(site: HostSite, enabled: boolean): void {
+	GM_setValue(SITE_SETTINGS[site].key, enabled);
 	refreshMenuCommands();
 }
 
@@ -63,29 +92,39 @@ function softOpenYtmd(ytmdUrl: string, force = false): void {
 	}
 }
 
-/** Auto-open current location when toggle on and URL is actionable. */
+/** Auto-open current location when that host’s setting is on and URL is actionable. */
 function maybeOpenCurrentLocation(): void {
-	if (!isAutoOpenEnabled()) return;
+	const site = hostSiteFromUrl(location.href);
+	if (!site || !isSiteEnabled(site)) return;
 	const ytmd = toYtmd(location.href);
 	if (ytmd) softOpenYtmd(ytmd);
 }
 
-/** Manual open from Tampermonkey menu (ignores auto-open toggle). */
+/** Manual open from Tampermonkey menu (ignores per-host auto-open settings). */
 function openCurrentPageNow(): void {
 	const ytmd = toYtmd(location.href);
 	if (ytmd) softOpenYtmd(ytmd, true);
 }
 
-function refreshMenuCommands(): void {
-	if (autoOpenMenuId !== undefined) GM_unregisterMenuCommand(autoOpenMenuId);
-	if (openNowMenuId !== undefined) GM_unregisterMenuCommand(openNowMenuId);
+function clearMenuCommands(): void {
+	for (const id of menuIds) GM_unregisterMenuCommand(id);
+	menuIds.length = 0;
+}
 
-	const enabled = isAutoOpenEnabled();
-	autoOpenMenuId = GM_registerMenuCommand(
-		enabled ? "YTMDesktop: Auto-open on load — ON" : "YTMDesktop: Auto-open on load — OFF",
-		() => setAutoOpenEnabled(!enabled),
-	);
-	openNowMenuId = GM_registerMenuCommand("YTMDesktop: Open this page now", openCurrentPageNow);
+function refreshMenuCommands(): void {
+	clearMenuCommands();
+
+	for (const site of SITE_ORDER) {
+		const setting = SITE_SETTINGS[site];
+		const enabled = isSiteEnabled(site);
+		const id = GM_registerMenuCommand(
+			`YTMDesktop: ${setting.label} — ${enabled ? "ON" : "OFF"}`,
+			() => setSiteEnabled(site, !enabled),
+		);
+		menuIds.push(id);
+	}
+
+	menuIds.push(GM_registerMenuCommand("YTMDesktop: Open this page now", openCurrentPageNow));
 }
 
 function patchHistory(): void {

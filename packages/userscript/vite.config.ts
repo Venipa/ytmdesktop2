@@ -9,7 +9,7 @@ export default defineConfig({
 				name: "YTMDesktop Open Links",
 				namespace: "https://youtube-music.app",
 				description:
-					"Open YouTube Music / YouTube / youtu.be pages in YTMDesktop2 via ytmd:// on load/navigate. Tampermonkey menu toggles auto-open.",
+					"Open YouTube Music / YouTube / youtu.be pages in YTMDesktop2 via ytmd:// on load/navigate. Per-host Tampermonkey menu toggles (music.youtube on by default).",
 				author: "Venipa",
 				homepage: "https://youtube-music.app",
 				homepageURL: "https://github.com/Venipa/ytmdesktop2",

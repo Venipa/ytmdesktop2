@@ -9,9 +9,14 @@ function isMusicHost(host: string): boolean {
 	return h === "music.youtube.com" || h === "www.music.youtube.com";
 }
 
-function isYoutubeHost(host: string): boolean {
+/** youtube.com / www.youtube.com (not m.). */
+function isYoutubeDesktopHost(host: string): boolean {
 	const h = host.trim().toLowerCase();
-	return h === "youtube.com" || h === "www.youtube.com" || h === "m.youtube.com";
+	return h === "youtube.com" || h === "www.youtube.com";
+}
+
+function isMYoutubeHost(host: string): boolean {
+	return host.trim().toLowerCase() === "m.youtube.com";
 }
 
 function isYoutuBeHost(host: string): boolean {
@@ -21,7 +26,31 @@ function isYoutuBeHost(host: string): boolean {
 
 /** Hosts that support the https→ytmd address-bar swap. */
 export function isConvertibleHost(host: string): boolean {
-	return isMusicHost(host) || isYoutubeHost(host) || isYoutuBeHost(host);
+	return (
+		isMusicHost(host) ||
+		isYoutubeDesktopHost(host) ||
+		isMYoutubeHost(host) ||
+		isYoutuBeHost(host)
+	);
+}
+
+export type HostSite = "music" | "youtube" | "mYoutube" | "youtuBe";
+
+/** Map hostname to settings site key (or null). */
+export function hostSite(host: string): HostSite | null {
+	if (isMusicHost(host)) return "music";
+	if (isYoutubeDesktopHost(host)) return "youtube";
+	if (isMYoutubeHost(host)) return "mYoutube";
+	if (isYoutuBeHost(host)) return "youtuBe";
+	return null;
+}
+
+export function hostSiteFromUrl(url: string): HostSite | null {
+	try {
+		return hostSite(new URL(url).hostname);
+	} catch {
+		return null;
+	}
 }
 
 function decodeSegment(value: string): string {

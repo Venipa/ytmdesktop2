@@ -26,7 +26,7 @@ YTMDesktop2 must be installed (or the `ytmd://` protocol registered) so the OS h
 
 | Event | Action |
 | --- | --- |
-| Page load / SPA navigate | If **auto-open** is on and the URL is actionable, soft-open `ytmd://…` (tab stays) |
+| Page load / SPA navigate | If that **host setting** is on and the URL is actionable, soft-open `ytmd://…` (tab stays) |
 | Link click | Unchanged — browser follows https as usual |
 
 Actionable paths: watch (`?v=`), playlist (`?list=`), channel (`/channel/UC…`), `@handle`, `/shorts/…`, `/embed/…`, and youtu.be `/{videoId}`. Home, search, and browse are skipped.
@@ -37,12 +37,15 @@ Transform is the same address-bar trick as [shared links](/docs/features/shared-
 
 Open the Tampermonkey / Violentmonkey menu on a matched page:
 
-| Command | Effect |
-| --- | --- |
-| **YTMDesktop: Auto-open on load — ON/OFF** | Toggle automatic open on load/navigate (persisted) |
-| **YTMDesktop: Open this page now** | Open the current URL as `ytmd://` even when auto-open is off |
+| Command | Default | Effect |
+| --- | --- | --- |
+| **YTMDesktop: music.youtube.com — ON/OFF** | ON | Auto-open on load/navigate for Music |
+| **YTMDesktop: youtube.com — ON/OFF** | OFF | Auto-open for youtube.com / www |
+| **YTMDesktop: m.youtube.com — ON/OFF** | OFF | Auto-open for mobile YouTube |
+| **YTMDesktop: youtu.be — ON/OFF** | OFF | Auto-open for short links |
+| **YTMDesktop: Open this page now** | — | Open current URL as `ytmd://` (ignores host toggles) |
 
-Default: auto-open **on**.
+Settings persist via `GM_setValue`.
 
 ## Develop
 
