@@ -13,6 +13,7 @@ concurrency:
 
 permissions:
   contents: read
+  packages: read # @venipa/xosms (+ platform optional deps) on GitHub Packages
   checks: write
   pull-requests: write
 
