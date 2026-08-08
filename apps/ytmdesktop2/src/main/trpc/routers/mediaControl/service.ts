@@ -5,6 +5,13 @@ import { MediaPlayerMediaType, MediaPlayerPlaybackStatus, MediaPlayerThumbnail, 
 import { type App, app } from "electron";
 import { clamp } from "lodash-es";
 
+/**
+ * Stable MPRIS D-Bus instance name → `org.mpris.MediaPlayer2.ytmdesktop2`.
+ * Must match Flatpak `--own-name` and Snap `mpris` slot name.
+ * Do not use productName/`app.name` (spaces → `YouTube_Music_for_Desktop`) — sandboxes deny that bind.
+ */
+const MPRIS_SERVICE_NAME = "ytmdesktop2";
+
 export default class MediaControlProvider extends BaseProvider implements AfterInit, BeforeStart, OnDestroy {
 	private _mediaProvider: MediaServiceProvider | null = null;
 	private xosmsLog = this.logger.child("xosms");
@@ -112,16 +119,15 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 
 	async AfterInit() {
 		try {
-			this._mediaProvider = new MediaServiceProvider(this.app.name, this.app.name);
-			if (!this._mediaProvider) {
-				throw new Error("Failed to create media provider");
-			}
+			// serviceName = D-Bus suffix; identity = human-readable MPRIS Identity (playerctl / DE UI)
+			this._mediaProvider = new MediaServiceProvider(MPRIS_SERVICE_NAME, this.app.name);
 
 			this._mediaProvider.addEventListener("buttonpressed", this.onKeyPressedBound);
 			this._mediaProvider.addEventListener("positionchanged", this.onPosChangeBound);
 			this._mediaProvider.addEventListener("positionseeked", this.onPosSeekBound);
 
 			this._mediaProvider.activate();
+			this.xosmsLog.debug(`activated org.mpris.MediaPlayer2.${MPRIS_SERVICE_NAME}`);
 
 			// Buttons must be enabled + flushed before playerctl play/pause works.
 			// macOS NowPlaying Toggle also needs can_play || can_pause (defaults false).

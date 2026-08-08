@@ -72,6 +72,7 @@ dmg:
   title: "Install or Update ${productName} ${version}"
 linux:
   executableName: ytmdesktop2
+  synopsis: Unofficial YouTube Music desktop client
   description: Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.
   # Match Electron WM_CLASS / app_id to installed .desktop (see package.json desktopName).
   syncDesktopName: true
@@ -88,7 +89,9 @@ linux:
       arch: x64
     - target: snap
       arch: x64
-  maintainer: youtube-music.app
+  # FPM (deb/pacman) author/vendor; must be "Name <email>" (not a bare domain).
+  maintainer: "Venipa <admin@venipa.net>"
+  vendor: Venipa
   category: AudioVideo
   icon: build/icon.icns
   mimeTypes:
@@ -98,6 +101,9 @@ pacman:
   # Arch package names cannot contain spaces (extraMetadata.name is the product title).
   packageName: ytmdesktop2
   artifactName: ytmdesktop2-${version}.${arch}.${ext}
+  maintainer: "Venipa <admin@venipa.net>"
+  vendor: Venipa
+  # SPDX via package.json license (MIT) is passed to fpm --license automatically.
   depends:
     # Core Electron / GTK
     - gtk3
@@ -122,13 +128,22 @@ pacman:
     - dbus
 flatpak:
   useWaylandFlags: true
+  # EB default branch is "master" — shows as Flatpak version/ref without this.
+  branch: stable
+  # Resolved via buildResources (directories.buildResources: build).
+  license: license.txt
   category: AudioVideo
+  synopsis: Unofficial YouTube Music desktop client
   description: Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.
   runtime: org.freedesktop.Platform
   runtimeVersion: "24.08"
   sdk: org.freedesktop.Sdk
   base: org.electronjs.Electron2.BaseApp
   baseVersion: "24.08"
+  # Placeholder — beforePack rewrites to absolute path (flatpak-bundler path.resolve(cwd)).
+  files:
+    - - build/net.venipa.ytmdesktop.metainfo.xml
+      - /share/metainfo/net.venipa.ytmdesktop.metainfo.xml
   finishArgs:
     - --socket=wayland
     - --socket=x11
@@ -158,6 +173,9 @@ flatpak:
     - --talk-name=org.freedesktop.Notifications
     - --talk-name=org.gnome.SessionManager
     - --talk-name=org.kde.StatusNotifierWatcher
+    # Must match MediaControlProvider MPRIS_SERVICE_NAME (xosms). Exact name + instance suffix.
+    # Trailing .* alone does NOT allow org.mpris.MediaPlayer2.ytmdesktop2 (no extra segment).
+    - --own-name=org.mpris.MediaPlayer2.ytmdesktop2
     - --own-name=org.mpris.MediaPlayer2.ytmdesktop2.*
 snapcraft:
   base: core24
@@ -203,11 +221,14 @@ snapcraft:
     executableArgs:
       - --no-sandbox
     slots:
+      # xosms owns org.mpris.MediaPlayer2.ytmdesktop2 — NOT Chromium MediaSession ("chromium").
+      # Slot name must match MediaControlProvider MPRIS_SERVICE_NAME or AppArmor denies dbus_bind.
       - mpris:
-          name: chromium
+          name: ytmdesktop2
 # appx:
 #   electronUpdaterAware: true
 #   addAutoLaunchExtension: true
+beforePack: ./scripts/beforePack.js
 afterPack: ./scripts/afterPack.js
 
 # Fixed version required in monorepo: install-app-deps cannot resolve
