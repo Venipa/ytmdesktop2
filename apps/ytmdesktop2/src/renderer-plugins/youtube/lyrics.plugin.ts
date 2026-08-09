@@ -4,11 +4,14 @@ import { createLyricsStore } from "./lyrics/store";
 import { createTabMount, type TabMountHandle } from "./lyrics/tab-mount";
 import {
 	playerCurrentTimeSec,
-	seekPlayerScript,
+	seekPlayer,
 	shouldSkipTrack,
 	trackInfoFromMainWorld,
 } from "./lyrics/track";
 import { createLyricsRenderer, type LyricsRenderApi } from "./lyrics/ui/render";
+import { lyricsPage } from "./lyrics.page";
+import lyricsRenderer from "./lyrics.renderer";
+import type { TrackSearchInfo } from "./lyrics/types";
 
 const SEEK_OFFSET_MS = 10;
 /** Nudge UI ahead of getCurrentTime — YTM clock often trails audible audio. */
@@ -61,20 +64,56 @@ function readLyricsSettings(settings?: Record<string, any>) {
 	};
 }
 
-async function refreshTrack() {
+/** Soft gate for queue prefetch (duration often missing on queue rows). */
+function canPrefetchTrack(info: TrackSearchInfo | null | undefined): info is TrackSearchInfo {
+	if (!info?.videoId || !info.title?.trim()) return false;
+	if (!info.artist?.trim()) return false;
+	if (info.isLiveContent) return false;
+	const type = String(info.musicVideoType ?? "");
+	if (type.includes("PODCAST") || type.includes("EPISODE")) return false;
+	return true;
+}
+
+async function prefetchNextTrack(cfg: ReturnType<typeof readLyricsSettings>) {
+	try {
+		const next = await lyricsPage.request("nextTrackInfo");
+		if (!canPrefetchTrack(next)) return;
+		runtime.store.prefetchForTrack(next, {
+			showEvenIfInexact: cfg.showEvenIfInexact,
+			providers: cfg.providers,
+		});
+		runtime.log?.debug("lyrics: prefetch next", next.videoId, next.title);
+	} catch (err) {
+		runtime.log?.debug("lyrics: prefetch next failed", err);
+	}
+}
+
+async function refreshTrack(expectVideoId?: string | null) {
 	if (!runtime.active) return;
-	const info = await trackInfoFromMainWorld();
+	const expected = expectVideoId ?? runtime.lastVideoId;
+	// Cached track: show lyrics immediately; do not block UI on meta retry.
+	const hadCache = expected ? runtime.store.applyCacheIfPresent(expected) : false;
+	if (expected && !hadCache) runtime.store.setLoading(expected);
+
+	const info = await trackInfoFromMainWorld({ expectVideoId: expected });
+	if (!runtime.active) return;
+	// Newer trackId:change won the race.
+	if (expected && runtime.lastVideoId !== expected) return;
+
 	const skip = shouldSkipTrack(info);
 	if (skip || !info) {
-		runtime.store.setSkipped(info?.videoId ?? null, skip ?? "No track");
+		runtime.store.setSkipped(info?.videoId ?? expected ?? null, skip ?? "No track");
 		return;
 	}
 	runtime.lastVideoId = info.videoId;
 	const cfg = readLyricsSettings();
-	void runtime.store.fetchForTrack(info, {
+	await runtime.store.fetchForTrack(info, {
 		showEvenIfInexact: cfg.showEvenIfInexact,
 		providers: cfg.providers,
 	});
+	if (!runtime.active) return;
+	if (runtime.lastVideoId !== info.videoId) return;
+	void prefetchNextTrack(cfg);
 }
 
 async function pushPlaybackTime() {
@@ -116,12 +155,12 @@ function bindTrackWatch() {
 		const ytmd = getYtmd();
 		runtime.unsubTrackId = ytmd.onInternal("trackId:change", (id) => {
 			const videoId = typeof id === "string" ? id : "";
-			if (!videoId || videoId === runtime.lastVideoId) {
-				void refreshTrack();
+			if (!videoId) {
+				void refreshTrack(null);
 				return;
 			}
 			runtime.lastVideoId = videoId;
-			void refreshTrack();
+			void refreshTrack(videoId);
 		});
 	} catch (err) {
 		runtime.log?.error("lyrics: failed to bind trackId:change", err);
@@ -154,9 +193,9 @@ async function startLyrics() {
 		showTimeCodes: () => readLyricsSettings().showTimeCodes,
 		showProgressBar: () => readLyricsSettings().showProgressBar,
 		onSeek: (timeMs) => {
-			void runtime.domUtils
-				?.createAndRunScript(seekPlayerScript((timeMs + SEEK_OFFSET_MS) / 1000), "lyrics-seek")
-				.catch((err) => runtime.log?.debug("lyrics: seek failed", err));
+			void seekPlayer((timeMs + SEEK_OFFSET_MS) / 1000).then((ok) => {
+				if (!ok) runtime.log?.debug("lyrics: seek failed");
+			});
 		},
 	});
 
@@ -204,6 +243,7 @@ export default definePlugin(
 		displayName: "Lyrics",
 	},
 	{
+		renderer: lyricsRenderer,
 		async afterInit({ settings, domUtils, log, onSettingsChange }) {
 			runtime.domUtils = domUtils;
 			runtime.log = log;

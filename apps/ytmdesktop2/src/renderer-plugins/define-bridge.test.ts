@@ -82,6 +82,17 @@ describe("defineBridge", () => {
 		await expect(cmds.add({}, 2, 3)).resolves.toBe(5);
 		dispose();
 	});
+
+	it("request retries when listen attaches late", async () => {
+		const bridge = defineBridge({ name: "test_bridge_late", timeoutMs: 40 });
+		const pending = bridge.request<string>("echo", "late");
+		await new Promise((r) => setTimeout(r, 60));
+		const dispose = bridge.listen({
+			echo: (value) => String(value),
+		});
+		await expect(pending).resolves.toBe("late");
+		dispose();
+	});
 });
 
 describe("definePageCmds", () => {

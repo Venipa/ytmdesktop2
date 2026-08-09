@@ -51,6 +51,12 @@ export type PageBridge = {
 };
 
 const DEFAULT_TIMEOUT_MS = 8_000;
+const REQUEST_RETRY_MAX = 3;
+const REQUEST_RETRY_BASE_MS = 150;
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
 
 function isRecord(data: unknown): data is Record<string, unknown> {
 	return !!data && typeof data === "object";
@@ -96,7 +102,7 @@ export function defineBridge(options: DefineBridgeOptions): PageBridge {
 	const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 	const idPrefix = options.name.replace(/_/g, "-");
 
-	function request<T = unknown>(cmd: string, ...args: unknown[]): Promise<T> {
+	function requestOnce<T = unknown>(cmd: string, args: unknown[]): Promise<T> {
 		const id = makeId(idPrefix);
 		return new Promise<T>((resolve, reject) => {
 			const timer = window.setTimeout(() => {
@@ -119,6 +125,26 @@ export function defineBridge(options: DefineBridgeOptions): PageBridge {
 			const req: BridgeRequest = { type, kind: "req", id, cmd, args };
 			window.postMessage(req, "*");
 		});
+	}
+
+	/**
+	 * Await page handler. Retries on timeout so preload afterInit/cmds
+	 * can win race vs async world0 `listen` attach.
+	 */
+	async function request<T = unknown>(cmd: string, ...args: unknown[]): Promise<T> {
+		let lastErr: unknown;
+		for (let attempt = 0; attempt < REQUEST_RETRY_MAX; attempt++) {
+			try {
+				return await requestOnce<T>(cmd, args);
+			} catch (err) {
+				lastErr = err;
+				const msg = err instanceof Error ? err.message : String(err);
+				const timedOut = msg.includes("bridge timed out");
+				if (!timedOut || attempt === REQUEST_RETRY_MAX - 1) break;
+				await sleep(REQUEST_RETRY_BASE_MS * (attempt + 1));
+			}
+		}
+		throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 	}
 
 	function notify(cmd: string, ...args: unknown[]): void {

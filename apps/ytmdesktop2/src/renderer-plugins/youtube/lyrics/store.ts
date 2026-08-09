@@ -28,6 +28,7 @@ function applyDisplay(snap: LyricsStoreSnapshot): LyricsStoreSnapshot {
 export function createLyricsStore() {
 	const cache = new Map<string, LyricResult | null>();
 	let abort: AbortController | null = null;
+	let prefetchAbort: AbortController | null = null;
 	let generation = 0;
 	let snap: LyricsStoreSnapshot = {
 		status: "idle",
@@ -45,6 +46,11 @@ export function createLyricsStore() {
 		emit();
 	};
 
+	const stopPrefetch = () => {
+		prefetchAbort?.abort();
+		prefetchAbort = null;
+	};
+
 	return {
 		subscribe(fn: Listener): () => void {
 			listeners.add(fn);
@@ -57,6 +63,7 @@ export function createLyricsStore() {
 		clear() {
 			abort?.abort();
 			abort = null;
+			stopPrefetch();
 			generation += 1;
 			cache.clear();
 			setLyricsTabDisplayMode("overlay");
@@ -76,6 +83,58 @@ export function createLyricsStore() {
 				videoId,
 				errorMessage: reason,
 			});
+		},
+		/** Show loading while waiting for player meta after trackId:change. */
+		setLoading(videoId: string | null) {
+			abort?.abort();
+			abort = null;
+			generation += 1;
+			setSnap({
+				status: "loading",
+				result: null,
+				videoId,
+				errorMessage: undefined,
+			});
+		},
+		/** If lyrics already cached for videoId, apply immediately (skip loading wait). */
+		applyCacheIfPresent(videoId: string): boolean {
+			if (!cache.has(videoId)) return false;
+			const cached = cache.get(videoId) ?? null;
+			abort?.abort();
+			abort = null;
+			generation += 1;
+			setSnap({
+				status: cached ? "ready" : "empty",
+				result: cached,
+				videoId,
+				errorMessage: undefined,
+			});
+			return true;
+		},
+		/**
+		 * Background-fetch lyrics into cache. Does not touch UI snapshot.
+		 * Safe to call for queue "up next" while current track is showing.
+		 */
+		prefetchForTrack(
+			info: TrackSearchInfo,
+			options: { showEvenIfInexact: boolean; providers?: unknown },
+		): void {
+			if (!info.videoId || cache.has(info.videoId)) return;
+			stopPrefetch();
+			prefetchAbort = new AbortController();
+			const signal = prefetchAbort.signal;
+			void searchLyrics(info, {
+				showEvenIfInexact: options.showEvenIfInexact,
+				providers: options.providers,
+				signal,
+			})
+				.then((result) => {
+					if (signal.aborted) return;
+					if (!cache.has(info.videoId)) cache.set(info.videoId, result);
+				})
+				.catch(() => {
+					/* prefetch failures stay silent */
+				});
 		},
 		async fetchForTrack(
 			info: TrackSearchInfo,

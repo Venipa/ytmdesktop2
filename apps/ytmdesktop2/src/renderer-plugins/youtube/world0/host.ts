@@ -4,6 +4,8 @@ import type { RendererPluginRegistration } from "./types";
 declare global {
 	interface Window {
 		__YTMD_WORLD0_HOST__?: boolean;
+		/** True after all renderer `start` hooks finished (bridges listening). */
+		__YTMD_WORLD0_STARTED__?: boolean;
 	}
 }
 
@@ -25,15 +27,20 @@ async function boot(): Promise<void> {
 	const destroyFns: Array<() => void> = [];
 	const active = rendererPlugins.filter((p) => p.enabled !== false);
 
-	for (const plugin of active) {
-		const ctx = createRendererContext(plugin.id);
-		try {
-			const maybeDestroy = await plugin.start?.(ctx);
-			if (typeof maybeDestroy === "function") destroyFns.push(maybeDestroy);
-		} catch (err) {
-			ctx.log.error("start failed", err);
-		}
-	}
+	// Parallel start so page bridges (`listen`) attach before preload afterInit/cmds race.
+	await Promise.all(
+		active.map(async (plugin) => {
+			const ctx = createRendererContext(plugin.id);
+			try {
+				const maybeDestroy = await plugin.start?.(ctx);
+				if (typeof maybeDestroy === "function") destroyFns.push(maybeDestroy);
+			} catch (err) {
+				ctx.log.error("start failed", err);
+			}
+		}),
+	);
+	window.__YTMD_WORLD0_STARTED__ = true;
+	window.dispatchEvent(new Event("ytmd-world0-started"));
 
 	const world0 = createRendererContext("world0");
 	const ytmd = world0.ytmd;

@@ -1,4 +1,5 @@
 import { definePageCmds } from "@plugins/define-bridge";
+import { disableVolumeRatio, enableVolumeRatio } from "./resources/volume-ratio/patch";
 import { getPagePlayerApi } from "./world0/context";
 
 export function forceUpdateVolume(volume?: number): number | undefined {
@@ -17,6 +18,14 @@ export const volumeRatioPage = definePageCmds({
 	name: "volume_ratio",
 	cmds: {
 		forceUpdate: (volume) => forceUpdateVolume(volume as number | undefined),
+		enable: () => {
+			enableVolumeRatio();
+			return forceUpdateVolume();
+		},
+		disable: () => {
+			disableVolumeRatio();
+			return forceUpdateVolume();
+		},
 	},
 });
 

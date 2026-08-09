@@ -1,14 +1,12 @@
 import definePlugin from "@plugins/utils";
-import {
-	postVolumeRatioForceUpdate,
-	requestVolumeRatioForceUpdate,
-	volumeRatioPage,
-} from "./volume-ratio.page";
-import volumeRatioRenderer, {
-	disableScriptContent,
-	enableScriptContent,
-} from "./volume-ratio.renderer";
+import { volumeRatioPage } from "./volume-ratio.page";
+import volumeRatioRenderer from "./volume-ratio.renderer";
 
+/**
+ * Boot enable lives in page renderer (settings.get on start).
+ * Preload afterInit must not bridge-request — world0 `listen` can still be racing.
+ * Toggle / IPC: cmds -> page `enable` / `disable` / `forceUpdate`.
+ */
 export default definePlugin(
 	"volume-ratio",
 	{
@@ -17,23 +15,7 @@ export default definePlugin(
 	},
 	{
 		renderer: volumeRatioRenderer,
-		async afterInit({ settings, domUtils, log }) {
-			if (!settings.volumeRatio?.enabled) return;
-			await domUtils.createAndRunScript(enableScriptContent, "volume-ratio-enable");
-			postVolumeRatioForceUpdate();
-			log.debug("volume ratio enabled (preload inject)");
-		},
 		cmds: {
-			async enable({ log, domUtils }) {
-				log.debug("Enabling volume ratio");
-				await domUtils.createAndRunScript(enableScriptContent, "volume-ratio-enable");
-				return requestVolumeRatioForceUpdate();
-			},
-			async disable({ log, domUtils }) {
-				log.debug("Disabling volume ratio");
-				await domUtils.createAndRunScript(disableScriptContent, "volume-ratio-disable");
-				return requestVolumeRatioForceUpdate();
-			},
 			...volumeRatioPage.pluginCmds,
 		},
 	},
