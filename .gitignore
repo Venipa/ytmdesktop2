@@ -4,7 +4,7 @@ node_modules
 /out
 apps/ytmdesktop2/dist
 apps/ytmdesktop2/out
-
+apps/ytmdesktop2/src/preload/generated
 # local env files
 .env.local
 .env.*.local

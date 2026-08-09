@@ -1,6 +1,8 @@
 import { webFrame } from "electron";
-import preloadRoot from "./base";
+import preloadRoot, { exposeElectronTRPC } from "./base";
 import { createContextExposer, createSettingsManager } from "./utils";
+
+exposeElectronTRPC();
 
 /** App chrome only — freeze page zoom at 1× (OS DPI still applies). */
 try {

@@ -4,10 +4,10 @@ const AUTO_CLOSE_MS = 3_000;
 
 type Toast = HTMLElement & { close?: () => void };
 
-/** YTM liked-music (and similar) toasts never auto-dismiss — close after 3s. */
+/** YTM liked-music (and similar) toasts never auto-dismiss - close after 3s. */
 export default definePlugin(
-	"ytm-toast-fix",
-	{ enabled: true, displayName: "YTM Toast Fix" },
+	"toast-autoclose",
+	{ enabled: true, displayName: "Toast auto-close" },
 	{
 		afterInit({ domUtils }) {
 			const timers = new WeakMap<Toast, ReturnType<typeof setTimeout>>();

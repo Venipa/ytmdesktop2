@@ -1,8 +1,10 @@
 import { createLogger } from "@shared/utils/console";
+import { buildYtmReadyPollScript } from "@shared/ytm";
 import DOMPurify from "dompurify";
-import { ipcRenderer } from "electron";
+import { ipcRenderer, webFrame } from "electron";
 import { debounce, get, merge, set } from "lodash-es";
 import { setContext } from "./base";
+import { getYtmd } from "./preload-local";
 import { PluginContext, PluginManager, PluginSettings } from "./pluginManager";
 
 // Types
@@ -31,14 +33,14 @@ export interface PluginUtils {
   createPluginName: (filename: string) => string;
   createPluginLogger: (baseLogger: any, pluginName: string) => any;
   createPlayerReadyWaiter: (timeoutMs?: number) => Promise<void>;
-  createPluginContext: (name: string, settings: any, playerApi: any, playerUiService: any, api: any, domUtils: any, log: any) => PluginContext;
+  createPluginContext: (name: string, settings: any, playerApi: any, playerUiService: any, api: any, domUtils: any, log: any, ytmd?: any) => PluginContext;
 }
 
 // Constants
 export const YOUTUBE_HOST_PREFIX = "music.youtube";
 export const YTMD_READY_MESSAGE = "ytmd-ready";
 export const YOUTUBE_MUSIC_HOST = "music.youtube.com";
-export const DEFAULT_PLAYER_TIMEOUT = 30 * 1000;
+export const DEFAULT_PLAYER_TIMEOUT = 12 * 1000;
 
 const PLAYER_API_SELECTORS = ["body>ytmusic-app", "ytmusic-app-layout>ytmusic-player-bar"] as const;
 
@@ -53,7 +55,7 @@ function isPlayerApiReady(api: unknown): boolean {
 }
 
 /** True when any known host element exposes a ready playerApi. */
-function isYoutubePlayerReadyFromDom(): boolean {
+export function isYoutubePlayerReadyFromDom(): boolean {
 	if (isPlayerApiReady(window.domUtils?.playerApi?.())) return true;
 	for (const selector of PLAYER_API_SELECTORS) {
 		const el = document.querySelector(selector) as { playerApi?: unknown } | null;
@@ -144,36 +146,30 @@ export const createPluginUtils = (): PluginUtils => ({
       .join(".")
       .replace(/.plugin$/, ""),
 
-  createPluginLogger: (baseLogger: any, pluginName: string) => baseLogger.child(`Client Plugin, ${pluginName}`),
+  createPluginLogger: (baseLogger: any, pluginName: string) => baseLogger.child("plugin").child(pluginName),
 
 	createPlayerReadyWaiter: (timeoutMs: number = DEFAULT_PLAYER_TIMEOUT) =>
-		new Promise<void>((resolve, reject) => {
-			let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
-			let checkHandle: ReturnType<typeof setTimeout> | undefined;
+		(async () => {
+			const script = buildYtmReadyPollScript({
+				timeoutMs,
+				requireLoaded: false,
+				requirePlayer: true,
+				intervalMs: 50,
+			});
+			// executeJavaScript awaits returned Promises (unlike some isolated-world paths).
+			const ok = await webFrame.executeJavaScript(script);
+			if (!ok) throw new Error("Unable to hook yt player");
+		})(),
 
-			const checkYTRoot = () => {
-				if (!timeoutHandle) {
-					timeoutHandle = setTimeout(() => {
-						if (checkHandle) clearTimeout(checkHandle);
-						reject(new Error("Unable to hook yt player"));
-					}, timeoutMs);
-				}
-
-				if (!isYoutubePlayerReadyFromDom()) {
-					checkHandle = setTimeout(checkYTRoot, 100);
-					return;
-				}
-
-				if (checkHandle) clearTimeout(checkHandle);
-				if (timeoutHandle) clearTimeout(timeoutHandle);
-				resolve();
-			};
-
-			checkYTRoot();
-		}),
-
-  createPluginContext: (name: string, settings: any, playerApi: any, playerUiService: any, api: any, domUtils: any, log: any) => {
+  createPluginContext: (name: string, settings: any, playerApi: any, playerUiService: any, api: any, domUtils: any, log: any, ytmd?: any) => {
     const pluginKey = parsePluginSettingKey(name);
+    const bridge = ytmd ?? (() => {
+      try {
+        return getYtmd();
+      } catch {
+        return null;
+      }
+    })();
     return {
       settings: new Proxy(settings, {
         get: (target, prop) => {
@@ -189,19 +185,23 @@ export const createPluginUtils = (): PluginUtils => ({
       playerUiService,
       api,
       domUtils,
+      ytmd: bridge,
       log,
       name,
       onSettingsChange: (fn: (key: string, value: any) => void) => {
-        // IPC: settingsProvider.change(ev, key, value, prevValue) — not a single object payload.
         const handler = debounce(
-          (_ev: unknown, key: string, value: any) => {
+          (key: string, value: any) => {
             fn(key, value);
           },
           100,
           { leading: true, trailing: true },
         );
-        window.ipcRenderer.on("settingsProvider.change", handler);
-        return () => window.ipcRenderer.off("settingsProvider.change", handler);
+        if (bridge?.onInternal) {
+          return bridge.onInternal("settingsProvider.change", (key, value) => handler(String(key), value));
+        }
+        const ipcHandler = (_ev: unknown, key: string, value: any) => handler(key, value);
+        window.ipcRenderer.on("settingsProvider.change", ipcHandler);
+        return () => window.ipcRenderer.off("settingsProvider.change", ipcHandler);
       },
     };
   },

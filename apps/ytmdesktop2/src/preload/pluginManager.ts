@@ -1,11 +1,15 @@
 import type { PluginOptions } from "@plugins/utils";
 import { ClientPlugin, initializePluginCommandsWithIPC } from "@plugins/utils";
 import { createLogger, Logger } from "@shared/utils/console";
+import type { YtmPageBridge } from "@shared/ytm";
 import { debounce, get, merge, set } from "lodash-es";
 import { basename } from "path";
 import type { PlayerApi, PlayerUiService } from "ytm-client-api";
 import pkg from "../../package.json";
+import { getPreloadApi, getPreloadDomUtils, getYtmd } from "./preload-local";
+import type { PreloadYtmdHost } from "./ytmd-bridge";
 import { createPluginUtils, isYoutubeMusicHost } from "./utils";
+import world0HostSource from "./generated/ytmd-world0-host.js?raw";
 export type PluginSettings = Record<string, any>;
 export interface PluginContext {
 	name: string;
@@ -16,6 +20,7 @@ export interface PluginContext {
 	playerUiService: PlayerUiService;
 	api: Window["api"];
 	domUtils: Window["domUtils"];
+	ytmd: PreloadYtmdHost | YtmPageBridge | null;
 	onSettingsChange: (fn: (key: string, value: any) => void) => () => void;
 }
 
@@ -25,6 +30,7 @@ export interface PluginInfo {
 	meta: PluginOptions;
 	cmds?: Record<string, (context: PluginContext, ...args: any[]) => void>;
 	afterInit?: (context: PluginContext) => void;
+	onConfigChange?: (key: string, value: unknown, context: PluginContext) => void | Promise<void>;
 	log: any;
 	name: string;
 	displayName: string;
@@ -39,7 +45,8 @@ export class PluginManager {
 	private pluginUtils = createPluginUtils();
 
 	constructor() {
-		this.settingsPromise = window.api.settingsProvider.getAll({}).then((x) => (window.__ytd_settings = merge({}, x)));
+		const api = getPreloadApi();
+		this.settingsPromise = api.settingsProvider.getAll({}).then((x) => (window.__ytd_settings = merge({}, x)));
 		this.loadPlugins();
 	}
 
@@ -51,21 +58,22 @@ export class PluginManager {
 		this.plugins = Object.entries(pluginModules)
 			.map(([filename, p]: [string, any]) => {
 				const m = basename(filename);
-				let { meta, exec, afterInit, cmds } = p.default as ClientPlugin;
+				let { meta, exec, afterInit, cmds, onConfigChange } = p.default as ClientPlugin;
 				const pluginName = meta?.name;
 				const pluginLog = this.pluginUtils.createPluginLogger(this.log, pluginName);
 
-				if (meta) pluginLog.debug("enabled:", meta.enabled !== false);
+				if (meta) pluginLog.debug("load", { enabled: meta.enabled !== false });
 				else return undefined;
 
 				if (meta && meta.enabled === false) return undefined;
-        if (import.meta.env.DEV) meta.throwOnError = true;
+				if (import.meta.env.DEV) meta.throwOnError = true;
 				return {
 					file: m,
 					exec,
 					meta,
 					cmds,
 					afterInit,
+					onConfigChange,
 					log: pluginLog,
 					name: this.pluginUtils.createPluginName(m),
 					displayName: meta.displayName,
@@ -78,34 +86,42 @@ export class PluginManager {
 	}
 
 	private getPlayerApi() {
-		return window.domUtils.playerApi();
+		return getPreloadDomUtils().playerApi();
 	}
 	private getPlayerUiService() {
-		return window.domUtils.playerUiService();
+		return getPreloadDomUtils().playerUiService();
 	}
 
 	private createPluginContext(name: string): PluginContext {
-		return this.pluginUtils.createPluginContext(name, window.__ytd_settings, this.getPlayerApi(), this.getPlayerUiService(), window.api, window.domUtils, this.log);
+		return this.pluginUtils.createPluginContext(
+			name,
+			window.__ytd_settings,
+			this.getPlayerApi(),
+			this.getPlayerUiService(),
+			getPreloadApi(),
+			getPreloadDomUtils(),
+			this.log,
+			getYtmd(),
+		);
 	}
 
 	private async waitForPlayerReady(): Promise<void> {
 		return this.pluginUtils.createPlayerReadyWaiter();
 	}
 	onSettingsChange(fn: (key: string, value: any) => void): () => void {
-		// IPC: settingsProvider.change(ev, key, value, prevValue) — not a single object payload.
 		const handler = debounce(
-			(_ev: unknown, key: string, value: any) => {
+			(key: string, value: any) => {
 				fn(key, value);
 			},
 			100,
 			{ leading: true, trailing: true },
 		);
-		window.ipcRenderer.on("settingsProvider.change", handler);
-		return () => window.ipcRenderer.off("settingsProvider.change", handler);
+		return getYtmd().onInternal("settingsProvider.change", (key, value) => handler(String(key), value));
 	}
 	private setupSettingsListener(): void {
 		try {
-			window.ipcRenderer.on("settingsProvider.change", (ev, key, value) => {
+			getYtmd().onInternal("settingsProvider.change", (key, value) => {
+				if (typeof key !== "string") return;
 				this.log.debug("settings.change", key, value);
 				const prevValue = get(window.__ytd_settings, key);
 				window.__ytd_settings = set(window.__ytd_settings, key, value);
@@ -115,9 +131,18 @@ export class PluginManager {
 					if (plugin) {
 						plugin.log.debug("settings.change", settingKey, value);
 						if (plugin.meta.restartNeeded && settingKey === "enabled" && !!prevValue !== !!value) {
-							window.api.action("app.restartNeeded");
+							getPreloadApi().action("app.restartNeeded");
 						}
 					}
+				}
+				for (const plugin of this.plugins) {
+					if (!plugin.onConfigChange) continue;
+					const pluginContext = this.createPluginContext(plugin.name);
+					void Promise.resolve(
+						plugin.onConfigChange(key, value, { ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi() }),
+					).catch((err) => {
+						plugin.log.error("onConfigChange failed", err);
+					});
 				}
 			});
 		} catch (ex) {
@@ -125,12 +150,24 @@ export class PluginManager {
 		}
 	}
 
+	/** Inject page-world host (onPlayerApiReady + DOM plugins). */
+	private async injectWorld0Host(): Promise<void> {
+		try {
+			await getPreloadDomUtils().createAndRunScript(world0HostSource, "ytmd-world0-host");
+			this.log.debug("world-0 host injected");
+		} catch (err) {
+			this.log.error("world-0 host inject failed", err);
+		}
+	}
+
 	private async initializePlugins(): Promise<void> {
-		// Execute plugins and collect destroy functions
+		await this.injectWorld0Host();
+
+		// Execute preload plugins and collect destroy functions
 		const results = await Promise.all(
 			this.plugins.map(async (plugin) => {
 				const pluginContext = this.createPluginContext(plugin.name);
-				plugin.log.debug(plugin.name, plugin.meta);
+				plugin.log.debug("exec", { displayName: plugin.meta.displayName });
 				const result = await Promise.resolve(plugin.exec({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi() }));
 				return result;
 			}),
@@ -156,7 +193,7 @@ export class PluginManager {
 				await Promise.resolve(plugin.afterInit({ ...pluginContext, log: plugin.log, playerApi: this.getPlayerApi() })).catch((err) => {
 					this.log.error(`Error running afterInit hook for plugin ${plugin.name}`, err);
 				});
-				this.log.child(`Client Plugin, ${plugin.name}`).debug(`afterInit execute`);
+				plugin.log.debug("afterInit");
 			}),
 		);
 	}
@@ -179,7 +216,7 @@ export class PluginManager {
 		);
 	}
 	private async removeChromecastIcon() {
-		const style = await window.domUtils.createStyle(`
+		const style = await getPreloadDomUtils().createStyle(`
       ytmusic-cast-button.cast-button {
         display: none !important;
       }
@@ -198,14 +235,14 @@ export class PluginManager {
 
 		this.setupSettingsListener();
 		this.log.debug("dom init...");
-    const markReady = () => {
-      window.api.emit("app.loadEnd");
-      this.isLoaded = true;
-      window.postMessage("ytmd-ready", "*");
-    }
+		const markReady = () => {
+			getPreloadApi().emit("app.loadEnd");
+			this.isLoaded = true;
+			window.postMessage("ytmd-ready", "*");
+		};
 		await this.removeChromecastIcon().catch((ex) => this.log.error("removeChromecastIcon failed", ex));
 		await new Promise<void>((resolve, reject) =>
-			window.domUtils.ensureDomLoaded(async () => {
+			getPreloadDomUtils().ensureDomLoaded(async () => {
 				try {
 					if (isYoutubeMusicHost()) {
 						await this.initializePlugins();

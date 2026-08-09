@@ -1,7 +1,7 @@
-import { createSendHandler } from "@main/ipc/ipc";
 import { BrowserWindowViews } from "@main/windows/mappedWindow";
+import { YtmClient } from "@main/ytm/ytm-client";
 import { createLogger, Logger } from "@shared/utils/console";
-import { waitMs } from "@shared/utils/promises";
+import type { YtmCmdTarget } from "@shared/ytm";
 import { App, BrowserWindow, WebContentsView } from "electron";
 import type { ProviderNameKey } from "ytmd";
 import { BaseProviderNames } from "ytmd";
@@ -52,29 +52,22 @@ export class BaseProvider<TView extends WebContentsView = WebContentsView> {
 	) {
 		this._loggerInstance = createLogger("services").child(this.name);
 	}
-	private async _ytmReady(retryCount: number = 0) {
+	private async _ytmReady() {
 		if (!this.views.youtubeView) return false;
 		if (this.views.youtubeView.webContents.isDestroyed()) return false;
 		if (this.views.youtubeView.webContents.isCrashed()) return false;
-		if (this.views.youtubeView.webContents.isLoading()) {
-			await new Promise<void>((resolve) => {
-				this.views.youtubeView.webContents.once("did-finish-load", () => resolve());
-			});
-		}
-		const isReady = await this.views.youtubeView.webContents.executeJavaScript(
-			`(window && window.isYTMLoaded && window.isYTMLoaded() && window.domUtils.playerApi().isReady())`,
-		);
-		this.logger.debug("YTM ready:", isReady, { retryCount });
-		if (!isReady && retryCount > 20) throw new Error("YTM was not able to initialize");
-		if (!isReady) return await waitMs(500).then(() => this._ytmReady(retryCount + 1));
+		const isReady = await YtmClient.isReady({ timeout: 12_000, requirePlayer: true, requireLoaded: true });
+		this.logger.debug("YTM ready:", isReady);
+		if (!isReady) throw new Error("YTM was not able to initialize");
 		return isReady;
 	}
 
 	async executeCommand<T = unknown>(command: string, ...args: any[]): Promise<T> {
-		return await createSendHandler<T>(this.views.youtubeView, `plugins:${this.name}:cmd:${command}`)(...args);
+		const target = this.name as YtmCmdTarget;
+		return await YtmClient.cmd<T>(target, command, ...args);
 	}
 	async isYtmReady() {
-		return await this._ytmReady(0);
+		return await this._ytmReady();
 	}
 	getName() {
 		return this.name;

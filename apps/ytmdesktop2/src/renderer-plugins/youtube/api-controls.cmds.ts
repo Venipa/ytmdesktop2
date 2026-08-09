@@ -1,4 +1,3 @@
-import definePlugin from "@plugins/utils";
 import type { PlayerApi } from "ytm-client-api";
 import { readLikeStatus } from "./ytm-like-status";
 import {
@@ -8,9 +7,9 @@ import {
 	type YtmStoreLike,
 } from "./ytm-store";
 
-type SeekPayload = { time?: number; type?: "seek" };
+export type SeekPayload = { time?: number; type?: "seek" };
 
-type NavigatePayload = {
+export type NavigatePayload = {
 	videoId?: string;
 	playlistId?: string;
 	play?: boolean;
@@ -27,7 +26,7 @@ function playlistBrowseId(playlistId: string): string {
 }
 
 function dispatchYtNavigate(endpoint: Record<string, unknown>): void {
-	// Upstream (ytmdesktop) only fires this event — do not also call ytmusic-app.navigate().
+	// Upstream (ytmdesktop) only fires this event - do not also call ytmusic-app.navigate().
 	// Dual dispatch starts playback but clears main content (empty page behind player).
 	document.dispatchEvent(
 		new CustomEvent("yt-navigate", {
@@ -84,7 +83,7 @@ function buildNavigateEndpoint(data?: NavigatePayload): Record<string, unknown> 
 	}
 
 	if (handle) {
-		// Handles often lack browseId — urlEndpoint is the reliable in-app path (still via yt-navigate).
+		// Handles often lack browseId - urlEndpoint is the reliable in-app path (still via yt-navigate).
 		return { urlEndpoint: { url: `https://music.youtube.com/@${encodeURIComponent(handle)}` } };
 	}
 
@@ -106,7 +105,7 @@ function playbackSnapshot(playerApi: PlayerApi, playing?: boolean) {
 	};
 }
 
-const trackControls = {
+export const trackControls = {
 	toggle: (player: PlayerApi) => {
 		const state = player.getPlayerStateObject();
 		if (!state) throw new Error("Player state not found");
@@ -265,7 +264,7 @@ async function queueAddVideo(videoId: string, index: number, store: YtmStoreLike
 	const queueContextParams = liveStore?.getState?.()?.queue?.queueContextParams;
 	const fetch = resolveYtmApp()?.networkManager?.fetch;
 	if (!liveStore || !queueContextParams || typeof fetch !== "function") {
-		throw new Error("queueAdd failed — play a track first (queue context missing)");
+		throw new Error("queueAdd failed - play a track first (queue context missing)");
 	}
 
 	const result = await fetch("/music/get_queue", {
@@ -274,7 +273,7 @@ async function queueAddVideo(videoId: string, index: number, store: YtmStoreLike
 		videoIds: [videoId],
 	});
 	const items = result?.queueDatas?.map((d) => d.content).filter(Boolean) ?? [];
-	if (!items.length) throw new Error("queueAdd failed — get_queue returned no items");
+	if (!items.length) throw new Error("queueAdd failed - get_queue returned no items");
 	dispatchQueueAddItems(liveStore, items, index);
 }
 
@@ -356,37 +355,3 @@ function summarizeQueueItem(item: unknown, index: number): { index: number; vide
 		...(title ? { title: String(title) } : {}),
 	};
 }
-
-export default definePlugin(
-	"track-api-controls",
-	{
-		enabled: true,
-		displayName: "Track API Controls",
-		service: "api",
-	},
-	{
-		cmds: {
-			toggle: async ({ playerApi }) => trackControls.toggle(playerApi),
-			play: async ({ playerApi }) => trackControls.play(playerApi),
-			pause: async ({ playerApi }) => trackControls.pause(playerApi),
-			next: async ({ playerApi }) => trackControls.next(playerApi),
-			prev: async ({ playerApi }) => trackControls.prev(playerApi),
-			isPlaying: async ({ playerApi }) => trackControls.isPlaying(playerApi),
-			repeat: async ({ playerApi }) => trackControls.repeat(playerApi),
-			shuffle: async ({ playerApi }) => trackControls.shuffle(playerApi),
-			forward: async ({ playerApi }, data?: SeekPayload) => trackControls.forward(playerApi, data),
-			backward: async ({ playerApi }, data?: SeekPayload) => trackControls.backward(playerApi, data),
-			seek: async ({ playerApi }, data?: SeekPayload) => trackControls.seek(playerApi, data),
-			like: async (_ctx, liked: boolean) => trackControls.like(liked),
-			dislike: async (_ctx, disliked: boolean) => trackControls.dislike(disliked),
-			likeState: async () => trackControls.likeState(),
-			volume: async ({ playerApi }, data?: { volume?: number }) => trackControls.volume(playerApi, data),
-			volumeUp: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeUp(playerApi, data),
-			volumeDown: async ({ playerApi }, data?: { amount?: number }) => trackControls.volumeDown(playerApi, data),
-			navigate: async (_ctx, data?: NavigatePayload) => trackControls.navigate(data),
-			queueAdd: async (_ctx, data?: { videoId?: string; playlistId?: string; index?: number }) => trackControls.queueAdd(data),
-			queueList: async (_ctx) => trackControls.queueList(),
-			queueClear: async ({ playerApi }) => trackControls.queueClear(playerApi),
-		},
-	},
-);

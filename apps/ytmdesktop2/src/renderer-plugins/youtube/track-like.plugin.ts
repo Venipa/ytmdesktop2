@@ -11,20 +11,25 @@ import {
 const POLL_MS = 200;
 const MAX_WAIT_MS = 3_000;
 
+/**
+ * Like/dislike state emit + optional skip-disliked.
+ * One observer + one poll per track id.
+ */
 export default definePlugin(
-	"track-like-watcher",
+	"track-like",
 	{
 		enabled: true,
-		displayName: "Track Like Watcher",
+		displayName: "Track like",
 	},
 	{
-		exec({ api, log }) {
+		exec({ api, log, ytmd, settings, domUtils }) {
 			let lastKey = "";
 			let watchVideoId: string | null = null;
 			let baseline = "";
 			let pollTimer: ReturnType<typeof setTimeout> | null = null;
 			let attrObserver: MutationObserver | null = null;
 			let observedEl: HTMLElement | null = null;
+			let skipDoneFor: string | null = null;
 
 			const clearPoll = () => {
 				if (pollTimer === null) return;
@@ -32,23 +37,36 @@ export default definePlugin(
 				pollTimer = null;
 			};
 
+			const trySkipDisliked = (videoId: string, reason: string) => {
+				if (!settings.player?.skipDisliked) return;
+				if (skipDoneFor === videoId) return;
+				const activeId = readPlayerVideoId();
+				if (activeId && activeId !== videoId) return;
+				const status = readLikeStatus();
+				if (!status.settled || !status.disliked) return;
+				skipDoneFor = videoId;
+				log.debug("skip disliked track", videoId, reason);
+				domUtils.playerApi()?.nextVideo();
+			};
+
 			const emitSettled = (videoId: string): boolean => {
 				const status = readLikeStatus();
 				if (!status.settled) return false;
 				const key = `${videoId}|${Number(status.liked)}|${Number(status.disliked)}`;
-				if (key === lastKey) return true;
-				lastKey = key;
-				const payload = { videoId, liked: status.liked, disliked: status.disliked };
-				publishLikeStatus(payload);
-				try {
-					api.emit(IPC_EVENT_NAMES.TRACK_LIKE_STATE, payload);
-				} catch (err) {
-					log.error("Failed to emit track:like-state", err);
+				if (key !== lastKey) {
+					lastKey = key;
+					const payload = { videoId, liked: status.liked, disliked: status.disliked };
+					publishLikeStatus(payload);
+					try {
+						api.emit(IPC_EVENT_NAMES.TRACK_LIKE_STATE, payload);
+					} catch (err) {
+						log.error("Failed to emit track:like-state", err);
+					}
 				}
+				trySkipDisliked(videoId, "settled");
 				return true;
 			};
 
-			/** Only trust status after attr leaves hop baseline (avoids stale LIKE flash). */
 			const statusReady = (): boolean => {
 				const raw = readRawLikeStatus();
 				if (raw === "") return false;
@@ -73,13 +91,14 @@ export default definePlugin(
 				return true;
 			};
 
-			const armPoll = (videoId: string) => {
+			const armWatch = (videoId: string) => {
 				clearPoll();
 				watchVideoId = videoId;
-				const startedAt = Date.now();
+				skipDoneFor = null;
 				baseline = readRawLikeStatus();
 				bindAttrObserver();
 
+				const startedAt = Date.now();
 				const tick = () => {
 					if (watchVideoId !== videoId) return;
 					bindAttrObserver();
@@ -92,14 +111,13 @@ export default definePlugin(
 					const ready = statusReady();
 					const timedOut = Date.now() - startedAt >= MAX_WAIT_MS;
 
-					// Prefer mutated status. Timeout + unchanged baseline = same status as previous
-					// track (e.g. LIKE→LIKE) — safe to emit; timeout + still baseline when we
-					// expected change is also "emit current" after wait.
-					if ((ready || timedOut) && emitSettled(videoId)) {
+					if (ready && emitSettled(videoId)) {
 						clearPoll();
 						return;
 					}
 					if (timedOut) {
+						// Unchanged baseline across consecutive disliked tracks still counts.
+						void emitSettled(videoId);
 						clearPoll();
 						return;
 					}
@@ -108,20 +126,23 @@ export default definePlugin(
 				pollTimer = setTimeout(tick, POLL_MS);
 			};
 
-			const onTrackIdChange = (_ev: unknown, id: string) => {
-				if (!id) return;
+			const onTrackIdChange = (id: unknown) => {
+				if (!id || typeof id !== "string") return;
 				lastKey = "";
-				armPoll(id);
+				armWatch(id);
 			};
 
 			bindAttrObserver();
-			window.ipcRenderer.on("trackId:change", onTrackIdChange);
+			const unsubTrack =
+				ytmd && "onInternal" in ytmd && typeof ytmd.onInternal === "function"
+					? ytmd.onInternal("trackId:change", onTrackIdChange)
+					: ytmd?.on("trackId:change", onTrackIdChange);
 			return () => {
 				clearPoll();
 				attrObserver?.disconnect();
 				attrObserver = null;
 				observedEl = null;
-				window.ipcRenderer.off("trackId:change", onTrackIdChange);
+				unsubTrack?.();
 			};
 		},
 	},

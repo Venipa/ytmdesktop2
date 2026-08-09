@@ -157,7 +157,8 @@ export class WindowManager {
 			},
 			{
 				sandbox: false,
-				contextIsolation: false,
+				contextIsolation: true,
+				nodeIntegration: false,
 				backgroundThrottling: false,
 			},
 		);

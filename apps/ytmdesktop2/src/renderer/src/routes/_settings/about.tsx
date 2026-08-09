@@ -1,11 +1,13 @@
 import { UPDATE_CHANNEL_LABELS, type UpdateChannel } from "@shared/utils/updater";
 import { createFileRoute } from "@tanstack/react-router";
+import { RiFolderOpenLine } from "@remixicon/react";
 import { SettingsSelect } from "@/components/settings-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { useUpdater } from "@/hooks/use-updater";
+import { trpc } from "@/lib/trpc";
 
 export const Route = createFileRoute("/_settings/about")({
 	component: AboutSettingsPage,
@@ -26,6 +28,7 @@ const CHANNEL_OPTIONS = (Object.keys(UPDATE_CHANNEL_LABELS) as UpdateChannel[]).
 function AboutSettingsPage() {
 	const appVersion = window.api.version;
 	const { updateInfo, progress, status, checking, installing, check, install } = useUpdater();
+	const { mutateAsync: openLogsFolder, isLoading: openingLogs } = trpc.app.openLogsFolder.useMutation();
 
 	return (
 		<>
@@ -51,14 +54,14 @@ function AboutSettingsPage() {
 							</Button>
 						) : status === "downloading" || status === "installing" ? (
 							<Button variant="outline" disabled>
-								{status === "installing" ? "Installing…" : `Downloading… ${(progress?.percent ?? 0).toFixed(0)}%`}
+								{status === "installing" ? "Installing..." : `Downloading... ${(progress?.percent ?? 0).toFixed(0)}%`}
 								<span data-icon="inline-end">
 									<Spinner />
 								</span>
 							</Button>
 						) : (
 							<Button variant="outline" onClick={() => void check()} disabled={checking}>
-								{checking ? "Checking…" : updateInfo ? `Update v${updateInfo.version}` : "Check for Update"}
+								{checking ? "Checking..." : updateInfo ? `Update v${updateInfo.version}` : "Check for Update"}
 								{checking ? (
 									<span data-icon="inline-end">
 										<Spinner />
@@ -67,6 +70,21 @@ function AboutSettingsPage() {
 							</Button>
 						)}
 					</div>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Logs</CardTitle>
+					<CardDescription>Open the app logs folder on disk (errors and warnings in production).</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<Button variant="outline" disabled={openingLogs} onClick={() => void openLogsFolder()}>
+						<span data-icon="inline-start">
+							<RiFolderOpenLine className="size-4" />
+						</span>
+						{openingLogs ? "Opening..." : "Open logs folder"}
+					</Button>
 				</CardContent>
 			</Card>
 

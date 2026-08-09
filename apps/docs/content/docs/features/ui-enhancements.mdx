@@ -3,7 +3,7 @@ title: UI enhancements
 description: Client plugins that fix YouTube Music UI quirks and improve playback UX
 ---
 
-YTMDesktop2 injects small **renderer plugins** into the YouTube Music page. Some fix UI quirks; others improve playback. Most run automatically — a few have settings under **Settings → Player**.
+YTMDesktop2 injects small **renderer plugins** into the YouTube Music page. Some fix UI quirks; others improve playback. Most run automatically - a few have settings under **Settings > Player**.
 
 ## Always on
 
@@ -11,23 +11,33 @@ These plugins load with the music view. No toggle.
 
 | Plugin | What it does |
 | --- | --- |
-| **YTM Toast Fix** (`ytm-toast-fix`) | YouTube Music “Saved to liked music” (and similar) paper toasts stay open until you dismiss them. The plugin closes open `tp-yt-paper-toast` toasts after **3 seconds**. |
-| **YouTube Performance Fixes** (`youtube-performance-fixes`) | Lowers background CPU use in the embedded player (CPU tamer + related patches; same idea as community YouTube Music clients). |
+| **Toast auto-close** (`toast-autoclose`) | YouTube Music "Saved to liked music" (and similar) paper toasts stay open until you dismiss them. The plugin closes open `tp-yt-paper-toast` toasts after **3 seconds**. |
+| **Performance fixes** (`perf-fixes`) | Lowers background CPU use in the embedded player (CPU tamer + related patches; same idea as community YouTube Music clients). |
 | **Cast button hide** | Hides the Chromecast control in the music chrome (not useful in this desktop shell). |
 
-## Settings → Player
+## Settings > Player
 
 | Setting | Plugin / behavior |
 | --- | --- |
-| **Skip disliked songs** | Auto-skips tracks you have disliked (experimental). |
-| **Exponential volume ratio** | Exponential volume curve instead of linear. |
-| **Customize player video settings** | Preferred resolution (720p–4K) when available. |
-| **Replace share links with ytmd://** | Rewrites the YTM share dialog URL — see [Shared links](/docs/features/shared-links). |
+| **Skip disliked songs** | `track-like` auto-skips tracks you have disliked (experimental). |
+| **Exponential volume ratio** | `volume-ratio` exponential volume curve instead of linear. |
+| **Customize player video settings** | `player-quality` preferred resolution (720p-4K) when available. |
+| **Replace share links with ytmd://** | `share-links` rewrites the YTM share dialog URL - see [Shared links](/docs/features/shared-links). |
+
+## Plugin authors
+
+YouTube view runs with `contextIsolation: true`.
+
+- **Preload plugins** use `PluginContext` (`ytmd`, `api`, `domUtils`, `onSettingsChange`). Do not touch Electron `ipcRenderer` from plugin code.
+- **Page-world hooks** live in `*.renderer.ts` (default export with `id`) and run via the world-0 host IIFE (built by electron-vite sidecar). Prefer this for `playerApi` listeners and DOM that must see page prototypes. Declare the same object on `definePlugin({ renderer })` for docs/meta.
+- Page world only sees `window.ytmd` (narrow allowlisted bridge). Do not expect `window.api`, `window.ipcRenderer`, or `electronTRPC` in the YouTube Music DevTools page console.
+- One-off main-world scripts must use `domUtils.createAndRunScript` (YTM Trusted Types block page `script.textContent` / bare eval).
+- Main process services call `YtmClient.cmd` / `YtmClient.push` / `YtmClient.isReady` instead of raw `plugins:...` channel strings.
 
 ## Tips
 
 - Toast auto-dismiss applies to all open paper toasts (liked music, library saves, and similar), not only the like confirmation.
-- **Skip disliked songs** runs on track change only — disliking the song that is already playing does not skip it mid-track. Like/dislike for tray and media controls comes from the renderer like watcher (`track:like-state`).
+- **Skip disliked songs** runs on track change only - disliking the song that is already playing does not skip it mid-track. Like/dislike for tray and media controls comes from `track-like` (`track:like-state`).
 - Performance fixes run in the YouTube Music webview only; they do not change app chrome or tray view.
 - Plugin source lives under `apps/ytmdesktop2/src/renderer-plugins/youtube/`.
 

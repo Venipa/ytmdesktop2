@@ -2,7 +2,7 @@ import { AfterInit, BaseProvider } from "@main/core/baseProvider";
 
 export default class VolumeRatioProvider extends BaseProvider implements AfterInit {
 	constructor() {
-		super("player-volume-ratio");
+		super("volume-ratio");
 	}
 	get settingsInstance() {
 		return this.getProvider("settings");

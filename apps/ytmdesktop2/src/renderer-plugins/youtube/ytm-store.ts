@@ -26,6 +26,7 @@ export function isYtmStore(value: unknown): value is YtmStoreLike {
 	return typeof store.getState === "function" && typeof store.dispatch === "function";
 }
 
+/** Cache on preload window (isolated). Page bag synced separately via agent script. */
 export function cacheYtmStore(store: YtmStoreLike): void {
 	const win = window as YtmdHookWindow;
 	if (isYtmStore(win.__YTMD_HOOK__?.ytmStore)) return;

@@ -1,7 +1,7 @@
 import { AfterInit, BaseProvider } from "@main/core/baseProvider";
 import { defaultUrl } from "@main/infra/devUtils";
-import { createSendHandler } from "@main/ipc/ipc";
 import { emitAppToast, friendlyQueueAddError } from "@main/lib/appToast";
+import { YtmClient } from "@main/ytm/ytm-client";
 import { type YtmdParsed, YtmdLink } from "@shared/protocol/ytmdProtocol";
 import { App } from "electron";
 
@@ -67,12 +67,19 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 		this.handleSameOriginNavigation(url);
 	}
 
-	private isYTMLoaded() {
+	private async isYTMLoaded() {
 		if (this.windowContext.main.webContents.isLoading()) return null;
-		return this.views.youtubeView.webContents
-			.executeJavaScript(`typeof window.isYTMLoaded === "function" && !!window.isYTMLoaded()`)
-			.then((x) => !!x)
-			.catch(() => false);
+		const view = this.views.youtubeView;
+		if (!view || view.webContents.isDestroyed() || view.webContents.isLoading()) return null;
+		try {
+			// Fast page-agent probe. Do NOT use YtmClient.isReady here:
+			// IPC timeout (3s+) returning false used to call main.reload() and stall boot.
+			return !!(await view.webContents.executeJavaScript(
+				`(typeof window.isYTMLoaded === "function" && !!window.isYTMLoaded())`,
+			));
+		} catch {
+			return false;
+		}
 	}
 	private _isPreloading = false;
 	private async handlePreloadOnWindowNav() {
@@ -84,7 +91,14 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 		}
 		if (!isLoaded) {
 			this._isPreloading = true;
-			this.windowContext.main.reload();
+			this.logger.warn("ytm preload missing on home nav — reloading youtube view only");
+			// Reload youtube view, not the whole main window (avoids full app rebootstrap).
+			try {
+				this.views.youtubeView.webContents.reload();
+			} catch (err) {
+				this.logger.error("youtube reload failed", err);
+				this._isPreloading = false;
+			}
 		}
 	}
 	async goHome() {
@@ -146,7 +160,7 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 
 	/** Append video **or** playlist to queue (never both — YTM rejects combined targets). */
 	async queueAdd(videoId?: string, playlistId?: string) {
-		const view = this.requireYoutubeView("queueAdd");
+		this.requireYoutubeView("queueAdd");
 		const vid = videoId?.trim() || undefined;
 		const list = playlistId?.trim() || undefined;
 		if (vid && list) {
@@ -158,7 +172,7 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 		}
 		await this.requireYtmReady("queueAdd");
 		try {
-			await createSendHandler(view, "plugins:api:cmd:queue_add", { timeout: 15000 })(target);
+			await YtmClient.cmdTimed("api", "queue_add", 15_000, target);
 			emitAppToast(this.windowContext, { type: "success", message: "Added to queue" });
 		} catch (err) {
 			emitAppToast(this.windowContext, { type: "error", message: friendlyQueueAddError(err) });
@@ -168,20 +182,20 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 
 	/** Current YTM queue snapshot (ids/titles when store hooked). */
 	async queueList(): Promise<{ items: { index: number; videoId?: string; title?: string }[]; count: number; storeHooked?: boolean }> {
-		const view = this.requireYoutubeView("queueList");
+		this.requireYoutubeView("queueList");
 		await this.requireYtmReady("queueList");
-		return await createSendHandler<{ items: { index: number; videoId?: string; title?: string }[]; count: number; storeHooked?: boolean }>(
-			view,
-			"plugins:api:cmd:queue_list",
-			{ timeout: 10000 },
-		)();
+		return await YtmClient.cmdTimed<{ items: { index: number; videoId?: string; title?: string }[]; count: number; storeHooked?: boolean }>(
+			"api",
+			"queue_list",
+			10_000,
+		);
 	}
 
 	/** Clear upcoming queue (store CLEAR, else playerApi.clearQueue). */
 	async queueClear(): Promise<{ ok: true }> {
-		const view = this.requireYoutubeView("queueClear");
+		this.requireYoutubeView("queueClear");
 		await this.requireYtmReady("queueClear");
-		await createSendHandler(view, "plugins:api:cmd:queue_clear", { timeout: 10000 })();
+		await YtmClient.cmdTimed("api", "queue_clear", 10_000);
 		return { ok: true as const };
 	}
 
@@ -200,9 +214,9 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 	}
 
 	private async sendNavigate(payload: Record<string, unknown>) {
-		const view = this.requireYoutubeView("navigate");
+		this.requireYoutubeView("navigate");
 		await this.requireYtmReady("navigate");
-		await createSendHandler(view, "plugins:api:cmd:navigate", { timeout: 15000 })(payload);
+		await YtmClient.cmdTimed("api", "navigate", 15_000, payload);
 	}
 
 	toggleDevTools() {

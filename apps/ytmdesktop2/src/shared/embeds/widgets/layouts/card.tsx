@@ -1,13 +1,13 @@
 import {
-	C,
-	CardFrame,
-	CoverArt,
-	ProgressRow,
-	Shell,
-	emptyLabel,
-	showArt,
-	showProgress,
-	type LayoutProps,
+  C,
+  CardFrame,
+  CoverArt,
+  emptyLabel,
+  type LayoutProps,
+  ProgressRow,
+  Shell,
+  showArt,
+  showProgress,
 } from "../chrome";
 
 export function CardLayout({ track, flags, accent, src, className, status }: LayoutProps) {

@@ -8,6 +8,7 @@ import { createRequire } from "module";
 import path, { basename, resolve } from "path";
 import { type AliasOptions, type Plugin, type UserConfigExport } from "vite";
 import svgr from "vite-plugin-svgr";
+import { ytmdSidecarWatchPlugin, ytmdWorld0BuildPlugin } from "./vite-plugins/sidecar-builds";
 
 const require = createRequire(import.meta.url);
 const glob = (await import("fast-glob")).default;
@@ -154,7 +155,7 @@ export default defineConfig({
 	},
 	preload: {
 		...mainResolve,
-		plugins: [react()],
+		plugins: [ytmdWorld0BuildPlugin(), react()],
 		build: {
 			minify: "esbuild",
 			externalizeDeps: { exclude: [...externalizedEsmDeps, ...bundleIntoMain, ...bundleIntoPreload] },
@@ -182,6 +183,7 @@ export default defineConfig({
 			},
 		},
 		plugins: [
+			ytmdSidecarWatchPlugin(),
 			tanstackRouter({
 				target: "react",
 				autoCodeSplitting: true,

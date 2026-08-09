@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { createSendHandler } from "@main/ipc/ipc";
+import { YtmClient } from "@main/ytm/ytm-client";
 import { serverMain } from "@main/ipc/serverEvents";
 import { getAppWindows, getLifecycleContext, getYoutubeView, onAfterInit, requireAppWindows } from "@main/lifecycle";
 import { thumbnailCache } from "@main/services/thumbnailCache";
@@ -205,12 +205,8 @@ export class TrackService {
 	}
 
 	async executeCommand<T = unknown>(command: string, ...args: unknown[]): Promise<T> {
-		const youtubeView = getYoutubeView();
-		if (!youtubeView) {
-			throw new Error(`TrackService: youtube view not ready for command "${command}"`);
-		}
-		// track-api-controls plugin registers under service "api" → plugins:api:cmd:*
-		return await createSendHandler<T>(youtubeView, `plugins:api:cmd:${command}`)(...args);
+		// api-controls plugin registers under service "api" -> plugins:api:cmd:*
+		return await YtmClient.cmd<T>("api", command, ...args);
 	}
 
 	getTrackInformation(): TrackEntry | null {
@@ -525,7 +521,7 @@ export class TrackService {
 				eventType: "state",
 				accent: null,
 			});
-			// likes come from track-like-watcher only — immediate like_state reads stale DOM
+			// likes come from track-like only - immediate like_state reads stale DOM
 		} else if (this._pendingTrackId === videoId) {
 			this._pendingTrackId = null;
 		}
@@ -572,7 +568,7 @@ export class TrackService {
 			eventType: "state",
 			accent: null,
 		});
-		// likes come from track-like-watcher only — immediate like_state reads stale DOM
+		// likes come from track-like only - immediate like_state reads stale DOM
 	}
 
 	/**
@@ -589,7 +585,7 @@ export class TrackService {
 		const windows = getAppWindows();
 		if (windows) {
 			try {
-				windows.views.youtubeView?.webContents.send("trackId:change", track.video.videoId);
+				YtmClient.push("trackId:change", track.video.videoId);
 				windows.sendToAllViews(IPC_EVENT_NAMES.TRACK_CHANGE, track);
 			} catch (error) {
 				this.logger.error("Failed to fanout track to views:", error);
@@ -1144,13 +1140,13 @@ export class TrackService {
 				if (state.accent === trackAccent) return;
 				state.accent = trackAccent;
 			});
-			this.windowContext.views.youtubeView.webContents.send("css.thumbnail-accent", trackAccent ?? "transparent");
+			YtmClient.push("css.thumbnail-accent", trackAccent ?? "transparent");
 			this.logger.debug("track:accent", trackAccent, track.video.thumbnail.thumbnails?.[0]?.url);
 		});
 		this.onTrackChange(async (track) => {
 			const hqThumbnail = track.context?.thumbnail?.thumbnails?.sort(firstBy((d) => d.width, "desc"))[0]?.url ?? track.meta.thumbnail;
 			const thumbnailUrl = hqThumbnail ? `url(${hqThumbnail})` : "transparent";
-			this.windowContext.views.youtubeView.webContents.send("css.thumbnail", thumbnailUrl);
+			YtmClient.push("css.thumbnail", thumbnailUrl);
 			this.logger.debug("track:thumbnail", thumbnailUrl);
 		});
 	}

@@ -23,13 +23,21 @@ export default class LyricsProvider extends BaseProvider implements AfterInit {
 
 	private async enable() {
 		this.logger.debug("Enabling lyrics");
-		await this.isYtmReady();
+		try {
+			await this.isYtmReady();
+		} catch (err) {
+			this.logger.warn("ytm not fully ready, enabling lyrics anyway", err);
+		}
 		await this.executeCommand("enable");
 	}
 
 	private async disable() {
 		this.logger.debug("Disabling lyrics");
-		await this.isYtmReady();
+		try {
+			await this.isYtmReady();
+		} catch (err) {
+			this.logger.warn("ytm not fully ready, disabling lyrics anyway", err);
+		}
 		await this.executeCommand("disable");
 	}
 }

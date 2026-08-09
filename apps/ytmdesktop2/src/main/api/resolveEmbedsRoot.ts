@@ -15,8 +15,8 @@ function withUnpackedTwin(dir: string): string[] {
 
 /**
  * Resolve built embed assets root (`…/now-playing/index.html` lives under this).
- * Dev + prod: `resources/embeds` (Vite build via `pnpm embeds:build`).
- * Packaged builds unpack `resources/**` → prefer `app.asar.unpacked`.
+ * Dev + prod: `resources/embeds` (built by electron-vite sidecar plugin).
+ * Packaged builds unpack `resources/**` -> prefer `app.asar.unpacked`.
  */
 export function resolveEmbedsRoot(): string | null {
 	const candidates: string[] = [];

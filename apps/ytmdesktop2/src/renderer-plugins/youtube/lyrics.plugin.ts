@@ -1,13 +1,18 @@
 import definePlugin from "@plugins/utils";
+import { getYtmd } from "@preload/preload-local";
 import { createLyricsStore } from "./lyrics/store";
 import { createTabMount, type TabMountHandle } from "./lyrics/tab-mount";
-import { shouldSkipTrack, trackInfoFromPlayer } from "./lyrics/track";
+import {
+	playerCurrentTimeSec,
+	seekPlayerScript,
+	shouldSkipTrack,
+	trackInfoFromMainWorld,
+} from "./lyrics/track";
 import { createLyricsRenderer, type LyricsRenderApi } from "./lyrics/ui/render";
 
 const SEEK_OFFSET_MS = 10;
 /** Nudge UI ahead of getCurrentTime — YTM clock often trails audible audio. */
 const DISPLAY_LEAD_MS = 80;
-const VIDEO_DATA_LOADED_TYPES = new Set(["dataupdated", "dataloaded", "newdata"]);
 
 type LyricsLogger = { debug: (...args: unknown[]) => void; error: (...args: unknown[]) => void };
 
@@ -17,15 +22,15 @@ interface LyricsRuntime {
 	renderer: LyricsRenderApi | null;
 	unsubStore: (() => void) | null;
 	unsubSettings: (() => void) | null;
+	unsubTrackId: (() => void) | null;
 	timeRaf: number;
-	onVideoDataChange: ((ev: { playertype?: number | string; type?: string }) => void) | null;
-	playerApi: any;
 	domUtils: Window["domUtils"] | null;
 	log: LyricsLogger | null;
 	onSettingsChange: ((fn: (key: string, value: any) => void) => () => void) | null;
 	active: boolean;
 	tabSelected: boolean;
 	started: boolean;
+	lastVideoId: string | null;
 }
 
 const runtime: LyricsRuntime = {
@@ -34,15 +39,15 @@ const runtime: LyricsRuntime = {
 	renderer: null,
 	unsubStore: null,
 	unsubSettings: null,
+	unsubTrackId: null,
 	timeRaf: 0,
-	onVideoDataChange: null,
-	playerApi: null,
 	domUtils: null,
 	log: null,
 	onSettingsChange: null,
 	active: false,
 	tabSelected: false,
 	started: false,
+	lastVideoId: null,
 };
 
 function readLyricsSettings(settings?: Record<string, any>) {
@@ -56,14 +61,15 @@ function readLyricsSettings(settings?: Record<string, any>) {
 	};
 }
 
-function refreshTrack() {
+async function refreshTrack() {
 	if (!runtime.active) return;
-	const info = trackInfoFromPlayer(runtime.playerApi ?? {});
+	const info = await trackInfoFromMainWorld();
 	const skip = shouldSkipTrack(info);
 	if (skip || !info) {
 		runtime.store.setSkipped(info?.videoId ?? null, skip ?? "No track");
 		return;
 	}
+	runtime.lastVideoId = info.videoId;
 	const cfg = readLyricsSettings();
 	void runtime.store.fetchForTrack(info, {
 		showEvenIfInexact: cfg.showEvenIfInexact,
@@ -71,57 +77,54 @@ function refreshTrack() {
 	});
 }
 
-function pushPlaybackTime() {
+async function pushPlaybackTime() {
 	if (!runtime.renderer) return;
 	try {
-		const t = Number(runtime.playerApi?.getCurrentTime?.() ?? 0);
+		const t = await playerCurrentTimeSec();
 		runtime.renderer.setTime(t * 1000 + DISPLAY_LEAD_MS);
 	} catch {
 		/* player may be mid-navigate */
 	}
 }
 
-function tickPlaybackTime() {
-	runtime.timeRaf = 0;
-	if (!runtime.active || !runtime.renderer || !runtime.tabSelected) return;
-	pushPlaybackTime();
-	runtime.timeRaf = requestAnimationFrame(tickPlaybackTime);
-}
-
 function startTimePoll() {
 	if (runtime.timeRaf) return;
-	runtime.timeRaf = requestAnimationFrame(tickPlaybackTime);
+	const tick = () => {
+		if (!runtime.active || !runtime.renderer || !runtime.tabSelected) {
+			runtime.timeRaf = 0;
+			return;
+		}
+		void pushPlaybackTime();
+		runtime.timeRaf = window.setTimeout(tick, 100) as unknown as number;
+	};
+	runtime.timeRaf = window.setTimeout(tick, 0) as unknown as number;
 }
 
 function stopTimePoll() {
-	if (runtime.timeRaf) cancelAnimationFrame(runtime.timeRaf);
+	if (runtime.timeRaf) clearTimeout(runtime.timeRaf);
 	runtime.timeRaf = 0;
 }
 
-function unbindPlayer() {
-	if (runtime.onVideoDataChange) {
-		try {
-			runtime.playerApi?.removeEventListener?.("onVideoDataChange", runtime.onVideoDataChange);
-		} catch {
-			/* ignore */
-		}
-	}
-	runtime.onVideoDataChange = null;
+function unbindTrackWatch() {
+	runtime.unsubTrackId?.();
+	runtime.unsubTrackId = null;
 }
 
-function bindPlayer() {
-	unbindPlayer();
-	runtime.playerApi = window.domUtils?.playerApi?.() ?? runtime.playerApi;
-	runtime.onVideoDataChange = (ev) => {
-		const type = String(ev?.type ?? "").toLowerCase();
-		if (!VIDEO_DATA_LOADED_TYPES.has(type)) return;
-		if (ev?.playertype != null && Number(ev.playertype) !== 1) return;
-		refreshTrack();
-	};
+function bindTrackWatch() {
+	unbindTrackWatch();
 	try {
-		runtime.playerApi?.addEventListener?.("onVideoDataChange", runtime.onVideoDataChange);
+		const ytmd = getYtmd();
+		runtime.unsubTrackId = ytmd.onInternal("trackId:change", (id) => {
+			const videoId = typeof id === "string" ? id : "";
+			if (!videoId || videoId === runtime.lastVideoId) {
+				void refreshTrack();
+				return;
+			}
+			runtime.lastVideoId = videoId;
+			void refreshTrack();
+		});
 	} catch (err) {
-		runtime.log?.error("lyrics: failed to bind onVideoDataChange", err);
+		runtime.log?.error("lyrics: failed to bind trackId:change", err);
 	}
 }
 
@@ -138,7 +141,7 @@ async function startLyrics() {
 		onTabSelectedChange: (selected) => {
 			runtime.tabSelected = selected;
 			if (selected) {
-				pushPlaybackTime();
+				void pushPlaybackTime();
 				startTimePoll();
 			} else {
 				stopTimePoll();
@@ -151,11 +154,9 @@ async function startLyrics() {
 		showTimeCodes: () => readLyricsSettings().showTimeCodes,
 		showProgressBar: () => readLyricsSettings().showProgressBar,
 		onSeek: (timeMs) => {
-			try {
-				runtime.playerApi?.seekTo?.((timeMs + SEEK_OFFSET_MS) / 1000, true);
-			} catch (err) {
-				runtime.log?.debug("lyrics: seek failed", err);
-			}
+			void runtime.domUtils
+				?.createAndRunScript(seekPlayerScript((timeMs + SEEK_OFFSET_MS) / 1000), "lyrics-seek")
+				.catch((err) => runtime.log?.debug("lyrics: seek failed", err));
 		},
 	});
 
@@ -167,13 +168,13 @@ async function startLyrics() {
 			}
 			if (key === "lyrics.showEvenIfInexact" || key === "lyrics.providers") {
 				runtime.store.clearCache();
-				refreshTrack();
+				void refreshTrack();
 			}
 		}) ?? null;
 
-	bindPlayer();
+	bindTrackWatch();
 	if (runtime.tabSelected) startTimePoll();
-	refreshTrack();
+	await refreshTrack();
 	runtime.renderer.repaint();
 }
 
@@ -182,8 +183,9 @@ function stopLyrics() {
 	runtime.log?.debug("lyrics: stop");
 	runtime.active = false;
 	runtime.tabSelected = false;
+	runtime.lastVideoId = null;
 	stopTimePoll();
-	unbindPlayer();
+	unbindTrackWatch();
 	runtime.unsubStore?.();
 	runtime.unsubStore = null;
 	runtime.unsubSettings?.();
@@ -202,10 +204,9 @@ export default definePlugin(
 		displayName: "Lyrics",
 	},
 	{
-		async afterInit({ settings, domUtils, log, playerApi, onSettingsChange }) {
+		async afterInit({ settings, domUtils, log, onSettingsChange }) {
 			runtime.domUtils = domUtils;
 			runtime.log = log;
-			runtime.playerApi = playerApi;
 			runtime.onSettingsChange = onSettingsChange;
 			runtime.started = true;
 
@@ -214,8 +215,10 @@ export default definePlugin(
 			}
 		},
 		cmds: {
-			async enable({ log }) {
+			async enable({ log, domUtils, onSettingsChange }) {
 				log.debug("lyrics cmd enable");
+				if (domUtils) runtime.domUtils = domUtils;
+				if (onSettingsChange) runtime.onSettingsChange = onSettingsChange;
 				await startLyrics();
 			},
 			async disable({ log }) {

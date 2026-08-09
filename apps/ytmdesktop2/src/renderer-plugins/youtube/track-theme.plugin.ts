@@ -1,22 +1,23 @@
 import definePlugin from "@plugins/utils";
 
+/** Apply main-pushed thumbnail CSS vars onto the YTM page. */
 export default definePlugin(
-	"internal:track-change-watcher",
+	"track-theme",
 	{
 		enabled: true,
-		displayName: "Track Change Watcher",
+		displayName: "Track theme CSS",
 	},
-	({ domUtils }) => {
+	({ domUtils, ytmd }) => {
 		let thumbGen = 0;
 		let accentGen = 0;
 		let destroyThumb: (() => void) | undefined;
 		let destroyAccent: (() => void) | undefined;
 
-		const handleThumbnail = async (_ev: unknown, value: string) => {
+		const handleThumbnail = async (value: unknown) => {
 			const gen = ++thumbGen;
 			destroyThumb?.();
 			destroyThumb = undefined;
-			if (!value) return;
+			if (!value || typeof value !== "string") return;
 			const destroy = await domUtils.createStyle(`:root { --ytmd-thumbnail-url: ${value}; }`);
 			if (gen !== thumbGen) {
 				destroy();
@@ -25,11 +26,11 @@ export default definePlugin(
 			destroyThumb = destroy;
 		};
 
-		const handleAccent = async (_ev: unknown, value: string) => {
+		const handleAccent = async (value: unknown) => {
 			const gen = ++accentGen;
 			destroyAccent?.();
 			destroyAccent = undefined;
-			if (!value) return;
+			if (!value || typeof value !== "string") return;
 			const destroy = await domUtils.createStyle(`:root { --ytmd-thumbnail-accent: ${value}; }`);
 			if (gen !== accentGen) {
 				destroy();
@@ -38,12 +39,12 @@ export default definePlugin(
 			destroyAccent = destroy;
 		};
 
-		window.ipcRenderer.on("css.thumbnail", handleThumbnail);
-		window.ipcRenderer.on("css.thumbnail-accent", handleAccent);
+		const unsubThumb = ytmd?.on("css.thumbnail", handleThumbnail) ?? (() => undefined);
+		const unsubAccent = ytmd?.on("css.thumbnail-accent", handleAccent) ?? (() => undefined);
 
 		return () => {
-			window.ipcRenderer.off("css.thumbnail", handleThumbnail);
-			window.ipcRenderer.off("css.thumbnail-accent", handleAccent);
+			unsubThumb();
+			unsubAccent();
 			destroyThumb?.();
 			destroyAccent?.();
 		};

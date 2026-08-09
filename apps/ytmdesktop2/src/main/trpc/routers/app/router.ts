@@ -17,6 +17,7 @@ export const appServiceRouter = router({
 	isWin11: publicProcedure.query(({ ctx }): Promise<boolean> => provider(ctx, "app").handleIsWin11()),
 	version: publicProcedure.query(({ ctx }): string => provider(ctx, "app").app.getVersion()),
 	openFile: publicProcedure.input(z.string()).mutation(({ ctx, input }) => provider(ctx, "app").handleOpenFile(null as unknown as Electron.IpcMainInvokeEvent, input)),
+	openLogsFolder: publicProcedure.mutation(({ ctx }) => provider(ctx, "app").openLogsFolder()),
 	minimize: publicProcedure.mutation(({ ctx }): void => {
 		const window = ctx.getBrowserWindow();
 		if (window?.isMinimizable?.()) window.minimize?.();

@@ -10,7 +10,9 @@ import { centerWindowOnParent, createAppDialogWindow, createAppWindow, shortcutO
 import { stripUndefined } from "@shared/utils/object";
 import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
 import { debounce } from "lodash-es";
+import fs from "node:fs";
 import { version as releaseVersion } from "node:os";
+import path from "node:path";
 
 const STATE_PAUSE_TIME = 30e4;
 const TEST_RESTART_NEEDED_DIALOG = isDevelopment && process.env.TEST_RESTART_NEEDED_DIALOG === "1";
@@ -317,6 +319,14 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
     } finally {
       this.restartWindowOpenPromise = null;
     }
+  }
+
+  async openLogsFolder() {
+    const logDir = path.join(this.app.getPath("userData"), "logs");
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    return this.handleOpenFile(null as unknown as IpcMainInvokeEvent, logDir);
   }
 
   async handleOpenFile(ev: IpcMainInvokeEvent, path: string) {
