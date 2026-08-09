@@ -1,8 +1,12 @@
 import definePlugin from "@plugins/utils";
+import {
+	postVolumeRatioForceUpdate,
+	requestVolumeRatioForceUpdate,
+	volumeRatioPage,
+} from "./volume-ratio.page";
 import volumeRatioRenderer, {
 	disableScriptContent,
 	enableScriptContent,
-	postVolumeRatioForceUpdate,
 } from "./volume-ratio.renderer";
 
 export default definePlugin(
@@ -23,18 +27,14 @@ export default definePlugin(
 			async enable({ log, domUtils }) {
 				log.debug("Enabling volume ratio");
 				await domUtils.createAndRunScript(enableScriptContent, "volume-ratio-enable");
-				postVolumeRatioForceUpdate();
+				return requestVolumeRatioForceUpdate();
 			},
 			async disable({ log, domUtils }) {
 				log.debug("Disabling volume ratio");
 				await domUtils.createAndRunScript(disableScriptContent, "volume-ratio-disable");
-				postVolumeRatioForceUpdate();
+				return requestVolumeRatioForceUpdate();
 			},
-			async forceUpdate({ log }, volume?: number) {
-				log.debug("Force updated volume ratio", volume);
-				postVolumeRatioForceUpdate(volume);
-				return volume;
-			},
+			...volumeRatioPage.pluginCmds,
 		},
 	},
 );

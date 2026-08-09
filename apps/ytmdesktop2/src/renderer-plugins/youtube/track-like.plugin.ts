@@ -1,5 +1,6 @@
 import definePlugin from "@plugins/utils";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
+import { requestApiControl } from "./api-controls.page";
 import {
 	publishLikeStatus,
 	queryLikeRenderer,
@@ -22,7 +23,7 @@ export default definePlugin(
 		displayName: "Track like",
 	},
 	{
-		exec({ api, log, ytmd, settings, domUtils }) {
+		exec({ api, log, ytmd, settings }) {
 			let lastKey = "";
 			let watchVideoId: string | null = null;
 			let baseline = "";
@@ -40,13 +41,20 @@ export default definePlugin(
 			const trySkipDisliked = (videoId: string, reason: string) => {
 				if (!settings.player?.skipDisliked) return;
 				if (skipDoneFor === videoId) return;
-				const activeId = readPlayerVideoId();
-				if (activeId && activeId !== videoId) return;
 				const status = readLikeStatus();
 				if (!status.settled || !status.disliked) return;
-				skipDoneFor = videoId;
 				log.debug("skip disliked track", videoId, reason);
-				domUtils.playerApi()?.nextVideo();
+				void (async () => {
+					const activeId = (await requestApiControl<string | null>("videoId").catch(() => null)) ?? null;
+					if (activeId && activeId !== videoId) return;
+					if (skipDoneFor === videoId) return;
+					skipDoneFor = videoId;
+					try {
+						await requestApiControl("next");
+					} catch (err) {
+						log.error("skip disliked next failed", err);
+					}
+				})();
 			};
 
 			const emitSettled = (videoId: string): boolean => {

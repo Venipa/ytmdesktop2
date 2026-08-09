@@ -1,18 +1,9 @@
 import disableScriptContent from "./resources/volume-ratio/disable-script.js?raw";
 import enableScriptContent from "./resources/volume-ratio/enable-script.js?raw";
-import { getPagePlayerApi } from "./world0/context";
+import { forceUpdateVolume, volumeRatioPage } from "./volume-ratio.page";
 import type { RendererPluginRegistration } from "./world0/types";
 
-const VOLUME_RATIO_MSG = "__ytmd_volume_ratio";
 const SETTING_KEY = "volumeRatio.enabled";
-
-function forceUpdateVolume(volume?: number): number | undefined {
-	const player = getPagePlayerApi();
-	if (!player) return volume;
-	const next = volume ?? player.getVolume();
-	player.setVolume(next);
-	return next;
-}
 
 /**
  * Page-world half: playerApi.setVolume only.
@@ -22,13 +13,7 @@ const volumeRatioRenderer: RendererPluginRegistration = {
 	id: "volume-ratio",
 	enabled: true,
 	async start(ctx) {
-		const onMessage = (ev: MessageEvent) => {
-			const data = ev.data;
-			if (!data || typeof data !== "object" || (data as { type?: string }).type !== VOLUME_RATIO_MSG) return;
-			const op = (data as { op?: string; volume?: number }).op;
-			if (op === "forceUpdate") forceUpdateVolume((data as { volume?: number }).volume);
-		};
-		window.addEventListener("message", onMessage);
+		const offBridge = volumeRatioPage.listen(ctx.log);
 
 		const offSettings = ctx.ytmd?.on("settingsProvider.change", (key, value) => {
 			if (key === SETTING_KEY && value === true) {
@@ -48,7 +33,7 @@ const volumeRatioRenderer: RendererPluginRegistration = {
 		}
 
 		return () => {
-			window.removeEventListener("message", onMessage);
+			offBridge();
 			offSettings?.();
 		};
 	},
@@ -65,10 +50,5 @@ const volumeRatioRenderer: RendererPluginRegistration = {
 };
 
 export default volumeRatioRenderer;
-
-/** Preload cmds ask page world to refresh volume via playerApi. */
-export function postVolumeRatioForceUpdate(volume?: number): void {
-	window.postMessage({ type: VOLUME_RATIO_MSG, op: "forceUpdate", volume }, "*");
-}
 
 export { disableScriptContent, enableScriptContent };

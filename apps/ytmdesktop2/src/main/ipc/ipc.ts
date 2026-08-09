@@ -8,13 +8,13 @@ export function createSendHandler<T = unknown>(view: WebContentsView, event: str
 			const requestId = createId();
 			const handleResponse = (_ev: IpcMainEvent, requestIdFromClient: string, ...responsePayload: any[]) => {
 				if (requestIdFromClient !== requestId) return;
-				if (responsePayload[1] === "error") {
-					destroyPromise(new Error(String(responsePayload[2] ?? "Unknown error")));
+				// Client: send(requestId, result) | send(requestId, "error", message)
+				if (responsePayload[0] === "error") {
+					destroyPromise(new Error(String(responsePayload[1] ?? "Unknown error")));
 					return;
 				}
 				destroyPromise();
-				// Renderer sends `(requestId, response)` → payload[0] is the command result.
-				resolve((responsePayload.length <= 1 ? responsePayload[0] : responsePayload) as T);
+				resolve(responsePayload[0] as T);
 			};
 			ipcMain.on(`${event}/response.${requestId}`, handleResponse);
 			view.webContents.send(event, {

@@ -4,8 +4,10 @@ import { isDevelopment } from "@main/infra/devUtils";
 import { serverMain } from "@main/ipc/serverEvents";
 import { runLifecycle } from "@main/lifecycle";
 import { BrowserWindowViews } from "@main/windows/mappedWindow";
+import { logger } from "@shared/utils/console";
 import { app } from "electron";
 import { setTrayState } from "./trayState";
+
 
 let isQuitRequested = false;
 let isForceQuitRequested = false;
@@ -22,7 +24,7 @@ async function ensureCleanup() {
 				await runLifecycle("destroy");
 			}
 		})().catch((error) => {
-			console.error("Error while running app cleanup during quit", error);
+			logger.error("Error while running app cleanup during quit", error);
 		});
 	}
 	return cleanupPromise;

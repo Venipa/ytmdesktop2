@@ -1,21 +1,12 @@
+import { createLogger } from "@shared/utils/console";
 import type { RendererPluginContext } from "./types";
-
-function consoleLog(name: string) {
-	const prefix = `[YTMD:plugin:${name}]`;
-	return {
-		debug: (...args: unknown[]) => console.debug(prefix, ...args),
-		info: (...args: unknown[]) => console.info(prefix, ...args),
-		warn: (...args: unknown[]) => console.warn(prefix, ...args),
-		error: (...args: unknown[]) => console.error(prefix, ...args),
-	};
-}
 
 export function createRendererContext(name: string): RendererPluginContext {
 	const ytmd = typeof window !== "undefined" ? (window as Window & { ytmd?: RendererPluginContext["ytmd"] }).ytmd ?? null : null;
 	return {
 		name,
 		ytmd,
-		log: consoleLog(name),
+		log: createLogger("YTMD").child("plugin").child(name),
 	};
 }
 

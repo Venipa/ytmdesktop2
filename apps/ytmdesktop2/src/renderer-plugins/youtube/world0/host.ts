@@ -35,7 +35,8 @@ async function boot(): Promise<void> {
 		}
 	}
 
-	const ytmd = createRendererContext("world0").ytmd;
+	const world0 = createRendererContext("world0");
+	const ytmd = world0.ytmd;
 	const offConfig =
 		ytmd?.on("settingsProvider.change", (key, value) => {
 			for (const plugin of active) {
@@ -58,7 +59,7 @@ async function boot(): Promise<void> {
 			}
 		}
 	} else {
-		console.warn("[ytmd:world0] playerApi not ready, skipping onPlayerApiReady hooks");
+		world0.log.warn("playerApi not ready, skipping onPlayerApiReady hooks");
 	}
 
 	window.addEventListener(

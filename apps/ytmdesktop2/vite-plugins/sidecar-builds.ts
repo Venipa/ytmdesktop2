@@ -33,6 +33,19 @@ async function buildWorld0(minify: boolean): Promise<void> {
 				"@preload": path.resolve(appRoot, "src/preload"),
 			},
 		},
+		plugins: [
+			{
+				name: "ytmd-world0-no-electron",
+				enforce: "pre",
+				resolveId(id) {
+					if (id === "electron" || id.startsWith("electron/")) {
+						throw new Error(
+							`world0 host must not import "${id}" (page world has no Node/Electron). Keep electron imports in preload-only modules.`,
+						);
+					}
+				},
+			},
+		],
 		build: {
 			lib: {
 				entry: path.resolve(appRoot, "src/renderer-plugins/youtube/world0/host.ts"),
@@ -45,7 +58,7 @@ async function buildWorld0(minify: boolean): Promise<void> {
 			sourcemap: false,
 			minify,
 			rollupOptions: {
-				external: [],
+				external: ["electron"],
 				output: {
 					inlineDynamicImports: true,
 				},

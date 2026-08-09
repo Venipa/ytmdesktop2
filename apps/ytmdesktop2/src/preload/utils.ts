@@ -83,6 +83,7 @@ export const createContextExposer = (): ContextExposer => ({
 // Settings management utilities
 export const createSettingsManager = async (preloadRoot: any): Promise<SettingsManager> => {
   let settings = {};
+  const settingsLog = createPreloadLogger("settings");
 
   await preloadRoot.api.settingsProvider.getAll({}).then((x: any) => {
     settings = merge(settings, x);
@@ -92,7 +93,7 @@ export const createSettingsManager = async (preloadRoot: any): Promise<SettingsM
   document.addEventListener("DOMContentLoaded", () => {
     preloadRoot.ipcRenderer.on("settingsProvider.change", (ev: any, key: string, value: any) => {
       if (settings) set(settings, key, value);
-      console.log("api:update-setting", key, value);
+      settingsLog.debug("api:update-setting", key, value);
     });
   });
 

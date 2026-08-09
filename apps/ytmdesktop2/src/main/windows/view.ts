@@ -1,11 +1,14 @@
 import { lockAppChromeZoom } from "@main/domain/uiZoom";
 import { defaultUrl, isDevelopment, isProduction } from "@main/infra/devUtils";
 import { getGoogleLoginUserAgent } from "@main/infra/userAgent";
+import { createLogger } from "@shared/utils/console";
 import translations from "@translations/index";
 import { BrowserWindow, BrowserWindowConstructorOptions, ipcMain, shell, WebContentsView, WebContentsViewConstructorOptions, WebPreferences } from "electron";
 import { join } from "path";
 import appIconPath from "~/build/favicon.ico?asset";
 import { LockSizeOptions, loadUrlOfWebContents, lockSizeToParent } from "./webContentUtils";
+
+const log = createLogger("windows").child("view");
 
 type CreateApiViewOptions = { lockSize: LockSizeOptions } & Pick<WebPreferences, "transparent">;
 export const createApiView = async <T extends WebContentsView>(path: string, postFunc?: (ctx: T) => Promise<void> | void, options?: CreateApiViewOptions): Promise<T> => {
@@ -167,7 +170,7 @@ export const googleLoginPopup = async (authUrl: string, parent?: Electron.Browse
 		loginView.webContents.on("did-navigate", onMusicRedirect);
 		loginView.webContents.on("did-navigate-in-page", onMusicRedirect);
 		loginView.webContents.on("ipc-message", (_ev, eventName) => {
-			console.log("login event", eventName);
+			log.debug("login event", eventName);
 			if (eventName === "g-login-success") {
 				markAuthenticated();
 			}

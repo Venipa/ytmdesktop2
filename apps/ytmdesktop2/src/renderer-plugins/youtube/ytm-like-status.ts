@@ -43,6 +43,10 @@ export function readLikeStatus(): YtmLikeStatus {
 	};
 }
 
+/**
+ * Current video id from preload playerApi snapshot.
+ * Under isolation this is often null - prefer `requestApiControl("videoId")`.
+ */
 export function readPlayerVideoId(): string | null {
 	try {
 		const data = window.domUtils?.playerApi?.()?.getVideoData?.() as { video_id?: string } | undefined;

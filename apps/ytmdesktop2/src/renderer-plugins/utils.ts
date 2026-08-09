@@ -5,6 +5,18 @@ import type { ServiceName } from "ytmd";
 import type { RendererPluginLifecycle } from "./youtube/world0/types";
 
 export { createPluginHandleName, pluginCommandKeySlug };
+export { defineBridge, definePageCmds } from "./define-bridge";
+export type {
+	BridgeHandler,
+	BridgeListenLog,
+	BridgeNotify,
+	BridgeRequest,
+	BridgeResponse,
+	DefineBridgeOptions,
+	DefinePageCmdsOptions,
+	PageBridge,
+	PageCmds,
+} from "./define-bridge";
 export type { RendererPluginLifecycle };
 
 export type PluginOptions = {
@@ -188,13 +200,22 @@ export function initializePluginCommandsWithIPC(plugin: ClientPlugin, pluginCont
 			const requestId = msg?.requestId;
 			const payload = msg?.payload;
 			pluginContext.log.debug(`cmd \`${cmd}\``, { requestId, payload });
-			const response = await Promise.resolve(fn(pluginContext, ...(Array.isArray(payload) ? payload : [payload])));
-			if (ytmd?.sendInternal) {
-				ytmd.sendInternal(`${commandChannel}/response.${requestId}`, requestId, response);
-			} else {
-				window.ipcRenderer.send(`${commandChannel}/response.${requestId}`, requestId, response);
+			const reply = (...args: unknown[]) => {
+				if (ytmd?.sendInternal) {
+					ytmd.sendInternal(`${commandChannel}/response.${requestId}`, ...args);
+				} else {
+					window.ipcRenderer.send(`${commandChannel}/response.${requestId}`, ...args);
+				}
+			};
+			try {
+				const response = await Promise.resolve(fn(pluginContext, ...(Array.isArray(payload) ? payload : [payload])));
+				reply(requestId, response);
+				pluginContext.log.debug(`cmd \`${cmd}\` ok`, { requestId, response });
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				pluginContext.log.error(`cmd \`${cmd}\` failed`, err);
+				reply(requestId, "error", message);
 			}
-			pluginContext.log.debug(`cmd \`${cmd}\` ok`, { requestId, response });
 		};
 
 		let dispose: () => void;

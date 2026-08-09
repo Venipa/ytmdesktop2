@@ -1,3 +1,5 @@
+import { logger } from "@shared/utils/console";
+
 export function parseJson<T = any>(value: any) {
 	if (typeof value !== "string") {
 		return null;
@@ -5,7 +7,7 @@ export function parseJson<T = any>(value: any) {
 	try {
 		return JSON.parse(value) as T;
 	} catch (ex) {
-		console.error(ex);
+		logger.error(ex);
 		return null;
 	}
 }
