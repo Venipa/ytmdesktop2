@@ -8,6 +8,7 @@ import {
 	CardFrame,
 	CoverArt,
 	Shell,
+	emptyLabel,
 	showArt,
 	type LayoutProps,
 } from "../chrome";
@@ -18,16 +19,18 @@ const BADGE_MAX_WIDTH = 360;
 export function BadgeLayout({ track, flags, accent, src, className, status }: LayoutProps) {
 	const contentRef = useRef<HTMLDivElement>(null);
 	const [width, setWidth] = useState<number | undefined>(undefined);
+	const idle = !track;
+	const label = emptyLabel(status);
 
 	useLayoutEffect(() => {
 		const el = contentRef.current;
 		if (!el) return;
 		const next = Math.min(BADGE_MAX_WIDTH, Math.ceil(el.scrollWidth));
 		setWidth((prev) => (prev === next ? prev : next));
-	}, [track.title, track.artist, track.videoId, flags.art, flags.title, flags.artist, status, src]);
+	}, [track?.title, track?.artist, track?.videoId, flags.art, flags.title, flags.artist, status, src, idle, label]);
 
 	return (
-		<Shell flags={flags} layout="badge" className={className} playing={track.playing}>
+		<Shell flags={flags} layout="badge" className={className} playing={track?.playing} idle={idle}>
 			<motion.div
 				initial={false}
 				animate={width != null ? { width } : undefined}
@@ -41,7 +44,7 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 				<CardFrame
 					flags={flags}
 					accent={accent}
-					src={src}
+					src={idle ? null : src}
 					style={{
 						width: "max-content",
 						maxWidth: BADGE_MAX_WIDTH,
@@ -59,9 +62,9 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 							boxSizing: "border-box",
 						}}
 					>
-						{showArt(flags) ? <CoverArt src={src} accent={accent} size={36} /> : null}
+						{showArt(flags) ? <CoverArt src={idle ? null : src} accent={accent} size={36} /> : null}
 						<div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-							{flags.title ? (
+							{flags.title || idle ? (
 								<div
 									style={{
 										fontSize: 13,
@@ -70,12 +73,13 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 										overflow: "hidden",
 										textOverflow: "ellipsis",
 										maxWidth: 220,
+										color: idle ? C.muted : undefined,
 									}}
 								>
-									{track.title}
+									{idle ? label : track.title}
 								</div>
 							) : null}
-							{flags.artist ? (
+							{!idle && flags.artist ? (
 								<div
 									style={{
 										fontSize: 11,
@@ -90,7 +94,7 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 								</div>
 							) : null}
 						</div>
-						{status ? <div style={{ fontSize: 10, color: C.error, flexShrink: 0 }}>{status}</div> : null}
+						{!idle && status ? <div style={{ fontSize: 10, color: C.error, flexShrink: 0 }}>{status}</div> : null}
 					</div>
 				</CardFrame>
 			</motion.div>

@@ -1,12 +1,15 @@
-import { C, BleedArt, Shell, formatTime, type LayoutProps } from "../chrome";
+import { BleedArt, C, Shell, emptyLabel, formatTime, type LayoutProps } from "../chrome";
 
 export function FullscreenLayout({ track, flags, accent, src, className, status }: LayoutProps) {
-	const pct = track.duration > 0 ? Math.min(100, Math.max(0, (track.progress / track.duration) * 100)) : 0;
+	const idle = !track;
+	const label = emptyLabel(status);
+	const pct =
+		!idle && track.duration > 0 ? Math.min(100, Math.max(0, (track.progress / track.duration) * 100)) : 0;
 
 	return (
-		<Shell flags={flags} layout="fullscreen" fill className={className} playing={track.playing}>
+		<Shell flags={flags} layout="fullscreen" fill className={className} playing={track?.playing} idle={idle}>
 			<div style={{ position: "relative", width: "100%", height: "100%", minHeight: 240, overflow: "hidden", background: C.bg }}>
-				<BleedArt src={src} accent={accent} />
+				<BleedArt src={idle ? null : src} accent={accent} />
 				<div
 					style={{
 						position: "absolute",
@@ -27,15 +30,23 @@ export function FullscreenLayout({ track, flags, accent, src, className, status 
 						maxWidth: 960,
 					}}
 				>
-					{flags.title ? (
-						<div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.15, textShadow: "0 2px 20px rgba(0,0,0,0.7)" }}>
-							{track.title}
+					{flags.title || idle ? (
+						<div
+							style={{
+								fontSize: 36,
+								fontWeight: 700,
+								lineHeight: 1.15,
+								textShadow: "0 2px 20px rgba(0,0,0,0.7)",
+								color: idle ? C.muted : undefined,
+							}}
+						>
+							{idle ? label : track.title}
 						</div>
 					) : null}
-					{flags.artist ? (
+					{!idle && flags.artist ? (
 						<div style={{ fontSize: 18, color: C.muted, textShadow: "0 1px 12px rgba(0,0,0,0.7)" }}>{track.artist}</div>
 					) : null}
-					{flags.progress ? (
+					{!idle && flags.progress ? (
 						<div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4, maxWidth: 480 }}>
 							<div style={{ height: 6, borderRadius: 999, background: C.track, overflow: "hidden" }}>
 								<div
@@ -64,7 +75,7 @@ export function FullscreenLayout({ track, flags, accent, src, className, status 
 							</div>
 						</div>
 					) : null}
-					{status ? <div style={{ fontSize: 12, color: C.error }}>{status}</div> : null}
+					{!idle && status ? <div style={{ fontSize: 12, color: C.error }}>{status}</div> : null}
 				</div>
 			</div>
 		</Shell>

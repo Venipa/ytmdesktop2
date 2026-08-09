@@ -24,12 +24,18 @@ export const ART_DURATION = 0.28;
 export const CARD_RADIUS = 12;
 
 export interface LayoutProps {
-	readonly track: NowPlayingViewModel;
+	readonly track: NowPlayingViewModel | null;
 	readonly flags: EmbedFlags;
 	readonly accent: string;
 	readonly src: string | null;
 	readonly className?: string;
 	readonly status?: string | null;
+}
+
+/** Status wins; else idle copy for empty layouts. */
+export function emptyLabel(status?: string | null): string {
+	const trimmed = status?.trim();
+	return trimmed || "Nothing playing";
 }
 
 export function formatTime(seconds: number): string {

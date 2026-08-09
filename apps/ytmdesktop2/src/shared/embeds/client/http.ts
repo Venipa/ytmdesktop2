@@ -76,6 +76,12 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 	};
 
 	/** Smooth progress between WS `track:state` buckets while playing. */
+	const stopLocalTick = () => {
+		if (!tickTimer) return;
+		clearInterval(tickTimer);
+		tickTimer = null;
+	};
+
 	const startLocalTick = () => {
 		if (tickTimer) return;
 		tickTimer = setInterval(() => {
@@ -90,6 +96,16 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 		}, 200);
 	};
 
+	/** Drop live payload so layouts show empty state until reconnect. */
+	const clearLive = (status: string | null) => {
+		trackRaw = null;
+		stateRaw = null;
+		lastStateAt = 0;
+		stopLocalTick();
+		setStatus(status);
+		emit();
+	};
+
 	const connectWs = () => {
 		if (stopped) return;
 		const root = baseUrl.replace(/\/$/, "");
@@ -99,6 +115,7 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 		try {
 			ws = new WebSocket(wsUrl.toString());
 		} catch {
+			clearLive("Disconnected");
 			scheduleReconnect();
 			return;
 		}
@@ -108,6 +125,7 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 			try {
 				if (ev.data === "null") {
 					trackRaw = null;
+					stateRaw = null;
 					emit();
 					return;
 				}
@@ -117,6 +135,7 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 				};
 				if (parsed?.event === "track:change" && Array.isArray(parsed.data)) {
 					trackRaw = (parsed.data[0] as EmbedTrackLike | undefined) ?? null;
+					if (!trackRaw) stateRaw = null;
 					setStatus(null);
 					emit();
 					return;
@@ -131,12 +150,16 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 
 		ws.onopen = () => {
 			setStatus(null);
+			void loadTrack();
+			void loadState();
 			startLocalTick();
 		};
 
 		ws.onclose = () => {
 			ws = null;
-			if (!stopped) scheduleReconnect();
+			if (stopped) return;
+			clearLive("Reconnecting…");
+			scheduleReconnect();
 		};
 
 		ws.onerror = () => {
@@ -168,8 +191,9 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 	return {
 		stop() {
 			stopped = true;
-			if (tickTimer) clearInterval(tickTimer);
+			stopLocalTick();
 			if (reconnectTimer) clearTimeout(reconnectTimer);
+			reconnectTimer = null;
 			try {
 				ws?.close();
 			} catch {

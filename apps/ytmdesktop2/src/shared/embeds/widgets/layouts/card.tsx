@@ -1,15 +1,27 @@
-import { C, CardFrame, CoverArt, ProgressRow, Shell, showArt, showProgress, type LayoutProps } from "../chrome";
+import {
+	C,
+	CardFrame,
+	CoverArt,
+	ProgressRow,
+	Shell,
+	emptyLabel,
+	showArt,
+	showProgress,
+	type LayoutProps,
+} from "../chrome";
 
 export function CardLayout({ track, flags, accent, src, className, status }: LayoutProps) {
 	const compact = flags.layout === "compact";
 	const coverSize = compact ? 48 : 64;
+	const idle = !track;
+	const label = emptyLabel(status);
 
 	return (
-		<Shell flags={flags} layout={flags.layout} className={className} playing={track.playing}>
+		<Shell flags={flags} layout={flags.layout} className={className} playing={track?.playing} idle={idle}>
 			<CardFrame
 				flags={flags}
 				accent={accent}
-				src={src}
+				src={idle ? null : src}
 				style={{
 					minWidth: compact ? 260 : 320,
 					maxWidth: compact ? 360 : 440,
@@ -17,9 +29,9 @@ export function CardLayout({ track, flags, accent, src, className, status }: Lay
 			>
 				<div style={{ display: "flex", flexDirection: "column", padding: compact ? "10px 12px" : "12px 14px" }}>
 					<div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-						{showArt(flags) ? <CoverArt src={src} accent={accent} size={coverSize} /> : null}
+						{showArt(flags) ? <CoverArt src={idle ? null : src} accent={accent} size={coverSize} /> : null}
 						<div style={{ minWidth: 0, flex: 1, paddingTop: 2 }}>
-							{flags.title ? (
+							{flags.title || idle ? (
 								<div
 									style={{
 										fontSize: compact ? 14 : 16,
@@ -28,13 +40,14 @@ export function CardLayout({ track, flags, accent, src, className, status }: Lay
 										whiteSpace: "nowrap",
 										overflow: "hidden",
 										textOverflow: "ellipsis",
+										color: idle ? C.muted : undefined,
 									}}
-									title={track.title}
+									title={idle ? label : track.title}
 								>
-									{track.title}
+									{idle ? label : track.title}
 								</div>
 							) : null}
-							{flags.artist ? (
+							{!idle && flags.artist ? (
 								<div
 									style={{
 										marginTop: 2,
@@ -51,8 +64,8 @@ export function CardLayout({ track, flags, accent, src, className, status }: Lay
 							) : null}
 						</div>
 					</div>
-					{showProgress(flags) ? <ProgressRow track={track} accent={accent} compact={compact} /> : null}
-					{status ? <div style={{ marginTop: 8, fontSize: 11, color: C.error }}>{status}</div> : null}
+					{!idle && showProgress(flags) ? <ProgressRow track={track} accent={accent} compact={compact} /> : null}
+					{!idle && status ? <div style={{ marginTop: 8, fontSize: 11, color: C.error }}>{status}</div> : null}
 				</div>
 			</CardFrame>
 		</Shell>
