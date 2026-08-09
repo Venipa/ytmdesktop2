@@ -5,6 +5,7 @@
 		"src/renderer/src/**/*",
 		"src/preload/*.d.ts",
 		"src/shared/**/*.ts",
+		"src/shared/**/*.tsx",
 		"src/translations/**/*.ts",
 		"src/renderer/src/typings.d.ts",
 		"src/main/contracts/**/*.d.ts"

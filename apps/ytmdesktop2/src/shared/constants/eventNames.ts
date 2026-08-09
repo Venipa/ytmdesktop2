@@ -1,6 +1,7 @@
 export const API_ROUTES = {
 	TRACK_CURRENT: "api/track",
 	TRACK_CURRENT_STATE: "api/track/state",
+	TRACK_THUMBNAIL: "api/track/thumbnail",
 	TRACK_LIKE: "api/track/like",
 	TRACK_DISLIKE: "api/track/dislike",
 	TRACK_ACCENT: "api/track/accent",

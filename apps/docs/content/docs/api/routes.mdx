@@ -13,7 +13,15 @@ Authorization: Bearer <token>
 
 (Token alone without `Bearer` is also accepted.)
 
-Auth endpoints (`/auth/*`) never require a token. `GET /` is always public.
+For browser sources / embeds that cannot set headers, pass the same token as a query param:
+
+```text
+?token=<token>
+```
+
+Accepted on `GET /track`, `GET /track/state`, `GET /track/thumbnail`, and WebSocket `/socket` (same as before for the socket).
+
+Auth endpoints (`/auth/*`) never require a token. `GET /` and static `/embed/*` pages are always public.
 
 ## Quick reference
 
@@ -24,6 +32,7 @@ Auth endpoints (`/auth/*`) never require a token. `GET /` is always public.
 | `POST` | `/auth/request` | No | Exchange code for token (blocks until approved) |
 | `GET` | `/track` | Yes | Current track payload |
 | `GET` | `/track/state` | Yes | Playback state |
+| `GET` | `/track/thumbnail` | Yes | Current album art (thumb-cache bytes) |
 | `POST` | `/track/play` | Yes | Play |
 | `POST` | `/track/pause` | Yes | Pause |
 | `POST` | `/track/toggle-play-state` | Yes | Toggle play/pause |
@@ -50,6 +59,7 @@ Auth endpoints (`/auth/*`) never require a token. `GET /` is always public.
 | `POST` | `/nav/home` | Yes | Navigate to YouTube Music home |
 | `GET` | `/socket` | Yes* | WebSocket track events |
 | `GET` | `/socket/ping` | No | WebSocket ping/pong |
+| `GET` | `/embed/now-playing` | No | First-party OBS now-playing HTML/JS |
 
 \* Auth via `Authorization` header or `?token=` query when required.
 
@@ -220,6 +230,31 @@ curl http://127.0.0.1:13091/track/state \
 ```
 
 `null` when no active track state exists yet.
+
+### `GET /track/thumbnail`
+
+Album art for the current track, served from the [thumbnail cache](/docs/internals/thumbnail-cache) (same bytes as tray `ytmd-thumb://`). Prefer this over hotlinking YouTube CDN URLs from OBS / scripts.
+
+Optional query:
+
+| Param | Role |
+| --- | --- |
+| `id` | Current `videoId` — cache-bust when the track changes |
+| `token` | Auth token when required (same as other GETs) |
+
+```bash
+curl -OJ "http://127.0.0.1:13091/track/thumbnail?id=dQw4w9WgXcQ" \
+  -H "Authorization: Bearer <token>"
+```
+
+Returns raw image bytes (`Content-Type` from cache, usually `image/jpeg` / `image/webp`).
+
+| Status | When |
+| --- | --- |
+| `200` | Image body |
+| `302` | Non-CDN thumb URL — redirects to remote |
+| `404` | No track / no thumbnail |
+| `502` | Cache fetch failed |
 
 ---
 
@@ -453,7 +488,7 @@ Clear upcoming queue via player `clearQueue`.
 
 Upgrade to WebSocket. When auth is required, pass `Authorization: Bearer <token>` or `?token=<token>`.
 
-On connect, the server pushes the current track (or `"null"`). Later broadcasts use:
+On connect, the server pushes the current track (or `"null"`), then current playback state when available. Later broadcasts use:
 
 ```json
 {
@@ -461,6 +496,15 @@ On connect, the server pushes the current track (or `"null"`). Later broadcasts 
   "data": [{ "video": { "videoId": "…" }, "meta": { "…" }, "…" }]
 }
 ```
+
+```json
+{
+  "event": "track:state",
+  "data": [{ "id": "…", "playing": true, "progress": 12.5, "duration": 210, "percentage": 6, "accent": "#3b82f6", "…" }]
+}
+```
+
+`track:state` is rate-limited (~250ms buckets) so overlays stay smooth without polling `GET /track/state`.
 
 Unauthorized sockets close with code `1008`.
 

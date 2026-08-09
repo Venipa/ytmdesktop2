@@ -45,54 +45,104 @@ function stripXmlns(ttml: string): string {
 	return ttml.replace(/\sxmlns(?::\w+)?="[^"]*"/g, "");
 }
 
+const OPEN_SPAN_RE = /^<span\b([^>]*)>/i;
+const CLOSE_SPAN = "</span>";
+
+/** Find matching `</span>` for an opening tag at `openEnd` (index of `>`). */
+function findBalancedSpanEnd(inner: string, openEnd: number): number {
+	let depth = 1;
+	let i = openEnd + 1;
+	while (i < inner.length && depth > 0) {
+		const nextOpen = inner.slice(i).search(/<span\b/i);
+		const nextClose = inner.toLowerCase().indexOf(CLOSE_SPAN, i);
+		if (nextClose < 0) return -1;
+
+		const openAt = nextOpen < 0 ? Number.POSITIVE_INFINITY : i + nextOpen;
+		if (openAt < nextClose) {
+			depth += 1;
+			const gt = inner.indexOf(">", openAt);
+			i = gt < 0 ? inner.length : gt + 1;
+			continue;
+		}
+		depth -= 1;
+		if (depth === 0) return nextClose;
+		i = nextClose + CLOSE_SPAN.length;
+	}
+	return -1;
+}
+
 function parseSpanWords(inner: string): { text: string; words?: LyricWord[] } {
 	const words: LyricWord[] = [];
 	let text = "";
-	const tokenRe = /<span\b([^>]*)>([\s\S]*?)<\/span>|([^<]+)/gi;
-	let match: RegExpExecArray | null;
-	while ((match = tokenRe.exec(inner)) !== null) {
-		if (match[3] != null) {
-			const plain = match[3];
-			text += plain;
-			if (words.length) words[words.length - 1].text += plain;
+	let i = 0;
+
+	const appendPlain = (plain: string) => {
+		if (!plain) return;
+		text += plain;
+		if (words.length) words[words.length - 1].text += plain;
+	};
+
+	while (i < inner.length) {
+		if (inner[i] !== "<") {
+			const next = inner.indexOf("<", i);
+			appendPlain(next < 0 ? inner.slice(i) : inner.slice(i, next));
+			i = next < 0 ? inner.length : next;
 			continue;
 		}
 
-		const spanAttrs = match[1] ?? "";
-		const role = attr(spanAttrs, "ttm:role") ?? attr(spanAttrs, "role");
-		// Background vocal containers — flatten nested timed spans.
-		if (role === "x-bg") {
-			const nested = parseSpanWords(match[2] ?? "");
-			text += nested.text;
-			if (nested.words?.length) words.push(...nested.words);
+		const open = OPEN_SPAN_RE.exec(inner.slice(i));
+		if (open) {
+			const attrs = open[1] ?? "";
+			const openEnd = i + open[0].length - 1;
+			const closeAt = findBalancedSpanEnd(inner, openEnd);
+			if (closeAt < 0) {
+				i += 1;
+				continue;
+			}
+			const content = inner.slice(openEnd + 1, closeAt);
+			i = closeAt + CLOSE_SPAN.length;
+
+			const role = attr(attrs, "ttm:role") ?? attr(attrs, "role");
+			if (role === "x-bg") {
+				const nested = parseSpanWords(content);
+				text += nested.text;
+				if (nested.words?.length) words.push(...nested.words);
+				continue;
+			}
+
+			const begin = attr(attrs, "begin");
+			const end = attr(attrs, "end");
+			if (begin == null || end == null) {
+				const nested = parseSpanWords(content);
+				appendPlain(nested.text);
+				if (nested.words?.length) words.push(...nested.words);
+				continue;
+			}
+
+			const startMs = parseTtmlTime(begin);
+			const endMs = parseTtmlTime(end);
+			// Timed leaf — content should be text (or nested syllables without own begin on outer).
+			const leaf = content.includes("<span") ? parseSpanWords(content).text : content;
+			words.push({
+				timeMs: startMs,
+				text: leaf,
+				durationMs: Math.max(0, endMs - startMs),
+			});
+			text += leaf;
 			continue;
 		}
 
-		const begin = attr(spanAttrs, "begin");
-		const end = attr(spanAttrs, "end");
-		const spanText = match[2] ?? "";
-		if (begin == null || end == null) {
-			text += spanText;
-			if (words.length) words[words.length - 1].text += spanText;
-			continue;
-		}
-
-		const startMs = parseTtmlTime(begin);
-		const endMs = parseTtmlTime(end);
-		words.push({
-			timeMs: startMs,
-			text: spanText,
-			durationMs: Math.max(0, endMs - startMs),
-		});
-		text += spanText;
+		// Skip unknown / closing tags so leftovers like stray markup never become lyric text.
+		const gt = inner.indexOf(">", i);
+		i = gt < 0 ? inner.length : gt + 1;
 	}
 
 	return words.length ? { text, words } : { text: text || inner.replace(/<[^>]+>/g, "") };
 }
 
 /**
- * Parse Apple-style lyric TTML (Better Lyrics / Binimum) into timed lines.
- * Timed `<span begin end>` → word/syllable cues; otherwise line-only.
+ * Parse Apple-style lyric TTML (Better Lyrics / Unison) into timed lines.
+ * Timed `<span begin end>` → word/syllable cues; nested `ttm:role="x-bg"` flattened.
  */
 export function parseTtml(ttml: string): LyricLine[] {
 	const cleaned = stripXmlns(ttml);

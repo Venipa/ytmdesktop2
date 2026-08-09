@@ -10,6 +10,7 @@ import {
 	RiGlobalLine,
 	RiInformationLine,
 	RiKey2Line,
+	RiLiveLine,
 	RiMusic2Line,
 	RiPaletteLine,
 	RiQrCodeLine,
@@ -68,6 +69,7 @@ const apiCoreSubs = [
 const apiIntegrationSubs = [
 	{ to: "/api-integrations/remote", label: "Remote", icon: RiQrCodeLine },
 	{ to: "/api-integrations/streamdeck", label: "Stream Deck", icon: RiDashboardLine },
+	{ to: "/api-integrations/obs", label: "OBS", icon: RiLiveLine },
 ] as const;
 
 const appearanceSubs = [

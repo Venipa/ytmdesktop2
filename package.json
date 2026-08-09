@@ -29,6 +29,7 @@
 		"biome:format": "pnpm --filter ytmdesktop2 biome:format",
 		"biome:check": "pnpm --filter ytmdesktop2 biome:check",
 		"biome:check:apply": "pnpm --filter ytmdesktop2 biome:check:apply",
+		"embeds:build": "pnpm --filter ytmdesktop2 embeds:build",
 		"streamdeck:build": "pnpm --filter ytmdesktop2-streamdeck build",
 		"streamdeck:icons": "pnpm --filter ytmdesktop2-streamdeck icons",
 		"streamdeck:pack": "pnpm --filter ytmdesktop2-streamdeck run pack",

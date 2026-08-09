@@ -1,8 +1,15 @@
 import { type ServerType, serve, upgradeWebSocket } from "@hono/node-server";
+import { resolveEmbedsRoot } from "@main/api/resolveEmbedsRoot";
+import { tryServeEmbedFile } from "@main/api/serveEmbeds";
 import { isDevelopment } from "@main/infra/devUtils";
+import { thumbnailCache } from "@main/services/thumbnailCache";
 import type { SettingsStore } from "@main/trpc/routers/settings/service";
+import { isCachableThumbUrl } from "@shared/media/appThumbUrl";
 import type { TrackData } from "@shared/track/trackData";
+import { resolveTrackThumbnailUrl } from "@shared/track/thumbnail";
 import { createLogger } from "@shared/utils/console";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { WSContext } from "hono/ws";
@@ -87,14 +94,19 @@ export async function startApiServer(options: {
 		})(c, next);
 	});
 
+	const extractRequestToken = (c: { req: { header: (name: string) => string | undefined; query: (key: string) => string | undefined } }) =>
+		extractBearerToken(c.req.header("Authorization")) ?? c.req.query("token") ?? null;
+
 	const requireAuth = async (c: any, next: () => Promise<void>) => {
 		if (!authRequired) return next();
-		const token = extractBearerToken(c.req.header("Authorization"));
+		const token = extractRequestToken(c);
 		if (!isAuthorized(token)) {
 			return c.json({ error: "unauthorized" }, 401);
 		}
 		return next();
 	};
+
+	const embedsRoot = resolveEmbedsRoot();
 
 	app.get("/", (c) =>
 		c.json({
@@ -103,8 +115,46 @@ export async function startApiServer(options: {
 			player: config?.player,
 			authRequired,
 			routes,
+			embeds: embedsRoot ? ["/embed/now-playing"] : [],
 		}),
 	);
+
+	/** Public static OBS embeds (auth is on /track via ?token=). */
+	app.get("/embed/now-playing", async (c) => {
+		if (!embedsRoot) return c.json({ error: "embeds not built" }, 503);
+		const served = await tryServeEmbedFile(c, {
+			root: path.join(embedsRoot, "now-playing"),
+			urlPrefix: "/embed/now-playing",
+		});
+		if (served) return served;
+		// Trailing-less path → index.html
+		const indexPath = path.join(embedsRoot, "now-playing", "index.html");
+		try {
+			const data = await fs.readFile(indexPath);
+			return c.body(data, 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+		} catch {
+			return c.json({ error: "embeds not built" }, 503);
+		}
+	});
+
+	app.get("/embed/now-playing/", async (c) => {
+		if (!embedsRoot) return c.json({ error: "embeds not built" }, 503);
+		try {
+			const data = await fs.readFile(path.join(embedsRoot, "now-playing", "index.html"));
+			return c.body(data, 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+		} catch {
+			return c.json({ error: "embeds not built" }, 503);
+		}
+	});
+
+	app.get("/embed/now-playing/*", async (c) => {
+		if (!embedsRoot) return c.json({ error: "embeds not built" }, 503);
+		const served = await tryServeEmbedFile(c, {
+			root: path.join(embedsRoot, "now-playing"),
+			urlPrefix: "/embed/now-playing",
+		});
+		return served ?? c.json({ error: "not found" }, 404);
+	});
 
 	app.post("/auth/requestcode", async (c) => {
 		try {
@@ -128,6 +178,35 @@ export async function startApiServer(options: {
 
 	app.get("/track", requireAuth, async (c) => c.json((await onRequest("api/track")) ?? null));
 	app.get("/track/state", requireAuth, async (c) => c.json((await onRequest("api/track/state")) ?? null));
+
+	/**
+	 * Current track art via disk thumb-cache (same path as tray `ytmd-thumb://`).
+	 * Query `id` = videoId for browser cache-bust on track change.
+	 */
+	app.get("/track/thumbnail", requireAuth, async (c) => {
+		try {
+			const track = (await onRequest("api/track")) as TrackData | null;
+			if (!track) return c.json({ error: "no track" }, 404);
+			const remote = resolveTrackThumbnailUrl(track);
+			if (!remote) return c.json({ error: "no thumbnail" }, 404);
+			if (!isCachableThumbUrl(remote)) {
+				// Non-CDN URL — redirect so clients still get something.
+				return c.redirect(remote, 302);
+			}
+			const entry = await thumbnailCache.get(remote);
+			const data = await fs.readFile(entry.filePath);
+			const videoId = track.video?.videoId ?? "";
+			return c.body(data, 200, {
+				"Content-Type": entry.mime || "image/jpeg",
+				"Content-Length": String(data.byteLength),
+				"Cache-Control": "public, max-age=3600",
+				ETag: `"${videoId || entry.filePath}"`,
+			});
+		} catch (err) {
+			log.error("track thumbnail failed", err);
+			return c.json({ error: "thumbnail unavailable" }, 502);
+		}
+	});
 
 	app.post("/track/*", requireAuth, async (c) => {
 		const operation = `api${c.req.path}`;
@@ -171,7 +250,7 @@ export async function startApiServer(options: {
 	app.get(
 		"/socket",
 		upgradeWebSocket((c) => {
-			const token = extractBearerToken(c.req.header("Authorization")) ?? c.req.query("token") ?? null;
+			const token = extractRequestToken(c);
 			const allowed = !authRequired || isAuthorized(token);
 			return {
 				onOpen(_event, ws) {
@@ -188,6 +267,10 @@ export async function startApiServer(options: {
 								ws.send(JSON.stringify({ event: "track:change", data: [{ ...track }] }));
 							} else {
 								ws.send("null");
+							}
+							const state = await onRequest("api/track/state");
+							if (state) {
+								ws.send(JSON.stringify({ event: "track:state", data: [state] }));
 							}
 						} catch (err) {
 							log.error("socket open track push failed", err);

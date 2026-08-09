@@ -334,7 +334,11 @@ export class TrackService {
 		if (key === this.lastStateEmitKey) return;
 		this.lastStateEmitKey = key;
 		// Shallow clone — in-place mutation keeps same ref; React setState skips via Object.is.
-		events.emit("track:state-change", { ...state });
+		const snapshot = { ...state };
+		events.emit("track:state-change", snapshot);
+		// Local API WS (OBS embeds) — already bucketed by stateEmitKey (~250ms).
+		const api = this.getProvider("api") as { sendMessage?: (...args: unknown[]) => void } | undefined;
+		api?.sendMessage?.("track:state", snapshot);
 	}
 
 	/**

@@ -14,6 +14,10 @@ const SAMPLE = `<?xml version="1.0"?>
   </body>
 </tt>`;
 
+const NESTED_BG = `<p begin="5.616" end="7.385" itunes:key="L3" ttm:agent="v1"><span begin="5.616" end="6.059">Boba</span> <span begin="6.059" end="6.506">tea</span> <span ttm:role="x-bg"><span begin="6.576" end="7.385">(Gnarly)</span></span></p>`;
+
+const SYLLABLE_JOIN = `<p begin="21.510" end="22.171"><span begin="21.510" end="21.744">gang-</span><span begin="21.744" end="22.171">gang</span></p>`;
+
 describe("parseTtmlTime", () => {
 	it("parses decimal seconds and mm:ss", () => {
 		expect(parseTtmlTime("9.731")).toBe(9731);
@@ -36,5 +40,30 @@ describe("parseTtml", () => {
 		const lineOnly = lines.find((l) => l.text === "line only");
 		expect(lineOnly?.words).toBeUndefined();
 		expect(lineOnly?.timeMs).toBe(15000);
+	});
+
+	it("flattens nested x-bg spans without leftover markup", () => {
+		const lines = parseTtml(
+			`<tt xmlns:ttm="http://music.apple.com/lyric-ttml-internal"><body>${NESTED_BG}</body></tt>`,
+		);
+		const line = lines.find((l) => l.text.includes("Boba"));
+		expect(line?.text).toBe("Boba tea (Gnarly)");
+		expect(line?.text).not.toMatch(/\/span>|<\/?span/i);
+		expect(line?.words?.map((w) => w.text.trim())).toEqual(["Boba", "tea", "(Gnarly)"]);
+	});
+
+	it("joins syllable spans without injecting junk", () => {
+		const lines = parseTtml(`<tt><body>${SYLLABLE_JOIN}</body></tt>`);
+		const line = lines.find((l) => l.text.includes("gang"));
+		expect(line?.text).toBe("gang-gang");
+		expect(line?.text).not.toContain("/span>");
+	});
+
+	it("flattens multi-word x-bg without leftover /span>", () => {
+		const html = `<p begin="14.600" end="17.149"><span begin="14.600" end="14.747">Oh</span> <span begin="14.747" end="14.899">my</span> <span begin="14.899" end="15.109">god,</span> <span begin="15.109" end="15.283">that</span> <span begin="15.283" end="15.515">new</span> <span begin="15.515" end="16.002">beat</span> <span ttm:role="x-bg"><span begin="15.432" end="16.157">(Fucking</span> <span begin="16.157" end="17.149">gnarly)</span></span></p>`;
+		const lines = parseTtml(`<tt xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body>${html}</body></tt>`);
+		const line = lines.find((l) => l.text.includes("beat"));
+		expect(line?.text).toBe("Oh my god, that new beat (Fucking gnarly)");
+		expect(line?.text).not.toMatch(/\/span>|<\/?span/i);
 	});
 });

@@ -5,24 +5,72 @@ description: Now-playing overlays via the local API
 
 Drive OBS (or other) browser sources from the [local API](/docs/api) so stream overlays stay in sync with playback.
 
-## Setup
+## First-party embed
 
 1. Enable the API under **Settings → API & Integrations → API**.
-2. Prefer [Authentication](/docs/api/authentication) for anything beyond a locked-down localhost setup.
-3. Point your OBS browser source at an overlay that reads the API (community packs or your own HTML).
-4. If you changed the API port, append `?port=<port>` to the source URL (default is `13091`).
+2. Open **Settings → API & Integrations → OBS**.
+3. Tune layout + flags in the live preview, then **Copy OBS URL**.
+4. In OBS: **Add → Browser Source** → paste the URL (suggested size ~480×140; smaller for badge/ticker; full scene for fullscreen).
 
-Community reference: [Zyphen's Now Playing](https://obsproject.com/forum/threads/zyphens-now-playing-overlay.125383/post-557409).
+Default URL:
+
+```text
+http://127.0.0.1:13091/embed/now-playing
+```
+
+When [authentication](/docs/api/authentication) is on, append a paired client token:
+
+```text
+http://127.0.0.1:13091/embed/now-playing?token=<token>
+```
+
+(The settings page can load a token from a paired client into the URL.)
+
+### Layouts
+
+| `layout` | Description |
+| --- | --- |
+| `default` | Full card — art, title, artist, progress (default) |
+| `compact` | Smaller card, tighter spacing |
+| `text` | Title + artist only (no art/progress) |
+| `badge` | Compact horizontal card (same 12px radius as default/ticker) |
+| `fullscreen` | Edge-to-edge art with overlay text — size Browser Source to scene |
+| `stack` | Vertical poster (art on top) — good for side panels |
+| `ticker` | Thin scrolling strip for top/bottom of stream |
+
+Example: `?layout=badge`, `?layout=fullscreen`, `?layout=ticker`.
+
+### Query flags
+
+| Param | Default | Description |
+| --- | --- | --- |
+| `layout` | `default` | Widget layout (see above) |
+| `art` | on | Album art |
+| `title` | on | Track title |
+| `artist` | on | Artist |
+| `progress` | on | Progress bar + times |
+| `transparent` | on | Transparent page background (OBS) |
+| `scale` | `1` | CSS scale (`0.25`–`4`) |
+| `token` | — | API token when auth is required |
+
+Set a flag off with `0` / `false` / `off` (example: `?art=0&progress=0`).
 
 ## Tips
 
 - Confirm `GET /track` and `GET /track/state` before wiring overlays — see [Routes](/docs/api/routes).
-- WebSocket `/socket` can push `track:change` events for live updates.
+- First-party embeds load art from `GET /track/thumbnail` (thumb-cache), not the YouTube CDN.
+- WebSocket `/socket` pushes `track:change` and `track:state` (progress / play).
+- Prefer `127.0.0.1` and a token when the API is reachable beyond your machine.
+
+## Community overlays
+
+You can still point browser sources at custom HTML that reads the API. Community reference: [Zyphen's Now Playing](https://obsproject.com/forum/threads/zyphens-now-playing-overlay.125383/post-557409).
 
 ## Related
 
 <Cards>
   <Card title="Local API" href="/docs/api" />
   <Card title="API routes" href="/docs/api/routes" />
+  <Card title="Authentication" href="/docs/api/authentication" />
   <Card title="All features" href="/docs/features" />
 </Cards>

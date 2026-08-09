@@ -11,6 +11,7 @@ YTMDesktop2 caches YouTube Music album art on disk and serves it to app chrome o
 | --- | --- |
 | [Tray view](/docs/features/tray-view) | Cover art in the tray popup (`toAppThumbUrl`) |
 | [Mini player](/docs/features/mini-player) (removed in 1.4.0) | Cover art in the compact window (`toAppThumbUrl`) |
+| [OBS embeds](/docs/features/obs) | Cover art via local API `GET /track/thumbnail` |
 | Track accent | Palette / accent color from the cached image buffer |
 | macOS Touch Bar | Artwork bytes via `getBuffer` |
 
@@ -52,6 +53,16 @@ Meta stores URL, MIME type, size, and save time. Invalid or decrypt-failed meta 
 - Fall back to `net.fetch` if session fetch fails.
 - In-flight requests are deduped per URL key.
 - Successful responses are served with long-lived `Cache-Control` to the renderer.
+
+## Local API
+
+OBS embeds and external tools can load the same cached bytes over HTTP:
+
+```text
+GET http://127.0.0.1:13091/track/thumbnail?id=<videoId>
+```
+
+Auth matches other `/track/*` routes (`Authorization` or `?token=`). See [API routes](/docs/api/routes).
 
 ## Related
 
