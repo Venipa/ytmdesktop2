@@ -1,9 +1,15 @@
 ---
 title: OBS overlays
 description: Now-playing overlays via the local API
+og:
+  image: /images/features-obs-settings-card.png
+  type: render
+  color: "#ff0000"
 ---
 
 Drive OBS (or other) browser sources from the [local API](/docs/api) so stream overlays stay in sync with playback.
+
+![OBS overlay settings — live preview and flags](/images/features-obs-settings-card.png)
 
 ## First-party embed
 
@@ -39,6 +45,24 @@ http://127.0.0.1:13091/embed/now-playing?token=<token>
 | `ticker` | Thin scrolling strip for top/bottom of stream |
 
 Example: `?layout=badge`, `?layout=fullscreen`, `?layout=ticker`.
+
+#### Default
+
+Horizontal card — art, title, artist, progress.
+
+![Default layout](/images/features-obs-default-layout.png)
+
+#### Stack
+
+Vertical poster — large art on top, centered metadata, progress.
+
+![Stack layout](/images/features-obs-stack-layout.png)
+
+#### Text
+
+Title + artist only — transparent background for minimal lower-thirds.
+
+![Text layout](/images/features-obs-text-layout.png)
 
 ### Query flags
 
