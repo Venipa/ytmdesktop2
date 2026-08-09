@@ -4,10 +4,10 @@ description: Timed lyrics in the YouTube Music Lyrics tab via LRCLib
 og:
   image: /images/features-lyrics-player.png
   type: render-auto
-  color: "#E0168E"
+  color: "#ff0000"
 ---
 
-When **Synced lyrics** is enabled, YTMDesktop2 replaces the YouTube Music **Lyrics** tab with timed lines from [LRCLib](https://lrclib.net). Click a line to seek; the active line follows playback.
+When **Synced lyrics** is enabled, YTMDesktop2 replaces the YouTube Music **Lyrics** tab with timed lines from [LRCLib](https://lrclib.net). Click a line to seek; the active line follows playback. Optional **word sync** highlights each word — real enhanced timestamps when present, otherwise estimated from line timing.
 
 ![Synced lyrics in the player](/images/features-lyrics-player.png)
 
@@ -24,13 +24,15 @@ When **Synced lyrics** is enabled, YTMDesktop2 replaces the YouTube Music **Lyri
 | **Enable synced lyrics** | Off | Hijacks the Lyrics tab with LRCLib-backed lines (hot-toggle, no app restart). |
 | **Allow approximate matches** | On | Show lyrics when title/artist match is close but not exact. |
 | **Show time codes** | Off | Two-column layout with a right-aligned timestamp per line. |
-| **Show line progress** | On | Muted fill on the active line as it plays. |
+| **Show line progress** | On | Muted fill on the active line as it plays (skipped when word sync paints that line). |
+| **Show word sync** | Off | Karaoke-style word highlight. Prefers enhanced `<mm:ss.xx>` cues; otherwise estimates from line duration. Single-word / duet rows keep normal line sync. Greyed when synced lyrics are off. |
 
 ## Notes
 
 - Results are cached in memory by video id for the current session (empty matches are cached too; fetch errors are not).
 - Ads, live, podcasts, and very short clips are skipped.
-- Concurrent / duet lines that start nearly together are stacked as one row.
+- Concurrent / duet lines that start nearly together are stacked as one row (word cues dropped on merge).
+- Estimated word timing shows a small “Estimated word timing” note in the Lyrics tab.
 - Disable the feature anytime to restore stock YouTube Music lyrics.
 
 ## Related

@@ -52,6 +52,7 @@ function readLyricsSettings(settings?: Record<string, any>) {
 		showTimeCodes: !!s?.lyrics?.showTimeCodes,
 		showEvenIfInexact: s?.lyrics?.showEvenIfInexact !== false,
 		showProgressBar: s?.lyrics?.showProgressBar !== false,
+		showWordSync: !!s?.lyrics?.showWordSync,
 	};
 }
 
@@ -146,6 +147,7 @@ async function startLyrics() {
 	runtime.renderer = createLyricsRenderer(() => runtime.mount?.getHost() ?? null, {
 		showTimeCodes: () => readLyricsSettings().showTimeCodes,
 		showProgressBar: () => readLyricsSettings().showProgressBar,
+		showWordSync: () => readLyricsSettings().showWordSync,
 		onSeek: (timeMs) => {
 			try {
 				runtime.playerApi?.seekTo?.((timeMs + SEEK_OFFSET_MS) / 1000, true);
@@ -158,7 +160,13 @@ async function startLyrics() {
 	runtime.unsubStore = runtime.store.subscribe((snap) => runtime.renderer?.setSnapshot(snap));
 	runtime.unsubSettings =
 		runtime.onSettingsChange?.((key) => {
-			if (key === "lyrics.showTimeCodes" || key === "lyrics.showProgressBar") runtime.renderer?.repaint();
+			if (
+				key === "lyrics.showTimeCodes" ||
+				key === "lyrics.showProgressBar" ||
+				key === "lyrics.showWordSync"
+			) {
+				runtime.renderer?.repaint();
+			}
 			if (key === "lyrics.showEvenIfInexact") refreshTrack();
 		}) ?? null;
 

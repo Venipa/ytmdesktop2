@@ -14,6 +14,8 @@ export interface SettingsCheckboxProps {
 	onChange?: (value: boolean) => void;
 	/** Shown via sonner after the value is saved. */
 	updateMessage?: string;
+	/** Grey out control (preference still readable). */
+	disabled?: boolean;
 }
 
 export function SettingsCheckbox({
@@ -24,6 +26,7 @@ export function SettingsCheckbox({
 	description,
 	onChange,
 	updateMessage,
+	disabled = false,
 }: SettingsCheckboxProps) {
 	const id = useId();
 	const [value, setValue, { isPending }] = useSettingsState<boolean>(configKey, defaultValue, {
@@ -31,8 +34,10 @@ export function SettingsCheckbox({
 		onPersisted: updateMessage ? () => toast.success(updateMessage) : undefined,
 	});
 
+	const locked = disabled || isPending;
+
 	const apply = (checked: boolean) => {
-		if (isPending || checked === value) return;
+		if (locked || checked === value) return;
 		setValue(checked);
 		onChange?.(checked);
 	};
@@ -40,7 +45,7 @@ export function SettingsCheckbox({
 	return (
 		<Field
 			orientation="horizontal"
-			data-disabled={isPending || undefined}
+			data-disabled={locked || undefined}
 			className={cn(
 				"-mx-2 items-start rounded-lg px-2 py-2 transition-colors duration-150 ease-out",
 				"cursor-pointer hover:bg-muted/50 active:bg-muted/70",
@@ -48,6 +53,7 @@ export function SettingsCheckbox({
 				className,
 			)}
 			onClick={(event) => {
+				if (locked) return;
 				const target = event.target as HTMLElement | null;
 				if (target?.closest("a, button, [role='link']")) return;
 				apply(!value);
@@ -61,7 +67,7 @@ export function SettingsCheckbox({
 			<Switch
 				id={id}
 				checked={value}
-				disabled={isPending}
+				disabled={locked}
 				onClick={(event) => event.stopPropagation()}
 				onCheckedChange={apply}
 			/>

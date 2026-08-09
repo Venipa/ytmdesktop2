@@ -20,6 +20,7 @@ describe("createLyricsRenderer", () => {
 		const api = createLyricsRenderer(() => host, {
 			showTimeCodes: () => false,
 			showProgressBar: () => true,
+			showWordSync: () => false,
 			onSeek: () => {},
 		});
 

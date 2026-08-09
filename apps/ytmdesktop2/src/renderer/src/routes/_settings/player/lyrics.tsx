@@ -2,12 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
+import { useSettingsState } from "@/hooks/use-settings";
 
 export const Route = createFileRoute("/_settings/player/lyrics")({
 	component: LyricsSettingsPage,
 });
 
 function LyricsSettingsPage() {
+	const [lyricsEnabled] = useSettingsState<boolean>("lyrics.enabled", false);
+
 	return (
 		<>
 			<Card>
@@ -26,12 +29,14 @@ function LyricsSettingsPage() {
 						<SettingsCheckbox
 							configKey="lyrics.showEvenIfInexact"
 							defaultValue={true}
+							disabled={!lyricsEnabled}
 							description="Show lyrics when the match is approximate (title/artist close but not exact)."
 						>
 							Allow approximate matches
 						</SettingsCheckbox>
 						<SettingsCheckbox
 							configKey="lyrics.showTimeCodes"
+							disabled={!lyricsEnabled}
 							description="Prefix each line with its timestamp."
 						>
 							Show time codes
@@ -39,9 +44,17 @@ function LyricsSettingsPage() {
 						<SettingsCheckbox
 							configKey="lyrics.showProgressBar"
 							defaultValue={true}
-							description="Fill the active lyric row with a muted translucent background as it plays."
+							disabled={!lyricsEnabled}
+							description="Fill the active lyric row with a muted translucent background as it plays (skipped on lines with word sync)."
 						>
 							Show line progress
+						</SettingsCheckbox>
+						<SettingsCheckbox
+							configKey="lyrics.showWordSync"
+							disabled={!lyricsEnabled}
+							description="Highlight each word while the line plays. Uses enhanced timestamps when present; otherwise estimates from line timing. Single-word and duet rows keep normal line sync."
+						>
+							Show word sync
 						</SettingsCheckbox>
 					</FieldGroup>
 				</CardContent>

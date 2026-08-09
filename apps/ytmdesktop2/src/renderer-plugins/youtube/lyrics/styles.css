@@ -159,6 +159,33 @@
 	word-break: normal;
 }
 
+#ytmd-lyrics-root .ytmd-lyrics-words {
+	display: inline;
+	white-space: pre-wrap;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-word {
+	display: inline;
+	color: inherit;
+	-webkit-text-fill-color: inherit;
+	transition: opacity 80ms ease, color 80ms ease;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active .ytmd-lyrics-word {
+	opacity: 0.45;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active .ytmd-lyrics-word.is-sung {
+	opacity: 0.78;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active .ytmd-lyrics-word.is-current {
+	opacity: 1;
+	font-weight: 700 !important;
+	color: #fff !important;
+	-webkit-text-fill-color: #fff !important;
+}
+
 #ytmd-lyrics-root .ytmd-lyrics-parts {
 	display: flex;
 	flex-direction: column;
@@ -225,6 +252,10 @@
 	}
 
 	#ytmd-lyrics-root .ytmd-lyrics-line {
+		transition: none;
+	}
+
+	#ytmd-lyrics-root .ytmd-lyrics-word {
 		transition: none;
 	}
 }

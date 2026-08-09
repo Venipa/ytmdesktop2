@@ -1,3 +1,10 @@
+/** Enhanced LRC word cue (`<mm:ss.xx>word`). */
+export interface LyricWord {
+	timeMs: number;
+	text: string;
+	durationMs: number;
+}
+
 export interface LyricLine {
 	timeMs: number;
 	/** Primary display / a11y text (joined parts when concurrent). */
@@ -5,6 +12,8 @@ export interface LyricLine {
 	durationMs: number;
 	/** Concurrent voices when several LRC lines start nearly together. */
 	parts?: string[];
+	/** Word-level cues when source LRC includes enhanced `<…>` timestamps. */
+	words?: LyricWord[];
 }
 
 export interface LyricResult {

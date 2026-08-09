@@ -105,7 +105,15 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 				showTimeCodes: false,
 				showEvenIfInexact: true,
 				showProgressBar: true,
+				showWordSync: false,
 			});
+		},
+	},
+	{
+		hook(store) {
+			const current = store.store?.lyrics;
+			if (!current || typeof current.showWordSync === "boolean") return;
+			store.set("lyrics.showWordSync", false);
 		},
 	},
 ];

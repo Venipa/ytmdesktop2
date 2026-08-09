@@ -43,6 +43,7 @@ const defaultSettings = {
 		showTimeCodes: false,
 		showEvenIfInexact: true,
 		showProgressBar: true,
+		showWordSync: false,
 	},
 	player: {
 		skipDisliked: false,
