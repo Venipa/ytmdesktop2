@@ -7,13 +7,15 @@ import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import type { TrackData } from "@shared/track/trackData";
 import {
 	decideLastFmSession,
-	isLastFmProgressRelisten,
+	lastFmScrobbleRemainingMs,
 	preferLastFmTrack,
 	relatedIdsIntersect,
 	relatedVideoIds,
 	shouldRefreshLastFmNowPlaying,
 	trackNeedsLastFmPush,
 	LASTFM_NP_REFRESH_AFTER_PAUSE_MS,
+	LASTFM_SCROBBLE_MIN_DURATION_SEC,
+	LASTFM_SCROBBLE_MAX_WAIT_SEC,
 } from "@shared/track/lastfmTrackSession";
 import { createLogger } from "@shared/utils/console";
 import { observable } from "@trpc/server/observable";
@@ -114,6 +116,8 @@ export class TrackService {
 	private lastLastFmTrackId: string | null = null;
 	/** Song + music-video counterpart ids for the active Last.fm listen session. */
 	private lastLastFmRelatedIds: Set<string> = new Set();
+	/** Monotonic listen id — unique scrobble/NP keys per loop. */
+	private lastFmListenEpoch = 0;
 	private lastTrackContentKey: string | null = null;
 	private lastStateEmitKey: string | null = null;
 	private pendingScrobble: {
@@ -121,23 +125,21 @@ export class TrackService {
 		videoId: string;
 		relatedIds: Set<string>;
 		maxProgress: number;
-		/** Wall ms when this listen pending was created — ignore stale high progress after loop. */
 		createdAtMs: number;
+		startedAt: number;
+		epoch: number;
 	} | null = null;
-	/** Last progress tick — detect same-track loop wrap for a new Last.fm listen. */
-	private lastHeardProgressSec: number | null = null;
-	/** Prevent double beginLastFmRelisten from parallel playstate/progress IPC. */
-	private lastFmRelistenInFlight = false;
+	/** Prevent double startFreshLastFmListen from parallel IPC. */
+	private lastFmListenInFlight = false;
 	/** Wall-clock when playback last went paused — resume after long idle re-pushes Last.fm NP. */
 	private lastFmPausedAt: number | null = null;
+	/** Delayed post-scrobble NP — clear on new listen. */
+	private postScrobbleNpTimer: ReturnType<typeof setTimeout> | null = null;
 	private _ipcBound = false;
 	private _styleBound = false;
 
 	/** Settle window before notifying Last.fm / socket API — UI stays instant. */
 	private static readonly EXTERNAL_TRACK_DEBOUNCE_MS = 1200;
-	/** Last.fm: half duration or 4 minutes, whichever shorter; tracks <30s skipped. */
-	private static readonly SCROBBLE_MIN_DURATION_SEC = 30;
-	private static readonly SCROBBLE_MAX_WAIT_SEC = 240;
 
 	private readonly logger = createLogger("services").child("track");
 
@@ -186,6 +188,7 @@ export class TrackService {
 		serverMain.on(IPC_EVENT_NAMES.TRACK_LIKE_STATE, (ev, data) => this.onLikeState(ev, data));
 		serverMain.on("track:title-change", debounce(this.onTitleChange.bind(this), 25));
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE, debounce(this.onPlayStateChange.bind(this), 50));
+		// Last.fm + UI progress: 50ms. Discord timeline: separate 1s handler (no Last.fm).
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, debounce(this.onPlayStateProgress.bind(this), 50));
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, debounce(this.onProgressHandler.bind(this), 1000));
 	}
@@ -443,10 +446,14 @@ export class TrackService {
 		return td ? parseTrackDuration(td) : null;
 	}
 
-	async onTrackInfo(_ev: unknown, ytTrack: TrackData & { counterpartVideoId?: string | null }) {
+	async onTrackInfo(
+		_ev: unknown,
+		ytTrack: TrackData & { counterpartVideoId?: string | null; restartListen?: boolean },
+	) {
 		if (!ytTrack?.video?.videoId) return;
 
 		const videoId = String(ytTrack.video.videoId);
+		const restartListen = !!ytTrack.restartListen;
 		const musicObject = ytTrack.music?.album ? { album: String(ytTrack.music.album) } : undefined;
 		const duration = parseTrackDuration(ytTrack);
 		const counterpartRaw = ytTrack.meta?.counterpartVideoId ?? ytTrack.counterpartVideoId;
@@ -481,6 +488,23 @@ export class TrackService {
 		const stateOutOfSync = !this._trackState || this._trackState.id !== videoId;
 		const needsLastFm = this.trackNeedsLastFm(track);
 
+		// dataloaded on same videoId = new listen (loop / repeat-one)
+		if (restartListen && !stateOutOfSync) {
+			this._pendingTrackId = videoId;
+			this.lastTrackContentKey = key;
+			this.patchTrackState({
+				id: videoId,
+				duration: Number(duration ?? 0),
+				progress: 0,
+				uiProgress: 0,
+				startedAt: Date.now() / 1000,
+				percentage: 0,
+				eventType: "state",
+			});
+			void this.onSongRestart(track);
+			return;
+		}
+
 		// Same payload already fanned out — skip (no tRPC / Last.fm spam)
 		if (!contentChanged && !stateOutOfSync && !needsLastFm) return;
 
@@ -488,7 +512,7 @@ export class TrackService {
 		this.lastTrackContentKey = key;
 
 		// Always Last.fm when id not yet submitted — do NOT key off isTrackChange vs pending
-		this.pushTrackToViews(track, needsLastFm);
+		this.pushTrackToViews(track, needsLastFm || restartListen);
 
 		if (stateOutOfSync) {
 			this.patchTrackState({
@@ -597,10 +621,10 @@ export class TrackService {
 		api?.sendMessage?.("track:change", track);
 
 		if (!updateLastFm) return;
-		await this.pushLastFm(track);
+		await this.onSongStart(track);
 	}, TrackService.EXTERNAL_TRACK_DEBOUNCE_MS);
 
-	private async pushLastFm(track: TrackData) {
+	private async pushLastFm(track: TrackData, opts?: { forceNowPlaying?: boolean }) {
 		const lastfm = this.getLastFm();
 		if (!lastfm) {
 			this.logger.warn("lastfm provider missing — skip now-playing");
@@ -645,14 +669,15 @@ export class TrackService {
 		if (decision.type === "upgrade-atv") {
 			if (!this.pendingScrobble) return;
 			const maxProgress = this.pendingScrobble.maxProgress;
-			const startedAt = this.pendingScrobble.track.meta.startedAt;
-			const upgraded = clone(decision.preferred);
+			const startedAt = this.pendingScrobble.startedAt;
+			const epoch = this.pendingScrobble.epoch;
+			const upgraded = structuredClone(decision.preferred);
 			upgraded.meta.startedAt = startedAt;
 			this.pendingScrobble.track = upgraded;
 			this.pendingScrobble.videoId = decision.preferred.video.videoId;
 			this.pendingScrobble.maxProgress = maxProgress;
 			this.lastLastFmTrackId = decision.preferred.video.videoId;
-			await lastfm.handleTrackStart(upgraded);
+			await lastfm.handleTrackStart(upgraded, { epoch });
 			this.logger.debug("lastfm upgrade to ATV", decision.preferred.video.videoId, { lastfmState });
 			return;
 		}
@@ -665,60 +690,50 @@ export class TrackService {
 			const prev = this.pendingScrobble;
 			const duration = Number(prev.track.meta.duration) || 0;
 			if (this.crossedScrobbleThreshold(prev.maxProgress, duration)) {
-				this.tryScrobblePending("track-change");
+				await this.onSongEnd("track-change");
 			} else {
 				this.logger.debug("lastfm abandon pending scrobble", prev.videoId, { progress: prev.maxProgress, duration });
 				this.pendingScrobble = null;
-				if (this.trackChangeTimeout) {
-					clearTimeout(this.trackChangeTimeout);
-					this.trackChangeTimeout = null;
-				}
+				this.clearScrobbleTimer();
 			}
 		}
 
 		const preferredId = preferredTrack.video.videoId;
-		if (preferredId === this.lastLastFmTrackId) return;
+		// Same videoId is normal on loop/relisten — only skip when not forcing a fresh listen
+		if (!opts?.forceNowPlaying && preferredId && preferredId === this.lastLastFmTrackId) return;
 
 		try {
 			this.lastLastFmTrackId = preferredId;
 			this.lastLastFmRelatedIds = new Set(relatedIds);
 			this.lastFmPausedAt = null;
+			this.clearPostScrobbleNpTimer();
+			const epoch = ++this.lastFmListenEpoch;
+			const startedAt = Number(preferredTrack.meta.startedAt) || Date.now() / 1000;
+			preferredTrack.meta.startedAt = startedAt;
+			const frozen = structuredClone(preferredTrack);
+			frozen.meta.startedAt = startedAt;
 			this.pendingScrobble = {
-				track: preferredTrack,
+				track: frozen,
 				videoId: preferredId,
 				relatedIds: new Set(relatedIds),
 				maxProgress: 0,
 				createdAtMs: Date.now(),
+				startedAt,
+				epoch,
 			};
-			await lastfm.handleTrackStart(preferredTrack);
+			await lastfm.handleTrackStart(frozen, {
+				force: !!opts?.forceNowPlaying,
+				epoch,
+			});
 			this.logger.debug("lastfm.handleTrackStart", preferredId, {
 				lastfmState,
 				playingId: videoId,
 				preferredAudio: !!preferredTrack.meta.isAudioExclusive,
+				forceNowPlaying: !!opts?.forceNowPlaying,
+				epoch,
+				startedAt,
 			});
-
-			if (this.trackChangeTimeout) clearTimeout(this.trackChangeTimeout);
-			const waitMs = this.scrobbleWaitMs(Number(preferredTrack.meta.duration) || 0);
-			if (waitMs == null) {
-				this.logger.debug("lastfm scrobble timer skipped — duration too short", preferredId, preferredTrack.meta.duration);
-				return;
-			}
-			// Wall-clock backup only — must still have listened past threshold (pause ≠ scrobble)
-			const sessionIds = [...relatedIds];
-			this.trackChangeTimeout = setTimeout(() => {
-				this.trackChangeTimeout = null;
-				const pending = this.pendingScrobble;
-				if (!pending || !sessionIds.some((id) => pending.relatedIds.has(id))) return;
-				const duration = Number(pending.track.meta.duration) || 0;
-				if (!this.crossedScrobbleThreshold(pending.maxProgress, duration)) {
-					this.logger.debug("lastfm timer skip — threshold not met", pending.videoId, {
-						progress: pending.maxProgress,
-						duration,
-					});
-					return;
-				}
-				this.tryScrobblePending("timer");
-			}, waitMs);
+			this.scheduleScrobbleTimer(0);
 		} catch (error) {
 			this.lastLastFmTrackId = null;
 			this.lastLastFmRelatedIds.clear();
@@ -742,8 +757,14 @@ export class TrackService {
 		return this.getProvider("lastfm") as
 			| {
 					getState: () => { connected: boolean; processing: boolean; error?: boolean };
-					handleTrackStart: (track: TrackData, opts?: { force?: boolean }) => Promise<void>;
-					handleTrackChange: (track: TrackData) => void;
+					handleTrackStart: (
+						track: TrackData,
+						opts?: { force?: boolean; epoch?: number },
+					) => Promise<void>;
+					handleTrackChange: (
+						track: TrackData,
+						opts?: { epoch?: number },
+					) => Promise<boolean>;
 			  }
 			| undefined;
 	}
@@ -773,113 +794,191 @@ export class TrackService {
 	}
 
 	/**
-	 * Progress ticks — detect same-track loop wrap, then scrobble / maxProgress as usual.
-	 * Call before updating lastHeard when isPlaying so wrap uses prior high watermark.
+	 * Progress → scrobble watermark only.
+	 * Loop / re-listen comes from player `dataloaded` (`restartListen`), not progress wrap.
 	 */
-	private noteProgressForLastFm(progressSec: number, durationSec: number, isPlaying: boolean) {
-		const prev = this.lastHeardProgressSec;
-		const activeId = this.lookupTrackId;
-		const sameListen =
-			!!activeId &&
-			(!!this.pendingScrobble?.relatedIds.has(activeId) || this.lastLastFmRelatedIds.has(activeId));
-		if (
-			isPlaying &&
-			sameListen &&
-			!this.lastFmRelistenInFlight &&
-			prev != null &&
-			isLastFmProgressRelisten(prev, progressSec, durationSec)
-		) {
-			// Sync watermark first — parallel progress IPC must not re-enter with old prev
-			this.lastHeardProgressSec = progressSec;
-			void this.beginLastFmRelisten(progressSec);
-			return;
-		}
-		this.lastHeardProgressSec = progressSec;
-		this.maybeScrobbleFromProgress(progressSec, durationSec);
+	private noteProgressForLastFm(progressSec: number, _durationSec: number, isPlaying: boolean) {
+		if (!isPlaying) return;
+		this.maybeScrobbleFromProgress(progressSec, _durationSec);
 	}
 
-	/** Loop / restart on same videoId — fresh NP + scrobble session (Song↔Video settled stays for non-wrap). */
-	private async beginLastFmRelisten(progressSec: number) {
-		if (this.lastFmRelistenInFlight) {
-			this.lastHeardProgressSec = progressSec;
-			return;
-		}
-		this.lastFmRelistenInFlight = true;
+	/** New song (different related set) — start NP + scrobble session. */
+	private async onSongStart(track: TrackData): Promise<void> {
+		this.logger.debug("lastfm onSongStart", track.video.videoId);
+		await this.pushLastFm(track);
+	}
+
+	/** Same song loop / media reload — force fresh listen. */
+	private async onSongRestart(track: TrackData): Promise<void> {
+		this.logger.debug("lastfm onSongRestart", track.video.videoId);
+		await this.startFreshLastFmListen(0, track);
+	}
+
+	/** Listen ended (threshold / track-change / restart flush) — scrobble if eligible. */
+	private async onSongEnd(
+		reason: string,
+		opts?: { refreshNowPlaying?: boolean },
+	): Promise<void> {
+		this.logger.debug("lastfm onSongEnd", reason, this.pendingScrobble?.videoId);
+		await this.tryScrobblePending(reason, opts);
+	}
+
+	/** Fresh listen: NP + scrobble timer. */
+	private async startFreshLastFmListen(progressSec: number, trackOverride?: TrackData) {
+		if (this.lastFmListenInFlight) return;
+		this.lastFmListenInFlight = true;
 		try {
 			const lastfm = this.getLastFm();
-			if (!lastfm?.getState().connected) {
-				this.lastHeardProgressSec = progressSec;
-				return;
-			}
-			const td = this.trackData;
-			if (!td?.video?.videoId) {
-				this.lastHeardProgressSec = progressSec;
-				return;
-			}
+			if (!lastfm?.getState().connected) return;
+			const td = trackOverride ?? this.trackData;
+			if (!td?.video?.videoId) return;
 
 			const pending = this.pendingScrobble;
 			if (pending) {
 				const duration = Number(pending.track.meta.duration) || 0;
 				if (this.crossedScrobbleThreshold(pending.maxProgress, duration)) {
-					this.tryScrobblePending("relisten");
+					await this.onSongEnd("relisten", { refreshNowPlaying: false });
 				} else {
-					this.logger.debug("lastfm abandon pending scrobble on relisten", pending.videoId, {
+					this.logger.debug("lastfm abandon pending on fresh listen", pending.videoId, {
 						progress: pending.maxProgress,
 						duration,
 					});
 					this.pendingScrobble = null;
-					if (this.trackChangeTimeout) {
-						clearTimeout(this.trackChangeTimeout);
-						this.trackChangeTimeout = null;
-					}
+					this.clearScrobbleTimer();
 				}
 			}
 
+			this.clearPostScrobbleNpTimer();
 			this.lastLastFmRelatedIds.clear();
 			this.lastLastFmTrackId = null;
 			this.lastFmPausedAt = null;
-			this.lastHeardProgressSec = progressSec;
 
-			const track = clone(td);
+			const track = structuredClone(td);
 			track.meta.startedAt = Date.now() / 1000;
-			this.logger.debug("lastfm begin relisten", track.video.videoId, { progressSec });
-			await this.pushLastFm(track);
+			this.logger.debug("lastfm start fresh listen", track.video.videoId, { progressSec });
+			await this.pushLastFm(track, { forceNowPlaying: true });
 		} finally {
-			this.lastFmRelistenInFlight = false;
+			this.lastFmListenInFlight = false;
 		}
 	}
 
-	/** Half duration or 4min (Last.fm). Null = track too short to scrobble. */
-	private scrobbleWaitMs(durationSec: number): number | null {
-		if (!Number.isFinite(durationSec) || durationSec < TrackService.SCROBBLE_MIN_DURATION_SEC) return null;
-		const thresholdSec = Math.min(durationSec * 0.5, TrackService.SCROBBLE_MAX_WAIT_SEC);
-		return thresholdSec * 1000;
+	/**
+	 * Wait = half(or 4min) − elapsed. Cleared on pause; recalculated on resume.
+	 * Timer still requires maxProgress past threshold before scrobbling.
+	 */
+	private scheduleScrobbleTimer(elapsedSec: number = 0) {
+		this.clearScrobbleTimer();
+		const pending = this.pendingScrobble;
+		if (!pending) return;
+		const duration = Number(pending.track.meta.duration) || 0;
+		const waitMs = lastFmScrobbleRemainingMs(
+			duration,
+			elapsedSec,
+			LASTFM_SCROBBLE_MIN_DURATION_SEC,
+			LASTFM_SCROBBLE_MAX_WAIT_SEC,
+		);
+		if (waitMs == null) {
+			this.logger.debug("lastfm scrobble timer skipped — duration too short", pending.videoId, duration);
+			return;
+		}
+		if (waitMs === 0) {
+			if (this.crossedScrobbleThreshold(pending.maxProgress, duration)) {
+				void this.onSongEnd("timer");
+			}
+			return;
+		}
+		const sessionIds = [...pending.relatedIds];
+		const timerEpoch = pending.epoch;
+		this.logger.debug("lastfm schedule scrobble timer", pending.videoId, { waitMs, elapsedSec, epoch: timerEpoch });
+		this.trackChangeTimeout = setTimeout(() => {
+			this.trackChangeTimeout = null;
+			const cur = this.pendingScrobble;
+			if (!cur || cur.epoch !== timerEpoch) return;
+			if (!sessionIds.some((id) => cur.relatedIds.has(id))) return;
+			const dur = Number(cur.track.meta.duration) || 0;
+			if (!this.crossedScrobbleThreshold(cur.maxProgress, dur)) {
+				this.logger.debug("lastfm timer skip — threshold not met", cur.videoId, {
+					progress: cur.maxProgress,
+					duration: dur,
+				});
+				return;
+			}
+			void this.onSongEnd("timer");
+		}, waitMs);
+	}
+
+	private clearScrobbleTimer() {
+		if (this.trackChangeTimeout) {
+			clearTimeout(this.trackChangeTimeout);
+			this.trackChangeTimeout = null;
+		}
 	}
 
 	private crossedScrobbleThreshold(progressSec: number, durationSec: number): boolean {
-		if (!Number.isFinite(durationSec) || durationSec < TrackService.SCROBBLE_MIN_DURATION_SEC) return false;
-		const thresholdSec = Math.min(durationSec * 0.5, TrackService.SCROBBLE_MAX_WAIT_SEC);
+		if (!Number.isFinite(durationSec) || durationSec < LASTFM_SCROBBLE_MIN_DURATION_SEC) return false;
+		const thresholdSec = Math.min(durationSec * 0.5, LASTFM_SCROBBLE_MAX_WAIT_SEC);
 		return progressSec >= thresholdSec;
 	}
 
-	private tryScrobblePending(reason: string) {
+	private async tryScrobblePending(
+		reason: string,
+		opts?: { refreshNowPlaying?: boolean },
+	) {
 		const pending = this.pendingScrobble;
 		if (!pending) return;
 		const lastfm = this.getLastFm();
 		if (!lastfm?.getState().connected) return;
 
 		this.pendingScrobble = null;
-		if (this.trackChangeTimeout) {
-			clearTimeout(this.trackChangeTimeout);
-			this.trackChangeTimeout = null;
+		this.clearScrobbleTimer();
+		for (const id of pending.relatedIds) this.lastLastFmRelatedIds.add(id);
+
+		this.logger.debug("lastfm.handleTrackChange", pending.videoId, {
+			reason,
+			epoch: pending.epoch,
+			startedAt: pending.startedAt,
+		});
+		const scrobbled = await lastfm.handleTrackChange(pending.track, { epoch: pending.epoch });
+		if (!scrobbled) {
+			this.logger.warn("lastfm scrobble not submitted", pending.videoId, { reason, epoch: pending.epoch });
+			return;
 		}
-		this.logger.debug("lastfm.handleTrackChange", pending.videoId, { reason });
-		lastfm.handleTrackChange(pending.track);
-		// Last.fm often clears Now Playing on scrobble — keep NP for rest of listen
-		const activeId = this.lookupTrackId;
-		if (activeId && pending.relatedIds.has(activeId) && this._trackState?.playing !== false) {
-			for (const id of pending.relatedIds) this.lastLastFmRelatedIds.add(id);
-			void this.refreshLastFmNowPlaying("post-scrobble", { track: pending.track });
+
+		const refreshNowPlaying = opts?.refreshNowPlaying !== false && reason !== "relisten";
+		if (!refreshNowPlaying) return;
+
+		const epoch = pending.epoch;
+		const stillThisListen = () => {
+			if (this.lastFmListenEpoch !== epoch) return false;
+			const activeId = this.lookupTrackId;
+			if (!activeId || !pending.relatedIds.has(activeId)) return false;
+			if (this._trackState?.playing === false) return false;
+			if (this.pendingScrobble) return this.pendingScrobble.epoch === epoch;
+			// Settled this epoch — still same track until fresh listen bumps epoch
+			return this.lastLastFmRelatedIds.has(activeId);
+		};
+
+		const pushNp = async (tag: string) => {
+			if (!stillThisListen()) {
+				this.logger.debug("lastfm post-scrobble NP skipped", { tag, videoId: pending.videoId });
+				return;
+			}
+			this.logger.debug("lastfm post-scrobble NP", { tag, videoId: pending.videoId });
+			await lastfm.handleTrackStart(pending.track, { force: true, epoch: pending.epoch });
+		};
+
+		this.clearPostScrobbleNpTimer();
+		await pushNp("immediate");
+		this.postScrobbleNpTimer = setTimeout(() => {
+			this.postScrobbleNpTimer = null;
+			void pushNp("delayed");
+		}, 1500);
+	}
+
+	private clearPostScrobbleNpTimer() {
+		if (this.postScrobbleNpTimer) {
+			clearTimeout(this.postScrobbleNpTimer);
+			this.postScrobbleNpTimer = null;
 		}
 	}
 
@@ -900,14 +999,20 @@ export class TrackService {
 
 		if (!isPlaying) {
 			if (wasPlaying !== false) this.lastFmPausedAt = Date.now();
+			// Pause clears scrobble wait; resume recalculates remaining
+			this.clearScrobbleTimer();
 		} else {
 			const pausedAt = this.lastFmPausedAt;
 			this.lastFmPausedAt = null;
-			if (wasPlaying === false && pausedAt != null) {
-				const pausedMs = Date.now() - pausedAt;
-				if (shouldRefreshLastFmNowPlaying(pausedMs, LASTFM_NP_REFRESH_AFTER_PAUSE_MS)) {
-					void this.refreshLastFmNowPlaying("resume-after-pause", { pausedMs });
+			if (wasPlaying === false) {
+				if (pausedAt != null) {
+					const pausedMs = Date.now() - pausedAt;
+					if (shouldRefreshLastFmNowPlaying(pausedMs, LASTFM_NP_REFRESH_AFTER_PAUSE_MS)) {
+						void this.refreshLastFmNowPlaying("resume-after-pause", { pausedMs });
+					}
 				}
+				const elapsed = Math.max(progress, this.pendingScrobble?.maxProgress ?? 0);
+				this.scheduleScrobbleTimer(elapsed);
 			}
 		}
 
@@ -933,14 +1038,14 @@ export class TrackService {
 			state.duration = duration;
 			state.eventType = "progress";
 		});
+		// Sole progress→Last.fm path (1s onProgressHandler must not also call this)
 		this.noteProgressForLastFm(progress, duration, isPlaying);
 	}
 
+	/** Throttled Discord/media timeline only — do not feed Last.fm (avoids dual-handler races). */
 	async onProgressHandler(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
-		const progress = Number(progressSeconds) || 0;
-		this.noteProgressForLastFm(progress, duration, isPlaying);
 		await this.updateMediaTimeline(duration, progressSeconds, isPlaying);
 	}
 
@@ -948,21 +1053,20 @@ export class TrackService {
 		if (!this.pendingScrobble) return;
 		const activeId = this.lookupTrackId;
 		if (!activeId || !this.pendingScrobble.relatedIds.has(activeId)) return;
-		// Stale playstate from pre-loop can arrive after wrap with high progress → false instant scrobble
+		// Ignore absurd jumps right after fresh listen (stale IPC from prior playthrough)
 		const ageMs = Date.now() - this.pendingScrobble.createdAtMs;
-		if (ageMs < 2500 && progressSec > 30) {
-			this.logger.debug("lastfm ignore stale progress after listen start", {
+		if (ageMs < 8_000 && progressSec > this.pendingScrobble.maxProgress + 20 && this.pendingScrobble.maxProgress < 15) {
+			this.logger.debug("lastfm ignore stale progress jump", {
 				progressSec,
+				maxProgress: this.pendingScrobble.maxProgress,
 				ageMs,
-				videoId: this.pendingScrobble.videoId,
 			});
 			return;
 		}
 		this.pendingScrobble.maxProgress = Math.max(this.pendingScrobble.maxProgress, progressSec);
-		// Threshold against preferred Last.fm track duration (ATV may differ from playing MV)
 		const scrobbleDuration = Number(this.pendingScrobble.track.meta.duration) || durationSec;
-		if (!this.crossedScrobbleThreshold(progressSec, scrobbleDuration)) return;
-		this.tryScrobblePending("progress");
+		if (!this.crossedScrobbleThreshold(this.pendingScrobble.maxProgress, scrobbleDuration)) return;
+		void this.onSongEnd("progress");
 	}
 
 	async getTrackAccent(track: TrackData | null = this.trackData): Promise<string | null> {

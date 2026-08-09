@@ -206,7 +206,7 @@ export default definePlugin(
 					albumPollTimer = setTimeout(tick, ALBUM_POLL_MS);
 				};
 
-				const pushTrackInfo = (): boolean => {
+				const pushTrackInfo = (opts?: { restartListen?: boolean }): boolean => {
 					const player = getPlayer();
 					if (!player) return false;
 
@@ -215,10 +215,12 @@ export default definePlugin(
 
 					const payload = buildTrackInfoPayload(videoData, readAlbum());
 					const key = contentKey(payload);
-					if (key === lastKey) return true;
+					const restartListen = !!opts?.restartListen;
+					// Same metadata is normal on loop — re-emit on dataloaded so listen restarts
+					if (!restartListen && key === lastKey) return true;
 
 					try {
-						api.emit("track:info-req", payload);
+						api.emit("track:info-req", { ...payload, restartListen });
 						lastKey = key;
 						if (payload.video.musicVideoType === "MUSIC_VIDEO_TYPE_ATV" && !payload.music) {
 							armAlbumPoll(payload.video.videoId);
@@ -234,10 +236,20 @@ export default definePlugin(
 
 				const handleVideoDataChange = (ev: { playertype?: number | string; type?: string }) => {
 					const type = String(ev?.type ?? "").toLowerCase();
+					const videoId = getPlayer()?.getPlayerResponse?.()?.videoDetails?.videoId ?? null;
+					// Raw event — prove YTM fires dataloaded on loop even when we filter
+					log.debug("onVideoDataChange", {
+						type: ev?.type,
+						playertype: ev?.playertype,
+						videoId,
+						accepted: VIDEO_DATA_LOADED_TYPES.has(type),
+					});
 					if (!VIDEO_DATA_LOADED_TYPES.has(type)) return;
 					// Main player is playertype 1; undefined = still try (YTM sometimes omits)
 					if (ev?.playertype != null && Number(ev.playertype) !== 1) return;
-					pushTrackInfo();
+					// dataloaded/newdata fire on same-id loop → new NP + scrobble timer
+					const restartListen = type === "dataloaded" || type === "newdata";
+					pushTrackInfo({ restartListen });
 				};
 
 				const player = getPlayer();

@@ -24,6 +24,8 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	/** `${videoId}:${floor(startedAt)}` — same track can re-listen after loop. */
 	private lastNowPlayingKey: string | null = null;
 	private lastScrobbledKey: string | null = null;
+	/** Serialize NP/scrobble so a late scrobble cannot clear a newer Now Playing. */
+	private writeChain: Promise<void> = Promise.resolve();
 	private authProgress = false;
 	private authWindow: BrowserWindow | null = null;
 	private authPollTimer: ReturnType<typeof setInterval> | null = null;
@@ -296,14 +298,23 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		return this.getState();
 	}
 
-	async handleTrackStart(track: TrackData, opts?: { force?: boolean }) {
+	private enqueueWrite(task: () => Promise<void>): Promise<void> {
+		const run = this.writeChain.then(task, task);
+		this.writeChain = run.then(
+			() => undefined,
+			() => undefined,
+		);
+		return run;
+	}
+
+	async handleTrackStart(track: TrackData, opts?: { force?: boolean; epoch?: number }) {
 		if (!this.client?.isConnected()) {
 			this.logger.debug("lastfm.handleTrackStart", track.video.videoId, "not connected");
 			return;
 		}
 		const videoId = track.video.videoId;
-		const listenKey = lastFmListenKey(videoId, Number(track.meta.startedAt) || 0);
-		// force: resume after long pause — Last.fm drops Now Playing while idle (same listen)
+		const listenKey = lastFmListenKey(videoId, Number(track.meta.startedAt) || 0, opts?.epoch);
+		// force: resume after long pause / relisten — Last.fm drops Now Playing while idle
 		if (!opts?.force && this.lastNowPlayingKey === listenKey) {
 			this.logger.debug("lastfm.handleTrackStart skip duplicate", listenKey);
 			return;
@@ -311,58 +322,58 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		this.lastNowPlayingKey = listenKey;
 		this.logger.debug("isAlbum", !!track.music?.album);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "start");
-		await this.client
-			.updateNowPlaying({
-				artist: track.video.author,
-				track: track.video.title,
-				duration: track.meta.duration,
-				...(track.music?.album && { album: track.music.album }),
-			})
-			.then(stringifyJson)
-			.then((d) => this.logger.debug(d))
-			.then(() => {
+		await this.enqueueWrite(async () => {
+			try {
+				const d = await this.client!.updateNowPlaying({
+					artist: track.video.author,
+					track: track.video.title,
+					duration: track.meta.duration,
+					...(track.music?.album && { album: track.music.album }),
+				});
+				this.logger.debug(stringifyJson(d));
 				this.sendState();
 				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
-			})
-			.catch((err) => {
+			} catch (err) {
 				this.logger.error(err);
 				this.sendState();
 				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
-			});
+			}
+		});
 	}
 
-	async handleTrackChange(track: TrackData) {
+	/** @returns false when skipped (duplicate) or not connected */
+	async handleTrackChange(track: TrackData, opts?: { epoch?: number }): Promise<boolean> {
 		if (!this.client?.isConnected()) {
 			this.logger.debug("lastfm.handleTrackChange", track.video.videoId, "not connected");
-			return;
+			return false;
 		}
 		const videoId = track.video.videoId;
-		const listenKey = lastFmListenKey(videoId, Number(track.meta.startedAt) || 0);
+		const listenKey = lastFmListenKey(videoId, Number(track.meta.startedAt) || 0, opts?.epoch);
 		if (this.lastScrobbledKey === listenKey) {
 			this.logger.debug("lastfm.handleTrackChange skip duplicate", listenKey);
-			return;
+			return false;
 		}
 		this.lastScrobbledKey = listenKey;
 		this.logger.debug("isAlbum", !!track.music?.album);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "change");
-		await this.client
-			.scrobble({
-				artist: track.video.author,
-				track: track.video.title,
-				timestamp: track.meta.startedAt,
-				duration: track.meta.duration,
-				...(track.music?.album && { album: track.music.album }),
-			})
-			.then(stringifyJson)
-			.then((d) => this.logger.debug(d))
-			.then(() => {
+		await this.enqueueWrite(async () => {
+			try {
+				const d = await this.client!.scrobble({
+					artist: track.video.author,
+					track: track.video.title,
+					timestamp: track.meta.startedAt,
+					duration: track.meta.duration,
+					...(track.music?.album && { album: track.music.album }),
+				});
+				this.logger.debug(stringifyJson(d));
 				this.sendState();
 				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, true);
-			})
-			.catch((err) => {
+			} catch (err) {
 				this.logger.error(err);
 				this.sendState();
 				this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, false);
-			});
+			}
+		});
+		return true;
 	}
 }

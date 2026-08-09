@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 import type { TrackData } from "./trackData";
 import {
 	decideLastFmSession,
-	isLastFmProgressRelisten,
 	lastFmListenKey,
+	lastFmScrobbleRemainingMs,
 	preferLastFmTrack,
 	relatedIdsIntersect,
 	relatedVideoIds,
@@ -194,21 +194,16 @@ describe("lastfmTrackSession smoke — Song↔Video", () => {
 		expect(shouldRefreshLastFmNowPlaying(Number.NaN)).toBe(false);
 	});
 
-	test("relisten: wrap end→0", () => {
-		expect(isLastFmProgressRelisten(198, 0, 200)).toBe(true);
-		expect(isLastFmProgressRelisten(100, 0, 200)).toBe(true);
-	});
-
-	test("relisten: mid seek 120→10 on 200s track → false", () => {
-		expect(isLastFmProgressRelisten(120, 10, 200)).toBe(false);
-	});
-
-	test("relisten: short track <30s → false", () => {
-		expect(isLastFmProgressRelisten(28, 0, 29)).toBe(false);
-	});
-
-	test("listen key floors startedAt", () => {
+	test("listen key includes epoch when provided", () => {
 		expect(lastFmListenKey("abc", 12.9)).toBe("abc:12");
-		expect(lastFmListenKey("abc", 13)).toBe("abc:13");
+		expect(lastFmListenKey("abc", 12.9, 3)).toBe("abc:12:3");
+	});
+
+	test("scrobble remaining ms from elapsed", () => {
+		expect(lastFmScrobbleRemainingMs(200, 0)).toBe(100_000);
+		expect(lastFmScrobbleRemainingMs(200, 40)).toBe(60_000);
+		expect(lastFmScrobbleRemainingMs(200, 100)).toBe(0);
+		expect(lastFmScrobbleRemainingMs(29, 0)).toBeNull();
+		expect(lastFmScrobbleRemainingMs(600, 0)).toBe(240_000);
 	});
 });

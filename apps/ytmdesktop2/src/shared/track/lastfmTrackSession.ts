@@ -88,17 +88,8 @@ export function trackNeedsLastFmPush(args: {
 
 /** Last.fm drops idle Now Playing — refresh after this pause on resume. */
 export const LASTFM_NP_REFRESH_AFTER_PAUSE_MS = 90_000;
-
-/** Tracks shorter than this never scrobble / never count as loop re-listen. */
-export const LASTFM_RELISTEN_MIN_DURATION_SEC = 30;
-/** Max wall progress that still counts as “near start” after a wrap (also duration*5%). */
-export const LASTFM_RELISTEN_NEAR_START_SEC = 3;
-/** Min drop (sec) so chatter / tiny seeks do not look like a loop. */
-export const LASTFM_RELISTEN_MIN_DROP_SEC = 10;
-/** Within this many seconds of duration end counts as “far enough” even before half. */
-export const LASTFM_RELISTEN_NEAR_END_SEC = 8;
-/** Same half-or-4min ceiling as Last.fm scrobble threshold. */
-export const LASTFM_RELISTEN_MAX_HALF_SEC = 240;
+export const LASTFM_SCROBBLE_MIN_DURATION_SEC = 30;
+export const LASTFM_SCROBBLE_MAX_WAIT_SEC = 240;
 
 /** True when pause was long enough that Last.fm likely cleared Now Playing. */
 export function shouldRefreshLastFmNowPlaying(
@@ -109,27 +100,24 @@ export function shouldRefreshLastFmNowPlaying(
 }
 
 /**
- * Same-track loop / restart: progress jumped from past scrobble (or near end) to near start.
- * Mid-track seeks (e.g. 50% → 10%) stay false.
+ * Remaining wait until scrobble threshold from current elapsed.
+ * Null = track too short; 0 = already at/past threshold.
  */
-export function isLastFmProgressRelisten(
-	prevProgressSec: number,
-	nextProgressSec: number,
+export function lastFmScrobbleRemainingMs(
 	durationSec: number,
-): boolean {
-	if (!Number.isFinite(prevProgressSec) || !Number.isFinite(nextProgressSec) || !Number.isFinite(durationSec)) {
-		return false;
-	}
-	if (durationSec < LASTFM_RELISTEN_MIN_DURATION_SEC) return false;
-	const nearStartMax = Math.max(LASTFM_RELISTEN_NEAR_START_SEC, durationSec * 0.05);
-	if (nextProgressSec >= nearStartMax) return false;
-	if (prevProgressSec - nextProgressSec < LASTFM_RELISTEN_MIN_DROP_SEC) return false;
-	const scrobbleFarEnough = prevProgressSec >= Math.min(durationSec * 0.5, LASTFM_RELISTEN_MAX_HALF_SEC);
-	const nearEnd = prevProgressSec >= durationSec - LASTFM_RELISTEN_NEAR_END_SEC;
-	return scrobbleFarEnough || nearEnd;
+	elapsedSec: number = 0,
+	minDurationSec: number = LASTFM_SCROBBLE_MIN_DURATION_SEC,
+	maxHalfSec: number = LASTFM_SCROBBLE_MAX_WAIT_SEC,
+): number | null {
+	if (!Number.isFinite(durationSec) || durationSec < minDurationSec) return null;
+	const thresholdSec = Math.min(durationSec * 0.5, maxHalfSec);
+	const elapsed = Number.isFinite(elapsedSec) ? Math.max(0, elapsedSec) : 0;
+	if (elapsed >= thresholdSec) return 0;
+	return (thresholdSec - elapsed) * 1000;
 }
 
-/** Listen identity for Last.fm NP/scrobble dedupe (same video can re-listen). */
-export function lastFmListenKey(videoId: string, startedAt: number): string {
-	return `${videoId}:${Math.floor(startedAt)}`;
+/** Listen identity for Last.fm NP/scrobble dedupe (epoch = unique loop listens). */
+export function lastFmListenKey(videoId: string, startedAt: number, epoch?: number): string {
+	const base = `${videoId}:${Math.floor(startedAt)}`;
+	return epoch != null ? `${base}:${epoch}` : base;
 }
