@@ -134,11 +134,27 @@
 	z-index: 1;
 	width: 100%;
 	max-width: 100%;
+	min-width: 0;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
 	font: inherit;
 	letter-spacing: inherit;
 	white-space: normal;
+	overflow-wrap: break-word;
+	word-break: normal;
+}
+
+/* Time | text — wrapped lines stay in text column, not under timecode. */
+#ytmd-lyrics-root .ytmd-lyrics-line-content.has-timecode {
+	display: grid;
+	grid-template-columns: minmax(0, 3.25rem) minmax(0, 1fr);
+	column-gap: 10px;
+	align-items: start;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-text {
+	display: block;
+	min-width: 0;
 	overflow-wrap: break-word;
 	word-break: normal;
 }
@@ -169,12 +185,20 @@
 }
 
 #ytmd-lyrics-root .ytmd-lyrics-line .ytmd-lyrics-time {
-	display: inline;
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 3.25rem;
+	padding-top: 0.35em;
 	font-size: 11px !important;
 	font-weight: 400 !important;
+	line-height: 1.2 !important;
 	opacity: 0.55;
-	margin-right: 8px;
 	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	text-align: right;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
 }

@@ -130,6 +130,19 @@ const LyricLineRow = memo(function LyricLineRow({
 		}
 	};
 
+	const textBody =
+		parts && parts.length > 1 ? (
+			<span className="ytmd-lyrics-parts">
+				{parts.map((part, p) => (
+					<span key={p} className={p === 0 ? "ytmd-lyrics-part" : "ytmd-lyrics-part is-secondary"}>
+						{part}
+					</span>
+				))}
+			</span>
+		) : (
+			line.text || "♪"
+		);
+
 	return (
 		<div
 			className={lineClassName(isActive, progress != null)}
@@ -141,19 +154,9 @@ const LyricLineRow = memo(function LyricLineRow({
 			onClick={seek}
 			onKeyDown={onKeyDown}
 		>
-			<span className="ytmd-lyrics-line-content">
-				{showTimeCodes && line.text ? <span className="ytmd-lyrics-time">{formatTime(line.timeMs)}</span> : null}
-				{parts && parts.length > 1 ? (
-					<span className="ytmd-lyrics-parts">
-						{parts.map((part, p) => (
-							<span key={p} className={p === 0 ? "ytmd-lyrics-part" : "ytmd-lyrics-part is-secondary"}>
-								{part}
-							</span>
-						))}
-					</span>
-				) : (
-					line.text || "♪"
-				)}
+			<span className={showTimeCodes ? "ytmd-lyrics-line-content has-timecode" : "ytmd-lyrics-line-content"}>
+				{showTimeCodes ? <span className="ytmd-lyrics-time">{formatTime(line.timeMs)}</span> : null}
+				<span className="ytmd-lyrics-text">{textBody}</span>
 			</span>
 		</div>
 	);
