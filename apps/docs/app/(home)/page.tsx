@@ -81,7 +81,15 @@ const features = [
     href: `${docsRoute}/features/dpi/`,
     icon: MonitorIcon,
     image: '/images/bg-4.jpg',
-    className: 'sm:col-span-2 lg:col-span-2',
+    className: '',
+  },
+  {
+    title: 'Synced lyrics',
+    description: 'Timed lyrics in the YouTube Music Lyrics tab via LRCLib.',
+    href: `${docsRoute}/features/lyrics/`,
+    icon: ScrollTextIcon,
+    image: '/images/features-lyrics-player.png',
+    className: '',
   },
   {
     title: 'OBS overlays',
