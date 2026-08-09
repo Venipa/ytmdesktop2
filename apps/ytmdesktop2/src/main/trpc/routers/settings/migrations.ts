@@ -96,6 +96,18 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 			store.set("player.deepLinkOpen", "ask");
 		},
 	},
+	{
+		hook(store) {
+			const current = store.store?.lyrics;
+      if (current) return;
+			store.set("lyrics", {
+				enabled: false,
+				showTimeCodes: false,
+				showEvenIfInexact: true,
+				showProgressBar: true,
+			});
+		},
+	},
 ];
 
 export default migrations;
