@@ -7,6 +7,7 @@ import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import type { TrackData } from "@shared/track/trackData";
 import {
 	decideLastFmSession,
+	isLastFmProgressRelisten,
 	preferLastFmTrack,
 	relatedIdsIntersect,
 	relatedVideoIds,
@@ -115,7 +116,18 @@ export class TrackService {
 	private lastLastFmRelatedIds: Set<string> = new Set();
 	private lastTrackContentKey: string | null = null;
 	private lastStateEmitKey: string | null = null;
-	private pendingScrobble: { track: TrackData; videoId: string; relatedIds: Set<string>; maxProgress: number } | null = null;
+	private pendingScrobble: {
+		track: TrackData;
+		videoId: string;
+		relatedIds: Set<string>;
+		maxProgress: number;
+		/** Wall ms when this listen pending was created — ignore stale high progress after loop. */
+		createdAtMs: number;
+	} | null = null;
+	/** Last progress tick — detect same-track loop wrap for a new Last.fm listen. */
+	private lastHeardProgressSec: number | null = null;
+	/** Prevent double beginLastFmRelisten from parallel playstate/progress IPC. */
+	private lastFmRelistenInFlight = false;
 	/** Wall-clock when playback last went paused — resume after long idle re-pushes Last.fm NP. */
 	private lastFmPausedAt: number | null = null;
 	private _ipcBound = false;
@@ -676,6 +688,7 @@ export class TrackService {
 				videoId: preferredId,
 				relatedIds: new Set(relatedIds),
 				maxProgress: 0,
+				createdAtMs: Date.now(),
 			};
 			await lastfm.handleTrackStart(preferredTrack);
 			this.logger.debug("lastfm.handleTrackStart", preferredId, {
@@ -736,7 +749,10 @@ export class TrackService {
 	}
 
 	/** Same listen session still active — re-push Now Playing without new scrobble timer. */
-	private async refreshLastFmNowPlaying(reason: string, meta?: { pausedMs?: number }) {
+	private async refreshLastFmNowPlaying(
+		reason: string,
+		meta?: { pausedMs?: number; track?: TrackData },
+	) {
 		const lastfm = this.getLastFm();
 		if (!lastfm) return;
 		const lastfmState = lastfm.getState();
@@ -746,12 +762,91 @@ export class TrackService {
 		const related = relatedVideoIds(td);
 		if (!related.some((id) => this.lastLastFmRelatedIds.has(id))) return;
 		const track =
-			this.pendingScrobble?.track ?? preferLastFmTrack(td, (id) => trackCollection.findById(id), clone);
+			meta?.track ??
+			this.pendingScrobble?.track ??
+			preferLastFmTrack(td, (id) => trackCollection.findById(id), clone);
 		this.logger.debug("lastfm refresh now-playing", track.video.videoId, {
 			reason,
 			...(meta?.pausedMs != null && { pausedMs: meta.pausedMs }),
 		});
 		await lastfm.handleTrackStart(track, { force: true });
+	}
+
+	/**
+	 * Progress ticks — detect same-track loop wrap, then scrobble / maxProgress as usual.
+	 * Call before updating lastHeard when isPlaying so wrap uses prior high watermark.
+	 */
+	private noteProgressForLastFm(progressSec: number, durationSec: number, isPlaying: boolean) {
+		const prev = this.lastHeardProgressSec;
+		const activeId = this.lookupTrackId;
+		const sameListen =
+			!!activeId &&
+			(!!this.pendingScrobble?.relatedIds.has(activeId) || this.lastLastFmRelatedIds.has(activeId));
+		if (
+			isPlaying &&
+			sameListen &&
+			!this.lastFmRelistenInFlight &&
+			prev != null &&
+			isLastFmProgressRelisten(prev, progressSec, durationSec)
+		) {
+			// Sync watermark first — parallel progress IPC must not re-enter with old prev
+			this.lastHeardProgressSec = progressSec;
+			void this.beginLastFmRelisten(progressSec);
+			return;
+		}
+		this.lastHeardProgressSec = progressSec;
+		this.maybeScrobbleFromProgress(progressSec, durationSec);
+	}
+
+	/** Loop / restart on same videoId — fresh NP + scrobble session (Song↔Video settled stays for non-wrap). */
+	private async beginLastFmRelisten(progressSec: number) {
+		if (this.lastFmRelistenInFlight) {
+			this.lastHeardProgressSec = progressSec;
+			return;
+		}
+		this.lastFmRelistenInFlight = true;
+		try {
+			const lastfm = this.getLastFm();
+			if (!lastfm?.getState().connected) {
+				this.lastHeardProgressSec = progressSec;
+				return;
+			}
+			const td = this.trackData;
+			if (!td?.video?.videoId) {
+				this.lastHeardProgressSec = progressSec;
+				return;
+			}
+
+			const pending = this.pendingScrobble;
+			if (pending) {
+				const duration = Number(pending.track.meta.duration) || 0;
+				if (this.crossedScrobbleThreshold(pending.maxProgress, duration)) {
+					this.tryScrobblePending("relisten");
+				} else {
+					this.logger.debug("lastfm abandon pending scrobble on relisten", pending.videoId, {
+						progress: pending.maxProgress,
+						duration,
+					});
+					this.pendingScrobble = null;
+					if (this.trackChangeTimeout) {
+						clearTimeout(this.trackChangeTimeout);
+						this.trackChangeTimeout = null;
+					}
+				}
+			}
+
+			this.lastLastFmRelatedIds.clear();
+			this.lastLastFmTrackId = null;
+			this.lastFmPausedAt = null;
+			this.lastHeardProgressSec = progressSec;
+
+			const track = clone(td);
+			track.meta.startedAt = Date.now() / 1000;
+			this.logger.debug("lastfm begin relisten", track.video.videoId, { progressSec });
+			await this.pushLastFm(track);
+		} finally {
+			this.lastFmRelistenInFlight = false;
+		}
 	}
 
 	/** Half duration or 4min (Last.fm). Null = track too short to scrobble. */
@@ -780,6 +875,12 @@ export class TrackService {
 		}
 		this.logger.debug("lastfm.handleTrackChange", pending.videoId, { reason });
 		lastfm.handleTrackChange(pending.track);
+		// Last.fm often clears Now Playing on scrobble — keep NP for rest of listen
+		const activeId = this.lookupTrackId;
+		if (activeId && pending.relatedIds.has(activeId) && this._trackState?.playing !== false) {
+			for (const id of pending.relatedIds) this.lastLastFmRelatedIds.add(id);
+			void this.refreshLastFmNowPlaying("post-scrobble", { track: pending.track });
+		}
 	}
 
 	async onPlayStateChange(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
@@ -810,7 +911,7 @@ export class TrackService {
 			}
 		}
 
-		this.maybeScrobbleFromProgress(progress, duration);
+		this.noteProgressForLastFm(progress, duration, isPlaying);
 		void this.updateMediaTimeline(duration, progress, isPlaying);
 	}
 
@@ -832,14 +933,14 @@ export class TrackService {
 			state.duration = duration;
 			state.eventType = "progress";
 		});
-		this.maybeScrobbleFromProgress(progress, duration);
+		this.noteProgressForLastFm(progress, duration, isPlaying);
 	}
 
 	async onProgressHandler(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
 		const progress = Number(progressSeconds) || 0;
-		this.maybeScrobbleFromProgress(progress, duration);
+		this.noteProgressForLastFm(progress, duration, isPlaying);
 		await this.updateMediaTimeline(duration, progressSeconds, isPlaying);
 	}
 
@@ -847,6 +948,16 @@ export class TrackService {
 		if (!this.pendingScrobble) return;
 		const activeId = this.lookupTrackId;
 		if (!activeId || !this.pendingScrobble.relatedIds.has(activeId)) return;
+		// Stale playstate from pre-loop can arrive after wrap with high progress → false instant scrobble
+		const ageMs = Date.now() - this.pendingScrobble.createdAtMs;
+		if (ageMs < 2500 && progressSec > 30) {
+			this.logger.debug("lastfm ignore stale progress after listen start", {
+				progressSec,
+				ageMs,
+				videoId: this.pendingScrobble.videoId,
+			});
+			return;
+		}
 		this.pendingScrobble.maxProgress = Math.max(this.pendingScrobble.maxProgress, progressSec);
 		// Threshold against preferred Last.fm track duration (ATV may differ from playing MV)
 		const scrobbleDuration = Number(this.pendingScrobble.track.meta.duration) || durationSec;

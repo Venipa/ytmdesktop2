@@ -23,6 +23,7 @@ Connect your Last.fm account so YTMDesktop2 can update **Now Playing** and scrob
 
 - Switching tracks mid-listen abandons a pending scrobble unless the threshold was already crossed.
 - Song ↔ Music Video toggles count as one listen (YTM counterpart pair). Last.fm prefers the song (ATV) when both exist; otherwise the video.
+- Loop / repeat-one (progress restart on the same track) starts a **new** listen — fresh **Now Playing** and another scrobble after the threshold. Song ↔ Music Video still counts as one listen.
 - After a long pause (≥ ~90s) on the same track, resume re-sends **Now Playing** so Last.fm picks up again (scrobble session stays the same).
 - Last.fm updates are debounced so rapid skipping does not spam the API.
 - Auth tokens are kept in an [encrypted store](/docs/internals/encrypted-stores) — clearing app data or the key file requires re-auth.

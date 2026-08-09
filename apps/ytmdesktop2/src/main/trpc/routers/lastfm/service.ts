@@ -5,6 +5,7 @@ import { LastFMClient } from "@main/lib/lastfm";
 import secureStore from "@main/lib/secureStore";
 import { appIconPath } from "@main/windows/windowUtils";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
+import { lastFmListenKey } from "@shared/track/lastfmTrackSession";
 import { TrackData } from "@shared/track/trackData";
 import { App, BrowserWindow, shell } from "electron";
 import { LastFMSettings } from "ytmd";
@@ -20,8 +21,9 @@ const lastFmClient =
 	null;
 
 export default class LastFMProvider extends BaseProvider implements AfterInit, OnInit {
-	private lastNowPlayingId: string | null = null;
-	private lastScrobbledId: string | null = null;
+	/** `${videoId}:${floor(startedAt)}` — same track can re-listen after loop. */
+	private lastNowPlayingKey: string | null = null;
+	private lastScrobbledKey: string | null = null;
 	private authProgress = false;
 	private authWindow: BrowserWindow | null = null;
 	private authPollTimer: ReturnType<typeof setInterval> | null = null;
@@ -117,8 +119,8 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		}
 		this.authWindow = null;
 		this.authProgress = false;
-		this.lastNowPlayingId = null;
-		this.lastScrobbledId = null;
+		this.lastNowPlayingKey = null;
+		this.lastScrobbledKey = null;
 		this.sendState();
 	}
 
@@ -266,8 +268,8 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	async handleLastFMReauth() {
 		if (!this.client) return false;
 		if (this.authProgress) return false;
-		this.lastNowPlayingId = null;
-		this.lastScrobbledId = null;
+		this.lastNowPlayingKey = null;
+		this.lastScrobbledKey = null;
 		await this.clearStoredSession();
 		const settings = this.getProvider("settings");
 		if (!settings.get<LastFMSettings>("lastfm")?.enabled) {
@@ -300,12 +302,13 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			return;
 		}
 		const videoId = track.video.videoId;
-		// force: resume after long pause — Last.fm drops Now Playing while idle
-		if (!opts?.force && this.lastNowPlayingId === videoId) {
-			this.logger.debug("lastfm.handleTrackStart skip duplicate", videoId);
+		const listenKey = lastFmListenKey(videoId, Number(track.meta.startedAt) || 0);
+		// force: resume after long pause — Last.fm drops Now Playing while idle (same listen)
+		if (!opts?.force && this.lastNowPlayingKey === listenKey) {
+			this.logger.debug("lastfm.handleTrackStart skip duplicate", listenKey);
 			return;
 		}
-		this.lastNowPlayingId = videoId;
+		this.lastNowPlayingKey = listenKey;
 		this.logger.debug("isAlbum", !!track.music?.album);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "start");
 		await this.client
@@ -334,11 +337,12 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 			return;
 		}
 		const videoId = track.video.videoId;
-		if (this.lastScrobbledId === videoId) {
-			this.logger.debug("lastfm.handleTrackChange skip duplicate", videoId);
+		const listenKey = lastFmListenKey(videoId, Number(track.meta.startedAt) || 0);
+		if (this.lastScrobbledKey === listenKey) {
+			this.logger.debug("lastfm.handleTrackChange skip duplicate", listenKey);
 			return;
 		}
-		this.lastScrobbledId = videoId;
+		this.lastScrobbledKey = listenKey;
 		this.logger.debug("isAlbum", !!track.music?.album);
 		this.windowContext.sendToAllViews(IPC_EVENT_NAMES.LAST_FM_SUBMIT_STATE, "change");
 		await this.client

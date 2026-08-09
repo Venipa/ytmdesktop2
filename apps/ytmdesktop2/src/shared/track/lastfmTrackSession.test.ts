@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import type { TrackData } from "./trackData";
 import {
 	decideLastFmSession,
+	isLastFmProgressRelisten,
+	lastFmListenKey,
 	preferLastFmTrack,
 	relatedIdsIntersect,
 	relatedVideoIds,
@@ -190,5 +192,23 @@ describe("lastfmTrackSession smoke — Song↔Video", () => {
 		expect(shouldRefreshLastFmNowPlaying(89_999)).toBe(false);
 		expect(shouldRefreshLastFmNowPlaying(90_000)).toBe(true);
 		expect(shouldRefreshLastFmNowPlaying(Number.NaN)).toBe(false);
+	});
+
+	test("relisten: wrap end→0", () => {
+		expect(isLastFmProgressRelisten(198, 0, 200)).toBe(true);
+		expect(isLastFmProgressRelisten(100, 0, 200)).toBe(true);
+	});
+
+	test("relisten: mid seek 120→10 on 200s track → false", () => {
+		expect(isLastFmProgressRelisten(120, 10, 200)).toBe(false);
+	});
+
+	test("relisten: short track <30s → false", () => {
+		expect(isLastFmProgressRelisten(28, 0, 29)).toBe(false);
+	});
+
+	test("listen key floors startedAt", () => {
+		expect(lastFmListenKey("abc", 12.9)).toBe("abc:12");
+		expect(lastFmListenKey("abc", 13)).toBe("abc:13");
 	});
 });
