@@ -190,7 +190,7 @@ export const createPluginUtils = (): PluginUtils => ({
       api,
       domUtils,
       log,
-      name: null,
+      name,
       onSettingsChange: (fn: (key: string, value: any) => void) => {
         // IPC: settingsProvider.change(ev, key, value, prevValue) — not a single object payload.
         const handler = debounce(

@@ -23,7 +23,7 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 		"isolatedModules": false,
-		"strictNullChecks": false,
+		"strictNullChecks": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
 		"types": ["electron-vite/node"],

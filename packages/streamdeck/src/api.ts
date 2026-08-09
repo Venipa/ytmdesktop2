@@ -1,3 +1,5 @@
+import { createFetch } from "@better-fetch/fetch";
+
 export type GlobalSettings = {
 	host?: string;
 	port?: number;
@@ -11,7 +13,30 @@ const APP_ID = "ytmdesktop2streamdeck";
 const APP_NAME = "YTMDesktop2 Stream Deck";
 const APP_VERSION = "1.0.0";
 
+type YtmFetch = ReturnType<typeof createFetch>;
+
+interface PingBody {
+	authRequired?: boolean;
+}
+
+interface AuthCodeBody {
+	code?: string;
+	error?: string;
+}
+
+interface AuthTokenBody {
+	token?: string;
+	error?: string;
+}
+
+interface TrackBody {
+	video?: { title?: string; author?: string };
+}
+
 export class YtmApiClient {
+	private cachedKey: string | null = null;
+	private cachedClient: YtmFetch | null = null;
+
 	constructor(private getSettings: () => Promise<GlobalSettings>) {}
 
 	private async baseUrl(): Promise<string> {
@@ -21,19 +46,34 @@ export class YtmApiClient {
 		return `http://${host}:${port}`;
 	}
 
-	private async headers(): Promise<HeadersInit> {
+	private async client(includeAuth = true): Promise<YtmFetch> {
 		const settings = await this.getSettings();
+		const baseURL = await this.baseUrl();
+		const token = includeAuth && settings.token ? String(settings.token) : "";
+		const cacheKey = `${baseURL}|auth:${includeAuth ? "1" : "0"}|token:${token}`;
+
+		if (this.cachedClient && this.cachedKey === cacheKey) {
+			return this.cachedClient;
+		}
+
 		const headers: Record<string, string> = { "Content-Type": "application/json" };
-		if (settings.token) headers.Authorization = `Bearer ${String(settings.token)}`;
-		return headers;
+		if (token) headers.Authorization = `Bearer ${token}`;
+
+		const client = createFetch({
+			baseURL,
+			headers,
+		});
+		this.cachedKey = cacheKey;
+		this.cachedClient = client;
+		return client;
 	}
 
 	async ping(): Promise<{ ok: boolean; authRequired?: boolean; error?: string }> {
 		try {
-			const res = await fetch(await this.baseUrl(), { method: "GET" });
-			if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-			const body = (await res.json()) as { authRequired?: boolean };
-			return { ok: true, authRequired: !!body.authRequired };
+			const api = await this.client(false);
+			const { data, error } = await api<PingBody>("/", { method: "GET" });
+			if (error) return { ok: false, error: `HTTP ${error.status}` };
+			return { ok: true, authRequired: !!data?.authRequired };
 		} catch (err) {
 			return { ok: false, error: err instanceof Error ? err.message : String(err) };
 		}
@@ -41,28 +81,26 @@ export class YtmApiClient {
 
 	async authorize(setSettings: (partial: GlobalSettings) => Promise<void>): Promise<{ code?: string; token?: string; error?: string }> {
 		try {
-			const base = await this.baseUrl();
-			const codeRes = await fetch(`${base}/auth/requestcode`, {
+			const api = await this.client(false);
+			const { data: codeBody, error: codeError } = await api<AuthCodeBody>("/auth/requestcode", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ appId: APP_ID, appName: APP_NAME, appVersion: APP_VERSION }),
+				body: { appId: APP_ID, appName: APP_NAME, appVersion: APP_VERSION },
 			});
-			const codeBody = (await codeRes.json()) as { code?: string; error?: string };
-			if (!codeRes.ok || !codeBody.code) {
-				return { error: codeBody.error || `Failed to request code (${codeRes.status})` };
+			if (codeError || !codeBody?.code) {
+				return { error: codeBody?.error || `Failed to request code (${codeError?.status ?? "unknown"})` };
 			}
 			await setSettings({ authCode: codeBody.code, status: `Code ${codeBody.code} — approve in YTMDesktop2` });
 
-			const tokenRes = await fetch(`${base}/auth/request`, {
+			const { data: tokenBody, error: tokenError } = await api<AuthTokenBody>("/auth/request", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ appId: APP_ID, code: codeBody.code }),
+				body: { appId: APP_ID, code: codeBody.code },
 			});
-			const tokenBody = (await tokenRes.json()) as { token?: string; error?: string };
-			if (!tokenRes.ok || !tokenBody.token) {
-				await setSettings({ status: tokenBody.error || "Authorization denied or timed out" });
-				return { code: codeBody.code, error: tokenBody.error || `Auth failed (${tokenRes.status})` };
+			if (tokenError || !tokenBody?.token) {
+				await setSettings({ status: tokenBody?.error || "Authorization denied or timed out" });
+				return { code: codeBody.code, error: tokenBody?.error || `Auth failed (${tokenError?.status ?? "unknown"})` };
 			}
+			this.cachedKey = null;
+			this.cachedClient = null;
 			await setSettings({ token: tokenBody.token, authCode: undefined, status: "Connected" });
 			return { code: codeBody.code, token: tokenBody.token };
 		} catch (err) {
@@ -73,26 +111,21 @@ export class YtmApiClient {
 	}
 
 	async post(path: string, body?: unknown): Promise<unknown> {
-		const res = await fetch(`${await this.baseUrl()}${path}`, {
+		const api = await this.client();
+		const { data, error } = await api<unknown>(path, {
 			method: "POST",
-			headers: await this.headers(),
-			body: body === undefined ? undefined : JSON.stringify(body),
+			body: body === undefined ? undefined : body,
 		});
-		if (!res.ok) {
-			const text = await res.text().catch(() => "");
-			throw new Error(text || `HTTP ${res.status}`);
+		if (error) {
+			throw new Error(error.message || error.statusText || `HTTP ${error.status}`);
 		}
-		return await res.json().catch(() => null);
+		return data;
 	}
 
 	async getTrack(): Promise<{ title?: string; author?: string } | null> {
-		const res = await fetch(`${await this.baseUrl()}/track`, {
-			method: "GET",
-			headers: await this.headers(),
-		});
-		if (!res.ok) return null;
-		const track = (await res.json()) as { video?: { title?: string; author?: string } } | null;
-		if (!track?.video) return null;
-		return { title: track.video.title, author: track.video.author };
+		const api = await this.client();
+		const { data, error } = await api<TrackBody | null>("/track", { method: "GET" });
+		if (error || !data?.video) return null;
+		return { title: data.video.title, author: data.video.author };
 	}
 }

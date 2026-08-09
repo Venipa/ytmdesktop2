@@ -1,11 +1,12 @@
+import { createFetch } from "@better-fetch/fetch";
 import {
   type LatestRelease,
   type ReleaseChannel,
   RELEASE_CHANNELS,
   getRepositoryUrl,
   resolveReleaseChannel,
-} from './downloads';
-import { repoBranch, repoName, repoOwner } from './shared';
+} from "./downloads";
+import { repoBranch, repoName, repoOwner } from "./shared";
 
 export type {
   DownloadKind,
@@ -14,7 +15,7 @@ export type {
   LatestRelease,
   ReleaseAsset,
   ReleaseChannel,
-} from './downloads';
+} from "./downloads";
 
 export {
   formatBytes,
@@ -31,7 +32,7 @@ export {
   resolveReleaseChannel,
   RELEASE_CHANNELS,
   RELEASE_CHANNEL_LABELS,
-} from './downloads';
+} from "./downloads";
 
 interface GitHubReleaseResponse {
   tag_name: string;
@@ -67,25 +68,33 @@ function mapRelease(data: GitHubReleaseResponse): LatestRelease {
   };
 }
 
-function githubHeaders(): HeadersInit {
-  const headers: Record<string, string> = {
-    Accept: 'application/vnd.github+json',
-    'User-Agent': `${repoName}-docs`,
-  };
-  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return headers;
-}
+/** Next.js fetch keeps `next.revalidate`; better-fetch does not forward unknown init fields. */
+const nextFetch: typeof fetch = (input, init) =>
+  fetch(input, {
+    ...init,
+    next: { revalidate: 3600 },
+  });
+
+const githubRepoFetch = createFetch({
+  baseURL: `https://api.github.com/repos/${repoOwner}/${repoName}`,
+  headers: {
+    Accept: "application/vnd.github+json",
+    "User-Agent": `${repoName}-docs`,
+  },
+  auth: {
+    type: "Bearer",
+    token: () => process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN,
+  },
+  customFetchImpl: nextFetch,
+});
 
 export function getBlobUrl(path: string): string {
-  const normalized = path.replace(/^\/+/, '');
+  const normalized = path.replace(/^\/+/, "");
   return `${getRepositoryUrl()}/blob/${repoBranch}/${normalized}`;
 }
 
 export function getTreeUrl(path: string): string {
-  const normalized = path.replace(/^\/+/, '');
+  const normalized = path.replace(/^\/+/, "");
   return `${getRepositoryUrl()}/tree/${repoBranch}/${normalized}`;
 }
 
@@ -130,20 +139,10 @@ export async function listReleases(options?: {
 
   try {
     for (let page = 1; page <= maxPages; page += 1) {
-      const response = await fetch(
-        `https://api.github.com/repos/${repoOwner}/${repoName}/releases?per_page=30&page=${page}`,
-        {
-          headers: githubHeaders(),
-          next: { revalidate: 3600 },
-        },
-      );
-
-      if (!response.ok) {
-        break;
-      }
-
-      const batch = (await response.json()) as GitHubReleaseResponse[];
-      if (batch.length === 0) {
+      const { data: batch, error } = await githubRepoFetch<GitHubReleaseResponse[]>("/releases", {
+        query: { per_page: 30, page },
+      });
+      if (error || !batch?.length) {
         break;
       }
 

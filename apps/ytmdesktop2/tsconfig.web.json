@@ -15,7 +15,7 @@
 		"baseUrl": ".",
 		"jsx": "react-jsx",
 		"allowSyntheticDefaultImports": true,
-		"strict": false,
+		"strict": true,
 		"noImplicitReturns": false,
 		"allowUnusedLabels": true,
 		"noUnusedLocals": false,

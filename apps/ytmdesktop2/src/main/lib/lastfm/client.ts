@@ -1,7 +1,15 @@
+import { createFetch } from "@better-fetch/fetch";
 import { createHash } from "crypto";
 
-const API_ROOT = "https://ws.audioscrobbler.com/2.0/";
+const API_ROOT = "https://ws.audioscrobbler.com/2.0";
 const USER_AGENT = "ytmd (github.com/Venipa/ytmdesktop2)";
+
+const lastfmFetch = createFetch({
+	baseURL: API_ROOT,
+	headers: {
+		"user-agent": USER_AGENT,
+	},
+});
 
 type HttpMethod = "GET" | "POST";
 
@@ -23,7 +31,7 @@ export class LastFMClient {
 	}
 
 	/** Sign all params except `format` / `callback` (Last.fm auth spec). */
-	private buildSignedParams(params: Record<string, string>): URLSearchParams {
+	private buildSignedParams(params: Record<string, string>): Record<string, string> {
 		const sortedKeys = Object.keys(params).sort();
 		let sigBase = "";
 		for (const key of sortedKeys) {
@@ -31,10 +39,11 @@ export class LastFMClient {
 			sigBase += key + params[key];
 		}
 		sigBase += this.key.secret;
-		const searchParams = new URLSearchParams(params);
-		searchParams.set("api_sig", this.md5(sigBase));
-		searchParams.set("format", "json");
-		return searchParams;
+		return {
+			...params,
+			api_sig: this.md5(sigBase),
+			format: "json",
+		};
 	}
 
 	private toParamRecord(extra: Record<string, string | number | undefined>): Record<string, string> {
@@ -61,44 +70,35 @@ export class LastFMClient {
 		}
 
 		const needsSig = method !== "auth.getToken";
-		const searchParams = needsSig
-			? this.buildSignedParams(params)
-			: (() => {
-					const sp = new URLSearchParams(params);
-					sp.set("format", "json");
-					return sp;
-				})();
+		const requestParams = needsSig ? this.buildSignedParams(params) : { ...params, format: "json" };
 
 		if (!options.expectError) this.lastError = null;
 
-		const init: RequestInit =
-			httpMethod === "POST"
-				? {
-						method: "POST",
-						headers: {
-							"user-agent": USER_AGENT,
-							"content-type": "application/x-www-form-urlencoded",
-						},
-						body: searchParams.toString(),
-					}
-				: {
-						method: "GET",
-						headers: { "user-agent": USER_AGENT },
-					};
-
-		const url = httpMethod === "POST" ? API_ROOT : `${API_ROOT}?${searchParams.toString()}`;
-
 		try {
-			const response = await fetch(url, init);
-			const data = (await response.json()) as T & LastFmApiErrorBody;
-			const apiError = data && typeof data === "object" && data.error != null;
-			if (!response.ok || apiError) {
-				const err = apiError
-					? Object.assign(new Error(data.message || `Last.fm error ${data.error}`), { code: data.error })
-					: Object.assign(new Error(`Last.fm HTTP ${response.status}`), { response });
-				if (!options.expectError) this.lastError = err;
-				throw err;
+			const { data, error } =
+				httpMethod === "POST"
+					? await lastfmFetch<T & LastFmApiErrorBody>("/", {
+							method: "POST",
+							headers: {
+								"content-type": "application/x-www-form-urlencoded",
+							},
+							body: requestParams,
+						})
+					: await lastfmFetch<T & LastFmApiErrorBody>("/", {
+							method: "GET",
+							query: requestParams,
+						});
+
+			if (error) {
+				throw Object.assign(new Error(`Last.fm HTTP ${error.status}`), { response: error });
 			}
+			if (!data) {
+				throw new Error("Last.fm empty response");
+			}
+			if (data.error != null) {
+				throw Object.assign(new Error(data.message || `Last.fm error ${data.error}`), { code: data.error });
+			}
+
 			this.lastError = null;
 			return data;
 		} catch (err) {

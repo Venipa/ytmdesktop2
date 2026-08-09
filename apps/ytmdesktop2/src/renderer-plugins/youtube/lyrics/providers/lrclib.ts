@@ -1,8 +1,12 @@
+import { createFetch } from "@better-fetch/fetch";
 import { parseLrc } from "../lrc";
 import { artistMatchRatio } from "../match";
 import type { LyricResult, TrackSearchInfo } from "../types";
 
-const LRCLIB_BASE = "https://lrclib.net";
+const lrclibFetch = createFetch({
+	baseURL: "https://lrclib.net",
+});
+
 const ARTIST_THRESHOLD = 0.9;
 const DURATION_TOLERANCE_SEC = 15;
 
@@ -23,12 +27,13 @@ export interface LrcLibSearchOptions {
 }
 
 async function searchApi(params: URLSearchParams, signal?: AbortSignal): Promise<LrcLibHit[]> {
-	const url = `${LRCLIB_BASE}/api/search?${params.toString()}`;
-	const response = await fetch(url, { signal });
-	if (!response.ok) throw new Error(`LRCLib HTTP ${response.status}`);
-	const data = (await response.json()) as unknown;
+	const { data, error } = await lrclibFetch<LrcLibHit[]>("/api/search", {
+		query: Object.fromEntries(params),
+		signal,
+	});
+	if (error) throw new Error(`LRCLib HTTP ${error.status}`);
 	if (!Array.isArray(data)) throw new Error("LRCLib: expected array");
-	return data as LrcLibHit[];
+	return data;
 }
 
 function pickBest(hits: LrcLibHit[], info: TrackSearchInfo, allowInexact: boolean): { hit: LrcLibHit; inexact: boolean } | null {

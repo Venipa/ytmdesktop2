@@ -4,7 +4,8 @@ import { isDevelopment, isProduction } from "@main/infra/devUtils";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import { createAppWindow } from "@main/windows/windowUtils";
 import { cacheWithFile } from "@shared/utils/filecache";
-import { apiRepoUrl } from "@shared/utils/github";
+import { githubRepoFetch } from "@shared/utils/github";
+import type { GithubRelease } from "@shared/utils/github";
 import type { ProgressInfo, ReleaseNoteEntry, UpdateChannel, UpdateInfo } from "@shared/utils/updater";
 import {
 	electronUpdaterChannelFor,
@@ -38,24 +39,7 @@ const events = new EventEmitter() as EventEmitter & {
 	emit<K extends keyof UpdateEvents>(event: K, ...args: UpdateEvents[K]): boolean;
 };
 
-type GithubReleaseJson = {
-	tag_name?: string;
-	name?: string | null;
-	body?: string | null;
-	published_at?: string | null;
-	draft?: boolean;
-	prerelease?: boolean;
-};
-
-function githubHeaders(): Record<string, string> {
-	const headers: Record<string, string> = {
-		Accept: "application/vnd.github+json",
-		"User-Agent": "ytmdesktop2-updater",
-	};
-	const token = process.env.GITHUB_TOKEN;
-	if (token) headers.Authorization = `Bearer ${token}`;
-	return headers;
-}
+type GithubReleaseJson = GithubRelease;
 
 function cleanVersion(raw: string): string | null {
 	const cleaned = semver.clean(raw.replace(/^v/i, ""), { loose: true });
@@ -102,9 +86,11 @@ async function fetchGithubReleaseRange(options: {
 
 	try {
 		const raw = await cacheWithFile(async () => {
-			const res = await fetch(`${apiRepoUrl}/releases?per_page=50`, { headers: githubHeaders() });
-			if (!res.ok) throw new Error(`GitHub releases: ${res.status}`);
-			return (await res.json()) as GithubReleaseJson[];
+			const { data, error } = await githubRepoFetch<GithubReleaseJson[]>("/releases", {
+				query: { per_page: 50 },
+			});
+			if (error) throw new Error(`GitHub releases: ${error.status}`);
+			return data ?? [];
 		}, `releases-${options.channel}-${target}-gt-${current}`);
 
 		const entries: ReleaseNoteEntry[] = [];
