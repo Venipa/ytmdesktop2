@@ -71,6 +71,19 @@ export async function playerCurrentTimeSec(): Promise<number> {
 	}
 }
 
+/** Prefer `subscribeLyricsTime` + startClock for UI; this is one-shot only. */
+export async function startLyricsClock(): Promise<boolean> {
+	try {
+		return !!(await lyricsPage.request("startClock"));
+	} catch {
+		return false;
+	}
+}
+
+export function stopLyricsClock(): void {
+	lyricsPage.notify("stopClock");
+}
+
 /** Seek player in page world (seconds). */
 export async function seekPlayer(timeSec: number): Promise<boolean> {
 	try {

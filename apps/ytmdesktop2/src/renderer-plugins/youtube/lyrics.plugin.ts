@@ -3,18 +3,19 @@ import { getYtmd } from "@preload/preload-local";
 import { createLyricsStore } from "./lyrics/store";
 import { createTabMount, type TabMountHandle } from "./lyrics/tab-mount";
 import {
-	playerCurrentTimeSec,
 	seekPlayer,
 	shouldSkipTrack,
+	startLyricsClock,
+	stopLyricsClock,
 	trackInfoFromMainWorld,
 } from "./lyrics/track";
 import { createLyricsRenderer, type LyricsRenderApi } from "./lyrics/ui/render";
-import { lyricsPage } from "./lyrics.page";
+import { lyricsPage, subscribeLyricsTime } from "./lyrics.page";
 import lyricsRenderer from "./lyrics.renderer";
 import type { TrackSearchInfo } from "./lyrics/types";
 
 const SEEK_OFFSET_MS = 10;
-/** Nudge UI ahead of getCurrentTime — YTM clock often trails audible audio. */
+/** Nudge UI ahead of getCurrentTime - YTM clock often trails audible audio. */
 const DISPLAY_LEAD_MS = 80;
 
 type LyricsLogger = { debug: (...args: unknown[]) => void; error: (...args: unknown[]) => void };
@@ -26,7 +27,7 @@ interface LyricsRuntime {
 	unsubStore: (() => void) | null;
 	unsubSettings: (() => void) | null;
 	unsubTrackId: (() => void) | null;
-	timeRaf: number;
+	unsubTime: (() => void) | null;
 	domUtils: Window["domUtils"] | null;
 	log: LyricsLogger | null;
 	onSettingsChange: ((fn: (key: string, value: any) => void) => () => void) | null;
@@ -43,7 +44,7 @@ const runtime: LyricsRuntime = {
 	unsubStore: null,
 	unsubSettings: null,
 	unsubTrackId: null,
-	timeRaf: 0,
+	unsubTime: null,
 	domUtils: null,
 	log: null,
 	onSettingsChange: null,
@@ -116,32 +117,26 @@ async function refreshTrack(expectVideoId?: string | null) {
 	void prefetchNextTrack(cfg);
 }
 
-async function pushPlaybackTime() {
-	if (!runtime.renderer) return;
-	try {
-		const t = await playerCurrentTimeSec();
-		runtime.renderer.setTime(t * 1000 + DISPLAY_LEAD_MS);
-	} catch {
-		/* player may be mid-navigate */
+function applyTickTime(timeSec: number) {
+	if (!runtime.renderer || !runtime.active || !runtime.tabSelected) return;
+	runtime.renderer.setTime(timeSec * 1000 + DISPLAY_LEAD_MS);
+}
+
+async function startTimePoll() {
+	if (runtime.unsubTime) return;
+	runtime.unsubTime = subscribeLyricsTime(applyTickTime);
+	const ok = await startLyricsClock();
+	if (!ok) {
+		runtime.unsubTime();
+		runtime.unsubTime = null;
+		runtime.log?.debug("lyrics: startClock failed (page listen not ready?)");
 	}
 }
 
-function startTimePoll() {
-	if (runtime.timeRaf) return;
-	const tick = () => {
-		if (!runtime.active || !runtime.renderer || !runtime.tabSelected) {
-			runtime.timeRaf = 0;
-			return;
-		}
-		void pushPlaybackTime();
-		runtime.timeRaf = window.setTimeout(tick, 100) as unknown as number;
-	};
-	runtime.timeRaf = window.setTimeout(tick, 0) as unknown as number;
-}
-
 function stopTimePoll() {
-	if (runtime.timeRaf) clearTimeout(runtime.timeRaf);
-	runtime.timeRaf = 0;
+	stopLyricsClock();
+	runtime.unsubTime?.();
+	runtime.unsubTime = null;
 }
 
 function unbindTrackWatch() {
@@ -180,8 +175,7 @@ async function startLyrics() {
 		onTabSelectedChange: (selected) => {
 			runtime.tabSelected = selected;
 			if (selected) {
-				void pushPlaybackTime();
-				startTimePoll();
+				void startTimePoll();
 			} else {
 				stopTimePoll();
 			}
@@ -212,7 +206,7 @@ async function startLyrics() {
 		}) ?? null;
 
 	bindTrackWatch();
-	if (runtime.tabSelected) startTimePoll();
+	if (runtime.tabSelected) await startTimePoll();
 	await refreshTrack();
 	runtime.renderer.repaint();
 }

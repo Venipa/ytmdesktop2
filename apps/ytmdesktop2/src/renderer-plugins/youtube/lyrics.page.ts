@@ -159,8 +159,62 @@ export function readNextTrackInfoFromQueue(): TrackSearchInfo | null {
 
 /**
  * Page cmd handlers + bridge for lyrics player reads/seeks.
- * Safe in world0 (no electron / preload).
+ * High-freq playback clock streams as `kind: "tick"` (not request/response).
  */
+const CLOCK_MIN_INTERVAL_MS = 32;
+
+type LyricsTickMessage = {
+	type: string;
+	kind: "tick";
+	timeSec: number;
+};
+
+let clockWanted = false;
+let clockRaf = 0;
+let lastTickEmitMs = 0;
+
+function emitTimeTick(): void {
+	const msg: LyricsTickMessage = {
+		type: LYRICS_BRIDGE_TYPE,
+		kind: "tick",
+		timeSec: readCurrentTimeSec(),
+	};
+	window.postMessage(msg, "*");
+}
+
+function clockFrame(now: number): void {
+	if (!clockWanted) {
+		clockRaf = 0;
+		return;
+	}
+	if (now - lastTickEmitMs >= CLOCK_MIN_INTERVAL_MS) {
+		lastTickEmitMs = now;
+		emitTimeTick();
+	}
+	clockRaf = window.requestAnimationFrame(clockFrame);
+}
+
+function startLyricsClock(): boolean {
+	clockWanted = true;
+	if (!clockRaf) {
+		lastTickEmitMs = 0;
+		clockRaf = window.requestAnimationFrame(clockFrame);
+	}
+	return true;
+}
+
+function stopLyricsClock(): boolean {
+	clockWanted = false;
+	if (clockRaf) {
+		window.cancelAnimationFrame(clockRaf);
+		clockRaf = 0;
+	}
+	return true;
+}
+
+/** Must match `definePageCmds({ name: "lyrics" })` -> `__ytmd_lyrics`. */
+const LYRICS_BRIDGE_TYPE = "__ytmd_lyrics";
+
 export const lyricsPage = definePageCmds({
 	name: "lyrics",
 	cmds: {
@@ -168,7 +222,29 @@ export const lyricsPage = definePageCmds({
 		nextTrackInfo: () => readNextTrackInfoFromQueue(),
 		currentTime: () => readCurrentTimeSec(),
 		seek: (timeSec) => seekToSec(Number(timeSec) || 0),
+		startClock: () => startLyricsClock(),
+		stopClock: () => stopLyricsClock(),
 	},
 });
 
 export const LYRICS_MSG = lyricsPage.type;
+
+function isLyricsTick(data: unknown): data is LyricsTickMessage {
+	return (
+		!!data &&
+		typeof data === "object" &&
+		(data as LyricsTickMessage).type === LYRICS_MSG &&
+		(data as LyricsTickMessage).kind === "tick" &&
+		typeof (data as LyricsTickMessage).timeSec === "number"
+	);
+}
+
+/** Preload: subscribe to page-world playback ticks (smooth progress / no bridge request storm). */
+export function subscribeLyricsTime(handler: (timeSec: number) => void): () => void {
+	const onMessage = (ev: MessageEvent) => {
+		if (!isLyricsTick(ev.data)) return;
+		handler(ev.data.timeSec);
+	};
+	window.addEventListener("message", onMessage);
+	return () => window.removeEventListener("message", onMessage);
+}

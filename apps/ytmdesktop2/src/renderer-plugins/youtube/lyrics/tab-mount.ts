@@ -111,10 +111,32 @@ export async function createTabMount(domUtils: Window["domUtils"], options: TabM
 		});
 	};
 
+	const isInsideLyricsHost = (node: Node | null): boolean => {
+		if (!node) return false;
+		if (node.nodeType === Node.ELEMENT_NODE) {
+			const el = node as Element;
+			if (el.id === LYRICS_ROOT_ID) return true;
+			if (typeof el.closest === "function" && el.closest(`#${LYRICS_ROOT_ID}`)) return true;
+		}
+		const parent = node.parentElement;
+		return !!(parent && (parent.id === LYRICS_ROOT_ID || parent.closest(`#${LYRICS_ROOT_ID}`)));
+	};
+
 	const armBodyObserver = () => {
 		bodyObserver?.disconnect();
 		const root = document.querySelector("ytmusic-player-page") ?? document.querySelector("ytmusic-app") ?? document.body;
-		bodyObserver = new MutationObserver(() => {
+		bodyObserver = new MutationObserver((mutations) => {
+			let relevant = false;
+			for (const m of mutations) {
+				if (isInsideLyricsHost(m.target)) continue;
+				if (m.type === "childList") {
+					const nodes = [...m.addedNodes, ...m.removedNodes];
+					if (nodes.length && nodes.every((n) => isInsideLyricsHost(n))) continue;
+				}
+				relevant = true;
+				break;
+			}
+			if (!relevant) return;
 			armHeaderObserver();
 			syncHost();
 		});
