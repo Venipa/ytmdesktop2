@@ -6,6 +6,8 @@ export const SELECTORS = {
 	lyricsTabHeader: "#tabsContent > .tab-header:nth-of-type(2)",
 	tabHeaders: "#tabsContent > .tab-header",
 	lyricsTabBody: '#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"]',
+	/** Some YTM builds expose the same page-type on the custom element without relying on id alone. */
+	lyricsTabBodyAlt: 'ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"]',
 	tabRenderer: "#tab-renderer",
 } as const;
 

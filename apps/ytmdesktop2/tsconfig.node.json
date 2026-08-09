@@ -9,9 +9,11 @@
 		"src/preload/**/*",
 		"src/shared/**/*.ts",
 		"src/translations/**/*.ts",
-		"src/renderer-plugins/**/*.ts"
+		"src/renderer-plugins/**/*.ts",
+		"src/renderer-plugins/**/*.tsx"
 	],
 	"compilerOptions": {
+		"jsx": "react-jsx",
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
 		"composite": true,

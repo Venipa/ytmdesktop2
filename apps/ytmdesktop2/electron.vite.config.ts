@@ -51,10 +51,19 @@ const rendererResolve: UserConfigExport = {
 const externalizedEsmDeps = ["lodash-es", "@faker-js/faker", "@trpc-limiter/memory", "got", "encryption.js"];
 /** Bundle into main — avoid asar nested node_modules holes (Express/ee-first class). */
 const bundleIntoMain = ["hono", "@hono/node-server", "ws"];
+/**
+ * Bundle into youtube preload — lyrics React UI must not require() Node react.
+ * Measured (prod minify): react-vendor ~584KB + lyrics.plugin ~20KB (was ~1.6MB monolithic).
+ */
+const bundleIntoPreload = ["react", "react-dom", "react/jsx-runtime", "scheduler"];
 const youtubeClientPlugins = glob.globSync("./src/renderer-plugins/youtube/*.plugin.ts").map((file) => {
 	const name = basename(file, ".ts");
 	return [name, file];
 });
+
+function isReactPreloadModule(id: string): boolean {
+	return /[/\\]node_modules[/\\](react|react-dom|scheduler)([/\\]|$)/.test(id);
+}
 
 function generateServiceTypesPlugin(): Plugin {
 	const writeServiceTypes = () => {
@@ -145,14 +154,22 @@ export default defineConfig({
 	},
 	preload: {
 		...mainResolve,
+		plugins: [react()],
 		build: {
-			externalizeDeps: { exclude: [...externalizedEsmDeps, ...bundleIntoMain] },
+			minify: "esbuild",
+			externalizeDeps: { exclude: [...externalizedEsmDeps, ...bundleIntoMain, ...bundleIntoPreload] },
 			rollupOptions: {
 				input: {
 					youtube: resolve(__dirname, "src/preload/youtube.ts"),
 					api: resolve(__dirname, "src/preload/api.ts"),
 					login: resolve(__dirname, "src/preload/login.ts"),
 					...Object.fromEntries(youtubeClientPlugins.map(([key, value]) => [`plugins/youtube/${key}`, value])),
+				},
+				output: {
+					manualChunks(id: string): string | null | undefined {
+						if (isReactPreloadModule(id)) return "react-vendor";
+						return null;
+					},
 				},
 			},
 		},

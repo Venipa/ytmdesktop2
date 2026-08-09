@@ -25,7 +25,10 @@ export function findLyricsHeader(): HTMLElement | null {
 
 /** Only the lyrics page-type renderer — never the shared queue/related panel without page-type. */
 export function findLyricsBody(): HTMLElement | null {
-	return (document.querySelector(SELECTORS.lyricsTabBody) as HTMLElement | null) ?? null;
+	return (
+		(document.querySelector(SELECTORS.lyricsTabBody) as HTMLElement | null) ??
+		(document.querySelector(SELECTORS.lyricsTabBodyAlt) as HTMLElement | null)
+	);
 }
 
 export function isLyricsTabSelected(): boolean {
@@ -40,7 +43,11 @@ function ensureHost(body: HTMLElement): HTMLElement {
 		host = document.createElement("div");
 		host.id = LYRICS_ROOT_ID;
 		body.appendChild(host);
+	} else if (host.parentElement !== body) {
+		body.appendChild(host);
 	}
+	// Keep last among page-type children so stock shelves can't paint above if CSS races (ATV).
+	if (body.lastElementChild !== host) body.appendChild(host);
 	return host;
 }
 

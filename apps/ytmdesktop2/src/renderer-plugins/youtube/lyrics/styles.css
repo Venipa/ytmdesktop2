@@ -205,14 +205,22 @@
 }
 
 /* Hide stock YTM lyrics only while lyrics page-type is active (pear-safe).
- * Do NOT use a sticky hijack class on shared #tab-renderer — breaks Up Next / whole side panel. */
-#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > * {
+ * Do NOT use a sticky hijack class on shared #tab-renderer — breaks Up Next / whole side panel.
+ * ATV/song mode often injects ytmusic-description-shelf-renderer under the same page-type. */
+#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > *,
+ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > * {
 	display: none !important;
 }
 
-#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > #ytmd-lyrics-root {
+#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > #ytmd-lyrics-root,
+ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > #ytmd-lyrics-root {
 	display: flex !important;
 	flex-direction: column;
 	height: 100%;
 	min-height: 200px;
+}
+
+#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] ytmusic-description-shelf-renderer,
+ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] ytmusic-description-shelf-renderer {
+	display: none !important;
 }
