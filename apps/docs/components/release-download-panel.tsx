@@ -11,7 +11,6 @@ import {
   type ReleaseAsset,
   type ReleaseChannel,
   DOWNLOAD_PLATFORMS,
-  RELEASE_CHANNELS,
   RELEASE_CHANNEL_LABELS,
   formatBytes,
   formatReleaseDate,
@@ -19,6 +18,7 @@ import {
   getReleaseNotes,
   getReleasesUrl,
   groupDownloadsByPlatform,
+  listVisibleReleaseChannels,
   pickPreferredDownload,
 } from '@/lib/downloads';
 
@@ -75,10 +75,7 @@ function detectCpuArch(): CpuArch {
 function pickDefaultChannel(
   releases: Partial<Record<ReleaseChannel, LatestRelease | null>>,
 ): ReleaseChannel {
-  for (const channel of RELEASE_CHANNELS) {
-    if (releases[channel]) return channel;
-  }
-  return 'stable';
+  return listVisibleReleaseChannels(releases)[0] ?? 'stable';
 }
 
 interface ReleaseDownloadPanelProps {
@@ -101,8 +98,9 @@ export function ReleaseDownloadPanel({ releases }: ReleaseDownloadPanelProps) {
   }, []);
 
   useEffect(() => {
-    if (!releases[channel]) {
-      setChannel(pickDefaultChannel(releases));
+    const visible = listVisibleReleaseChannels(releases);
+    if (!visible.includes(channel)) {
+      setChannel(visible[0] ?? 'stable');
     }
   }, [releases, channel]);
 
@@ -132,7 +130,7 @@ export function ReleaseDownloadPanel({ releases }: ReleaseDownloadPanelProps) {
   }, [channelOpen]);
 
   const availableChannels = useMemo(
-    () => RELEASE_CHANNELS.filter((item) => Boolean(releases[item])),
+    () => listVisibleReleaseChannels(releases),
     [releases],
   );
 

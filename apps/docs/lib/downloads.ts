@@ -30,6 +30,92 @@ export const RELEASE_CHANNEL_LABELS: Record<ReleaseChannel, string> = {
   alpha: 'Alpha',
 };
 
+interface ParsedReleaseVersion {
+  major: number;
+  minor: number;
+  patch: number;
+  /** null = stable release; otherwise prerelease id + number */
+  pre: { id: 'rc' | 'a'; num: number } | null;
+}
+
+/**
+ * Parse a tag/name like `v1.2.3`, `1.2.3-rc.1`, or `1.2.3-a.0`.
+ */
+export function parseReleaseVersion(version: string): ParsedReleaseVersion | null {
+  const match = version.match(
+    /(\d+)\.(\d+)\.(\d+)(?:-(rc|a|alpha)(?:\.(\d+))?)?/i,
+  );
+  if (!match) return null;
+
+  const preRaw = match[4]?.toLowerCase();
+  let pre: ParsedReleaseVersion['pre'] = null;
+  if (preRaw === 'rc') {
+    pre = { id: 'rc', num: Number(match[5] ?? 0) };
+  } else if (preRaw === 'a' || preRaw === 'alpha') {
+    pre = { id: 'a', num: Number(match[5] ?? 0) };
+  }
+
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+    pre,
+  };
+}
+
+/**
+ * Compare two version-like tags. Negative if `left` < `right`, 0 if equal /
+ * unparsable, positive if `left` > `right`. Prereleases rank below the same
+ * core version (alpha < beta/rc < stable).
+ */
+export function compareReleaseVersions(left: string, right: string): number {
+  const a = parseReleaseVersion(left);
+  const b = parseReleaseVersion(right);
+  if (!a || !b) return 0;
+
+  if (a.major !== b.major) return a.major - b.major;
+  if (a.minor !== b.minor) return a.minor - b.minor;
+  if (a.patch !== b.patch) return a.patch - b.patch;
+
+  const preRank = (pre: ParsedReleaseVersion['pre']): number => {
+    if (!pre) return 2;
+    if (pre.id === 'rc') return 1;
+    return 0;
+  };
+
+  const rankDelta = preRank(a.pre) - preRank(b.pre);
+  if (rankDelta !== 0) return rankDelta;
+  if (a.pre && b.pre) return a.pre.num - b.pre.num;
+  return 0;
+}
+
+/** True when `left` is a strictly older release than `right`. */
+export function isReleaseOlderThan(left: string, right: string): boolean {
+  return compareReleaseVersions(left, right) < 0;
+}
+
+/**
+ * Channels that should appear in the download picker.
+ * Hides beta when its latest tag is older than (or equal-core behind) stable.
+ */
+export function listVisibleReleaseChannels(
+  releases: Partial<Record<ReleaseChannel, LatestRelease | null>>,
+): ReleaseChannel[] {
+  return RELEASE_CHANNELS.filter((channel) => {
+    const release = releases[channel];
+    if (!release) return false;
+
+    if (channel === 'beta') {
+      const stable = releases.stable;
+      if (stable && isReleaseOlderThan(release.tag_name, stable.tag_name)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
 /**
  * Classify a version-like string into a channel.
  * - stable: no prerelease id
