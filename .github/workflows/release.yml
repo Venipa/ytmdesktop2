@@ -93,7 +93,9 @@ jobs:
 
       - name: Verify compile output
         shell: bash
-        run: test -f apps/ytmdesktop2/out/main/index.js
+        run: |
+          test -f apps/ytmdesktop2/out/main/index.js
+          test -f apps/ytmdesktop2/resources/embeds/now-playing/index.html
 
       # Wildcard → artifact root is out contents. Download into apps/ytmdesktop2/out.
       - name: Upload compile artifact
@@ -101,6 +103,15 @@ jobs:
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out/**
+          if-no-files-found: error
+          retention-days: 3
+
+      # Embeds Vite dist lives outside out/ — pack jobs need it in the asar.
+      - name: Upload embeds artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}-embeds
+          path: apps/ytmdesktop2/resources/embeds/**
           if-no-files-found: error
           retention-days: 3
 
@@ -196,11 +207,20 @@ jobs:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
 
+      - name: Download embeds artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}-embeds
+          path: apps/ytmdesktop2/resources/embeds
+
       - name: Verify compile output
         shell: pwsh
         run: |
           if (-not (Test-Path -LiteralPath "apps/ytmdesktop2/out/main/index.js")) {
             throw "missing apps/ytmdesktop2/out/main/index.js"
+          }
+          if (-not (Test-Path -LiteralPath "apps/ytmdesktop2/resources/embeds/now-playing/index.html")) {
+            throw "missing embeds now-playing/index.html"
           }
 
       - name: Pack Windows release
@@ -264,9 +284,17 @@ jobs:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
 
+      - name: Download embeds artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}-embeds
+          path: apps/ytmdesktop2/resources/embeds
+
       - name: Verify compile output
         shell: bash
-        run: test -f apps/ytmdesktop2/out/main/index.js
+        run: |
+          test -f apps/ytmdesktop2/out/main/index.js
+          test -f apps/ytmdesktop2/resources/embeds/now-playing/index.html
 
       # Outside Mac App Store: Developer ID Application + notarize (see macos-signing.md)
       # Secrets: MACOS_DEVELOPER_ID_APPLICATION_P12 (+ _PASSWORD),
@@ -353,9 +381,17 @@ jobs:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
 
+      - name: Download embeds artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}-embeds
+          path: apps/ytmdesktop2/resources/embeds
+
       - name: Verify compile output
         shell: bash
-        run: test -f apps/ytmdesktop2/out/main/index.js
+        run: |
+          test -f apps/ytmdesktop2/out/main/index.js
+          test -f apps/ytmdesktop2/resources/embeds/now-playing/index.html
 
       - name: Pack Linux core (AppImage/deb/pacman)
         run: pnpm release:pack:linux:core
@@ -424,9 +460,17 @@ jobs:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
 
+      - name: Download embeds artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}-embeds
+          path: apps/ytmdesktop2/resources/embeds
+
       - name: Verify compile output
         shell: bash
-        run: test -f apps/ytmdesktop2/out/main/index.js
+        run: |
+          test -f apps/ytmdesktop2/out/main/index.js
+          test -f apps/ytmdesktop2/resources/embeds/now-playing/index.html
 
       - name: Pack Linux arm64 AppImage
         run: pnpm release:pack:linux:arm
@@ -504,9 +548,17 @@ jobs:
           name: ${{ env.COMPILE_ARTIFACT }}
           path: apps/ytmdesktop2/out
 
+      - name: Download embeds artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.COMPILE_ARTIFACT }}-embeds
+          path: apps/ytmdesktop2/resources/embeds
+
       - name: Verify compile output
         shell: bash
-        run: test -f apps/ytmdesktop2/out/main/index.js
+        run: |
+          test -f apps/ytmdesktop2/out/main/index.js
+          test -f apps/ytmdesktop2/resources/embeds/now-playing/index.html
 
       - name: Pack Linux Flatpak
         run: pnpm release:pack:linux:flatpak

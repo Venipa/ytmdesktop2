@@ -6,28 +6,47 @@ import path from "node:path";
 
 const log = createLogger("api-embeds");
 
+function withUnpackedTwin(dir: string): string[] {
+	if (dir.includes("app.asar") && !dir.includes("app.asar.unpacked")) {
+		return [dir.replace("app.asar", "app.asar.unpacked"), dir];
+	}
+	return [dir];
+}
+
 /**
  * Resolve built embed assets root (`…/now-playing/index.html` lives under this).
  * Dev + prod: `resources/embeds` (Vite build via `pnpm embeds:build`).
+ * Packaged builds unpack `resources/**` → prefer `app.asar.unpacked`.
  */
 export function resolveEmbedsRoot(): string | null {
 	const candidates: string[] = [];
+	const push = (dir: string | null | undefined) => {
+		if (!dir) return;
+		for (const next of withUnpackedTwin(dir)) {
+			if (!candidates.includes(next)) candidates.push(next);
+		}
+	};
 
 	// electron-vite out/main → ../../resources/embeds
-	candidates.push(path.resolve(__dirname, "../../resources/embeds"));
-	candidates.push(path.resolve(__dirname, "../resources/embeds"));
+	push(path.resolve(__dirname, "../../resources/embeds"));
+	push(path.resolve(__dirname, "../resources/embeds"));
 
-	if (isDevelopment) {
-		// Running from apps/ytmdesktop2 cwd or monorepo root
-		candidates.push(path.resolve(process.cwd(), "resources/embeds"));
-		candidates.push(path.resolve(process.cwd(), "apps/ytmdesktop2/resources/embeds"));
-	}
+	// Always allow cwd (preview / monorepo / pack-from-artifact)
+	push(path.resolve(process.cwd(), "resources/embeds"));
+	push(path.resolve(process.cwd(), "apps/ytmdesktop2/resources/embeds"));
 
 	try {
-		candidates.push(path.join(process.resourcesPath, "app.asar.unpacked", "resources", "embeds"));
-		candidates.push(path.join(app.getAppPath(), "resources", "embeds"));
+		push(path.join(process.resourcesPath, "app.asar.unpacked", "resources", "embeds"));
+		push(path.join(app.getAppPath(), "resources", "embeds"));
+		if (app.isPackaged) {
+			push(path.join(process.resourcesPath, "resources", "embeds"));
+		}
 	} catch {
 		/* app may be unavailable in tests */
+	}
+
+	if (isDevelopment) {
+		log.debug("embeds candidates", candidates);
 	}
 
 	for (const dir of candidates) {
