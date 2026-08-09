@@ -6,6 +6,7 @@ const USER_AGENT = "ytmd (github.com/Venipa/ytmdesktop2)";
 
 const lastfmFetch = createFetch({
 	baseURL: API_ROOT,
+	throw: false as const,
 	headers: {
 		"user-agent": USER_AGENT,
 	},

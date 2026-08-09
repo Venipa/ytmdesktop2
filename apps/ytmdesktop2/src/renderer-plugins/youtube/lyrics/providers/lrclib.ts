@@ -5,6 +5,7 @@ import type { LyricResult, TrackSearchInfo } from "../types";
 
 const lrclibFetch = createFetch({
 	baseURL: "https://lrclib.net",
+	throw: false as const,
 });
 
 const ARTIST_THRESHOLD = 0.9;
@@ -29,7 +30,7 @@ export interface LrcLibSearchOptions {
 async function searchApi(params: URLSearchParams, signal?: AbortSignal): Promise<LrcLibHit[]> {
 	const { data, error } = await lrclibFetch<LrcLibHit[]>("/api/search", {
 		query: Object.fromEntries(params),
-		signal,
+		...(signal ? { signal } : {}),
 	});
 	if (error) throw new Error(`LRCLib HTTP ${error.status}`);
 	if (!Array.isArray(data)) throw new Error("LRCLib: expected array");
@@ -61,8 +62,8 @@ function toResult(hit: LrcLibHit, inexact: boolean): LyricResult | null {
 	return {
 		title: hit.trackName,
 		artists: hit.artistName.split(/[&,]/).map((s) => s.trim()).filter(Boolean),
-		lines: synced ? parseLrc(synced) : undefined,
-		plain: plain || undefined,
+		...(synced ? { lines: parseLrc(synced) } : {}),
+		...(plain ? { plain } : {}),
 		inexact,
 		provider: "lrclib",
 	};

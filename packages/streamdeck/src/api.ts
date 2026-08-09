@@ -4,7 +4,7 @@ export type GlobalSettings = {
 	host?: string;
 	port?: number;
 	token?: string;
-	authCode?: string;
+	authCode?: string | null;
 	status?: string;
 	[key: string]: string | number | boolean | null | undefined;
 };
@@ -61,6 +61,7 @@ export class YtmApiClient {
 
 		const client = createFetch({
 			baseURL,
+			throw: false as const,
 			headers,
 		});
 		this.cachedKey = cacheKey;
@@ -101,7 +102,7 @@ export class YtmApiClient {
 			}
 			this.cachedKey = null;
 			this.cachedClient = null;
-			await setSettings({ token: tokenBody.token, authCode: undefined, status: "Connected" });
+			await setSettings({ token: tokenBody.token, status: "Connected", authCode: null });
 			return { code: codeBody.code, token: tokenBody.token };
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
@@ -114,7 +115,7 @@ export class YtmApiClient {
 		const api = await this.client();
 		const { data, error } = await api<unknown>(path, {
 			method: "POST",
-			body: body === undefined ? undefined : body,
+			...(body !== undefined ? { body } : {}),
 		});
 		if (error) {
 			throw new Error(error.message || error.statusText || `HTTP ${error.status}`);
@@ -126,6 +127,9 @@ export class YtmApiClient {
 		const api = await this.client();
 		const { data, error } = await api<TrackBody | null>("/track", { method: "GET" });
 		if (error || !data?.video) return null;
-		return { title: data.video.title, author: data.video.author };
+		return {
+			...(data.video.title != null ? { title: data.video.title } : {}),
+			...(data.video.author != null ? { author: data.video.author } : {}),
+		};
 	}
 }

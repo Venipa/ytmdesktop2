@@ -33,6 +33,7 @@ export interface GithubRelease {
 /** Shared GitHub repo API client (`apiRepoUrl` as baseURL). */
 export const githubRepoFetch = createFetch({
 	baseURL: apiRepoUrl,
+	throw: false as const,
 	headers: {
 		Accept: "application/vnd.github+json",
 		"User-Agent": "ytmdesktop2",

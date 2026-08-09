@@ -77,6 +77,7 @@ const nextFetch: typeof fetch = (input, init) =>
 
 const githubRepoFetch = createFetch({
   baseURL: `https://api.github.com/repos/${repoOwner}/${repoName}`,
+  throw: false as const,
   headers: {
     Accept: "application/vnd.github+json",
     "User-Agent": `${repoName}-docs`,

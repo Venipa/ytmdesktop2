@@ -20,6 +20,7 @@
 		"resolveJsonModule": true,
 		"moduleResolution": "Bundler",
 		"skipLibCheck": true,
+		"strict": true,
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 		"isolatedModules": false,
