@@ -48,7 +48,7 @@ exports.default = async function beforePack(context) {
     <name translate="no">Venipa</name>
   </developer>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>MIT</project_license>
+  <project_license>CC0-1.0</project_license>
   <url type="homepage">https://youtube-music.app</url>
   <url type="bugtracker">https://github.com/Venipa/ytmdesktop2/issues</url>
   <url type="vcs-browser">https://github.com/Venipa/ytmdesktop2</url>
