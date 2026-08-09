@@ -1,4 +1,4 @@
-import logger from "@shared/utils/Logger";
+import { logger } from "@shared/utils/console";
 import { App } from "electron";
 import { BaseProvider } from "./baseProvider";
 

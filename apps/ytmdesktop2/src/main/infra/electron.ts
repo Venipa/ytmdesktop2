@@ -1,50 +1,12 @@
 import { is } from "@electron-toolkit/utils";
-import { Logger, LogLevel } from "@shared/utils/console";
+import { Logger, logger } from "@shared/utils/console";
 import { ipcPromise } from "@shared/utils/ipcPromise";
-import logger from "@shared/utils/Logger";
-import { format } from "date-fns";
 import { app, WebContentsView } from "electron";
-import fs from "fs";
-import path from "path";
+import path from "node:path";
 import { isProduction } from "./devUtils";
+import { attachAppLogging } from "./logging";
 
 let isInitialized = false;
-
-const fsLogger = () => {
-	const logDir = path.join(app.getPath("userData"), "logs");
-	if (!isProduction) console.log("logDir", logDir);
-	if (!fs.existsSync(logDir)) {
-		fs.mkdirSync(logDir, { recursive: true });
-	}
-	const logFile = path.join(logDir, `app_${format(new Date(), "yyyy-MM-dd")}.log`);
-	logger.debug("logFile", logFile);
-	const writeStream = fs.createWriteStream(logFile, {
-		flags: "w+", // append and create if doesn't exist
-		highWaterMark: 64 * 1024, // 64KB buffer size
-		encoding: "utf8",
-	});
-	process.on("SIGINT", () => writeStream.end());
-	process.on("SIGTERM", () => writeStream.end());
-	process.on("SIGQUIT", () => writeStream.end());
-	process.on("SIGBREAK", () => writeStream.end());
-	process.on("uncaughtException", (err) => {
-		console.error("[uncaughtException]:\n", err);
-		writeStream.write(`[uncaughtException]: ${err.message}\n${err.stack}\n`);
-	});
-	process.on("unhandledRejection", (reason, promise) => {
-		console.error("[unhandledRejection]:\n", reason);
-		writeStream.write(`[unhandledRejection]: ${reason}\n${promise}\n`);
-	});
-	const allowedLevels = [LogLevel.Error, LogLevel.Warning];
-	return (source: string, level: LogLevel, objects: any[] = []) => {
-		if (!allowedLevels.includes(level)) return;
-		writeStream.write(`[${source}][${level}]: ${[objects].flat().join(" ") ?? ""}\n`, () => {
-			if (writeStream.writableEnded) {
-				writeStream.end();
-			}
-		});
-	};
-};
 
 export function initializeCustomElectronEnvironment() {
 	if (isInitialized) {
@@ -53,28 +15,20 @@ export function initializeCustomElectronEnvironment() {
 		process.exit(0);
 	}
 
-	// Isolate dev from installed build — same userData = shared SingleInstanceLock → silent app.exit().
+	// Isolate dev from installed build - same userData = shared SingleInstanceLock -> silent app.exit().
 	if (!isProduction) {
 		const appData = app.getPath("appData");
 		app.setPath("userData", path.join(appData, "ytmdesktop2-dev"));
-		app.commandLine.appendSwitch("disable-web-security"); // disable cors (also disables other security features, allows webpack eval) - dev only
+		app.commandLine.appendSwitch("disable-web-security");
 		app.commandLine.appendSwitch("disable-site-isolation-trials");
-		console.log({ env: import.meta.env, isDev: is.dev, userData: app.getPath("userData") });
+		logger.info("dev env", { isDev: is.dev, userData: app.getPath("userData") });
 	}
 	process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
 
-	if (import.meta.env.PROD && !process.env.DEBUG) {
-		Logger.enableProductionMode();
-		const fsOutput = fsLogger();
-		Logger.outputs.push(fsOutput);
-	} else {
-		process.on("uncaughtException", (err) => {
-			logger.error("Uncaught exception", err);
-		});
-		process.on("unhandledRejection", (reason, promise) => {
-			logger.error("Unhandled rejection", reason);
-		});
-	}
+	const fileLogs = import.meta.env.PROD && !process.env.DEBUG;
+	attachAppLogging({ file: fileLogs });
+	if (fileLogs) Logger.enableProductionMode();
+
 	process.env.NODE_ENV = import.meta.env.MODE;
 	WebContentsView.prototype.invoke = function <T>(channel: string, data: any) {
 		return ipcPromise<T>(this, channel, data);

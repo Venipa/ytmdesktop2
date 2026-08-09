@@ -8,7 +8,7 @@ import { thumbnailCache } from "@main/services/thumbnailCache";
 import { attachTrpcWindow, initElectronTrpc } from "@main/trpc/handler";
 import { WindowManager } from "@main/windows/windowManager";
 import { onWindowLoad } from "@main/windows/windowUtils";
-import logger from "@shared/utils/Logger";
+import { logger } from "@shared/utils/console";
 import { waitMs } from "@shared/utils/promises";
 import { app, BrowserWindow, protocol } from "electron";
 

@@ -1,6 +1,5 @@
 import { serverMain } from "@main/ipc/serverEvents";
-import { Logger } from "@shared/utils/console";
-import logger from "@shared/utils/Logger";
+import { Logger, logger } from "@shared/utils/console";
 import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { BaseProviderNames } from "ytmd";
 import { BaseProvider } from "./baseProvider";

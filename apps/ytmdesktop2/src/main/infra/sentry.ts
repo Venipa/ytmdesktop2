@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/electron/main";
-import logger from "@shared/utils/Logger";
+import { logger } from "@shared/utils/console";
 
 let enabledReporting = true;
 const sentryLog = logger.child("Sentry");

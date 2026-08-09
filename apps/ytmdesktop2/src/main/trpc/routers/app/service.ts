@@ -2,6 +2,7 @@ import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { applyYoutubeZoom, applyZoomToWebContents, clampZoomFactor } from "@main/domain/uiZoom";
 import { requestAppRelaunch } from "@main/handlers/quitHandler";
 import { isDevelopment } from "@main/infra/devUtils";
+import { ensureLogsDir } from "@main/infra/logging";
 import { setSentryEnabled } from "@main/infra/sentry";
 import { serverMain } from "@main/ipc/serverEvents";
 import { getYoutubeView, onMusicReload } from "@main/lifecycle";
@@ -10,9 +11,7 @@ import { centerWindowOnParent, createAppDialogWindow, createAppWindow, shortcutO
 import { stripUndefined } from "@shared/utils/object";
 import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
 import { debounce } from "lodash-es";
-import fs from "node:fs";
 import { version as releaseVersion } from "node:os";
-import path from "node:path";
 
 const STATE_PAUSE_TIME = 30e4;
 const TEST_RESTART_NEEDED_DIALOG = isDevelopment && process.env.TEST_RESTART_NEEDED_DIALOG === "1";
@@ -322,15 +321,11 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
   }
 
   async openLogsFolder() {
-    const logDir = path.join(this.app.getPath("userData"), "logs");
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-    return this.handleOpenFile(null as unknown as IpcMainInvokeEvent, logDir);
+    return this.handleOpenFile(null, ensureLogsDir());
   }
 
-  async handleOpenFile(ev: IpcMainInvokeEvent, path: string) {
-    const errorMessage = await shell.openPath(path);
+  async handleOpenFile(_ev: IpcMainInvokeEvent | null, filePath: string) {
+    const errorMessage = await shell.openPath(filePath);
     if (errorMessage) {
       this.logger.error("Failed to open file", errorMessage);
       return false;
