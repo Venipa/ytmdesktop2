@@ -99,7 +99,7 @@ jobs:
           test -f apps/ytmdesktop2/resources/embeds/now-playing/index.html
           test -f apps/ytmdesktop2/src/preload/generated/ytmd-world0-host.js
 
-      # out/ + resources/embeds (sidecar). Download to workspace root to restore paths.
+      # out/ + resources/embeds (sidecar). upload-artifact strips common apps/ytmdesktop2 prefix.
       - name: Upload compile artifact
         uses: actions/upload-artifact@v7
         with:
@@ -195,12 +195,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_msvs_version: "2026"
 
-      # After install — shared vite out + embeds from compile job (sidecar).
+      # Artifact root is out/ + resources/ (common apps/ytmdesktop2 prefix stripped).
       - name: Download compile artifact
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          path: apps/ytmdesktop2
 
       - name: Verify compile output
         shell: pwsh
@@ -271,7 +271,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          path: apps/ytmdesktop2
 
       - name: Verify compile output
         shell: bash
@@ -362,7 +362,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          path: apps/ytmdesktop2
 
       - name: Verify compile output
         shell: bash
@@ -435,7 +435,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          path: apps/ytmdesktop2
 
       - name: Verify compile output
         shell: bash
@@ -517,7 +517,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: .
+          path: apps/ytmdesktop2
 
       - name: Verify compile output
         shell: bash
