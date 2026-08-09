@@ -79,6 +79,9 @@ importers:
       '@base-ui/react':
         specifier: ^1.6.0
         version: 1.6.0(@types/react@19.2.18)(date-fns@2.30.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@better-fetch/fetch':
+        specifier: ^1.3.1
+        version: 1.3.1
       '@electron-toolkit/utils':
         specifier: ^3.0.0
         version: 3.0.0(electron@43.3.0(supports-color@8.1.1))
@@ -542,6 +545,9 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@better-fetch/fetch@1.3.1':
+    resolution: {integrity: sha512-ABkD1WhyfPZprKRQI3bhATjeiFuNWC9PXhfGWqL+sg/gKrM977oFrYkdb4msM3hgUGonr7KlOsOFT5TU2rht9g==}
 
   '@biomejs/biome@2.4.7':
     resolution: {integrity: sha512-vXrgcmNGZ4lpdwZSpMf1hWw1aWS6B+SyeSYKTLrNsiUsAdSRN0J4d/7mF3ogJFbIwFFSOL3wT92Zzxia/d5/ng==}
@@ -8081,6 +8087,8 @@ snapshots:
       use-sync-external-store: 1.6.0(react@19.2.8)
     optionalDependencies:
       '@types/react': 19.2.18
+
+  '@better-fetch/fetch@1.3.1': {}
 
   '@biomejs/biome@2.4.7':
     optionalDependencies:

@@ -1,6 +1,7 @@
 import {
 	RiAlbumLine,
 	RiArrowRightSLine,
+	RiChatQuoteLine,
 	RiCodeSSlashLine,
 	RiComputerLine,
 	RiDashboardLine,
@@ -49,11 +50,15 @@ export const Route = createFileRoute("/_settings")({
 
 const tabs = {
 	generic: { to: "/", label: "Generic", icon: RiSettings3Line },
-	player: { to: "/player", label: "Player", icon: RiMusic2Line },
 	discord: { to: "/discord", label: "Discord", icon: RiDiscordLine },
 	lastfm: { to: "/lastfm", label: "Last.fm", icon: RiAlbumLine },
 	about: { to: "/about", label: "About", icon: RiInformationLine },
 } as const;
+
+const playerSubs = [
+	{ to: "/player/general", label: "General", icon: RiMusic2Line },
+	{ to: "/player/lyrics", label: "Lyrics", icon: RiChatQuoteLine },
+] as const;
 
 const apiCoreSubs = [
 	{ to: "/api-integrations/api", label: "API", icon: RiServerLine },
@@ -77,6 +82,7 @@ const socials = [
 
 type SettingsTabTo =
 	| (typeof tabs)[keyof typeof tabs]["to"]
+	| (typeof playerSubs)[number]["to"]
 	| (typeof apiCoreSubs)[number]["to"]
 	| (typeof apiIntegrationSubs)[number]["to"]
 	| (typeof appearanceSubs)[number]["to"];
@@ -139,6 +145,37 @@ const SettingsNavSubItem = memo(function SettingsNavSubItem({
 				<span>{label}</span>
 			</SidebarMenuSubButton>
 		</SidebarMenuSubItem>
+	);
+});
+
+const PlayerNav = memo(function PlayerNav() {
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const isSectionActive = pathname.startsWith("/player");
+	const [open, setOpen] = useState(isSectionActive);
+
+	useEffect(() => {
+		if (isSectionActive) setOpen(true);
+	}, [isSectionActive]);
+
+	return (
+		<SidebarMenuItem>
+			<Collapsible open={open} onOpenChange={setOpen} className="group/collapsible w-full">
+				<CollapsibleTrigger render={<SidebarMenuButton isActive={isSectionActive} />}>
+					<RiMusic2Line />
+					<span>Player</span>
+					<RiArrowRightSLine
+						className={cn("ml-auto transition-transform duration-150 ease-out", open && "rotate-90")}
+					/>
+				</CollapsibleTrigger>
+				<CollapsibleContent>
+					<SidebarMenuSub>
+						{playerSubs.map((item) => (
+							<SettingsNavSubItem key={item.to} {...item} />
+						))}
+					</SidebarMenuSub>
+				</CollapsibleContent>
+			</Collapsible>
+		</SidebarMenuItem>
 	);
 });
 
@@ -237,7 +274,7 @@ function SettingsLayout() {
 							<SidebarGroupContent>
 								<SidebarMenu className="flex flex-col gap-1">
 									<SettingsNavItem {...tabs.generic} />
-									<SettingsNavItem {...tabs.player} />
+									<PlayerNav />
 									<AppearanceNav />
 									<SettingsNavItem {...tabs.discord} />
 									<SettingsNavItem {...tabs.lastfm} />

@@ -6,11 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FieldGroup } from "@/components/ui/field";
 import { useSettingsState } from "@/hooks/use-settings";
 
-export const Route = createFileRoute("/_settings/player")({
-	component: PlayerSettingsPage,
+export const Route = createFileRoute("/_settings/player/general")({
+	component: PlayerGeneralSettingsPage,
 });
 
-function PlayerSettingsPage() {
+function PlayerGeneralSettingsPage() {
 	const [resEnabled, , { isPending: resPending }] = useSettingsState("player.res.enabled", false);
 
 	return (

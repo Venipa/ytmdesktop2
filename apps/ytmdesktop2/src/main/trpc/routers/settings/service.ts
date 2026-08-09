@@ -38,6 +38,12 @@ const defaultSettings = {
 		enabled: true,
 		volume: 0.05,
 	},
+	lyrics: {
+		enabled: false,
+		showTimeCodes: false,
+		showEvenIfInexact: true,
+		showProgressBar: true,
+	},
 	player: {
 		skipDisliked: false,
 		/** `ask` = confirm dialog; `play` = open watch immediately */
