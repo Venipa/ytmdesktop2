@@ -58,7 +58,8 @@
 	overflow-x: hidden;
 	overflow-y: auto;
 	scroll-behavior: smooth;
-	padding: 4px 0 24px;
+	/* Vertical padding set in JS (~half list height) so active line can sit mid-viewport. */
+	padding: 0;
 	box-sizing: border-box;
 }
 
@@ -222,5 +223,6 @@ ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > #ytmd-lyrics-ro
 
 #tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] ytmusic-description-shelf-renderer,
 ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] ytmusic-description-shelf-renderer {
+	/* ATV/song native lyrics shelf — page-type scoped only (never sticky hijack class). */
 	display: none !important;
 }

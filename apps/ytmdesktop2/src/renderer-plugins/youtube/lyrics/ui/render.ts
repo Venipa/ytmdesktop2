@@ -1,6 +1,11 @@
 import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { LyricsApp, type LyricsUiOptions, type LyricsUiState } from "./LyricsApp";
+import {
+	LyricsApp,
+	type LyricsClockState,
+	type LyricsShellState,
+	type LyricsUiOptions,
+} from "./LyricsApp";
 import type { LyricsStoreSnapshot } from "../store";
 
 export interface LyricsRenderApi {
@@ -13,7 +18,7 @@ export interface LyricsRenderApi {
 
 /**
  * React createRoot bridge into `#ytmd-lyrics-root`.
- * High-freq setTime uses an external store (no remount per rAF tick).
+ * Shell store (snap/settings) separate from clock store (rAF time) so inactive lines skip reconcile.
  */
 export function createLyricsRenderer(
 	getHost: () => HTMLElement | null,
@@ -23,30 +28,39 @@ export function createLyricsRenderer(
 	let mountedHost: HTMLElement | null = null;
 	let disposed = false;
 
-	let state: LyricsUiState = {
+	let shell: LyricsShellState = {
 		snap: { status: "idle", result: null, videoId: null },
-		timeMs: 0,
 		showTimeCodes: options.showTimeCodes(),
 		showProgressBar: options.showProgressBar(),
 		settingsEpoch: 0,
 	};
+	let clock: LyricsClockState = { timeMs: 0 };
 
-	const listeners = new Set<() => void>();
+	const shellListeners = new Set<() => void>();
+	const clockListeners = new Set<() => void>();
 
-	const subscribe = (onStoreChange: () => void) => {
-		listeners.add(onStoreChange);
-		return () => listeners.delete(onStoreChange);
+	const subscribeShell = (onStoreChange: () => void) => {
+		shellListeners.add(onStoreChange);
+		return () => shellListeners.delete(onStoreChange);
+	};
+	const subscribeClock = (onStoreChange: () => void) => {
+		clockListeners.add(onStoreChange);
+		return () => clockListeners.delete(onStoreChange);
 	};
 
-	const getSnapshot = () => state;
+	const getShell = () => shell;
+	const getClock = () => clock;
 
-	const emit = () => {
-		for (const fn of listeners) fn();
+	const emitShell = () => {
+		for (const fn of shellListeners) fn();
+	};
+	const emitClock = () => {
+		for (const fn of clockListeners) fn();
 	};
 
-	const patch = (partial: Partial<LyricsUiState>) => {
-		state = { ...state, ...partial };
-		emit();
+	const patchShell = (partial: Partial<LyricsShellState>) => {
+		shell = { ...shell, ...partial };
+		emitShell();
 	};
 
 	const unmountRoot = () => {
@@ -73,8 +87,10 @@ export function createLyricsRenderer(
 		root = createRoot(host);
 		root.render(
 			createElement(LyricsApp, {
-				subscribe,
-				getSnapshot,
+				subscribeShell,
+				getShell,
+				subscribeClock,
+				getClock,
 				onSeek: options.onSeek,
 			}),
 		);
@@ -85,20 +101,20 @@ export function createLyricsRenderer(
 
 	return {
 		setSnapshot(snap) {
-			patch({ snap });
+			patchShell({ snap });
 			ensureRoot();
 		},
 		setTime(ms) {
-			if (state.timeMs === ms) return;
-			patch({ timeMs: ms });
+			if (clock.timeMs === ms) return;
+			clock = { timeMs: ms };
+			emitClock();
 		},
 		repaint() {
-			patch({
+			patchShell({
 				showTimeCodes: options.showTimeCodes(),
 				showProgressBar: options.showProgressBar(),
-				settingsEpoch: state.settingsEpoch + 1,
+				settingsEpoch: shell.settingsEpoch + 1,
 			});
-			unmountRoot();
 			ensureRoot();
 		},
 		destroy() {
@@ -106,8 +122,8 @@ export function createLyricsRenderer(
 			unmountRoot();
 			const host = getHost();
 			host?.replaceChildren();
-			host?.classList.remove("has-progress");
-			listeners.clear();
+			shellListeners.clear();
+			clockListeners.clear();
 		},
 	};
 }

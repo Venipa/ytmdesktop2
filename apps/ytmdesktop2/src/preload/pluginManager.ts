@@ -92,9 +92,14 @@ export class PluginManager {
 		return this.pluginUtils.createPlayerReadyWaiter();
 	}
 	onSettingsChange(fn: (key: string, value: any) => void): () => void {
-		const handler = debounce((ev: unknown, { key, value }: { key: string; value: any }) => {
-			fn(key, value);
-		}, 100);
+		// IPC: settingsProvider.change(ev, key, value, prevValue) — not a single object payload.
+		const handler = debounce(
+			(_ev: unknown, key: string, value: any) => {
+				fn(key, value);
+			},
+			100,
+			{ leading: true, trailing: true },
+		);
 		window.ipcRenderer.on("settingsProvider.change", handler);
 		return () => window.ipcRenderer.off("settingsProvider.change", handler);
 	}
