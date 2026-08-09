@@ -1,4 +1,5 @@
-import { searchLrcLib } from "./providers/lrclib";
+import { searchLyrics } from "./providers/search";
+import { resolveLyricsDisplay, setLyricsTabDisplayMode, ytmHasStockLyrics } from "./stock";
 import type { LyricResult, LyricsStatus, TrackSearchInfo } from "./types";
 
 export interface LyricsStoreSnapshot {
@@ -9,6 +10,20 @@ export interface LyricsStoreSnapshot {
 }
 
 type Listener = (snap: LyricsStoreSnapshot) => void;
+
+function applyDisplay(snap: LyricsStoreSnapshot): LyricsStoreSnapshot {
+	const hasTimedLines = !!snap.result?.lines?.length;
+	const resolved = resolveLyricsDisplay({
+		status: snap.status,
+		hasTimedLines,
+		hasStock: ytmHasStockLyrics(),
+	});
+	setLyricsTabDisplayMode(resolved.mode);
+	if (resolved.status === "stock") {
+		return { ...snap, status: "stock", errorMessage: undefined };
+	}
+	return snap;
+}
 
 export function createLyricsStore() {
 	const cache = new Map<string, LyricResult | null>();
@@ -26,7 +41,7 @@ export function createLyricsStore() {
 	};
 
 	const setSnap = (partial: Partial<LyricsStoreSnapshot>) => {
-		snap = { ...snap, ...partial };
+		snap = applyDisplay({ ...snap, ...partial });
 		emit();
 	};
 
@@ -43,7 +58,13 @@ export function createLyricsStore() {
 			abort?.abort();
 			abort = null;
 			generation += 1;
-			setSnap({ status: "idle", result: null, videoId: null, errorMessage: undefined });
+			cache.clear();
+			setLyricsTabDisplayMode("overlay");
+			snap = { status: "idle", result: null, videoId: null, errorMessage: undefined };
+			emit();
+		},
+		clearCache() {
+			cache.clear();
 		},
 		setSkipped(videoId: string | null, reason?: string) {
 			abort?.abort();
@@ -58,7 +79,7 @@ export function createLyricsStore() {
 		},
 		async fetchForTrack(
 			info: TrackSearchInfo,
-			options: { showEvenIfInexact: boolean },
+			options: { showEvenIfInexact: boolean; providers?: unknown },
 		): Promise<void> {
 			const cached = cache.get(info.videoId);
 			if (cached !== undefined) {
@@ -78,8 +99,9 @@ export function createLyricsStore() {
 			setSnap({ status: "loading", result: null, videoId: info.videoId, errorMessage: undefined });
 
 			try {
-				const result = await searchLrcLib(info, {
+				const result = await searchLyrics(info, {
 					showEvenIfInexact: options.showEvenIfInexact,
+					providers: options.providers,
 					signal,
 				});
 				if (gen !== generation) return;

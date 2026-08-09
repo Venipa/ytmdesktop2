@@ -39,11 +39,66 @@
 	color: #fff;
 }
 
+#ytmd-lyrics-root .ytmd-lyrics-loading {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 14px;
+	opacity: 1;
+	min-height: 160px;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-loading-label {
+	opacity: 0.7;
+	font-size: 14px;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-spinner {
+	position: relative;
+	display: block;
+	width: 28px;
+	height: 28px;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-spinner-blade {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 24%;
+	height: 8%;
+	margin-top: -4%;
+	margin-left: -12%;
+	border-radius: 2px;
+	background-color: #fff;
+	opacity: 0.15;
+	transform: rotate(calc(var(--i) * 30deg)) translate(146%);
+	animation: ytmd-lyrics-spinner 1.2s linear infinite;
+	animation-delay: calc(var(--i) * -0.1s);
+}
+
+@keyframes ytmd-lyrics-spinner {
+	0% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0.15;
+	}
+}
+
 #ytmd-lyrics-root .ytmd-lyrics-meta {
 	flex: 0 0 auto;
 	font-size: 12px;
 	opacity: 0.55;
 	color: #fff;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-meta-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	flex: 0 0 auto;
 }
 
 #ytmd-lyrics-root .ytmd-lyrics-list {
@@ -263,21 +318,32 @@
 /* Hide stock YTM lyrics only while lyrics page-type is active (pear-safe).
  * Do NOT use a sticky hijack class on shared #tab-renderer — breaks Up Next / whole side panel.
  * ATV/song mode often injects ytmusic-description-shelf-renderer under the same page-type. */
-#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > *,
-ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > * {
+#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"]:not([data-ytmd-lyrics="stock"]) > *,
+ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"]:not([data-ytmd-lyrics="stock"]) > * {
 	display: none !important;
 }
 
-#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > #ytmd-lyrics-root,
-ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] > #ytmd-lyrics-root {
+#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"]:not([data-ytmd-lyrics="stock"]) > #ytmd-lyrics-root,
+ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"]:not([data-ytmd-lyrics="stock"]) > #ytmd-lyrics-root {
 	display: flex !important;
 	flex-direction: column;
 	height: 100%;
 	min-height: 200px;
 }
 
-#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] ytmusic-description-shelf-renderer,
-ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"] ytmusic-description-shelf-renderer {
+#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"]:not([data-ytmd-lyrics="stock"]) ytmusic-description-shelf-renderer,
+ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"]:not([data-ytmd-lyrics="stock"]) ytmusic-description-shelf-renderer {
 	/* ATV/song native lyrics shelf — page-type scoped only (never sticky hijack class). */
 	display: none !important;
+}
+
+/* Plain provider + YTM already has lyrics → leave stock visible. */
+#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"][data-ytmd-lyrics="stock"] > #ytmd-lyrics-root,
+ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"][data-ytmd-lyrics="stock"] > #ytmd-lyrics-root {
+	display: none !important;
+}
+
+#tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"][data-ytmd-lyrics="stock"] ytmusic-description-shelf-renderer,
+ytmusic-tab-renderer[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"][data-ytmd-lyrics="stock"] ytmusic-description-shelf-renderer {
+	display: block !important;
 }

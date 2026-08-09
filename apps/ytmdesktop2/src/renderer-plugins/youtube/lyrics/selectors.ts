@@ -14,3 +14,11 @@ export const SELECTORS = {
 export function lyricsRootSelector(): string {
 	return `#${LYRICS_ROOT_ID}`;
 }
+
+/** Only the lyrics page-type renderer — never the shared queue/related panel without page-type. */
+export function findLyricsBody(): HTMLElement | null {
+	return (
+		(document.querySelector(SELECTORS.lyricsTabBody) as HTMLElement | null) ??
+		(document.querySelector(SELECTORS.lyricsTabBodyAlt) as HTMLElement | null)
+	);
+}

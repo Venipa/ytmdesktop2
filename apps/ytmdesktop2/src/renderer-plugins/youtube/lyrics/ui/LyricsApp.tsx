@@ -9,9 +9,11 @@ import {
 	type KeyboardEvent,
 	type ReactNode,
 } from "react";
-import { activeLineIndex, activeWordIndex, canWordSync, hasEnhancedWordSync, resolveLineWords } from "../lrc";
+import { activeLineIndices, activeWordIndex, primaryActiveLineIndex } from "../lrc";
+import { lyricsProviderLabel } from "../providers/catalog";
 import type { LyricsStoreSnapshot } from "../store";
-import type { LyricLine, LyricWord } from "../types";
+import type { LyricLine, LyricResult, LyricWord } from "../types";
+import { LyricsSpinner } from "./LyricsSpinner";
 
 export const USER_SCROLL_PAUSE_MS = 2500;
 
@@ -20,7 +22,6 @@ export interface LyricsShellState {
 	snap: LyricsStoreSnapshot;
 	showTimeCodes: boolean;
 	showProgressBar: boolean;
-	showWordSync: boolean;
 	settingsEpoch: number;
 }
 
@@ -34,7 +35,6 @@ export interface LyricsUiState extends LyricsShellState, LyricsClockState {}
 export interface LyricsUiOptions {
 	showTimeCodes: () => boolean;
 	showProgressBar: () => boolean;
-	showWordSync: () => boolean;
 	onSeek: (timeMs: number) => void;
 }
 
@@ -57,6 +57,8 @@ export function statusMessage(snap: LyricsStoreSnapshot): string {
 			return snap.errorMessage ?? "Lyrics unavailable for this track";
 		case "idle":
 			return "Play a song to see lyrics";
+		case "stock":
+			return "";
 		case "ready":
 			return "No lyrics found";
 		default:
@@ -207,12 +209,26 @@ const LyricLineRow = memo(function LyricLineRow({
 	);
 });
 
+function providerMetaLabel(result: LyricResult): string {
+	const name = lyricsProviderLabel(result.provider);
+	const level =
+		result.syncLevel === "syllable"
+			? "syllable"
+			: result.syncLevel === "word"
+				? "word"
+				: result.syncLevel === "plain"
+					? "plain"
+					: result.hasWordSync
+						? "syllable"
+						: "line";
+	return `${name} · ${level}`;
+}
+
 interface SyncedListProps {
 	lines: LyricLine[];
-	inexact?: boolean;
+	result: LyricResult;
 	showTimeCodes: boolean;
 	showProgressBar: boolean;
-	showWordSync: boolean;
 	settingsEpoch: number;
 	videoId: string | null;
 	subscribeClock: (onStoreChange: () => void) => () => void;
@@ -222,10 +238,9 @@ interface SyncedListProps {
 
 function SyncedList({
 	lines,
-	inexact,
+	result,
 	showTimeCodes,
 	showProgressBar,
-	showWordSync,
 	settingsEpoch,
 	videoId,
 	subscribeClock,
@@ -233,7 +248,9 @@ function SyncedList({
 	onSeek,
 }: SyncedListProps) {
 	const timeMs = useSyncExternalStore(subscribeClock, () => getClock().timeMs, () => getClock().timeMs);
-	const activeIdx = activeLineIndex(lines, timeMs);
+	const activeIndices = activeLineIndices(lines, timeMs);
+	const activeSet = new Set(activeIndices);
+	const primaryIdx = primaryActiveLineIndex(lines, timeMs);
 
 	const listRef = useRef<HTMLDivElement | null>(null);
 	const userScrollUntil = useRef(0);
@@ -272,21 +289,21 @@ function SyncedList({
 	useEffect(() => () => clearCatchUpTimer(), []);
 
 	useEffect(() => {
-		if (activeIdx < 0) return undefined;
-		if (activeIdx === lastScrolledActive.current) return undefined;
+		if (primaryIdx < 0) return undefined;
+		if (primaryIdx === lastScrolledActive.current) return undefined;
 		if (Date.now() < userScrollUntil.current) {
 			// Keep lastScrolled stale so catch-up / next tick can center the real active line.
 			return undefined;
 		}
 		const list = listRef.current;
-		const el = list?.querySelector(`[data-index="${activeIdx}"]`) as HTMLElement | null;
+		const el = list?.querySelector(`[data-index="${primaryIdx}"]`) as HTMLElement | null;
 		if (!list || !el) return undefined;
-		lastScrolledActive.current = activeIdx;
+		lastScrolledActive.current = primaryIdx;
 		const smooth = !prefersReducedMotion();
 		ignoreScrollUntil.current = Date.now() + (smooth ? 450 : 50);
 		const raf = requestAnimationFrame(() => scrollLineToCenter(list, el, smooth));
 		return () => cancelAnimationFrame(raf);
-	}, [activeIdx, videoId, settingsEpoch, catchUpNonce]);
+	}, [primaryIdx, videoId, settingsEpoch, catchUpNonce]);
 
 	useLayoutEffect(() => {
 		const list = listRef.current;
@@ -304,14 +321,14 @@ function SyncedList({
 
 	return (
 		<div className="ytmd-lyrics-body">
-			{inexact ? <div className="ytmd-lyrics-meta">Approximate match</div> : null}
-			{showWordSync && canWordSync(lines) && !hasEnhancedWordSync(lines) ? (
-				<div className="ytmd-lyrics-meta">Estimated word timing</div>
-			) : null}
+			<div className="ytmd-lyrics-meta-row">
+				<div className="ytmd-lyrics-meta">{providerMetaLabel(result)}</div>
+				{result.inexact ? <div className="ytmd-lyrics-meta">Approximate match</div> : null}
+			</div>
 			<div ref={listRef} className="ytmd-lyrics-list" role="list" onScroll={onListScroll}>
 				{lines.map((line, i) => {
-					const isActive = i === activeIdx;
-					const words = resolveLineWords(line, showWordSync);
+					const isActive = activeSet.has(i);
+					const words = line.words?.length ? line.words : undefined;
 					const useWords = !!words?.length;
 					const progress = isActive && showProgressBar && !useWords ? lineProgressRatio(line, timeMs) : null;
 					const activeWord = isActive && useWords ? activeWordIndex(words!, timeMs) : -1;
@@ -336,10 +353,22 @@ function SyncedList({
 
 export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, onSeek }: LyricsAppProps) {
 	const shell = useSyncExternalStore(subscribeShell, getShell, getShell);
-	const { snap, showTimeCodes, showProgressBar, showWordSync, settingsEpoch } = shell;
+	const { snap, showTimeCodes, showProgressBar, settingsEpoch } = shell;
 
 	const result = snap.result;
 	const lines = snap.status === "ready" && result?.lines?.length ? result.lines : null;
+
+	if (snap.status === "stock") {
+		return null;
+	}
+
+	if (snap.status === "loading") {
+		return (
+			<div className="ytmd-lyrics-body">
+				<LyricsSpinner />
+			</div>
+		);
+	}
 
 	if (snap.status !== "ready" || !result) {
 		return (
@@ -355,10 +384,9 @@ export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, 
 		return (
 			<SyncedList
 				lines={lines}
-				inexact={result.inexact}
+				result={result}
 				showTimeCodes={showTimeCodes}
 				showProgressBar={showProgressBar}
-				showWordSync={showWordSync}
 				settingsEpoch={settingsEpoch}
 				videoId={snap.videoId}
 				subscribeClock={subscribeClock}
@@ -371,7 +399,10 @@ export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, 
 	if (result.plain) {
 		return (
 			<div className="ytmd-lyrics-body">
-				{result.inexact ? <div className="ytmd-lyrics-meta">Approximate match</div> : null}
+				<div className="ytmd-lyrics-meta-row">
+					<div className="ytmd-lyrics-meta">{providerMetaLabel(result)}</div>
+					{result.inexact ? <div className="ytmd-lyrics-meta">Approximate match</div> : null}
+				</div>
 				<div className="ytmd-lyrics-plain">{result.plain}</div>
 			</div>
 		);

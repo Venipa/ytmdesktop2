@@ -105,15 +105,42 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 				showTimeCodes: false,
 				showEvenIfInexact: true,
 				showProgressBar: true,
-				showWordSync: false,
+				providers: [
+					{ id: "better-lyrics", enabled: true },
+					{ id: "unison", enabled: true },
+					{ id: "lrclib", enabled: true },
+				],
 			});
 		},
 	},
 	{
 		hook(store) {
 			const current = store.store?.lyrics;
-			if (!current || typeof current.showWordSync === "boolean") return;
-			store.set("lyrics.showWordSync", false);
+			if (!current) return;
+
+			if ("showWordSync" in current) store.delete("lyrics.showWordSync" as keyof SettingsStore);
+			if ("estimateWordTiming" in current) store.delete("lyrics.estimateWordTiming" as keyof SettingsStore);
+
+			const providers = current.providers;
+			if (!Array.isArray(providers) || !providers.length) {
+				store.set("lyrics.providers", [
+					{ id: "better-lyrics", enabled: true },
+					{ id: "unison", enabled: true },
+					{ id: "lrclib", enabled: true },
+				]);
+				return;
+			}
+
+			if (providers.every((item) => item && typeof item === "object" && "id" in item)) return;
+
+			const next = providers
+				.map((item) => {
+					if (typeof item === "string") return { id: item, enabled: true };
+					return null;
+				})
+				.filter(Boolean);
+			if (!next.length) return;
+			store.set("lyrics.providers", next as SettingsStore["lyrics"]["providers"]);
 		},
 	},
 ];

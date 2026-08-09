@@ -192,7 +192,7 @@ export function parseLrc(text: string): LyricLine[] {
 	return grouped;
 }
 
-/** Active line index for current playback time (binary search). */
+/** Active line index for current playback time (binary search / latest started). */
 export function activeLineIndex(lines: LyricLine[], timeMs: number): number {
 	if (!lines.length) return -1;
 	let lo = 0;
@@ -208,6 +208,39 @@ export function activeLineIndex(lines: LyricLine[], timeMs: number): number {
 		}
 	}
 	return ans;
+}
+
+/** True when playhead is inside a line's `[timeMs, timeMs + durationMs)` window. */
+export function isLineActiveAt(line: LyricLine, timeMs: number): boolean {
+	if (timeMs < line.timeMs) return false;
+	if (Number.isFinite(line.durationMs) && line.durationMs >= 0) {
+		return timeMs < line.timeMs + line.durationMs;
+	}
+	return true;
+}
+
+/**
+ * All lines whose timing window covers `timeMs` (overlapping vocals).
+ * Ordered by line index ascending.
+ */
+export function activeLineIndices(lines: LyricLine[], timeMs: number): number[] {
+	const out: number[] = [];
+	for (let i = 0; i < lines.length; i++) {
+		if (isLineActiveAt(lines[i], timeMs)) out.push(i);
+	}
+	return out;
+}
+
+/**
+ * Primary (scroll / focus) active line: latest-started among overlapping actives,
+ * else classic `activeLineIndex` when none have ended yet / open-ended edge cases.
+ */
+export function primaryActiveLineIndex(lines: LyricLine[], timeMs: number): number {
+	const active = activeLineIndices(lines, timeMs);
+	if (active.length) return active[active.length - 1];
+	if (!lines.length) return -1;
+	if (timeMs < lines[0].timeMs) return -1;
+	return activeLineIndex(lines, timeMs);
 }
 
 /** Active word index within a line (binary search). `-1` when before first word. */
@@ -227,48 +260,4 @@ export function activeWordIndex(words: LyricWord[], timeMs: number): number {
 		}
 	}
 	return ans;
-}
-
-/** Fallback span when last line has infinite duration. */
-export const SYNTH_FALLBACK_LINE_MS = 3000;
-/** Need at least this many tokens before estimating word times. */
-export const SYNTH_MIN_WORDS = 2;
-
-/**
- * Estimate word times by splitting line text across `durationMs`.
- * Skips duet `parts` rows and single-token lines (keep normal line sync).
- */
-export function synthesizeLineWords(line: LyricLine): LyricWord[] | undefined {
-	if (line.words?.length) return undefined;
-	if (line.parts && line.parts.length > 1) return undefined;
-	const raw = line.text?.trim();
-	if (!raw) return undefined;
-	const tokens = raw.match(/\S+\s*/g);
-	if (!tokens || tokens.length < SYNTH_MIN_WORDS) return undefined;
-
-	const span =
-		Number.isFinite(line.durationMs) && line.durationMs > 0 ? line.durationMs : SYNTH_FALLBACK_LINE_MS;
-	const slice = span / tokens.length;
-	return tokens.map((text, i) => ({
-		timeMs: line.timeMs + Math.floor(i * slice),
-		text,
-		durationMs: Math.max(1, Math.floor(slice)),
-	}));
-}
-
-/** Enhanced words if present; otherwise soft-synth when `enabled`. */
-export function resolveLineWords(line: LyricLine, enabled: boolean): LyricWord[] | undefined {
-	if (!enabled) return undefined;
-	if (line.words?.length) return line.words;
-	return synthesizeLineWords(line);
-}
-
-/** True when any line has real enhanced `<…>` cues (not estimated). */
-export function hasEnhancedWordSync(lines: LyricLine[]): boolean {
-	return lines.some((line) => !!line.words?.length);
-}
-
-/** True when word sync UI can paint at least one line (enhanced or synth). */
-export function canWordSync(lines: LyricLine[]): boolean {
-	return lines.some((line) => !!resolveLineWords(line, true)?.length);
 }

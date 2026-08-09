@@ -1,4 +1,4 @@
-/** Enhanced LRC word cue (`<mm:ss.xx>word`). */
+/** Timed word/syllable cue. */
 export interface LyricWord {
 	timeMs: number;
 	text: string;
@@ -12,9 +12,11 @@ export interface LyricLine {
 	durationMs: number;
 	/** Concurrent voices when several LRC lines start nearly together. */
 	parts?: string[];
-	/** Word-level cues when source LRC includes enhanced `<…>` timestamps. */
+	/** Word/syllable cues when the provider returns them. */
 	words?: LyricWord[];
 }
+
+export type LyricsSyncLevel = "syllable" | "word" | "line" | "plain";
 
 export interface LyricResult {
 	title: string;
@@ -22,7 +24,10 @@ export interface LyricResult {
 	lines?: LyricLine[];
 	plain?: string;
 	inexact?: boolean;
-	provider: "lrclib";
+	provider: "lrclib" | "better-lyrics" | "unison";
+	/** True when result includes real word/syllable cues. */
+	hasWordSync?: boolean;
+	syncLevel?: LyricsSyncLevel;
 }
 
 export interface TrackSearchInfo {
@@ -35,7 +40,7 @@ export interface TrackSearchInfo {
 	isLiveContent?: boolean;
 }
 
-export type LyricsStatus = "idle" | "loading" | "ready" | "empty" | "error" | "skipped";
+export type LyricsStatus = "idle" | "loading" | "ready" | "empty" | "error" | "skipped" | "stock";
 
 export interface LyricsViewState {
 	status: LyricsStatus;

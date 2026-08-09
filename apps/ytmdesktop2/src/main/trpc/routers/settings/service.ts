@@ -43,7 +43,11 @@ const defaultSettings = {
 		showTimeCodes: false,
 		showEvenIfInexact: true,
 		showProgressBar: true,
-		showWordSync: false,
+		providers: [
+			{ id: "better-lyrics", enabled: true },
+			{ id: "unison", enabled: true },
+			{ id: "lrclib", enabled: true },
+		] as Array<{ id: "better-lyrics" | "unison" | "lrclib"; enabled: boolean }>,
 	},
 	player: {
 		skipDisliked: false,

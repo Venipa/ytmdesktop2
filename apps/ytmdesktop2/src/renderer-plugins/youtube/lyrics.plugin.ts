@@ -52,7 +52,7 @@ function readLyricsSettings(settings?: Record<string, any>) {
 		showTimeCodes: !!s?.lyrics?.showTimeCodes,
 		showEvenIfInexact: s?.lyrics?.showEvenIfInexact !== false,
 		showProgressBar: s?.lyrics?.showProgressBar !== false,
-		showWordSync: !!s?.lyrics?.showWordSync,
+		providers: s?.lyrics?.providers,
 	};
 }
 
@@ -65,7 +65,10 @@ function refreshTrack() {
 		return;
 	}
 	const cfg = readLyricsSettings();
-	void runtime.store.fetchForTrack(info, { showEvenIfInexact: cfg.showEvenIfInexact });
+	void runtime.store.fetchForTrack(info, {
+		showEvenIfInexact: cfg.showEvenIfInexact,
+		providers: cfg.providers,
+	});
 }
 
 function pushPlaybackTime() {
@@ -147,7 +150,6 @@ async function startLyrics() {
 	runtime.renderer = createLyricsRenderer(() => runtime.mount?.getHost() ?? null, {
 		showTimeCodes: () => readLyricsSettings().showTimeCodes,
 		showProgressBar: () => readLyricsSettings().showProgressBar,
-		showWordSync: () => readLyricsSettings().showWordSync,
 		onSeek: (timeMs) => {
 			try {
 				runtime.playerApi?.seekTo?.((timeMs + SEEK_OFFSET_MS) / 1000, true);
@@ -160,14 +162,13 @@ async function startLyrics() {
 	runtime.unsubStore = runtime.store.subscribe((snap) => runtime.renderer?.setSnapshot(snap));
 	runtime.unsubSettings =
 		runtime.onSettingsChange?.((key) => {
-			if (
-				key === "lyrics.showTimeCodes" ||
-				key === "lyrics.showProgressBar" ||
-				key === "lyrics.showWordSync"
-			) {
+			if (key === "lyrics.showTimeCodes" || key === "lyrics.showProgressBar") {
 				runtime.renderer?.repaint();
 			}
-			if (key === "lyrics.showEvenIfInexact") refreshTrack();
+			if (key === "lyrics.showEvenIfInexact" || key === "lyrics.providers") {
+				runtime.store.clearCache();
+				refreshTrack();
+			}
 		}) ?? null;
 
 	bindPlayer();
@@ -198,7 +199,7 @@ export default definePlugin(
 	"lyrics",
 	{
 		enabled: true,
-		displayName: "Synced Lyrics",
+		displayName: "Lyrics",
 	},
 	{
 		async afterInit({ settings, domUtils, log, playerApi, onSettingsChange }) {

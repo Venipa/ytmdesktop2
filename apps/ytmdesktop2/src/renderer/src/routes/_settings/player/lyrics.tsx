@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { LyricsProvidersOrder } from "@/components/lyrics-providers-order";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
@@ -15,22 +16,25 @@ function LyricsSettingsPage() {
 		<>
 			<Card>
 				<CardHeader>
-					<CardTitle>Synced lyrics</CardTitle>
-					<CardDescription>Replace the YouTube Music Lyrics tab with timed lyrics from LRCLib.</CardDescription>
+					<CardTitle>Lyrics</CardTitle>
+					<CardDescription>
+						Replace the YouTube Music Lyrics tab with timed lyrics. Word or syllable highlighting uses whatever the
+						winning provider returns.
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<FieldGroup>
 						<SettingsCheckbox
 							configKey="lyrics.enabled"
-							description="When enabled, open the Lyrics tab in the player to see synced lines. Click a line to seek."
+							description="When enabled, open the Lyrics tab in the player to see synced lines. Click a line or word to seek."
 						>
-							Enable synced lyrics
+							Enable lyrics
 						</SettingsCheckbox>
 						<SettingsCheckbox
 							configKey="lyrics.showEvenIfInexact"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
-							description="Show lyrics when the match is approximate (title/artist close but not exact)."
+							description="For LRCLib matches, show lyrics when title/artist are close but not exact."
 						>
 							Allow approximate matches
 						</SettingsCheckbox>
@@ -45,23 +49,26 @@ function LyricsSettingsPage() {
 							configKey="lyrics.showProgressBar"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
-							description="Fill the active lyric row with a muted translucent background as it plays (skipped on lines with word sync)."
+							description="Fill the active lyric row as it plays when the provider has no word/syllable cues."
 						>
 							Show line progress
 						</SettingsCheckbox>
-						<SettingsCheckbox
-							configKey="lyrics.showWordSync"
-							disabled={!lyricsEnabled}
-							description="Highlight each word while the line plays. Uses enhanced timestamps when present; otherwise estimates from line timing. Single-word and duet rows keep normal line sync."
-						>
-							Show word sync
-						</SettingsCheckbox>
 					</FieldGroup>
 				</CardContent>
+			</Card>
+			<Card>
+				<CardHeader>
+					<CardTitle>Providers</CardTitle>
+					<CardDescription>
+						Tried in order until one returns lyrics (default: Better Lyrics → Unison → LRCLib). Better Lyrics and Unison
+						can return syllable sync; LRCLib is line/plain only. Toggle sources on or off and drag to reorder.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<LyricsProvidersOrder disabled={!lyricsEnabled} />
+				</CardContent>
 				<CardFooter>
-					<a href="https://lrclib.net" target="_blank" rel="noreferrer" className="text-xs text-primary underline-offset-4 hover:underline">
-						Lyrics provided by LRCLib
-					</a>
+					<p className="text-xs text-muted-foreground">Site links open each provider&apos;s homepage or docs.</p>
 				</CardFooter>
 			</Card>
 		</>

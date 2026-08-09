@@ -1,4 +1,5 @@
-import { LYRICS_ROOT_ID, SELECTORS } from "./selectors";
+import { findLyricsBody, LYRICS_ROOT_ID, SELECTORS } from "./selectors";
+import { clearLyricsTabDisplayMode } from "./stock";
 import styles from "./styles.css?raw";
 
 export interface TabMountHandle {
@@ -23,13 +24,7 @@ export function findLyricsHeader(): HTMLElement | null {
 	return null;
 }
 
-/** Only the lyrics page-type renderer — never the shared queue/related panel without page-type. */
-export function findLyricsBody(): HTMLElement | null {
-	return (
-		(document.querySelector(SELECTORS.lyricsTabBody) as HTMLElement | null) ??
-		(document.querySelector(SELECTORS.lyricsTabBodyAlt) as HTMLElement | null)
-	);
-}
+export { findLyricsBody };
 
 export function isLyricsTabSelected(): boolean {
 	const header = findLyricsHeader();
@@ -149,6 +144,7 @@ export async function createTabMount(domUtils: Window["domUtils"], options: TabM
 			observedHeader = null;
 			const node = document.querySelector(`#${LYRICS_ROOT_ID}`);
 			node?.remove();
+			clearLyricsTabDisplayMode();
 			// Cleanup leftover class from older hijack builds (broke shared tab-renderer).
 			for (const el of Array.from(document.querySelectorAll(".ytmd-lyrics-hijacked"))) {
 				el.classList.remove("ytmd-lyrics-hijacked");

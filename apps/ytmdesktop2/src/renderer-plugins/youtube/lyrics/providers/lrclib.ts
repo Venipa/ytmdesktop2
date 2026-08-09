@@ -6,10 +6,13 @@ import type { LyricResult, TrackSearchInfo } from "../types";
 const lrclibFetch = createFetch({
 	baseURL: "https://lrclib.net",
 	throw: false as const,
+	headers: {
+		"User-Agent": "YTMDesktop2 (https://youtube-music.app)",
+	},
 });
 
 const ARTIST_THRESHOLD = 0.9;
-const DURATION_TOLERANCE_SEC = 15;
+export const DURATION_TOLERANCE_SEC = 15;
 
 interface LrcLibHit {
 	id: number;
@@ -27,6 +30,12 @@ export interface LrcLibSearchOptions {
 	signal?: AbortSignal;
 }
 
+export interface RankedLrcLibHit {
+	hit: LrcLibHit;
+	artistRatio: number;
+	durationDelta: number;
+}
+
 async function searchApi(params: URLSearchParams, signal?: AbortSignal): Promise<LrcLibHit[]> {
 	const { data, error } = await lrclibFetch<LrcLibHit[]>("/api/search", {
 		query: Object.fromEntries(params),
@@ -37,21 +46,41 @@ async function searchApi(params: URLSearchParams, signal?: AbortSignal): Promise
 	return data;
 }
 
-function pickBest(hits: LrcLibHit[], info: TrackSearchInfo, allowInexact: boolean): { hit: LrcLibHit; inexact: boolean } | null {
-	const scored = hits
+/** Rank by duration match, then artist score. Line-synced only (no word sync). */
+export function rankLrcLibHits(hits: LrcLibHit[], info: TrackSearchInfo): RankedLrcLibHit[] {
+	return hits
 		.map((hit) => {
 			const artistRatio = artistMatchRatio(info.artist, hit.artistName);
 			const durationDelta = Math.abs(hit.duration - info.durationSec);
 			return { hit, artistRatio, durationDelta };
 		})
 		.filter((row) => row.artistRatio > ARTIST_THRESHOLD)
-		.sort((a, b) => a.durationDelta - b.durationDelta);
+		.sort((a, b) => {
+			const aExact = a.durationDelta <= DURATION_TOLERANCE_SEC ? 0 : 1;
+			const bExact = b.durationDelta <= DURATION_TOLERANCE_SEC ? 0 : 1;
+			if (aExact !== bExact) return aExact - bExact;
+			if (a.durationDelta !== b.durationDelta) return a.durationDelta - b.durationDelta;
+			return b.artistRatio - a.artistRatio;
+		});
+}
 
-	const exact = scored.find((row) => row.durationDelta <= DURATION_TOLERANCE_SEC);
-	if (exact) return { hit: exact.hit, inexact: false };
+export function pickBest(
+	hits: LrcLibHit[],
+	info: TrackSearchInfo,
+	allowInexact: boolean,
+): { hit: LrcLibHit; inexact: boolean } | null {
+	const ranked = rankLrcLibHits(hits, info);
+	const best = ranked[0];
+	if (!best) return null;
+	if (best.durationDelta <= DURATION_TOLERANCE_SEC) {
+		return { hit: best.hit, inexact: false };
+	}
+	if (!allowInexact) return null;
+	return { hit: best.hit, inexact: true };
+}
 
-	if (!allowInexact || !scored.length) return null;
-	return { hit: scored[0].hit, inexact: true };
+function artistsFromHit(artistName: string): string[] {
+	return artistName.split(/[&,]/).map((s) => s.trim()).filter(Boolean);
 }
 
 function toResult(hit: LrcLibHit, inexact: boolean): LyricResult | null {
@@ -61,15 +90,17 @@ function toResult(hit: LrcLibHit, inexact: boolean): LyricResult | null {
 	if (!synced && !plain) return null;
 	return {
 		title: hit.trackName,
-		artists: hit.artistName.split(/[&,]/).map((s) => s.trim()).filter(Boolean),
+		artists: artistsFromHit(hit.artistName),
 		...(synced ? { lines: parseLrc(synced) } : {}),
 		...(plain ? { plain } : {}),
 		inexact,
 		provider: "lrclib",
+		hasWordSync: false,
+		syncLevel: synced ? "line" : "plain",
 	};
 }
 
-/** Fetch lyrics from LRCLib for the given track. */
+/** Fetch line-synced / plain lyrics from LRCLib. */
 export async function searchLrcLib(info: TrackSearchInfo, options: LrcLibSearchOptions): Promise<LyricResult | null> {
 	const params = new URLSearchParams({
 		artist_name: info.artist,

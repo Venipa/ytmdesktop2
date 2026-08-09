@@ -32,7 +32,6 @@ export function createLyricsRenderer(
 		snap: { status: "idle", result: null, videoId: null },
 		showTimeCodes: options.showTimeCodes(),
 		showProgressBar: options.showProgressBar(),
-		showWordSync: options.showWordSync(),
 		settingsEpoch: 0,
 	};
 	let clock: LyricsClockState = { timeMs: 0 };
@@ -114,7 +113,6 @@ export function createLyricsRenderer(
 			patchShell({
 				showTimeCodes: options.showTimeCodes(),
 				showProgressBar: options.showProgressBar(),
-				showWordSync: options.showWordSync(),
 				settingsEpoch: shell.settingsEpoch + 1,
 			});
 			ensureRoot();

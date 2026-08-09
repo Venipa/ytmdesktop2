@@ -71,8 +71,7 @@
 	}
 }
 
-.drag,
-[draggable] {
+.drag {
 	-webkit-app-region: drag;
 }
 
@@ -82,7 +81,7 @@ a,
 input,
 select,
 textarea,
-*[tab-index] {
+[tabindex] {
 	-webkit-app-region: no-drag;
 }
 
@@ -90,7 +89,7 @@ button,
 a,
 div,
 span,
-*[tab-index] {
+[tabindex] {
 	outline: none;
 }
 

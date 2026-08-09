@@ -85,7 +85,7 @@ const features = [
   },
   {
     title: 'Synced lyrics',
-    description: 'Timed lyrics in the YouTube Music Lyrics tab via LRCLib.',
+    description: 'Timed lyrics via Better Lyrics, Unison, and LRCLib.',
     href: `${docsRoute}/features/lyrics/`,
     icon: ScrollTextIcon,
     image: '/images/features-lyrics-player.png',
