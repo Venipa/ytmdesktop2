@@ -19,7 +19,8 @@ env:
   COMPILE_ARTIFACT: electron-compile
 
 jobs:
-  # Shared electron-vite build — pack jobs skip typecheck + vite.
+  # Shared electron-vite build (sidecar builds world0 + embeds).
+  # Pack jobs download this artifact and run electron-builder only (no vite).
   compile:
     runs-on: ubuntu-latest
     outputs:
@@ -96,22 +97,16 @@ jobs:
         run: |
           test -f apps/ytmdesktop2/out/main/index.js
           test -f apps/ytmdesktop2/resources/embeds/now-playing/index.html
+          test -f apps/ytmdesktop2/src/preload/generated/ytmd-world0-host.js
 
-      # Wildcard → artifact root is out contents. Download into apps/ytmdesktop2/out.
+      # out/ + resources/embeds (sidecar). Download to workspace root to restore paths.
       - name: Upload compile artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: apps/ytmdesktop2/out/**
-          if-no-files-found: error
-          retention-days: 3
-
-      # Embeds Vite dist lives outside out/ — pack jobs need it in the asar.
-      - name: Upload embeds artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ env.COMPILE_ARTIFACT }}-embeds
-          path: apps/ytmdesktop2/resources/embeds/**
+          path: |
+            apps/ytmdesktop2/out
+            apps/ytmdesktop2/resources/embeds
           if-no-files-found: error
           retention-days: 3
 
@@ -200,18 +195,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_msvs_version: "2026"
 
-      # After install — shared vite out from compile job.
+      # After install — shared vite out + embeds from compile job (sidecar).
       - name: Download compile artifact
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: apps/ytmdesktop2/out
-
-      - name: Download embeds artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.COMPILE_ARTIFACT }}-embeds
-          path: apps/ytmdesktop2/resources/embeds
+          path: .
 
       - name: Verify compile output
         shell: pwsh
@@ -282,13 +271,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: apps/ytmdesktop2/out
-
-      - name: Download embeds artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.COMPILE_ARTIFACT }}-embeds
-          path: apps/ytmdesktop2/resources/embeds
+          path: .
 
       - name: Verify compile output
         shell: bash
@@ -379,13 +362,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: apps/ytmdesktop2/out
-
-      - name: Download embeds artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.COMPILE_ARTIFACT }}-embeds
-          path: apps/ytmdesktop2/resources/embeds
+          path: .
 
       - name: Verify compile output
         shell: bash
@@ -458,13 +435,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: apps/ytmdesktop2/out
-
-      - name: Download embeds artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.COMPILE_ARTIFACT }}-embeds
-          path: apps/ytmdesktop2/resources/embeds
+          path: .
 
       - name: Verify compile output
         shell: bash
@@ -546,13 +517,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ${{ env.COMPILE_ARTIFACT }}
-          path: apps/ytmdesktop2/out
-
-      - name: Download embeds artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.COMPILE_ARTIFACT }}-embeds
-          path: apps/ytmdesktop2/resources/embeds
+          path: .
 
       - name: Verify compile output
         shell: bash
