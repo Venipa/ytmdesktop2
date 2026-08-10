@@ -19,7 +19,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
 		},
 		{
 			label: updateAvailable ? `Update Available - ${updateInfo?.version ? `Download v${updateInfo.version}` : "Download"}` : "Check for Updates",
-			click: () => (updateAvailable ? applyUpdate(null, false) : checkUpdate()),
+			click: () => (updateAvailable ? applyUpdate(null, false) : checkUpdate({ forceDialog: true })),
 		},
 		{
 			type: "separator",

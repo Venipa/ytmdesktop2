@@ -15,6 +15,7 @@ export function useUpdater() {
 	const checkMutation = trpc.update.check.useMutation();
 	const installMutation = trpc.update.install.useMutation();
 	const cancelMutation = trpc.update.cancel.useMutation();
+	const dismissMutation = trpc.update.dismiss.useMutation();
 
 	trpc.update.onUpdate.useSubscription(undefined, {
 		onData: (info) => utils.update.get.setData(undefined, (info as UpdateInfo | null) ?? null),
@@ -45,6 +46,9 @@ export function useUpdater() {
 
 	const cancel = useCallback(() => cancelMutation.mutateAsync(), [cancelMutation]);
 
+	/** Dismiss update dialog until next app launch (Later). */
+	const dismiss = useCallback(() => dismissMutation.mutateAsync(), [dismissMutation]);
+
 	/** Check for updates, or install if already downloaded. */
 	const runUpdate = useCallback(() => {
 		if (downloaded) return install(true);
@@ -74,6 +78,7 @@ export function useUpdater() {
 		check,
 		install,
 		cancel,
+		dismiss,
 		runUpdate,
 	};
 }

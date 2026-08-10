@@ -178,6 +178,8 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	private _window: BrowserWindow | null = null;
 	private _showUpdateDialogPromise: Promise<void> | null = null;
 	private _ignoreUpdaterEvents = false;
+	/** After "Later" / closing the update window, skip auto dialogs until next app launch. */
+	private _suppressDialogUntilRestart = false;
 
 	constructor(private app: App) {
 		super("update");
@@ -305,7 +307,22 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		if (this.isAutoUpdate) this.quitAndInstall();
 	}
 
-	private async showUpdateDialog(updateInfo: UpdateInfo | null = this._update) {
+	/** User dismissed update UI ("Later" / close). Auto prompts wait until next launch. */
+	dismissUpdateDialog() {
+		this._suppressDialogUntilRestart = true;
+		this.logger.debug("dismissUpdateDialog", { suppressUntilRestart: true });
+		if (this._window && !this._window.isDestroyed()) {
+			this._window.close();
+			return true;
+		}
+		return false;
+	}
+
+	private async showUpdateDialog(updateInfo: UpdateInfo | null = this._update, options: { force?: boolean } = {}) {
+		if (this._suppressDialogUntilRestart && !options.force) {
+			this.logger.debug("showUpdateDialog skipped — dismissed until restart");
+			return;
+		}
 		if (this._showUpdateDialogPromise) {
 			await this._showUpdateDialogPromise;
 			return;
@@ -342,6 +359,8 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 				else events.emit("update", this._update);
 			});
 			this._window.on("closed", () => {
+				// Closing the update window (Later / X) snoozes auto prompts for this session.
+				this._suppressDialogUntilRestart = true;
 				this._window = null;
 			});
 			this._window.show();
@@ -544,11 +563,14 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 		return true;
 	}
 
-	async onCheckUpdate(options: { showDialog?: boolean } = {}) {
+	async onCheckUpdate(options: { showDialog?: boolean; forceDialog?: boolean } = {}) {
 		const showDialog = options.showDialog ?? true;
+		const forceDialog = options.forceDialog ?? false;
 		try {
 			const result = await this._checkUpdate();
-			if (showDialog && result.updateInfo) await this.showUpdateDialog(result.updateInfo);
+			if (showDialog && result.updateInfo) {
+				await this.showUpdateDialog(result.updateInfo, { force: forceDialog });
+			}
 			return result.updateInfo;
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);

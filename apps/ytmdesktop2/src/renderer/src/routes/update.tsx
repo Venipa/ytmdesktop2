@@ -23,8 +23,9 @@ function UpdateActions(props: {
 	installing: boolean;
 	progress: ProgressInfo | null;
 	onInstall: (quitAndInstall: boolean) => void;
+	onLater: () => void;
 }) {
-	const { isMacOS, isDownloading, downloaded, installing, progress, onInstall } = props;
+	const { isMacOS, isDownloading, downloaded, installing, progress, onInstall, onLater } = props;
 	const showDownloadProgress = !!progress && !downloaded && !installing;
 
 	return (
@@ -49,7 +50,7 @@ function UpdateActions(props: {
 			{isDownloading ? (
 				<Button variant="secondary" className="w-full" size={"xl"} disabled>
 					<Spinner size={"sm"} />
-					Downloading…
+					Downloading...
 				</Button>
 			) : downloaded && !installing ? (
 				<div className="flex w-full flex-col gap-2">
@@ -58,7 +59,7 @@ function UpdateActions(props: {
 						Install now
 					</Button>
 					{!isMacOS ? (
-						<Button variant="outline" className="w-full" onClick={() => window.close()}>
+						<Button variant="outline" className="w-full" onClick={onLater}>
 							Later
 						</Button>
 					) : null}
@@ -66,7 +67,7 @@ function UpdateActions(props: {
 			) : installing ? (
 				<div className="flex w-full flex-col items-center gap-2 py-1">
 					<Spinner />
-					<span className="text-xs text-muted-foreground">Installing… app will restart</span>
+					<span className="text-xs text-muted-foreground">Installing... app will restart</span>
 				</div>
 			) : (
 				<div className="flex w-full flex-col gap-2">
@@ -74,7 +75,7 @@ function UpdateActions(props: {
 						<ArrowDownCircleIcon />
 						{isMacOS ? "Download & install" : "Download"}
 					</Button>
-					<Button variant="outline" className="w-full" onClick={() => window.close()}>
+					<Button variant="outline" className="w-full" onClick={onLater}>
 						Later
 					</Button>
 				</div>
@@ -86,7 +87,7 @@ function UpdateActions(props: {
 function UpdatePage() {
 	const currentVersion = window.api.version;
 	const isMacOS = window.api.platform.isMacOS;
-	const { updateInfo, downloaded, progress, checking, installing, status, check, install } = useUpdater();
+	const { updateInfo, downloaded, progress, checking, installing, status, check, install, dismiss } = useUpdater();
 	const isDownloading = status === "downloading" || (!!progress && !downloaded);
 
 	async function installUpdate(quitAndInstall = true) {
@@ -150,6 +151,7 @@ function UpdatePage() {
 							installing={installing}
 							progress={progress}
 							onInstall={(quit) => void installUpdate(quit)}
+							onLater={() => void dismiss()}
 						/>
 					</div>
 				</aside>
