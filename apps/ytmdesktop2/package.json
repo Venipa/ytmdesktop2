@@ -53,7 +53,7 @@
 		"@trpc/client": "10.45.4",
 		"@trpc/react-query": "10.45.4",
 		"@trpc/server": "10.45.4",
-		"@venipa/xosms": "0.8.4",
+		"@venipa/xosms": "0.8.5",
 		"cnfast": "^0.1.0",
 		"date-fns": "^2.29.1",
 		"dompurify": "^3.4.13",
