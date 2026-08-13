@@ -16,12 +16,11 @@ import { useTrack, useTrackState } from "@/hooks/use-track";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { toAppThumbUrl } from "@shared/media/appThumbUrl";
-import { YtmdLink } from "@shared/protocol/ytmdProtocol";
 import { createFileRoute } from "@tanstack/react-router";
 import { cva } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
 import { clamp } from "lodash-es";
-import { ArrowLeftIcon, CopyIcon } from "lucide-react";
+import { ArrowLeftIcon, GripVerticalIcon, PinIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
@@ -160,15 +159,30 @@ function TrayBleedArt({ src, accent }: { src: string | null; accent: string | nu
 	);
 }
 
-function TrayAccentPill({ accent }: { accent: string | null }) {
+function TrayAccentPill({ accent, drag, expanded }: { accent: string | null; drag?: boolean; expanded?: boolean }) {
 	return (
-		<div className="relative z-10 flex w-3 shrink-0 items-stretch justify-center py-2.5 ml-1" aria-hidden>
+		<div
+			className={cn(
+				"relative z-10 flex shrink-0 items-stretch justify-center py-2.5 ml-1 transition-[width] duration-200 ease-out",
+				expanded ? "w-6" : "w-3",
+				drag ? "drag cursor-grab" : "no-drag",
+			)}
+			aria-hidden={!drag}
+			title={drag ? "Drag" : undefined}
+		>
 			<motion.div
-				className="w-1.5 rounded-full bg-accent"
+				className={cn(
+					"pointer-events-none flex items-center justify-center overflow-hidden rounded-full bg-accent transition-[width] duration-200 ease-out",
+					expanded ? "w-4" : "w-1.5",
+				)}
 				initial={false}
 				animate={{ backgroundColor: accent ?? "var(--accent)" }}
 				transition={{ duration: ART_DURATION, ease: ART_EASE }}
-			/>
+			>
+				<GripVerticalIcon
+					className={cn("size-3.5 shrink-0 text-background/80 transition-opacity duration-200", expanded ? "opacity-100" : "opacity-0")}
+				/>
+			</motion.div>
 		</div>
 	);
 }
@@ -295,12 +309,12 @@ function TrayViewPage() {
 	const { enabled: lastFmEnabled, toggleLastFM, lastFM, lastFMLoading, isBusy: lastFmBusy } = useLastFm();
 	const { enabled: discordEnabled, toggle: toggleDiscord, loading: discordLoading, connected: discordConnected, error: discordError } = useDiscord();
 	const [apiEnabled, setApiEnabled] = useSettingsState<boolean>("api.enabled", false);
-	const [linkCopied, setLinkCopied] = useState(false);
-	const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const [pinned, setPinned] = useState(false);
 	const [contentHovered, setContentHovered] = useState(false);
+	const [leftThirdHovered, setLeftThirdHovered] = useState(false);
 	const [chromeTooltipOpen, setChromeTooltipOpen] = useState(false);
 	/** Portaled tooltips leave the tray DOM — keep chrome up while a chrome tooltip is open. */
-	const chromeVisible = contentHovered || chromeTooltipOpen;
+	const chromeVisible = contentHovered || chromeTooltipOpen || pinned;
 
 	const { mutateAsync: next } = trpc.track.next.useMutation();
 	const { mutateAsync: prev } = trpc.track.prev.useMutation();
@@ -311,23 +325,23 @@ function TrayViewPage() {
 	const { mutateAsync: dislike } = trpc.track.dislike.useMutation();
 	const { mutateAsync: hideTrayView } = trpc.trayView.hide.useMutation();
 	const { mutateAsync: openMain } = trpc.trayView.openMain.useMutation();
+	const { mutateAsync: toggleTrayPin } = trpc.trayView.togglePinned.useMutation();
 	const { mutateAsync: openSettings } = trpc.app.openSettings.useMutation();
 
 	useEffect(() => {
 		document.title = "YouTube Music - Tray";
 	}, []);
 
-	useEffect(() => {
-		return () => {
-			if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current);
-		};
-	}, []);
+	trpc.trayView.onState.useSubscription(undefined, {
+		onData: (state) => {
+			if (typeof state?.pinned === "boolean") setPinned(state.pinned);
+		},
+	});
 
 	const thumbnail = toAppThumbUrl(track?.meta?.thumbnail);
 	const playing = !!playState?.playing;
 	const title = track?.video?.title ?? "Nothing playing";
 	const artist = track?.video?.author ?? "";
-	const videoId = track?.video?.videoId ?? null;
 	const hasLike = typeof playState?.liked === "boolean";
 	const hasDislike = typeof playState?.disliked === "boolean";
 	const liveAccent = trackAccent || playState?.accent || null;
@@ -416,15 +430,12 @@ function TrayViewPage() {
 		await openSettings();
 	}
 
-	async function handleCopyYtmdLink() {
-		if (!videoId) return;
+	async function handlePinToggle() {
 		try {
-			await navigator.clipboard.writeText(YtmdLink.share(videoId, track?.context?.urlCanonical));
-			setLinkCopied(true);
-			if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current);
-			linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 1500);
+			const applied = await toggleTrayPin();
+			setPinned(applied);
 		} catch {
-			setLinkCopied(false);
+			/* keep last known pin */
 		}
 	}
 
@@ -500,19 +511,28 @@ function TrayViewPage() {
 		<div
 			className="absolute inset-0 flex overflow-hidden border border-border bg-background text-foreground shadow-sm"
 			onMouseEnter={() => setContentHovered(true)}
-			onMouseLeave={() => setContentHovered(false)}
+			onMouseMove={(ev) => {
+				const { left, width } = ev.currentTarget.getBoundingClientRect();
+				if (width <= 0) return;
+				const inLeftThird = (ev.clientX - left) / width < 1 / 3;
+				setLeftThirdHovered((prev) => (prev === inLeftThird ? prev : inLeftThird));
+			}}
+			onMouseLeave={() => {
+				setContentHovered(false);
+				setLeftThirdHovered(false);
+			}}
 		>
 			<TrayBleedArt src={artSrc} accent={displayAccent} />
-			<TrayAccentPill accent={displayAccent} />
+			<TrayAccentPill accent={displayAccent} drag={pinned} expanded={leftThirdHovered} />
 
-			<div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
+			<div className="no-drag relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
 				<div className="relative z-10 flex min-h-0 flex-1">
 					{/* Player column */}
 					<div className="relative flex min-w-0 flex-1 flex-col px-3 pt-3 pb-2">
 						{/* Chrome: fade in while pointer over content (or chrome tooltip open) */}
 						<div
 							className={cn(
-								"absolute top-2 right-2 z-20 flex items-center gap-0.5 rounded-md bg-background/60 p-0.5 shadow-sm backdrop-blur-sm",
+								"no-drag absolute top-2 right-2 z-20 flex items-center gap-0.5 rounded-md bg-background/60 p-0.5 shadow-sm backdrop-blur-sm",
 								"transition-[opacity,transform] duration-200 ease-out",
 								chromeVisible
 									? "pointer-events-auto translate-y-0 opacity-100"
@@ -523,15 +543,22 @@ function TrayViewPage() {
 								<TooltipTrigger
 									render={
 										<ChromeButton
-											aria-label={linkCopied ? "Copied" : "Copy ytmd link"}
-											disabled={!videoId}
-											onClick={() => void handleCopyYtmdLink()}
+											aria-label={pinned ? "Unpin" : "Pin"}
+											aria-pressed={pinned}
+											data-active={pinned ? "true" : undefined}
+											onPointerDown={(ev) => {
+												if (ev.button !== 0) return;
+												ev.preventDefault();
+												ev.stopPropagation();
+												void handlePinToggle();
+											}}
+											className={cn("no-drag", pinned && "text-foreground bg-accent/20")}
 										>
-											<CopyIcon />
+											<PinIcon className={cn(pinned && "fill-current")} />
 										</ChromeButton>
 									}
 								/>
-								<TooltipContent side="bottom">{linkCopied ? "Copied" : "Copy ytmd link"}</TooltipContent>
+								<TooltipContent side="bottom">{pinned ? "Unpin" : "Pin"}</TooltipContent>
 							</Tooltip>
 							<Tooltip onOpenChange={setChromeTooltipOpen}>
 								<TooltipTrigger

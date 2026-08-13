@@ -45,9 +45,27 @@ export class PluginManager {
 	private pluginUtils = createPluginUtils();
 
 	constructor() {
-		const api = getPreloadApi();
-		this.settingsPromise = api.settingsProvider.getAll({}).then((x) => (window.__ytd_settings = merge({}, x)));
+		this.settingsPromise = this.loadSettings();
 		this.loadPlugins();
+	}
+
+	private async loadSettings(): Promise<void> {
+		const api = getPreloadApi();
+		console.info("[YTMD][preload] settings getAll start");
+		const timeoutMs = 4000;
+		try {
+			const x = await Promise.race([
+				api.settingsProvider.getAll({}),
+				new Promise<never>((_, reject) => {
+					setTimeout(() => reject(new Error(`settings getAll timeout ${timeoutMs}ms`)), timeoutMs);
+				}),
+			]);
+			window.__ytd_settings = merge({}, x);
+			console.info("[YTMD][preload] settings getAll ok");
+		} catch (err) {
+			console.warn("[YTMD][preload] settings getAll failed, continue empty", err);
+			window.__ytd_settings = window.__ytd_settings ?? {};
+		}
 	}
 
 	private loadPlugins(): void {
@@ -153,10 +171,13 @@ export class PluginManager {
 	/** Inject page-world host (onPlayerApiReady + DOM plugins). */
 	private async injectWorld0Host(): Promise<void> {
 		try {
+			console.info("[YTMD][preload] world0 inject start", { bytes: world0HostSource.length });
 			await getPreloadDomUtils().createAndRunScript(world0HostSource, "ytmd-world0-host");
 			this.log.debug("world-0 host injected");
+			console.info("[YTMD][preload] world0 inject ok");
 		} catch (err) {
 			this.log.error("world-0 host inject failed", err);
+			console.warn("[YTMD][preload] world0 inject failed", err);
 		}
 	}
 
@@ -224,7 +245,7 @@ export class PluginManager {
 		return () => style();
 	}
 	public async initialize(force?: boolean): Promise<void> {
-		await this.settingsPromise;
+		console.info("[YTMD][preload] initialize enter", { readyState: document.readyState, force: !!force });
 
 		if (window.isYTMLoaded?.() && !force) {
 			throw new Error("YTMD is already loaded, " + pkg.version);
@@ -235,32 +256,54 @@ export class PluginManager {
 
 		this.setupSettingsListener();
 		this.log.debug("dom init...");
-		const markReady = () => {
+		console.info("[YTMD][preload] waiting ensureDomLoaded", { readyState: document.readyState });
+		const markReady = async () => {
 			getPreloadApi().emit("app.loadEnd");
 			this.isLoaded = true;
+			this.log.info("markReady: post ytmd-ready (preload world)", {
+				isolated: process.contextIsolated,
+				readyState: document.readyState,
+			});
+			console.info("[YTMD][preload] postMessage ytmd-ready");
 			window.postMessage("ytmd-ready", "*");
+			try {
+				await getPreloadDomUtils().createAndRunScript(
+					`console.info("[YTMD][page] posting ytmd-ready"); window.postMessage("ytmd-ready","*");`,
+					"ytmd-ready",
+				);
+				this.log.info("markReady: page ping ran");
+			} catch (err) {
+				this.log.warn("ytmd-ready page ping failed", err);
+			}
 		};
 		await this.removeChromecastIcon().catch((ex) => this.log.error("removeChromecastIcon failed", ex));
 		await new Promise<void>((resolve, reject) =>
 			getPreloadDomUtils().ensureDomLoaded(async () => {
 				try {
+					console.info("[YTMD][preload] dom loaded", { host: location.host, readyState: document.readyState });
+					// Hide loading overlay before plugins/player — those can hang.
+					await markReady();
+					await this.settingsPromise;
+					console.info("[YTMD][preload] initialize after settings");
 					if (isYoutubeMusicHost()) {
+						console.info("[YTMD][preload] initializePlugins");
 						await this.initializePlugins();
-						// Signed-out shells often never flip isReady() — soft-fail so loadEnd still fires.
+						console.info("[YTMD][preload] waitForPlayerReady");
 						await this.waitForPlayerReady().catch((err) => {
 							this.log.warn("ytplayer not ready, continuing", err);
+							console.warn("[YTMD][preload] ytplayer not ready, continuing", err);
 						});
 						this.log.debug("ytplayer ready");
+						console.info("[YTMD][preload] afterInit + cmds");
 
 						await this.runAfterInitHooks();
 						await this.initializePluginCommands();
 					}
 
-					markReady();
 					resolve();
 				} catch (ex) {
 					this.log.error("Failed to initialize plugins", ex);
-					if (!this.isLoaded) markReady();
+					if (!this.isLoaded) await markReady();
 					reject(ex);
 				}
 			}),

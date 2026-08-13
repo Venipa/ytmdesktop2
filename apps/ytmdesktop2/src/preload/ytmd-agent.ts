@@ -3,7 +3,10 @@
  * Readiness flags + `__YTMD_HOOK__` bag + store capture from DOM. No Node.
  */
 export const YTMD_AGENT_SOURCE = `(() => {
-  if (window.__YTMD_AGENT__) return;
+  if (window.__YTMD_AGENT__) {
+    console.info("[YTMD][page] agent already present");
+    return;
+  }
   window.__YTMD_AGENT__ = { version: 1 };
   window.__YTMD_HOOK__ = window.__YTMD_HOOK__ || {};
   let loaded = false;
@@ -11,8 +14,11 @@ export const YTMD_AGENT_SOURCE = `(() => {
     return loaded;
   };
   window.addEventListener("message", function (ev) {
-    if (ev.data === "ytmd-ready") loaded = true;
+    if (ev.data !== "ytmd-ready") return;
+    loaded = true;
+    console.info("[YTMD][page] got ytmd-ready", { origin: ev.origin, source: ev.source === window ? "same-window" : "other" });
   });
+  console.info("[YTMD][page] agent injected, waiting for ytmd-ready");
 
   function isYtmStore(value) {
     return !!(value && typeof value === "object" && typeof value.getState === "function" && typeof value.dispatch === "function");

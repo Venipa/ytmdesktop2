@@ -49,12 +49,15 @@ async function injectYtmdAgent(): Promise<void> {
 	const frame = webFrame as typeof webFrame & {
 		executeJavaScriptInIsolatedWorld?: (worldId: number, scripts: { code: string }[]) => Promise<unknown>;
 	};
+	log.info("inject ytmd-agent", { isolated: process.contextIsolated, readyState: document.readyState });
+	console.info("[YTMD][preload] inject agent", { isolated: process.contextIsolated, readyState: document.readyState });
 	try {
 		if (typeof frame.executeJavaScriptInIsolatedWorld === "function") {
 			await frame.executeJavaScriptInIsolatedWorld(0, [{ code: YTMD_AGENT_SOURCE }]);
 		} else {
 			await webFrame.executeJavaScript(YTMD_AGENT_SOURCE);
 		}
+		log.info("ytmd-agent inject ok");
 	} catch (err) {
 		log.warn("ytmd-agent inject failed", err);
 	}
@@ -66,11 +69,23 @@ const initFn = initUtils.createInitFunction(pluginManager);
 window.__ytmd_loadingPromise = domUtils.createLoadingPromise();
 assignPreload("__initYTMD", initFn);
 
-process.on("loaded", () => {
-	// Agent + init in parallel — do not block plugin boot on agent inject.
-	void injectYtmdAgent();
-	initFn().catch((err) => {
+let bootStarted = false;
+async function bootYtmd(): Promise<void> {
+	// Agent must listen before plugins post ytmd-ready, else page isYTMLoaded stays false.
+	await injectYtmdAgent();
+	await initFn();
+}
+function scheduleBoot(from: string): void {
+	if (bootStarted) {
+		log.info("boot already started, skip", { from });
+		return;
+	}
+	bootStarted = true;
+	log.info("boot start", { from, readyState: document.readyState });
+	console.info("[YTMD][preload] boot start", { from, readyState: document.readyState });
+	void bootYtmd().catch((err) => {
 		logger.error("Failed to initialize YTMD", err);
-		throw err;
 	});
-});
+}
+process.once("loaded", () => scheduleBoot("process.loaded"));
+exposeData.domUtils.ensureDomLoaded(() => scheduleBoot("dom"));

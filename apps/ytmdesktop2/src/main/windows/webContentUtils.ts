@@ -41,25 +41,32 @@ export function lockSizeToParent(win: BrowserWindow, options: LockSizeOptions = 
 }
 export function getWindowState(win: BrowserWindow) {
 	if (!win || win.isDestroyed()) return null;
-	const { maximizable, minimizable, movable, fullScreen, fullScreenable, menuBarVisible, id, resizable, title, closable, autoHideMenuBar } = win;
+	const bounds = win.getBounds();
 	return {
-		id,
+		id: win.id,
 		maximized: win.isMaximized(),
 		minimized: win.isMinimized(),
 		alwaysOnTop: win.isAlwaysOnTop(),
-		closable,
-		maximizable,
-		minimizable,
-		movable,
-		resizable,
-		menuBarVisible,
+		closable: win.closable,
+		maximizable: win.maximizable,
+		minimizable: win.minimizable,
+		movable: win.movable,
+		resizable: win.resizable,
+		menuBarVisible: win.menuBarVisible,
 		simpleFullscreen: platform.isMacOS && win.isSimpleFullScreen(),
-		autoHideMenuBar,
-		fullScreen,
-		fullScreenable,
-		title,
-		platform: platform,
-		...win.getBounds(),
+		autoHideMenuBar: win.autoHideMenuBar,
+		fullScreen: win.fullScreen,
+		fullScreenable: win.fullScreenable,
+		title: win.title,
+		platform: {
+			isWindows: process.platform === "win32",
+			isMacOS: process.platform === "darwin",
+			isLinux: process.platform === "linux",
+		},
+		x: bounds.x,
+		y: bounds.y,
+		width: bounds.width,
+		height: bounds.height,
 	};
 }
 export function getWindowStateFromContext<

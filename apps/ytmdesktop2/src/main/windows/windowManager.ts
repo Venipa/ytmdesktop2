@@ -227,6 +227,14 @@ export class WindowManager {
 				this.handleGoogleLogin(GOOGLE_LOGIN_URL, view);
 			}
 		});
+		// view.webContents.on("did-finish-load", () => {
+		// 	if (this._youtubeReady) return;
+		// 	setTimeout(() => {
+		// 		if (this._youtubeReady) return;
+		// 		logger.warn("app.loadEnd fallback after youtube did-finish-load");
+		// 		serverMain.emit("app.loadEnd");
+		// 	}, 2500);
+		// });
 		view.webContents.on("page-title-updated", (ev, title) => view.webContents.emit("window-title-updated", title));
 	}
 

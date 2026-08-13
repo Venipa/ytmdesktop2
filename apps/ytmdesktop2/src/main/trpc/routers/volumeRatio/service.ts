@@ -30,6 +30,6 @@ export default class VolumeRatioProvider extends BaseProvider implements AfterIn
 	}
 	async forceUpdateVolume(volume?: number) {
 		this.logger.debug("Force updating volume ratio", volume ?? "refreshing");
-		return await this.executeCommand<number>("force_update", volume).catch(this.logger.error);
+		return await this.executeCommand<number>("force_update", volume).catch((err) => this.logger.error(err));
 	}
 }

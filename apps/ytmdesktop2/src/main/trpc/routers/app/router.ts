@@ -30,7 +30,10 @@ export const appServiceRouter = router({
 		serverMain.emit("app.quit", null, input ?? false);
 	}),
 	openWindow: publicProcedure.input(z.string()).mutation(({ ctx, input }): Promise<void> => provider(ctx, "app").openSubWindow(input)),
-	openSettings: publicProcedure.mutation(({ ctx }): Promise<unknown> => provider(ctx, "app").openSettingsWindow()),
+	openSettings: publicProcedure.mutation(async ({ ctx }): Promise<boolean> => {
+		await provider(ctx, "app").openSettingsWindow();
+		return true;
+	}),
 	closeWindow: publicProcedure.input(z.string().optional()).mutation(({ ctx, input }): void => {
 		if (input) {
 			provider(ctx, "app").closeSubWindow(ctx.event as Electron.IpcMainEvent, input);

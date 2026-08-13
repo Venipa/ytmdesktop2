@@ -15,6 +15,8 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	private _blurHiddenAt = 0;
 	/** Ignore blur while showOnActiveDesktop toggles visibility. */
 	private _suppressBlurUntil = 0;
+	/** Pinned: movable, always on top, click-away does not hide. */
+	private _pinned = false;
 
 	constructor(private app: App) {
 		super("trayView");
@@ -62,11 +64,11 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 				...(platform.isMacOS ? { type: "panel" as const } : {}),
 			});
 
-			win.setAlwaysOnTop(true, "pop-up-menu");
 			win.setResizable(false);
 			win.setMinimizable(false);
 			win.setMaximizable(false);
 			win.webContents.setBackgroundThrottling(false);
+			this.applyPinFlags(win);
 
 			win.on("close", (ev) => {
 				ev.preventDefault();
@@ -74,9 +76,10 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 				this.emitState(false);
 			});
 
-			// Outside click / focus loss closes popup (all platforms + dev).
+			// Outside click / focus loss closes popup unless pinned.
 			win.on("blur", () => {
 				if (win.isDestroyed() || !win.isVisible()) return;
+				if (this._pinned) return;
 				if (Date.now() < this._suppressBlurUntil) return;
 				win.hide();
 				this._blurHiddenAt = Date.now();
@@ -105,10 +108,48 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	}
 
 	private emitState(active: boolean) {
-		this.windowContext.sendToAllViews("trayview.state", { active });
+		this.windowContext.sendToAllViews("trayview.state", { active, pinned: this._pinned });
+	}
+
+	private applyPinFlags(win: BrowserWindow) {
+		if (win.isDestroyed()) return;
+		this.suppressBlur(400);
+		try {
+			win.setMovable(this._pinned);
+			// Drop always-on-top first so Windows actually leaves the floating level.
+			win.setAlwaysOnTop(false);
+			if (this._pinned) {
+				win.setAlwaysOnTop(true, "floating");
+				win.setVisibleOnAllWorkspaces(true, {
+					visibleOnFullScreen: true,
+					skipTransformProcessType: true,
+				});
+			} else {
+				win.setVisibleOnAllWorkspaces(false);
+				win.setAlwaysOnTop(true, "pop-up-menu");
+			}
+		} catch (err) {
+			this.logger.error("applyPinFlags failed", err);
+		}
+	}
+
+	setPinned(pinned: boolean): boolean {
+		this._pinned = pinned;
+		const win = this.getWindow();
+		if (win) {
+			this.applyPinFlags(win);
+			if (!this._pinned) this.position(win);
+		}
+		this.emitState(win?.isVisible() ?? false);
+		return this._pinned;
+	}
+
+	togglePinned(): boolean {
+		return this.setPinned(!this._pinned);
 	}
 
 	private position(win: BrowserWindow) {
+		if (this._pinned) return;
 		const tray = this.trayProvider?.Tray;
 		positionNearTray(win, tray && !tray.isDestroyed() ? tray : null, {
 			width: TRAY_VIEW_WIDTH,
@@ -119,9 +160,8 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	private present(win: BrowserWindow) {
 		this.position(win);
 		showOnActiveDesktop(win, { suppressBlur: (ms) => this.suppressBlur(ms) });
-		// Re-assert after workspace dance (some DEs drop always-on-top).
 		if (!win.isDestroyed()) {
-			win.setAlwaysOnTop(true, "pop-up-menu");
+			this.applyPinFlags(win);
 			win.moveTop();
 		}
 	}
@@ -134,6 +174,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	}
 
 	async hide(): Promise<void> {
+		if (this._pinned) return;
 		const win = this.getWindow();
 		if (!win) return;
 		if (win.isVisible()) win.hide();

@@ -17,8 +17,9 @@ The tray view is a small always-on-top popup anchored to the system tray (or men
 2. Click the YTMDesktop2 tray icon.
 3. Use transport controls, seek, like/dislike, and quick toggles for Discord, Last.fm, and the local API.
 4. Open the main window or Settings from the popup, or press **Escape** / click away to dismiss.
+5. Use **Pin** to keep the popup on top. While pinned it stays open after click-away and you can drag it by the colored accent pill.
 
-The popup positions itself near the tray icon and clamps to the current display work area. On multi-desktop setups it prefers the active desktop when shown.
+The popup positions itself near the tray icon and clamps to the current display work area. On multi-desktop setups it prefers the active desktop when shown. A pinned window keeps its last position instead of snapping back to the tray.
 
 ## Seek tooltip
 
@@ -30,7 +31,7 @@ Hover or drag the progress thumb to see the exact timestamp in a tooltip while s
 
 - Pair with **Minimize to tray on close** for a tray-first workflow.
 - Tray icon artwork follows platform conventions (including template icons on macOS).
-- Copy a `ytmd://` share link for the current track — see [shared links](/docs/features/shared-links).
+- Pin the popup to move it and keep it above other windows; drag from the accent pill while pinned.
 - Album art is served through the [thumbnail cache](/docs/internals/thumbnail-cache) (`ytmd-thumb://`).
 - The former [mini player](/docs/features/mini-player) was removed in 1.4.0; tray view replaces it.
 

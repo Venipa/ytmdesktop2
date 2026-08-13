@@ -158,7 +158,6 @@ function attachProcessErrorHandlers() {
 	});
 	process.on("unhandledRejection", (reason) => {
 		logger.error("unhandledRejection", reason);
-		showFatalErrorDialog("unhandledRejection", reason);
 	});
 }
 
