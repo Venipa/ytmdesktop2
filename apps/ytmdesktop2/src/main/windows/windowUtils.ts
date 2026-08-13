@@ -371,7 +371,15 @@ export function getBoundsWithScaleFactor(win: BrowserWindow) {
 	const { width: dWidth, height: dHeight, scaleFactor } = calculateSizeWithScaleFactor(x, y, width, height);
 	return { x, y, width: dWidth, height: dHeight, scaleFactor };
 }
-export async function wrapWindowHandler(win: BrowserWindow, windowName: string, { width: defaultWidth, height: defaultHeight }: { width: number; height: number }) {
+export async function wrapWindowHandler(
+	win: BrowserWindow,
+	windowName: string,
+	{
+		width: defaultWidth,
+		height: defaultHeight,
+		persist,
+	}: { width: number; height: number; persist?: () => boolean },
+) {
 	const key = "window-state";
 	const name = `window-state-${windowName}`;
 	const store = createYmlStore(name);
@@ -381,6 +389,8 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 	};
 	let state: { width: number; height: number; x: number; y: number; maximized?: boolean } | null = null;
 	const restore = () => store.get(key, defaultSize);
+	const raw = restore();
+	const restored = typeof (raw as { x?: number })?.x === "number" && typeof (raw as { y?: number })?.y === "number";
 
 	const getCurrentPosition = () => {
 		const [x, y] = win.getPosition();
@@ -429,13 +439,14 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 		return windowState;
 	};
 	const saveState = () => {
+		if (persist && !persist()) return;
 		if (!win.isMinimized() && !win.isMaximized()) {
 			state = Object.assign({}, state, getCurrentPosition());
 		}
 		store.set(key, state);
 		log.debug("saveWindowState", state);
 	};
-	state = ensureVisibleOnSomeDisplay(restore());
+	state = ensureVisibleOnSomeDisplay(raw);
 
 	// Electron getBounds/setBounds use DIP already — do not divide by display.scaleFactor
 	// (that shrunk windows on Windows 125%/150% HiDPI).
@@ -443,7 +454,7 @@ export async function wrapWindowHandler(win: BrowserWindow, windowName: string, 
 		displayScaleFactor: platform.isWindows && state ? screen.getDisplayNearestPoint({ x: state.x, y: state.y }).scaleFactor : 1,
 	});
 	win.on("close", saveState);
-	return { state, saveState };
+	return { state, saveState, restored };
 }
 export async function onWindowLoad(
 	win: WebContentsView | BrowserWindow,

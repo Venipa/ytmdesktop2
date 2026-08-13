@@ -143,6 +143,23 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 			store.set("lyrics.providers", next as SettingsStore["lyrics"]["providers"]);
 		},
 	},
+	{
+		hook(store) {
+			const current = (store.store as SettingsStore)?.trayView?.pinned;
+			if (typeof current === "boolean") return;
+			let pinned = false;
+			try {
+				const legacyPath = path.resolve(app.getPath("userData"), "tray-view.yml");
+				if (statSync(legacyPath, { throwIfNoEntry: false })) {
+					const raw = readFileSync(legacyPath, "utf8");
+					pinned = /^\s*pinned:\s*true\s*$/m.test(raw);
+				}
+			} catch {
+				pinned = false;
+			}
+			store.set("trayView.pinned", pinned);
+		},
+	},
 ];
 
 export default migrations;

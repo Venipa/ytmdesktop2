@@ -1,3 +1,11 @@
+import { toAppThumbUrl } from "@shared/media/appThumbUrl";
+import { createFileRoute } from "@tanstack/react-router";
+import { cva } from "class-variance-authority";
+import { intervalToDuration } from "date-fns";
+import { clamp } from "lodash-es";
+import { ArrowLeftIcon, GripVerticalIcon, PinIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ApiIcon from "@/assets/icons/chip.svg?react";
 import DiscordIcon from "@/assets/icons/discord-rpc.svg?react";
 import LastFMIcon from "@/assets/icons/lastfm.svg?react";
@@ -15,14 +23,6 @@ import { useSettingsState } from "@/hooks/use-settings";
 import { useTrack, useTrackState } from "@/hooks/use-track";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { toAppThumbUrl } from "@shared/media/appThumbUrl";
-import { createFileRoute } from "@tanstack/react-router";
-import { cva } from "class-variance-authority";
-import { intervalToDuration } from "date-fns";
-import { clamp } from "lodash-es";
-import { ArrowLeftIcon, GripVerticalIcon, PinIcon } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 export const Route = createFileRoute("/trayview")({
 	component: TrayViewPage,
@@ -160,12 +160,22 @@ function TrayBleedArt({ src, accent }: { src: string | null; accent: string | nu
 }
 
 function TrayAccentPill({ accent, drag, expanded }: { accent: string | null; drag?: boolean; expanded?: boolean }) {
+	const [dragLayer, setDragLayer] = useState(false);
+
+	useEffect(() => {
+		if (!drag || !expanded) {
+			setDragLayer(false);
+			return;
+		}
+		const id = window.setTimeout(() => setDragLayer(true), 200);
+		return () => clearTimeout(id);
+	}, [drag, expanded]);
+
 	return (
 		<div
 			className={cn(
-				"relative z-10 flex shrink-0 items-stretch justify-center py-2.5 ml-1 transition-[width] duration-200 ease-out",
+				"relative z-10 flex shrink-0 items-stretch justify-center py-2.5 ml-1 no-drag transition-[width] duration-200 ease-out",
 				expanded ? "w-6" : "w-3",
-				drag ? "drag cursor-grab" : "no-drag",
 			)}
 			aria-hidden={!drag}
 			title={drag ? "Drag" : undefined}
@@ -183,6 +193,7 @@ function TrayAccentPill({ accent, drag, expanded }: { accent: string | null; dra
 					className={cn("size-3.5 shrink-0 text-background/80 transition-opacity duration-200", expanded ? "opacity-100" : "opacity-0")}
 				/>
 			</motion.div>
+			{dragLayer ? <div className="drag absolute inset-0 z-10 cursor-grab" /> : null}
 		</div>
 	);
 }
@@ -297,6 +308,9 @@ function ControlToggle({
 	);
 }
 
+function pointerInsideWindow(ev: { clientX: number; clientY: number }): boolean {
+	return ev.clientX >= 0 && ev.clientY >= 0 && ev.clientX < window.innerWidth && ev.clientY < window.innerHeight;
+}
 function TrayViewPage() {
 	const utils = trpc.useUtils();
 	const track = useTrack();
@@ -309,7 +323,7 @@ function TrayViewPage() {
 	const { enabled: lastFmEnabled, toggleLastFM, lastFM, lastFMLoading, isBusy: lastFmBusy } = useLastFm();
 	const { enabled: discordEnabled, toggle: toggleDiscord, loading: discordLoading, connected: discordConnected, error: discordError } = useDiscord();
 	const [apiEnabled, setApiEnabled] = useSettingsState<boolean>("api.enabled", false);
-	const [pinned, setPinned] = useState(false);
+	const { data: pinned = false } = trpc.trayView.pinned.useQuery();
 	const [contentHovered, setContentHovered] = useState(false);
 	const [leftThirdHovered, setLeftThirdHovered] = useState(false);
 	const [chromeTooltipOpen, setChromeTooltipOpen] = useState(false);
@@ -332,9 +346,26 @@ function TrayViewPage() {
 		document.title = "YouTube Music - Tray";
 	}, []);
 
+	useEffect(() => {
+		const collapseIfLeftWindow = (ev: any) => {
+			if (pointerInsideWindow(ev)) return;
+			setLeftThirdHovered(false);
+		};
+		const collapseOnBlur = () => setLeftThirdHovered(false);
+		const root = document.documentElement;
+		root.addEventListener("mouseenter", collapseIfLeftWindow);
+    root.addEventListener("mouseleave", collapseIfLeftWindow as any);
+		window.addEventListener("blur", collapseOnBlur);
+		return () => {
+			root.removeEventListener("mouseenter", collapseIfLeftWindow);
+			root.removeEventListener("mouseleave", collapseIfLeftWindow as any);
+			window.removeEventListener("blur", collapseOnBlur);
+		};
+	}, []);
+
 	trpc.trayView.onState.useSubscription(undefined, {
 		onData: (state) => {
-			if (typeof state?.pinned === "boolean") setPinned(state.pinned);
+			if (typeof state?.pinned === "boolean") utils.trayView.pinned.setData(undefined, state.pinned);
 		},
 	});
 
@@ -433,7 +464,7 @@ function TrayViewPage() {
 	async function handlePinToggle() {
 		try {
 			const applied = await toggleTrayPin();
-			setPinned(applied);
+			utils.trayView.pinned.setData(undefined, applied);
 		} catch {
 			/* keep last known pin */
 		}
@@ -510,20 +541,26 @@ function TrayViewPage() {
 	return (
 		<div
 			className="absolute inset-0 flex overflow-hidden border border-border bg-background text-foreground shadow-sm"
-			onMouseEnter={() => setContentHovered(true)}
+			onMouseEnter={(ev) => {
+				setContentHovered(true);
+				const { left, width } = ev.currentTarget.getBoundingClientRect();
+				if (width <= 0) return;
+				setLeftThirdHovered((ev.clientX - left) / width < 1 / 3);
+			}}
 			onMouseMove={(ev) => {
 				const { left, width } = ev.currentTarget.getBoundingClientRect();
 				if (width <= 0) return;
 				const inLeftThird = (ev.clientX - left) / width < 1 / 3;
 				setLeftThirdHovered((prev) => (prev === inLeftThird ? prev : inLeftThird));
 			}}
-			onMouseLeave={() => {
+			onMouseLeave={(ev) => {
 				setContentHovered(false);
+				if (pointerInsideWindow(ev)) return;
 				setLeftThirdHovered(false);
 			}}
 		>
 			<TrayBleedArt src={artSrc} accent={displayAccent} />
-			<TrayAccentPill accent={displayAccent} drag={pinned} expanded={leftThirdHovered} />
+			<TrayAccentPill accent={displayAccent} drag={pinned} expanded={pinned && leftThirdHovered} />
 
 			<div className="no-drag relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
 				<div className="relative z-10 flex min-h-0 flex-1">

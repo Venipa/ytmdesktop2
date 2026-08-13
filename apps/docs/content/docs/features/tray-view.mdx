@@ -17,7 +17,7 @@ The tray view is a small always-on-top popup anchored to the system tray (or men
 2. Click the YTMDesktop2 tray icon.
 3. Use transport controls, seek, like/dislike, and quick toggles for Discord, Last.fm, and the local API.
 4. Open the main window or Settings from the popup, or press **Escape** / click away to dismiss.
-5. Use **Pin** to keep the popup on top. While pinned it stays open after click-away and you can drag it by the colored accent pill.
+5. Use **Pin** to keep the popup on top. While pinned it stays open after click-away and you can drag it by the colored accent pill. Pin is stored in app settings (`trayView.pinned`); position uses the same window-state store as the main window.
 
 The popup positions itself near the tray icon and clamps to the current display work area. On multi-desktop setups it prefers the active desktop when shown. A pinned window keeps its last position instead of snapping back to the tray.
 

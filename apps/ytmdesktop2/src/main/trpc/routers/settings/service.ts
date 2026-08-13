@@ -34,6 +34,9 @@ const defaultSettings = {
 		enableTaskbarProgress: true,
 		zoomFactor: 1,
 	},
+	trayView: {
+		pinned: false,
+	},
 	volumeRatio: {
 		enabled: true,
 		volume: 0.05,

@@ -12,5 +12,6 @@ export const trayViewRouter = router({
 	openMain: publicProcedure.mutation(({ ctx }) => provider(ctx, "trayView").openMain()),
 	setPinned: publicProcedure.input(z.object({ pinned: z.boolean() })).mutation(({ ctx, input }) => provider(ctx, "trayView").setPinned(input.pinned)),
 	togglePinned: publicProcedure.mutation(({ ctx }) => provider(ctx, "trayView").togglePinned()),
+	pinned: publicProcedure.query(({ ctx }) => provider(ctx, "trayView").isPinned()),
 	onState: publicProcedure.subscription(() => fromIpcEvent<TrayViewState | null>("trayview.state")),
 });
