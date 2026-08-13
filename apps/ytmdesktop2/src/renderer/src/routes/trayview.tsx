@@ -347,19 +347,17 @@ function TrayViewPage() {
 	}, []);
 
 	useEffect(() => {
-		const collapseIfLeftWindow = (ev: any) => {
+		const collapse = (ev: { clientX: number; clientY: number }) => {
 			if (pointerInsideWindow(ev)) return;
 			setLeftThirdHovered(false);
 		};
-		const collapseOnBlur = () => setLeftThirdHovered(false);
+		const onBlur = () => setLeftThirdHovered(false);
 		const root = document.documentElement;
-		root.addEventListener("mouseenter", collapseIfLeftWindow);
-    root.addEventListener("mouseleave", collapseIfLeftWindow as any);
-		window.addEventListener("blur", collapseOnBlur);
+		root.addEventListener("mouseleave", collapse);
+		window.addEventListener("blur", onBlur);
 		return () => {
-			root.removeEventListener("mouseenter", collapseIfLeftWindow);
-			root.removeEventListener("mouseleave", collapseIfLeftWindow as any);
-			window.removeEventListener("blur", collapseOnBlur);
+			root.removeEventListener("mouseleave", collapse);
+			window.removeEventListener("blur", onBlur);
 		};
 	}, []);
 

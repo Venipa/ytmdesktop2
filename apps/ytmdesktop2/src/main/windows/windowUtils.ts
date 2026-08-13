@@ -390,7 +390,7 @@ export async function wrapWindowHandler(
 	let state: { width: number; height: number; x: number; y: number; maximized?: boolean } | null = null;
 	const restore = () => store.get(key, defaultSize);
 	const raw = restore();
-	const restored = typeof (raw as { x?: number })?.x === "number" && typeof (raw as { y?: number })?.y === "number";
+	const restored = typeof raw?.x === "number" && typeof raw?.y === "number";
 
 	const getCurrentPosition = () => {
 		const [x, y] = win.getPosition();
