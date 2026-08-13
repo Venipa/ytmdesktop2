@@ -183,6 +183,10 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 
 	constructor(private app: App) {
 		super("update");
+		this.onCheckUpdate = this.onCheckUpdate.bind(this);
+		this.onAutoUpdateRun = this.onAutoUpdateRun.bind(this);
+		this.onDownloadUpdate = this.onDownloadUpdate.bind(this);
+		this.onDownloadUpdateCancel = this.onDownloadUpdateCancel.bind(this);
 	}
 
 	get settingsInstance(): SettingsProvider {
@@ -574,7 +578,11 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 			return result.updateInfo;
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
-			this.logger.error(message);
+			try {
+				this.logger.error(message);
+			} catch {
+				/* unbound this (destructured method) */
+			}
 			return null;
 		}
 	}

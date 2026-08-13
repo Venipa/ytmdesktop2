@@ -1,6 +1,6 @@
 import { formatLogArgs, Logger, LogLevel, logLevelLabel, type LogOutput, logger } from "@shared/utils/console";
 import { format } from "date-fns";
-import { app } from "electron";
+import { app, dialog } from "electron";
 import fs, { type WriteStream } from "node:fs";
 import path from "node:path";
 
@@ -124,14 +124,41 @@ function createFileLogOutput(): LogOutput {
 	};
 }
 
+let fatalErrorDialogShown = false;
+
+function formatFatalReason(reason: unknown): string {
+	if (reason instanceof Error) {
+		const stack = reason.stack?.trim();
+		return stack && stack.length > 0 ? stack : `${reason.name}: ${reason.message}`;
+	}
+	if (typeof reason === "string") return reason;
+	try {
+		return JSON.stringify(reason);
+	} catch {
+		return String(reason);
+	}
+}
+
+function showFatalErrorDialog(kind: string, reason: unknown): void {
+	if (fatalErrorDialogShown) return;
+	fatalErrorDialogShown = true;
+	try {
+		dialog.showErrorBox(`YouTube Music for Desktop: ${kind}`, formatFatalReason(reason).slice(0, 4000));
+	} catch {
+		/* dialog can fail if Electron is tearing down */
+	}
+}
+
 function attachProcessErrorHandlers() {
 	if (processHandlersAttached) return;
 	processHandlersAttached = true;
 	process.on("uncaughtException", (err) => {
 		logger.error("uncaughtException", err);
+		showFatalErrorDialog("uncaughtException", err);
 	});
 	process.on("unhandledRejection", (reason) => {
 		logger.error("unhandledRejection", reason);
+		showFatalErrorDialog("unhandledRejection", reason);
 	});
 }
 

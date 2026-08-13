@@ -10,7 +10,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
 	const { instance: sp } = settings;
 	const appProvider = provider.getProvider("app") as AppProvider;
 	const { app } = appProvider;
-	const { updateAvailable, onCheckUpdate: checkUpdate, onAutoUpdateRun: applyUpdate, updateInfo } = provider.getProvider("update");
+	const update = provider.getProvider("update");
 	const menu = Menu.buildFromTemplate([
 		{
 			label: translations.appName,
@@ -18,8 +18,13 @@ export const createTrayMenu = (provider: BaseProvider) => {
 			click: () => serverMain.emit("app.trayState", null, "visible"),
 		},
 		{
-			label: updateAvailable ? `Update Available - ${updateInfo?.version ? `Download v${updateInfo.version}` : "Download"}` : "Check for Updates",
-			click: () => (updateAvailable ? applyUpdate(null, false) : checkUpdate({ forceDialog: true })),
+			label: update.updateAvailable
+				? `Update Available - ${update.updateInfo?.version ? `Download v${update.updateInfo.version}` : "Download"}`
+				: "Check for Updates",
+			click: () => {
+				if (update.updateAvailable) void update.onAutoUpdateRun(null, false);
+				else void update.onCheckUpdate({ forceDialog: true });
+			},
 		},
 		{
 			type: "separator",
