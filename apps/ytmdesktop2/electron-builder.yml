@@ -83,47 +83,40 @@ linux:
       arch: x64
     - target: deb
       arch: x64
-    - target: pacman
+    - target: rpm
       arch: x64
     - target: flatpak
       arch: x64
-  # FPM (deb/pacman) author/vendor; must be "Name <email>" (not a bare domain).
+  # FPM (deb/rpm) author/vendor; must be "Name <email>" (not a bare domain).
   maintainer: "Venipa <admin@venipa.net>"
   vendor: Venipa
   category: AudioVideo
   icon: build/icon.icns
   mimeTypes:
     - x-scheme-handler/ytmd
-# Override EB defaults (http-parser is AUR-only; breaks Arch/CachyOS installs).
-pacman:
-  # Arch package names cannot contain spaces (extraMetadata.name is the product title).
+rpm:
+  # RPM names cannot contain spaces (extraMetadata.name is the product title).
   packageName: ytmdesktop2
   artifactName: ytmdesktop2-${version}.${arch}.${ext}
   maintainer: "Venipa <admin@venipa.net>"
   vendor: Venipa
-  # SPDX via package.json license (MIT) is passed to fpm --license automatically.
   depends:
-    # Core Electron / GTK
     - gtk3
     - nss
     - at-spi2-core
     - libsecret
     - xdg-utils
-    # Display: Wayland + X11 (ozone-platform-hint=auto in app)
-    - wayland
+    - libwayland-client
     - libxkbcommon
-    - libxss
-    - libxtst
-    # GPU (Flatpak --device=dri)
+    - libXScrnSaver
+    - libXtst
     - libdrm
-    - mesa
-    # Audio (Flatpak --socket=pulseaudio; PipeWire-Pulse on CachyOS)
-    - libpulse
+    - mesa-libgbm
+    - pulseaudio-libs
     - alsa-lib
-    # Desktop integration (notifications, tray, MPRIS/session bus)
     - libnotify
-    - libayatana-appindicator
-    - dbus
+    - libappindicator-gtk3
+    - dbus-libs
 flatpak:
   useWaylandFlags: true
   # EB default branch is "master" — shows as Flatpak version/ref without this.

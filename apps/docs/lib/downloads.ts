@@ -161,7 +161,7 @@ export type DownloadKind =
   | 'macos-pkg'
   | 'linux-appimage'
   | 'linux-deb'
-  | 'linux-pacman'
+  | 'linux-rpm'
   | 'linux-flatpak'
   | 'other';
 
@@ -224,7 +224,7 @@ function isLikelyMacZip(name: string): boolean {
   if (!lower.endsWith('.zip')) return false;
   if (lower.includes('source') || lower.includes('sources')) return false;
   if (lower.includes('mac') || lower.includes('darwin') || lower.includes('osx')) return true;
-  // Linux ships AppImage/deb/pacman/flatpak — remaining arch zips are mac builds.
+  // Linux ships AppImage/deb/rpm/flatpak — remaining arch zips are mac builds.
   if (/-arm64\.zip$/.test(lower) || /-x64\.zip$/.test(lower) || /-universal\.zip$/.test(lower)) {
     return true;
   }
@@ -298,13 +298,13 @@ export function getDownloadLabel(asset: ReleaseAsset): DownloadLabel {
     };
   }
 
-  if (name.endsWith('.pkg.tar.zst') || name.endsWith('.pkg.tar.xz')) {
+  if (name.endsWith('.rpm')) {
     return {
-      kind: 'linux-pacman',
+      kind: 'linux-rpm',
       platform: 'linux',
       arch,
-      title: 'Arch package',
-      description: 'Arch, CachyOS, Manjaro',
+      title: 'RPM package',
+      description: 'Fedora, RHEL, openSUSE',
     };
   }
 
@@ -335,7 +335,7 @@ export function listUserDownloads(assets: ReleaseAsset[]): ReleaseAsset[] {
     'macos-zip',
     'linux-appimage',
     'linux-deb',
-    'linux-pacman',
+    'linux-rpm',
     'linux-flatpak',
   ];
 

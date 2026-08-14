@@ -307,7 +307,7 @@ jobs:
         name: Cleanup Apple secrets
         run: rm -rf .secrets
 
-  # AppImage x64 + deb + pacman — no LXD / flatpak tooling.
+  # AppImage x64 + deb + rpm — no LXD / flatpak tooling.
   build-linux-core:
     needs: compile
     runs-on: ubuntu-latest
@@ -340,7 +340,7 @@ jobs:
       - name: update apt and install utils
         run: |
           sudo apt update
-          sudo apt install -y libdbus-1-dev elfutils libarchive-tools
+          sudo apt install -y libdbus-1-dev elfutils libarchive-tools rpm
 
       - name: Prepare pnpm / auth
         shell: bash
@@ -370,7 +370,7 @@ jobs:
           test -f apps/ytmdesktop2/out/main/index.js
           test -f apps/ytmdesktop2/resources/embeds/now-playing/index.html
 
-      - name: Pack Linux core (AppImage/deb/pacman)
+      - name: Pack Linux core (AppImage/deb/rpm)
         run: pnpm release:pack:linux:core
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -379,6 +379,17 @@ jobs:
           VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
           VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Verify RPM Requires
+        shell: bash
+        run: |
+          rpm_file="$(find apps/ytmdesktop2/dist dist -name '*.rpm' -print -quit 2>/dev/null || true)"
+          test -n "$rpm_file"
+          echo "rpm=$rpm_file"
+          rpm -qp --requires "$rpm_file"
+          rpm -qp --requires "$rpm_file" | grep -F gtk3
+          rpm -qp --requires "$rpm_file" | grep -F nss
+          rpm -qp --requires "$rpm_file" | grep -F libnotify
 
   # Native arm64 AppImage (no x64 cross-compile).
   build-linux-arm:

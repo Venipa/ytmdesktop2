@@ -1,50 +1,11 @@
 import EventEmitter from "node:events";
-import { existsSync, statSync } from "node:fs";
 import { type DiscordActivity } from "@main/lib/discord-rpc/discord-rpc";
 import { createLogger } from "@shared/utils/console";
 import { randomUUID } from "crypto";
 import IPCClient, { OPCode } from "./ipc";
+import { getIPCPath } from "./ipc-path";
 
 const log = createLogger("Lib:DiscordRPC.Client");
-
-function directoryExists(dirPath: string): boolean {
-	try {
-		return existsSync(dirPath) && statSync(dirPath).isDirectory();
-	} catch {
-		return false;
-	}
-}
-
-function getIPCPath(id: number): string {
-	if (process.platform === "win32") {
-		return `\\\\?\\pipe\\discord-ipc-${id}`;
-	}
-
-	const dirtyPrefix = process.env.XDG_RUNTIME_DIR || process.env.TMPDIR || process.env.TMP || process.env.TEMP || "/tmp";
-	// Snaps remap XDG_RUNTIME_DIR to .../snap.<name>; Discord IPC lives on the host runtime dir
-	// (.../discord-ipc-N) or under packaged Discord dirs (snap / Flatpak stable|PTB|Canary).
-	const prefix = dirtyPrefix.replace(/\/$/, "").replace(/\/snap\.[^/]+$/, "");
-	const packagedDirs = [
-		`${prefix}/snap.discord`,
-		`${prefix}/snap.discord-ptb`,
-		`${prefix}/snap.discord-canary`,
-		`${prefix}/app/com.discordapp.Discord`,
-		`${prefix}/app/com.discordapp.DiscordPTB`,
-		`${prefix}/app/com.discordapp.DiscordCanary`,
-	];
-	for (const dir of packagedDirs) {
-		const socketPath = `${dir}/discord-ipc-${id}`;
-		if (existsSync(socketPath)) {
-			return socketPath;
-		}
-	}
-	for (const dir of packagedDirs) {
-		if (directoryExists(dir)) {
-			return `${dir}/discord-ipc-${id}`;
-		}
-	}
-	return `${prefix}/discord-ipc-${id}`;
-}
 
 const PROCESS_PID = process?.pid ?? 0;
 const MAX_CONNECTION_ITERATIONS = 10;
