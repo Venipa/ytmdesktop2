@@ -6,14 +6,14 @@ import { runLifecycle } from "@main/lifecycle";
 import { BrowserWindowViews } from "@main/windows/mappedWindow";
 import { logger } from "@shared/utils/console";
 import { app } from "electron";
+import { autoUpdater } from "electron-updater";
+import { isAppQuitting, markAppQuitting, shouldCancelWindowClose } from "./quitPolicy";
 import { setTrayState } from "./trayState";
 
-
-let isQuitRequested = false;
-let isForceQuitRequested = false;
-let isCleanupRunning = false;
 let cleanupPromise: Promise<void> | null = null;
 let services: ServiceCollection | null = null;
+
+export { isAppQuitting } from "./quitPolicy";
 
 async function ensureCleanup() {
 	if (!cleanupPromise) {
@@ -30,45 +30,48 @@ async function ensureCleanup() {
 	return cleanupPromise;
 }
 
+async function finishQuit(then: () => void) {
+	if (isAppQuitting()) return;
+	markAppQuitting();
+	await ensureCleanup();
+	then();
+}
+
+function hideToTray(mainWindow: BrowserWindowViews<any, any>) {
+	setTrayState("hidden");
+	if (!mainWindow.main.isDestroyed() && mainWindow.main.isVisible()) {
+		mainWindow.main.hide();
+		mainWindow.main.setSkipTaskbar(true);
+	}
+}
+
 /** Persist settings, destroy providers, then relaunch. Skips tray minimize. */
 export async function requestAppRelaunch() {
-	if (isCleanupRunning || isQuitRequested) return;
-	isCleanupRunning = true;
-	isForceQuitRequested = true;
-	await ensureCleanup();
-	isQuitRequested = true;
-	app.relaunch();
-	app.exit(0);
+	await finishQuit(() => {
+		app.relaunch();
+		app.exit(0);
+	});
+}
+
+/** Cleanup once, then electron-updater install. Idempotent via `quitting`. */
+export async function requestQuitAndInstall() {
+	await finishQuit(() => {
+		autoUpdater.quitAndInstall(true, true);
+	});
 }
 
 export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serviceCollection: ServiceCollection) {
 	services = serviceCollection;
 	const getSettingsProvider = () => serviceCollection.getTypedProvider("settings");
-	const getUpdateProvider = () => serviceCollection.getTypedProvider("update");
-	const isUpdaterQuitRequested = () => !!getUpdateProvider()?.updateQueuedForInstall;
 	const isMinimizeToTrayEnabled = () => !!getSettingsProvider()?.get("app.minimizeTrayOverride");
-
-	const hideToTray = () => {
-		setTrayState("hidden");
-		if (mainWindow.main.isVisible()) {
-			mainWindow.main.hide();
-			mainWindow.main.setSkipTaskbar(true);
-		}
-	};
-
-	const shouldMinimizeToTray = (forceQuit: boolean) => isMinimizeToTrayEnabled() && !forceQuit && !isUpdaterQuitRequested();
+	const shouldHideToTray = (forceQuit: boolean) => isMinimizeToTrayEnabled() && !forceQuit && !isAppQuitting();
 
 	const requestQuit = async (forceQuit: boolean = false) => {
-		if (shouldMinimizeToTray(forceQuit)) {
-			hideToTray();
+		if (shouldHideToTray(forceQuit)) {
+			hideToTray(mainWindow);
 			return;
 		}
-		isForceQuitRequested = isForceQuitRequested || forceQuit || isUpdaterQuitRequested();
-		if (isCleanupRunning || isQuitRequested) return;
-		isCleanupRunning = true;
-		await ensureCleanup();
-		isQuitRequested = true;
-		app.quit();
+		await finishQuit(() => app.quit());
 	};
 
 	// Use serverMain (not raw ipcMain) so main-side emit + renderer IPC share one path
@@ -77,14 +80,10 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 	});
 
 	mainWindow.main.on("close", (ev) => {
-		if (isCleanupRunning && !isQuitRequested) {
+		if (!shouldCancelWindowClose({ quitting: isAppQuitting(), hideToTray: shouldHideToTray(false) })) return;
+		if (shouldHideToTray(false)) {
 			ev.preventDefault();
-			return;
-		}
-		if (isQuitRequested || isForceQuitRequested || isUpdaterQuitRequested()) return;
-		if (shouldMinimizeToTray(false)) {
-			ev.preventDefault();
-			hideToTray();
+			hideToTray(mainWindow);
 			return;
 		}
 		ev.preventDefault();
@@ -92,10 +91,10 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 	});
 
 	app.on("before-quit", (ev) => {
-		if (isQuitRequested || isForceQuitRequested || isUpdaterQuitRequested()) return;
-		if (shouldMinimizeToTray(false)) {
+		if (!shouldCancelWindowClose({ quitting: isAppQuitting(), hideToTray: shouldHideToTray(false) })) return;
+		if (shouldHideToTray(false)) {
 			ev.preventDefault();
-			hideToTray();
+			hideToTray(mainWindow);
 			return;
 		}
 		ev.preventDefault();
@@ -103,7 +102,7 @@ export function attachQuitHandler(mainWindow: BrowserWindowViews<any, any>, serv
 	});
 
 	app.on("window-all-closed", () => {
-		if (!platform.isMacOS || isUpdaterQuitRequested()) {
+		if (!platform.isMacOS || isAppQuitting()) {
 			void requestQuit(true);
 		}
 	});

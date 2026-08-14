@@ -1,5 +1,7 @@
 import { EventEmitter } from "node:events";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
+import { requestQuitAndInstall } from "@main/handlers/quitHandler";
+import { isAppQuitting } from "@main/handlers/quitPolicy";
 import { isDevelopment, isProduction } from "@main/infra/devUtils";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import { createAppWindow } from "@main/windows/windowUtils";
@@ -455,8 +457,9 @@ export default class UpdateProvider extends BaseProvider implements BeforeStart,
 	}
 
 	private quitAndInstall() {
+		if (isAppQuitting() || this._updateQueuedForInstall) return;
 		this._updateQueuedForInstall = true;
-		autoUpdater.quitAndInstall(false, true);
+		void requestQuitAndInstall();
 	}
 
 	async onAutoUpdateRun(_ev: unknown = null, quitAndInstall = true) {

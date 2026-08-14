@@ -1,5 +1,6 @@
 import { createEventCollection, createServiceCollection } from "@main/core/serviceCollection";
 import { attachQuitHandler } from "@main/handlers/quitHandler";
+import { isAppQuitting } from "@main/handlers/quitPolicy";
 import { attachTrayState } from "@main/handlers/trayState";
 import { initializeCustomElectronEnvironment } from "@main/infra/electron";
 import { serverMain } from "@main/ipc/serverEvents";
@@ -83,6 +84,7 @@ const runApp = async function () {
 	let mainWindow: ReturnType<typeof windowManager.createRootWindow> extends Promise<infer T> ? T : never;
 
 	const reactivate = async () => {
+		if (isAppQuitting()) return;
 		if (BrowserWindow.getAllWindows().length === 0) {
 			mainWindow = await windowManager.createRootWindow();
 			await waitMs(); // next tick

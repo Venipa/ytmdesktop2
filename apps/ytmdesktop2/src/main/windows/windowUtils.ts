@@ -439,6 +439,7 @@ export async function wrapWindowHandler(
 		return windowState;
 	};
 	const saveState = () => {
+		if (win.isDestroyed()) return;
 		if (persist && !persist()) return;
 		if (!win.isMinimized() && !win.isMaximized()) {
 			state = Object.assign({}, state, getCurrentPosition());

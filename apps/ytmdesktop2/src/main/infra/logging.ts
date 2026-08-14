@@ -1,3 +1,4 @@
+import { isAppQuitting } from "@main/handlers/quitPolicy";
 import { formatLogArgs, Logger, LogLevel, logLevelLabel, type LogOutput, logger } from "@shared/utils/console";
 import { format } from "date-fns";
 import { app, dialog } from "electron";
@@ -154,6 +155,7 @@ function attachProcessErrorHandlers() {
 	processHandlersAttached = true;
 	process.on("uncaughtException", (err) => {
 		logger.error("uncaughtException", err);
+		if (isAppQuitting()) return;
 		showFatalErrorDialog("uncaughtException", err);
 	});
 	process.on("unhandledRejection", (reason) => {

@@ -1,5 +1,6 @@
 import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
+import { isAppQuitting, shouldCancelWindowClose } from "@main/handlers/quitPolicy";
 import { showOnActiveDesktop } from "@main/domain/showOnActiveDesktop";
 import { positionNearTray } from "@main/domain/trayPosition";
 import SettingsProvider from "@main/trpc/routers/settings/service";
@@ -146,6 +147,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			};
 
 			win.on("close", (ev) => {
+				if (!shouldCancelWindowClose({ quitting: isAppQuitting() })) return;
 				ev.preventDefault();
 				dismiss();
 			});
