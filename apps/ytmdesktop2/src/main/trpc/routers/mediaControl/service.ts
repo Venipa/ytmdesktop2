@@ -180,8 +180,9 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 			}
 
 			player.playbackStatus = isPlaying ? MediaPlayerPlaybackStatus.Playing : MediaPlayerPlaybackStatus.Paused;
-			player.playButtonEnabled = !isPlaying;
-			player.pauseButtonEnabled = isPlaying;
+			// MPRIS CanPlay/CanPause = command allowed, not exclusive UI. playerctl play-pause needs both.
+			player.playButtonEnabled = true;
+			player.pauseButtonEnabled = true;
 
 			const duration = Number(state.duration || trackData.meta?.duration || 0);
 			const progress = Number(state.progress ?? state.uiProgress ?? 0);
@@ -218,8 +219,8 @@ export default class MediaControlProvider extends BaseProvider implements AfterI
 				player.playbackStatus = playing ? MediaPlayerPlaybackStatus.Playing : MediaPlayerPlaybackStatus.Paused;
 				player.artist = trackData.video.author ?? "";
 				player.albumTitle = albumTitle;
-				player.playButtonEnabled = !playing;
-				player.pauseButtonEnabled = playing;
+				player.playButtonEnabled = true;
+				player.pauseButtonEnabled = true;
 				player.title = trackData.video.title;
 				player.trackId = trackData.video.videoId;
 				player.previousButtonEnabled = true;

@@ -107,10 +107,9 @@ function playbackSnapshot(playerApi: PlayerApi, playing?: boolean) {
 
 export const trackControls = {
 	toggle: (player: PlayerApi) => {
-		const state = player.getPlayerStateObject();
-		if (!state) throw new Error("Player state not found");
-		state.isPlaying ? player.pauseVideo() : player.playVideo();
-		return playbackSnapshot(player, !state.isPlaying);
+		const playing = isPlayingState(player);
+		playing ? player.pauseVideo() : player.playVideo();
+		return playbackSnapshot(player, !playing);
 	},
 	play: (playerApi: PlayerApi) => {
 		playerApi.playVideo();
