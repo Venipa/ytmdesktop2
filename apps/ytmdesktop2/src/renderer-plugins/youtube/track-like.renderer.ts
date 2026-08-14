@@ -1,19 +1,15 @@
 import { trackControls } from "./api-controls.cmds";
-import {
-	publishLikeStatus,
-	queryLikeRenderer,
-	readLikeStatus,
-	readRawLikeStatus,
-} from "./ytm-like-status";
+import { readActiveVideoId, readLikeStatus } from "./ytm-like-status";
+import { resolveYtmStore } from "./ytm-store";
 import { getPagePlayerApi } from "./world0/context";
 import type { RendererPluginRegistration } from "./world0/types";
 
-const POLL_MS = 200;
-const MAX_WAIT_MS = 3_000;
 const SKIP_DISLIKED_KEY = "player.skipDisliked";
+const STORE_HOOK_MS = 250;
+const STORE_HOOK_MAX_MS = 20_000;
 
 /**
- * Like/dislike watch + emit in page world.
+ * Like/dislike watch + emit from YTM redux store.
  * Skip-disliked uses page playerApi directly (no preload bridge hop).
  */
 const trackLikeRenderer: RendererPluginRegistration = {
@@ -22,12 +18,10 @@ const trackLikeRenderer: RendererPluginRegistration = {
 	async start(ctx) {
 		let lastKey = "";
 		let watchVideoId: string | null = null;
-		let baseline = "";
-		let pollTimer: ReturnType<typeof setTimeout> | null = null;
-		let attrObserver: MutationObserver | null = null;
-		let observedEl: HTMLElement | null = null;
 		let skipDoneFor: string | null = null;
 		let skipDisliked = false;
+		let unsubStore: (() => void) | undefined;
+		let hookTimer: ReturnType<typeof setInterval> | null = null;
 
 		try {
 			skipDisliked = (await ctx.ytmd?.settings.get(SKIP_DISLIKED_KEY)) === true;
@@ -35,32 +29,14 @@ const trackLikeRenderer: RendererPluginRegistration = {
 			/* default off */
 		}
 
-		const clearPoll = () => {
-			if (pollTimer === null) return;
-			clearTimeout(pollTimer);
-			pollTimer = null;
-		};
-
-		const readActiveVideoId = (): string | null => {
-			try {
-				const data = getPagePlayerApi()?.getVideoData?.() as { video_id?: string } | undefined;
-				return data?.video_id ?? null;
-			} catch {
-				return null;
-			}
-		};
-
-		const trySkipDisliked = (videoId: string, reason: string) => {
-			if (!skipDisliked) return;
-			if (skipDoneFor === videoId) return;
-			const status = readLikeStatus();
+		const trySkipDisliked = (videoId: string) => {
+			if (!skipDisliked || skipDoneFor === videoId) return;
+			const status = readLikeStatus(videoId);
 			if (!status.settled || !status.disliked) return;
-			ctx.log.debug("skip disliked track", videoId, reason);
 			const player = getPagePlayerApi();
 			if (!player) return;
 			const activeId = readActiveVideoId();
 			if (activeId && activeId !== videoId) return;
-			if (skipDoneFor === videoId) return;
 			skipDoneFor = videoId;
 			try {
 				trackControls.next(player);
@@ -69,90 +45,56 @@ const trackLikeRenderer: RendererPluginRegistration = {
 			}
 		};
 
-		const emitSettled = (videoId: string): boolean => {
-			const status = readLikeStatus();
-			if (!status.settled) return false;
+		const emitSettled = (videoId: string) => {
+			const status = readLikeStatus(videoId);
+			if (!status.settled) return;
 			const key = `${videoId}|${Number(status.liked)}|${Number(status.disliked)}`;
 			if (key !== lastKey) {
 				lastKey = key;
 				const payload = { videoId, liked: status.liked, disliked: status.disliked };
-				publishLikeStatus(payload);
 				try {
 					ctx.ytmd?.emit("track:like-state", payload);
 				} catch (err) {
 					ctx.log.error("Failed to emit track:like-state", err);
 				}
 			}
-			trySkipDisliked(videoId, "settled");
+			trySkipDisliked(videoId);
+		};
+
+		const sync = (id?: string | null) => {
+			const videoId = id || readActiveVideoId() || watchVideoId;
+			if (!videoId) return;
+			if (videoId !== watchVideoId) {
+				watchVideoId = videoId;
+				lastKey = "";
+				skipDoneFor = null;
+			}
+			emitSettled(videoId);
+		};
+
+		const bindStore = (): boolean => {
+			if (unsubStore) return true;
+			const store = resolveYtmStore();
+			if (!store?.subscribe) return false;
+			unsubStore = store.subscribe(() => sync());
+			sync();
 			return true;
 		};
 
-		const statusReady = (): boolean => {
-			const raw = readRawLikeStatus();
-			if (raw === "") return false;
-			return raw !== baseline;
-		};
-
-		const onAttrChange = () => {
-			const videoId = readActiveVideoId() ?? watchVideoId;
-			if (!videoId || videoId !== watchVideoId) return;
-			if (!statusReady()) return;
-			if (emitSettled(videoId)) clearPoll();
-		};
-
-		const bindAttrObserver = (): boolean => {
-			const el = queryLikeRenderer();
-			if (!el) return false;
-			if (el === observedEl && attrObserver) return true;
-			attrObserver?.disconnect();
-			observedEl = el;
-			attrObserver = new MutationObserver(onAttrChange);
-			attrObserver.observe(el, { attributes: true, attributeFilter: ["like-status", "like_status"] });
-			return true;
-		};
-
-		const armWatch = (videoId: string) => {
-			clearPoll();
-			watchVideoId = videoId;
-			skipDoneFor = null;
-			baseline = readRawLikeStatus();
-			bindAttrObserver();
-
+		if (!bindStore()) {
 			const startedAt = Date.now();
-			const tick = () => {
-				if (watchVideoId !== videoId) return;
-				bindAttrObserver();
-				const activeId = readActiveVideoId();
-				if (activeId && activeId !== videoId) {
-					clearPoll();
-					return;
+			hookTimer = setInterval(() => {
+				if (bindStore() || Date.now() - startedAt > STORE_HOOK_MAX_MS) {
+					if (hookTimer) clearInterval(hookTimer);
+					hookTimer = null;
 				}
+			}, STORE_HOOK_MS);
+		}
 
-				const ready = statusReady();
-				const timedOut = Date.now() - startedAt >= MAX_WAIT_MS;
-
-				if (ready && emitSettled(videoId)) {
-					clearPoll();
-					return;
-				}
-				if (timedOut) {
-					void emitSettled(videoId);
-					clearPoll();
-					return;
-				}
-				pollTimer = setTimeout(tick, POLL_MS);
-			};
-			pollTimer = setTimeout(tick, POLL_MS);
-		};
-
-		const onTrackIdChange = (id: unknown) => {
-			if (!id || typeof id !== "string") return;
-			lastKey = "";
-			armWatch(id);
-		};
-
-		bindAttrObserver();
-		const unsubTrack = ctx.ytmd?.on("trackId:change", onTrackIdChange);
+		sync(readActiveVideoId());
+		const unsubTrack = ctx.ytmd?.on("trackId:change", (id) => {
+			if (typeof id === "string" && id) sync(id);
+		});
 		const unsubSettings = ctx.ytmd?.on("settingsProvider.change", (key, value) => {
 			if (key === SKIP_DISLIKED_KEY) {
 				skipDisliked = value === true;
@@ -164,10 +106,8 @@ const trackLikeRenderer: RendererPluginRegistration = {
 		});
 
 		return () => {
-			clearPoll();
-			attrObserver?.disconnect();
-			attrObserver = null;
-			observedEl = null;
+			if (hookTimer) clearInterval(hookTimer);
+			unsubStore?.();
 			unsubTrack?.();
 			unsubSettings?.();
 		};

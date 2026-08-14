@@ -109,6 +109,8 @@ const stateEmitKey = (state: TrackState): string =>
 export class TrackService {
 	/** Heard title/id before TrackData + chrome (`_trackState.id`) catch up. */
 	private _pendingTrackId: string | null = null;
+	/** Like IPC can beat chrome id; apply when `state.id` matches. */
+	private _pendingLike: { videoId: string; liked: boolean; disliked: boolean } | null = null;
 	private _trackState: TrackState | null = null;
 	private _trackDataCache: TrackEntry | null = null;
 	private _currentPallete: { id: string; color: string } | null = null;
@@ -210,34 +212,33 @@ export class TrackService {
 	}
 
 	getTrackInformation(): TrackEntry | null {
-		return this.trackData;
+		const track = this.trackData;
+		if (!track) return null;
+		const state = this._trackState;
+		if (state && state.id === track.id) {
+			track.meta.liked = state.liked;
+			track.meta.disliked = state.disliked;
+		}
+		return track;
 	}
 
 	getTrackState(): TrackState | null {
 		return this.trackState;
 	}
 
-	async postTrackLike(_ev: unknown, like: boolean): Promise<boolean | null> {
-		// Emit intent immediately so tray view updates before YTM DOM settles.
+	async postTrackLike(like: boolean): Promise<boolean | null> {
 		this.patchTrackState(like ? { liked: true, disliked: false } : { liked: false });
 		const liked = await this.executeCommand<boolean>("like", like);
 		const resolved = typeof liked === "boolean" ? liked : like;
 		this.patchTrackState(resolved ? { liked: true, disliked: false } : { liked: false });
-		// Renderer like-watcher emits settled DOM state; cmd is backup if observer lags.
-		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
-			this.patchTrackState({ liked: isLiked, disliked: isDLiked });
-		});
 		return resolved;
 	}
 
-	async postTrackDisLike(_ev: unknown, dislike: boolean): Promise<boolean | null> {
+	async postTrackDisLike(dislike: boolean): Promise<boolean | null> {
 		this.patchTrackState(dislike ? { disliked: true, liked: false } : { disliked: false });
 		const disliked = await this.executeCommand<boolean>("dislike", dislike);
 		const resolved = typeof disliked === "boolean" ? disliked : dislike;
 		this.patchTrackState(resolved ? { disliked: true, liked: false } : { disliked: false });
-		void this.currentSongLikeState().then(([isLiked, isDLiked]) => {
-			this.patchTrackState({ liked: isLiked, disliked: isDLiked });
-		});
 		return resolved;
 	}
 
@@ -363,6 +364,7 @@ export class TrackService {
 		const nextId = patch.id !== undefined ? String(patch.id) : state.id;
 		const idChanged = nextId !== state.id;
 
+		const pendingLike = this._pendingLike?.videoId === nextId ? this._pendingLike : null;
 		if (idChanged) {
 			state.id = nextId;
 			state.progress = patch.progress ?? 0;
@@ -370,8 +372,8 @@ export class TrackService {
 			state.percentage = patch.percentage ?? 0;
 			state.startedAt = patch.startedAt ?? Date.now() / 1000;
 			state.accent = patch.accent !== undefined ? patch.accent : null;
-			state.liked = patch.liked ?? false;
-			state.disliked = patch.disliked ?? false;
+			state.liked = patch.liked ?? pendingLike?.liked ?? false;
+			state.disliked = patch.disliked ?? pendingLike?.disliked ?? false;
 			if (patch.duration !== undefined) state.duration = patch.duration;
 			if (patch.eventType !== undefined) state.eventType = patch.eventType;
 			if (patch.playing !== undefined) state.playing = patch.playing;
@@ -389,6 +391,9 @@ export class TrackService {
 		}
 
 		this.commitTrackState(prevId);
+		if (idChanged || patch.liked !== undefined || patch.disliked !== undefined) {
+			this.writeTrackMetaLikes(state.id, state.liked, state.disliked);
+		}
 	}
 
 	/** In-place mutator for play/progress/accent. Object form → `patchTrackState`. */
@@ -417,24 +422,33 @@ export class TrackService {
 		}
 	}
 
-	async currentSongLikeState(): Promise<[boolean, boolean]> {
-		try {
-			const status = await this.executeCommand<{ liked?: boolean; disliked?: boolean }>("like_state");
-			return [!!status?.liked, !!status?.disliked];
-		} catch {
-			return [false, false];
+	private writeTrackMetaLikes(videoId: string, liked: boolean, disliked: boolean): void {
+		if (!videoId) return;
+		const entry = trackCollection.findById(videoId);
+		if (!entry) return;
+		if (entry.meta.liked === liked && entry.meta.disliked === disliked) return;
+		entry.meta.liked = liked;
+		entry.meta.disliked = disliked;
+		this._trackDataCache = null;
+		const snapshot = { ...entry, meta: { ...entry.meta } };
+		events.emit("track:change", snapshot);
+		const api = this.getProvider("api") as { sendMessage?: (...args: unknown[]) => void } | undefined;
+		api?.sendMessage?.("track:change", snapshot);
+	}
+
+	private applyLikeIfCurrent(videoId: string, liked: boolean, disliked: boolean): void {
+		this._pendingLike = { videoId, liked, disliked };
+		if (this._trackState?.id === videoId) {
+			this.patchTrackState({ liked, disliked });
+			return;
 		}
+		this.writeTrackMetaLikes(videoId, liked, disliked);
 	}
 
 	onLikeState(_ev: unknown, data: { videoId?: string; liked?: boolean; disliked?: boolean }) {
 		const videoId = data?.videoId ? String(data.videoId) : "";
 		if (!videoId) return;
-		const stateId = this._trackState?.id;
-		const pendingId = this._pendingTrackId;
-		if (videoId !== stateId && videoId !== pendingId) return;
-		// Likes only apply to chrome when state.id matches — never set state.id from like IPC.
-		if (!stateId || stateId !== videoId) return;
-		this.patchTrackState({ liked: !!data.liked, disliked: !!data.disliked });
+		this.applyLikeIfCurrent(videoId, !!data.liked, !!data.disliked);
 	}
 
 	getTrackDuration(): number | null {
@@ -465,6 +479,8 @@ export class TrackService {
 				startedAt: Date.now() / 1000,
 				duration,
 				isAlbum: !!musicObject,
+				liked: this._pendingLike?.videoId === videoId ? this._pendingLike.liked : this._trackState?.id === videoId ? this._trackState.liked : undefined,
+				disliked: this._pendingLike?.videoId === videoId ? this._pendingLike.disliked : this._trackState?.id === videoId ? this._trackState.disliked : undefined,
 			},
 			music: musicObject,
 		} as TrackData;
@@ -521,7 +537,6 @@ export class TrackService {
 				eventType: "state",
 				accent: null,
 			});
-			// likes come from track-like only - immediate like_state reads stale DOM
 		} else if (this._pendingTrackId === videoId) {
 			this._pendingTrackId = null;
 		}
@@ -568,7 +583,6 @@ export class TrackService {
 			eventType: "state",
 			accent: null,
 		});
-		// likes come from track-like only - immediate like_state reads stale DOM
 	}
 
 	/**

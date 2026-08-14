@@ -83,6 +83,8 @@ interface TrackMeta {
 	counterpartVideoId?: string | null;
 	startedAt: number;
 	duration: number;
+	liked?: boolean;
+	disliked?: boolean;
 }
 export interface TrackData {
 	video: TrackVideoData;

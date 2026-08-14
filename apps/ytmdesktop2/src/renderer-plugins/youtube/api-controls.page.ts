@@ -29,7 +29,6 @@ export const apiControlsPage = definePageCmds({
 		seek: (data) => trackControls.seek(requirePlayer(), data as Parameters<typeof trackControls.seek>[1]),
 		like: (liked) => trackControls.like(!!liked),
 		dislike: (disliked) => trackControls.dislike(!!disliked),
-		likeState: () => trackControls.likeState(),
 		volume: (data) => trackControls.volume(requirePlayer(), data as Parameters<typeof trackControls.volume>[1]),
 		volumeUp: (data) =>
 			trackControls.volumeUp(requirePlayer(), data as Parameters<typeof trackControls.volumeUp>[1]),

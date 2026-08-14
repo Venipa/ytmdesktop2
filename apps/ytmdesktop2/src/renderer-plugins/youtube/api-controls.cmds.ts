@@ -1,5 +1,5 @@
 import type { PlayerApi } from "ytm-client-api";
-import { readLikeStatus } from "./ytm-like-status";
+import { readActiveVideoId, readLikeStatus, type YtmLikeStatus } from "./ytm-like-status";
 import {
 	dispatchQueueAddItems,
 	resolveYtmApp,
@@ -105,6 +105,15 @@ function playbackSnapshot(playerApi: PlayerApi, playing?: boolean) {
 	};
 }
 
+async function waitLike(videoId: string | null, pred: (s: YtmLikeStatus) => boolean, fallback: boolean): Promise<boolean> {
+	for (let i = 0; i < 12; i++) {
+		await new Promise((r) => setTimeout(r, 40));
+		const status = readLikeStatus(videoId);
+		if (status.settled && pred(status)) return fallback;
+	}
+	return fallback;
+}
+
 export const trackControls = {
 	toggle: (player: PlayerApi) => {
 		const playing = isPlayingState(player);
@@ -153,30 +162,23 @@ export const trackControls = {
 	forward: (playerApi: PlayerApi, data?: SeekPayload) => trackControls.seek(playerApi, { time: Math.abs(Number(data?.time ?? 10000)) }),
 	backward: (playerApi: PlayerApi, data?: SeekPayload) => trackControls.seek(playerApi, { time: -Math.abs(Number(data?.time ?? 10000)) }),
 	like: async (liked: boolean) => {
-		const btn = document.querySelector<HTMLElement>("#like-button-renderer #button-shape-like.like button");
-		const current = readLikeStatus();
+		const videoId = readActiveVideoId();
+		const btn = document.querySelector<HTMLElement>("ytmusic-player-bar #button-shape-like.like button");
+		const current = readLikeStatus(videoId);
 		if (!btn) return current.liked;
 		if (current.liked === liked) return liked;
 		btn.click();
-		for (let i = 0; i < 12; i++) {
-			await new Promise((r) => setTimeout(r, 40));
-			if (readLikeStatus().liked === liked) return liked;
-		}
-		return liked;
+		return waitLike(videoId, (s) => s.liked === liked, liked);
 	},
 	dislike: async (disliked: boolean) => {
-		const btn = document.querySelector<HTMLElement>("#like-button-renderer #button-shape-dislike.dislike button");
-		const current = readLikeStatus();
+		const videoId = readActiveVideoId();
+		const btn = document.querySelector<HTMLElement>("ytmusic-player-bar #button-shape-dislike.dislike button");
+		const current = readLikeStatus(videoId);
 		if (!btn) return current.disliked;
 		if (current.disliked === disliked) return disliked;
 		btn.click();
-		for (let i = 0; i < 12; i++) {
-			await new Promise((r) => setTimeout(r, 40));
-			if (readLikeStatus().disliked === disliked) return disliked;
-		}
-		return disliked;
+		return waitLike(videoId, (s) => s.disliked === disliked, disliked);
 	},
-	likeState: () => readLikeStatus(),
 	volume: (playerApi: PlayerApi, data?: { volume?: number }) => {
 		if (typeof data?.volume === "number" && Number.isFinite(data.volume)) {
 			playerApi.setVolume(Math.max(0, Math.min(100, data.volume)));

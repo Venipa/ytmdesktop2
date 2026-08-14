@@ -1,8 +1,8 @@
-import type { AppRouter } from "@main/trpc/router";
-import type { TrackData } from "@shared/track/trackData";
-import type { inferRouterOutputs } from "@trpc/server";
-import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import type { AppRouter } from "@main/trpc/router";
+import type { inferRouterOutputs } from "@trpc/server";
+import { isEqual, pick } from "lodash-es";
+import { useMemo } from "react";
 
 export type TrackState = NonNullable<inferRouterOutputs<AppRouter>["track"]["state"]>;
 export type CurrentTrack = inferRouterOutputs<AppRouter>["track"]["current"];
@@ -14,11 +14,11 @@ export type TrackProgress = {
 	percentage: number;
 	eventType: TrackState["eventType"] | null;
 };
-
+const compareProps = ["video.videoId", "video.title", "music.album", "meta.liked", "meta.disliked"] as const;
 function sameTrack(a: CurrentTrack, b: CurrentTrack): boolean {
 	if (a === b) return true;
 	if (!a || !b) return false;
-	return a.video.videoId === b.video.videoId && a.video.title === b.video.title && a.music?.album === b.music?.album;
+	return isEqual(pick(a, compareProps), pick(b, compareProps));
 }
 
 function sameState(a: TrackState | null, b: TrackState | null): boolean {

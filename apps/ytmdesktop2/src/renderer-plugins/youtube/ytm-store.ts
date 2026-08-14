@@ -1,4 +1,6 @@
-/** Minimal YTM redux store shape used by queue cmds. */
+export type YtmLikeStatusCode = "LIKE" | "DISLIKE" | "INDIFFERENT";
+
+/** Minimal YTM redux store shape used by queue / like cmds. */
 export type YtmStoreLike = {
 	getState: () => {
 		queue?: {
@@ -6,6 +8,13 @@ export type YtmStoreLike = {
 			nextQueueItemId?: number;
 			shuffleEnabled?: boolean;
 			queueContextParams?: string;
+		};
+		likeStatus?: {
+			videos?: Record<string, YtmLikeStatusCode | string>;
+			playlists?: Record<string, YtmLikeStatusCode | string>;
+		};
+		playerPage?: {
+			playerPageWatchNextResponse?: unknown;
 		};
 	};
 	dispatch: (action: unknown) => void;
