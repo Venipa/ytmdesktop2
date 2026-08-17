@@ -5,14 +5,14 @@ import { isDevelopment } from "@main/infra/devUtils";
 import { thumbnailCache } from "@main/services/thumbnailCache";
 import type { SettingsStore } from "@main/trpc/routers/settings/service";
 import { isCachableThumbUrl } from "@shared/media/appThumbUrl";
-import type { TrackData } from "@shared/track/trackData";
 import { resolveTrackThumbnailUrl } from "@shared/track/thumbnail";
+import type { TrackData } from "@shared/track/trackData";
 import { createLogger } from "@shared/utils/console";
-import fs from "node:fs/promises";
-import path from "node:path";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { WSContext } from "hono/ws";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { WebSocketServer } from "ws";
 
 const log = createLogger("api-server");
@@ -92,6 +92,16 @@ export async function startApiServer(options: {
 			allowHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"],
 			allowMethods: ["GET", "POST", "OPTIONS"],
 		})(c, next);
+	});
+
+	// Legacy clients (Windows PowerShell 5.1 Invoke-RestMethod) decode JSON as
+	// ISO-8859-1 unless charset is explicit. See github.com/Venipa/ytmdesktop2/issues/233
+	app.use("*", async (c, next) => {
+		await next();
+		const contentType = c.res.headers.get("Content-Type");
+		if (contentType && contentType.split(";", 1)[0]?.trim().toLowerCase() === "application/json") {
+			c.res.headers.set("Content-Type", "application/json; charset=utf-8");
+		}
 	});
 
 	const extractRequestToken = (c: { req: { header: (name: string) => string | undefined; query: (key: string) => string | undefined } }) =>
