@@ -139,6 +139,7 @@ export class TrackService {
 	private postScrobbleNpTimer: ReturnType<typeof setTimeout> | null = null;
 	private _ipcBound = false;
 	private _styleBound = false;
+	private readonly onProgressHandlerDebounced = debounce(this.onProgressHandler.bind(this), 1000);
 
 	/** Settle window before notifying Last.fm / socket API — UI stays instant. */
 	private static readonly EXTERNAL_TRACK_DEBOUNCE_MS = 1200;
@@ -192,7 +193,7 @@ export class TrackService {
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE, debounce(this.onPlayStateChange.bind(this), 50));
 		// Last.fm + UI progress: 50ms. Discord timeline: separate 1s handler (no Last.fm).
 		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, debounce(this.onPlayStateProgress.bind(this), 50));
-		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, debounce(this.onProgressHandler.bind(this), 1000));
+		serverMain.on(IPC_EVENT_NAMES.TRACK_PLAYSTATE_PROGRESS, this.onProgressHandlerDebounced);
 	}
 
 	afterInit(): void {
@@ -1027,13 +1028,14 @@ export class TrackService {
 		}
 
 		this.noteProgressForLastFm(progress, duration, isPlaying);
-		void this.updateMediaTimeline(duration, progress, isPlaying);
+		this.onProgressHandlerDebounced.cancel();
+		void this.updateMediaTimeline(duration, progress, isPlaying, true);
 	}
 
-	private async updateMediaTimeline(_duration: number, progressSeconds: number, isPlaying: boolean) {
+	private async updateMediaTimeline(_duration: number, progressSeconds: number, isPlaying: boolean, immediate = false) {
 		// OS media controls subscribe via trackService.onTrackStateChange (mediaControl).
 		const discordProvider = this.getProvider("discord") as { updateTrackProgress?: (a: boolean, b: number, c?: boolean) => Promise<void> | void };
-		await discordProvider?.updateTrackProgress?.(isPlaying, progressSeconds);
+		await discordProvider?.updateTrackProgress?.(isPlaying, progressSeconds, immediate);
 	}
 
 	async onPlayStateProgress(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
@@ -1055,6 +1057,7 @@ export class TrackService {
 	/** Throttled Discord/media timeline only — do not feed Last.fm (avoids dual-handler races). */
 	async onProgressHandler(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
 		if (!this.trackData?.meta) return;
+		if (!isPlaying) return;
 		const duration = Number(this.trackData.meta.duration);
 		await this.updateMediaTimeline(duration, progressSeconds, isPlaying);
 	}

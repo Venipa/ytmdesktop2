@@ -225,7 +225,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 	async updateTrackProgress(isPlaying: boolean, mediaProgress: number = 0, updateImmediate: boolean = false) {
 		if (!this.wantConnected || !this.settingsEnabled || !this.isConnected || !trackService.trackData) return;
 		const embed = discordEmbedFromTrack(trackService.trackData, isPlaying, mediaProgress);
-		if (updateImmediate) this._updateActivity(embed);
+		if (updateImmediate || !isPlaying) this._updateActivity(embed);
 		else this.updateActivity(embed);
 	}
 
@@ -247,7 +247,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 
 	private async __onTrackInfo(track: TrackData) {
 		if (!track?.video || !this.wantConnected || !this.settingsEnabled || !this.isConnected) return;
-		this.updateActivity(discordEmbedFromTrack(track));
+		this.updateActivity(discordEmbedFromTrack(track, trackService.playing, trackService.trackState?.progress ?? 0));
 	}
 
 	async OnDestroy() {
