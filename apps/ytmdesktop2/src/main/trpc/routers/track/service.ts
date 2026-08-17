@@ -1042,6 +1042,7 @@ export class TrackService {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
 		const progress = Number(progressSeconds) || 0;
+		const wasPlaying = this._trackState?.playing;
 		this.setTrackState((state) => {
 			state.progress = progress;
 			state.uiProgress = progress;
@@ -1052,6 +1053,11 @@ export class TrackService {
 		});
 		// Sole progress→Last.fm path (1s onProgressHandler must not also call this)
 		this.noteProgressForLastFm(progress, duration, isPlaying);
+		// Resume often only hits progress IPC (no onStateChange). Push Discord now.
+		if (wasPlaying !== isPlaying) {
+			this.onProgressHandlerDebounced.cancel();
+			void this.updateMediaTimeline(duration, progress, isPlaying, true);
+		}
 	}
 
 	/** Throttled Discord/media timeline only — do not feed Last.fm (avoids dual-handler races). */
