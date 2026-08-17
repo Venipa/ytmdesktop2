@@ -1,14 +1,24 @@
+import { getRotatingFileSink } from "@logtape/file";
+import { configureSync, getLogger, getTextFormatter, type LogLevel as LogTapeLevel } from "@logtape/logtape";
 import { isAppQuitting } from "@main/handlers/quitPolicy";
-import { formatLogArgs, Logger, LogLevel, logLevelLabel, type LogOutput, logger } from "@shared/utils/console";
-import { format } from "date-fns";
+import { formatLogArgs, Logger, LogLevel, type LogOutput, logger } from "@shared/utils/console";
 import { app, dialog } from "electron";
-import fs, { type WriteStream } from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 
 /** Per-file soft cap before rotate. */
 const MAX_LOG_FILE_BYTES = 5 * 1024 * 1024;
-/** Keep newest N `app_*.log` files in logs dir (active + rotated). */
+/** Keep newest N rotated files plus the active `app.log`. */
 const MAX_LOG_FILES = 14;
+const APP_LOG_CATEGORY = "ytmdesktop2" as const;
+const APP_LOG_FILENAME = "app.log";
+
+const LOGTAPE_BY_APP_LEVEL: Record<Exclude<LogLevel, LogLevel.Off>, LogTapeLevel> = {
+	[LogLevel.Error]: "error",
+	[LogLevel.Warning]: "warning",
+	[LogLevel.Info]: "info",
+	[LogLevel.Debug]: "debug",
+};
 
 let fileOutputAttached = false;
 let processHandlersAttached = false;
@@ -24,27 +34,11 @@ export function ensureLogsDir(): string {
 	return logDir;
 }
 
-function todayLogFile(): string {
-	return path.join(ensureLogsDir(), `app_${format(new Date(), "yyyy-MM-dd")}.log`);
+export function getAppLogFile(): string {
+	return path.join(ensureLogsDir(), APP_LOG_FILENAME);
 }
 
-function fileSizeOrZero(filePath: string): number {
-	try {
-		return fs.statSync(filePath).size;
-	} catch {
-		return 0;
-	}
-}
-
-function openLogStream(logFile: string): WriteStream {
-	return fs.createWriteStream(logFile, {
-		flags: "a",
-		encoding: "utf8",
-		highWaterMark: 64 * 1024,
-	});
-}
-
-/** Drop oldest `app_*.log` until at most MAX_LOG_FILES remain. */
+/** Drop oldest leftover `app_*.log` until at most MAX_LOG_FILES remain. */
 function pruneOldLogs(): void {
 	const logDir = getLogsDir();
 	let names: string[];
@@ -76,53 +70,56 @@ function pruneOldLogs(): void {
 	}
 }
 
-function rotateLogFile(activePath: string): string {
-	const stamp = format(new Date(), "HHmmss");
-	let rotated = activePath.replace(/\.log$/i, `.${stamp}.log`);
-	if (fs.existsSync(rotated)) {
-		rotated = activePath.replace(/\.log$/i, `.${stamp}.${Date.now()}.log`);
-	}
-	try {
-		fs.renameSync(activePath, rotated);
-	} catch {
-		/* active may not exist yet */
-	}
-	pruneOldLogs();
-	return todayLogFile();
+function categoryForSource(source: string | undefined): readonly string[] {
+	const parts = (source || "app").split(":").filter((part) => part.length > 0);
+	return [APP_LOG_CATEGORY, ...(parts.length > 0 ? parts : ["app"])];
 }
 
-function createFileLogOutput(): LogOutput {
-	pruneOldLogs();
-
-	let logFile = todayLogFile();
-	let bytesWritten = fileSizeOrZero(logFile);
-	let writeStream = openLogStream(logFile);
-	logger.info("log file", logFile, { maxBytes: MAX_LOG_FILE_BYTES, maxFiles: MAX_LOG_FILES });
-
-	const close = () => {
-		if (!writeStream.destroyed) writeStream.end();
-	};
-	process.once("exit", close);
-	process.once("SIGINT", close);
-	process.once("SIGTERM", close);
-
-	const minLevel = LogLevel.Warning;
+function createLogTapeOutput(): LogOutput {
 	return (source, level, objects) => {
-		if (level > minLevel || level === LogLevel.Off) return;
-		const src = source || "app";
-		const line = `${format(new Date(), "yyyy-MM-dd HH:mm:ss.SSS")} [${src}] ${logLevelLabel(level)}: ${formatLogArgs(objects)}\n`;
-		const lineBytes = Buffer.byteLength(line, "utf8");
-
-		if (bytesWritten > 0 && bytesWritten + lineBytes > MAX_LOG_FILE_BYTES) {
-			if (!writeStream.destroyed) writeStream.end();
-			logFile = rotateLogFile(logFile);
-			bytesWritten = 0;
-			writeStream = openLogStream(logFile);
+		if (level === LogLevel.Off) return;
+		const tape = getLogger(categoryForSource(source));
+		const message = formatLogArgs(objects);
+		const error = objects.find((item): item is Error => item instanceof Error);
+		const properties = error ? { error } : undefined;
+		switch (LOGTAPE_BY_APP_LEVEL[level]) {
+			case "error":
+				tape.error(message, properties);
+				break;
+			case "warning":
+				tape.warn(message, properties);
+				break;
+			case "info":
+				tape.info(message, properties);
+				break;
+			default:
+				tape.debug(message, properties);
 		}
-
-		writeStream.write(line);
-		bytesWritten += lineBytes;
 	};
+}
+
+function configureFileSink(): void {
+	const logDir = ensureLogsDir();
+	const logFile = getAppLogFile();
+	pruneOldLogs();
+	configureSync({
+		sinks: {
+			file: getRotatingFileSink(logFile, {
+				maxSize: MAX_LOG_FILE_BYTES,
+				maxFiles: MAX_LOG_FILES,
+				bufferSize: 0,
+				formatter: getTextFormatter({
+					timestamp: "date-time",
+					timeZone: null,
+				}),
+			}),
+		},
+		loggers: [
+			{ category: ["logtape", "meta"], lowestLevel: "warning", sinks: ["file"] },
+			{ category: [APP_LOG_CATEGORY], lowestLevel: "warning", sinks: ["file"] },
+		],
+	});
+	logger.info("log file", logFile, { maxBytes: MAX_LOG_FILE_BYTES, maxFiles: MAX_LOG_FILES, logDir });
 }
 
 let fatalErrorDialogShown = false;
@@ -163,10 +160,11 @@ function attachProcessErrorHandlers() {
 	});
 }
 
-/** Prod: warn+ to file. Always: process error handlers. */
+/** Prod: warn+ to rotating logtape file sink. Always: process error handlers. */
 export function attachAppLogging(options?: { file?: boolean }): void {
 	attachProcessErrorHandlers();
 	if (!options?.file || fileOutputAttached) return;
 	fileOutputAttached = true;
-	Logger.outputs.push(createFileLogOutput());
+	configureFileSink();
+	Logger.outputs.push(createLogTapeOutput());
 }

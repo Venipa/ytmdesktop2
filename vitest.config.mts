@@ -1,8 +1,17 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
+
+const ytmdesktop2Src = path.resolve("apps/ytmdesktop2/src");
 
 const isCi = process.env.CI === "true";
 
 export default defineConfig({
+	resolve: {
+		alias: {
+			"@main": path.join(ytmdesktop2Src, "main"),
+			"@shared": path.join(ytmdesktop2Src, "shared"),
+		},
+	},
 	test: {
 		name: "ytmdesktop2-workspace",
 		environment: "node",

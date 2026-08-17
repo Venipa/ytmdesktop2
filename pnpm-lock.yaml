@@ -94,6 +94,12 @@ importers:
       '@hono/node-server':
         specifier: ^2.0.12
         version: 2.0.12(hono@4.13.0)
+      '@logtape/file':
+        specifier: ^2.3.1
+        version: 2.3.1(@logtape/logtape@2.3.1)
+      '@logtape/logtape':
+        specifier: ^2.3.1
+        version: 2.3.1
       '@mdx-js/mdx':
         specifier: ^3.1.1
         version: 3.1.1(supports-color@8.1.1)
@@ -1615,6 +1621,14 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@logtape/file@2.3.1':
+    resolution: {integrity: sha512-jNGW1Ey0m9eFTmMxk5b8xOnX0XGetnCUJVs57BbXA28oAtQ+EDTp2rto2Jql7jM/RZAiDFp8lgovSKeLJnoj9g==}
+    peerDependencies:
+      '@logtape/logtape': ^2.3.1
+
+  '@logtape/logtape@2.3.1':
+    resolution: {integrity: sha512-nYLsBWMKk0Llp62U6cDbQxNcEKc0E0s5hWbAxkmUM8ax6VchGkPSjPrVp3ixFQUuvUB9ku7MSgPzFhmVTSh2Jw==}
 
   '@lukeed/ms@2.0.2':
     resolution: {integrity: sha512-9I2Zn6+NJLfaGoz9jN3lpwDgAYvfGeNYdbAIjJOqzs4Tpc+VU3Jqq4IofSUBKajiDS8k9fZIg18/z13mpk1bsA==}
@@ -8944,6 +8958,12 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@logtape/file@2.3.1(@logtape/logtape@2.3.1)':
+    dependencies:
+      '@logtape/logtape': 2.3.1
+
+  '@logtape/logtape@2.3.1': {}
 
   '@lukeed/ms@2.0.2': {}
 
