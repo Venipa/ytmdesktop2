@@ -1,8 +1,8 @@
-import { Inter } from 'next/font/google';
 import { Provider } from '@/components/provider';
-import type { Metadata } from 'next';
 import { assetPath } from '@/lib/paths';
 import { appDescription, appName, appTagline, siteUrl } from '@/lib/shared';
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './global.css';
 
 const inter = Inter({
@@ -35,9 +35,19 @@ export const metadata: Metadata = {
   },
 };
 
+import Script from "next/script";
+
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en" className={inter.className} suppressHydrationWarning>
+      <head>
+        <Script
+          src="https://rybbit.venipa.net/api/script.js"
+          data-site-id="2"
+          strategy="afterInteractive"
+          defer
+        />
+      </head>
       <body className="flex flex-col min-h-screen">
         <Provider>{children}</Provider>
       </body>
