@@ -41,7 +41,8 @@ export function getYtmPlayerApiFromDom(): unknown {
 			for (const key of Object.getOwnPropertyNames(el)) {
 				if (!/playerController$/i.test(key)) continue;
 				const ctrl = el[key] as { playerApi?: unknown } | undefined;
-				if (ready(ctrl?.playerApi)) return ctrl.playerApi;
+        if (!ctrl) continue;
+				if (ready(ctrl.playerApi)) return ctrl.playerApi;
 				if (ready(ctrl)) return ctrl;
 			}
 			if (typeof el.resolvePlayerApi === "function") {
