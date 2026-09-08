@@ -91,6 +91,11 @@ jobs:
           VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
           VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+          VITE_APP_GIT_HASH: ${{ github.sha }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: venipa.net
+          SENTRY_PROJECT: ytmdesktop
+          SENTRY_URL: ${{ secrets.SENTRY_URL }}
 
       - name: Verify compile output
         shell: bash
@@ -123,23 +128,6 @@ jobs:
           else
             gh release create "$tag" --draft --title "$title" --notes "Publishing assets…"
           fi
-
-      - name: Upload release source maps to sentry
-        continue-on-error: true
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_PROJECT: ytmdesktop
-          SENTRY_ORG: venipa.net
-          SENTRY_DEPLOY_ENVIRONMENT: production
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_URL: ${{ secrets.SENTRY_URL }}
-        run: |
-          curl -sL https://sentry.io/get-cli/ | bash
-          export SENTRY_RELEASE=$(sentry-cli releases propose-version)
-          sentry-cli releases new --project $SENTRY_PROJECT $SENTRY_RELEASE
-          sentry-cli releases set-commits --auto $SENTRY_RELEASE
-          sentry-cli releases finalize $SENTRY_RELEASE
-          sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_DEPLOY_ENVIRONMENT
 
   build-windows:
     needs: compile

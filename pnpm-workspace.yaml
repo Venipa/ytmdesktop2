@@ -8,6 +8,7 @@ nodeLinker: hoisted
 onlyBuiltDependencies:
   - '@biomejs/biome'
   - '@parcel/watcher'
+  - '@sentry/cli'
   - 'electron-winstaller'
   - electron
   - esbuild
@@ -16,6 +17,7 @@ onlyBuiltDependencies:
 
 allowBuilds:
   '@parcel/watcher': true
+  '@sentry/cli': true
   '@swc/core': true
   bufferutil: true
   electron: true

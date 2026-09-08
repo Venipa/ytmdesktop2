@@ -1,4 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "electron-vite";
@@ -6,8 +7,9 @@ import fs from "fs";
 import { camelCase } from "lodash-es";
 import { createRequire } from "module";
 import path, { basename, resolve } from "path";
-import { type AliasOptions, type Plugin, type UserConfigExport } from "vite";
+import { type AliasOptions, type Plugin, type PluginOption, type UserConfigExport } from "vite";
 import svgr from "vite-plugin-svgr";
+import { formatSentryRelease } from "./src/shared/sentry-release";
 import { ytmdSidecarWatchPlugin, ytmdWorld0BuildPlugin } from "./vite-plugins/sidecar-builds";
 
 const require = createRequire(import.meta.url);
@@ -134,11 +136,39 @@ export { };
 	};
 }
 
+function sentryReleaseName(): string {
+	const version = JSON.parse(fs.readFileSync(resolve("package.json"), "utf8")).version as string;
+	return formatSentryRelease(version, process.env.VITE_APP_GIT_HASH ?? process.env.GITHUB_SHA);
+}
+
+function sentryUploadPlugin(): PluginOption {
+	const authToken = process.env.SENTRY_AUTH_TOKEN;
+	const org = process.env.SENTRY_ORG;
+	const project = process.env.SENTRY_PROJECT;
+	if (!authToken || !org || !project) {
+		return;
+	}
+	return sentryVitePlugin({
+		url: process.env.SENTRY_URL || "https://sentry.venipa.net",
+		org,
+		project,
+		authToken,
+		release: { name: sentryReleaseName() },
+		sourcemaps: {
+			filesToDeleteAfterUpload: ["out/**/*.map"],
+		},
+		telemetry: false,
+	});
+}
+
+const sentrySourcemap = process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT ? "hidden" : false;
+
 export default defineConfig({
 	main: {
 		...mainResolve,
-		plugins: [generateServiceTypesPlugin()],
+		plugins: [generateServiceTypesPlugin(), sentryUploadPlugin()],
 		build: {
+			sourcemap: sentrySourcemap,
 			externalizeDeps: { exclude: [...externalizedEsmDeps, ...bundleIntoMain] },
 			rollupOptions: {
 				input: {
@@ -155,8 +185,9 @@ export default defineConfig({
 	},
 	preload: {
 		...mainResolve,
-		plugins: [ytmdWorld0BuildPlugin(), react()],
+		plugins: [ytmdWorld0BuildPlugin(), react(), sentryUploadPlugin()],
 		build: {
+			sourcemap: sentrySourcemap,
 			minify: "esbuild",
 			externalizeDeps: { exclude: [...externalizedEsmDeps, ...bundleIntoMain, ...bundleIntoPreload] },
 			rollupOptions: {
@@ -182,6 +213,9 @@ export default defineConfig({
 				overlay: true,
 			},
 		},
+		build: {
+			sourcemap: sentrySourcemap,
+		},
 		plugins: [
 			ytmdSidecarWatchPlugin(),
 			tanstackRouter({
@@ -195,6 +229,7 @@ export default defineConfig({
 			}),
 			svgr(),
 			tailwindcss(),
+			sentryUploadPlugin(),
 		],
 	},
 });

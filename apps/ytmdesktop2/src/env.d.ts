@@ -9,6 +9,8 @@ import type { IpcPromiseResult } from "@shared/utils/promises";
 interface ImportMetaEnv {
 	readonly MAIN_APP_SECRET: string;
 	readonly NODE_ENV: "production" | "development";
+	readonly VITE_SENTRY_DSN?: string;
+	readonly VITE_APP_GIT_HASH?: string;
 }
 interface ImportMeta {
 	readonly env: ImportMetaEnv;

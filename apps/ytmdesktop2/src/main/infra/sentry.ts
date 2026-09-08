@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/electron/main";
+import { formatSentryRelease } from "@shared/sentry-release";
 import { logger } from "@shared/utils/console";
+import { app } from "electron";
 
 let enabledReporting = true;
 const sentryLog = logger.child("Sentry");
@@ -14,6 +16,7 @@ if (import.meta.env.VITE_SENTRY_DSN && Sentry && !Sentry.isInitialized) {
 		Sentry.init({
 			dsn: import.meta.env.VITE_SENTRY_DSN,
 			enabled: import.meta.env.PROD,
+			release: formatSentryRelease(app.getVersion(), import.meta.env.VITE_APP_GIT_HASH),
 			onFatalError(error) {
 				if (enabledReporting) sentryLog.error(error);
 			},
