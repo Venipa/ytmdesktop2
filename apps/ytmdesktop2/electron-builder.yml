@@ -67,7 +67,6 @@ mac:
     - target: zip
       arch: arm64
   icon: build/icon.icns
-  forceCodeSigning: false
 dmg:
   title: "Install or Update ${productName} ${version}"
 linux:

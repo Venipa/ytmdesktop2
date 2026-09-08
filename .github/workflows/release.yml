@@ -267,9 +267,25 @@ jobs:
           test -f apps/ytmdesktop2/out/main/index.js
           test -f apps/ytmdesktop2/resources/embeds/now-playing/index.html
 
-      # Outside Mac App Store: Developer ID Application + notarize (see macos-signing.md)
+      # Outside Mac App Store: Developer ID Application + notarize
       # Secrets: MACOS_DEVELOPER_ID_APPLICATION_P12 (+ _PASSWORD),
       #          APPLE_NOTARY_API_KEY_P8, APPLE_NOTARY_API_KEY_ID, APPLE_NOTARY_API_ISSUER_ID
+      #
+      # Do not pass CSC_LINK. electron-builder 26.x calls
+      # `security set-key-partition-list -k` with the .p12 password instead of the
+      # temp keychain password (electron-userland/electron-builder#10066). That
+      # fails on some macos-latest images (SecKeychainUnlock: passphrase not
+      # correct) and succeeds on others where securityd is more lenient.
+      - name: Import Developer ID certificate
+        uses: apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_P12 }}
+          p12-password: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_PASSWORD }}
+
+      - name: Verify codesigning identity
+        run: |
+          security find-identity -v -p codesigning | grep -F "Developer ID Application"
+
       - name: Prepare Apple notarization key
         run: |
           mkdir -p .secrets
@@ -280,13 +296,8 @@ jobs:
         run: pnpm release:pack:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
-          VITE_LASTFM_API: ${{ secrets.LASTFM_API }}
-          VITE_LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
-          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
-          CSC_LINK: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_P12 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_PASSWORD }}
+          NODE_ENV: production
+          CSC_IDENTITY_AUTO_DISCOVERY: "true"
           APPLE_API_KEY: ${{ format('{0}/.secrets/AuthKey.p8', github.workspace) }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_NOTARY_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_NOTARY_API_ISSUER_ID }}
