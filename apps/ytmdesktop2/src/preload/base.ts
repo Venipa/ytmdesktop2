@@ -1,3 +1,4 @@
+import { getYtmPlayerApiFromDom } from "@shared/ytm";
 import { contextBridge, ipcRenderer, webFrame } from "electron";
 import { webUtils } from "electron/renderer";
 import { ELECTRON_TRPC_CHANNEL } from "electron-trpc/main";
@@ -103,14 +104,11 @@ const appMethods = {
 
 const createPlayerApi = () => {
 	let playerApiCache: any;
-	const selectors = ["body>ytmusic-app", "ytmusic-app-layout>ytmusic-player-bar"] as const;
 	return () => {
-		for (const selector of selectors) {
-			const fresh = (document.querySelector(selector) as any)?.playerApi;
-			if (fresh) {
-				playerApiCache = fresh;
-				return fresh;
-			}
+		const fresh = getYtmPlayerApiFromDom();
+		if (fresh) {
+			playerApiCache = fresh;
+			return fresh;
 		}
 		return playerApiCache ?? null;
 	};

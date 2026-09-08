@@ -27,7 +27,7 @@ export type YtmAppNetwork = {
 	};
 };
 
-type YtmdHookWindow = Window & { __YTMD_HOOK__?: { ytmStore?: YtmStoreLike } };
+type YtmdHookWindow = Window & { __YTMD_HOOK__?: { ytmStore?: YtmStoreLike; ytmPlayerBar?: { playerApi?: unknown } } };
 
 export function isYtmStore(value: unknown): value is YtmStoreLike {
 	if (!value || typeof value !== "object") return false;
@@ -39,7 +39,7 @@ export function isYtmStore(value: unknown): value is YtmStoreLike {
 export function cacheYtmStore(store: YtmStoreLike): void {
 	const win = window as YtmdHookWindow;
 	if (isYtmStore(win.__YTMD_HOOK__?.ytmStore)) return;
-	win.__YTMD_HOOK__ = { ytmStore: store };
+	win.__YTMD_HOOK__ = { ...win.__YTMD_HOOK__, ytmStore: store };
 }
 
 function readQueueHostStore(): YtmStoreLike | null {

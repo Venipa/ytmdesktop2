@@ -8,5 +8,7 @@ describe("buildYtmReadyPollScript", () => {
 		expect(script).toContain("Date.now() + 5000");
 		expect(script).toContain("needLoaded = false");
 		expect(script).toContain("needPlayer = true");
+		expect(script).toContain("__YTMD_HOOK__");
+		expect(script).toContain("#movie_player");
 	});
 });

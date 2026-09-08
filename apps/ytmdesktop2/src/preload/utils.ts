@@ -1,5 +1,5 @@
 import { createLogger } from "@shared/utils/console";
-import { buildYtmReadyPollScript } from "@shared/ytm";
+import { buildYtmReadyPollScript, getYtmPlayerApiFromDom, isYtmPlayerApiReady } from "@shared/ytm";
 import DOMPurify from "dompurify";
 import { ipcRenderer, webFrame } from "electron";
 import { debounce, get, merge, set } from "lodash-es";
@@ -42,26 +42,10 @@ export const YTMD_READY_MESSAGE = "ytmd-ready";
 export const YOUTUBE_MUSIC_HOST = "music.youtube.com";
 export const DEFAULT_PLAYER_TIMEOUT = 12 * 1000;
 
-const PLAYER_API_SELECTORS = ["body>ytmusic-app", "ytmusic-app-layout>ytmusic-player-bar"] as const;
-
-function isPlayerApiReady(api: unknown): boolean {
-	try {
-		const player = api as { isReady?: (() => boolean) | boolean } | null | undefined;
-		if (!player) return false;
-		return typeof player.isReady === "function" ? !!player.isReady() : !!player.isReady;
-	} catch {
-		return false;
-	}
-}
-
 /** True when any known host element exposes a ready playerApi. */
 export function isYoutubePlayerReadyFromDom(): boolean {
-	if (isPlayerApiReady(window.domUtils?.playerApi?.())) return true;
-	for (const selector of PLAYER_API_SELECTORS) {
-		const el = document.querySelector(selector) as { playerApi?: unknown } | null;
-		if (isPlayerApiReady(el?.playerApi)) return true;
-	}
-	return false;
+	if (isYtmPlayerApiReady(window.domUtils?.playerApi?.())) return true;
+	return isYtmPlayerApiReady(getYtmPlayerApiFromDom());
 }
 
 // Logger

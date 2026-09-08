@@ -103,5 +103,6 @@ function scheduleBoot(from: string): void {
 		logger.error("Failed to initialize YTMD", err);
 	});
 }
+void injectYtmdAgent();
 process.once("loaded", () => scheduleBoot("process.loaded"));
 exposeData.domUtils.ensureDomLoaded(() => scheduleBoot("dom"));
