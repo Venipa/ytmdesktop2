@@ -63,6 +63,15 @@ function readLyricsSettings(settings?: Record<string, any>) {
 		showProgressBar: s?.lyrics?.showProgressBar !== false,
 		dynamicLyrics: s?.lyrics?.dynamicLyrics !== false,
 		providers: s?.lyrics?.providers,
+		betterLyricsApiKey: typeof s?.lyrics?.betterLyricsApiKey === "string" ? s.lyrics.betterLyricsApiKey : "",
+	};
+}
+
+function fetchOptions(cfg: ReturnType<typeof readLyricsSettings>) {
+	return {
+		showEvenIfInexact: cfg.showEvenIfInexact,
+		providers: cfg.providers,
+		betterLyricsApiKey: cfg.betterLyricsApiKey,
 	};
 }
 
@@ -80,10 +89,7 @@ async function prefetchNextTrack(cfg: ReturnType<typeof readLyricsSettings>) {
 	try {
 		const next = await lyricsPage.request("nextTrackInfo");
 		if (!canPrefetchTrack(next)) return;
-		runtime.store.prefetchForTrack(next, {
-			showEvenIfInexact: cfg.showEvenIfInexact,
-			providers: cfg.providers,
-		});
+		runtime.store.prefetchForTrack(next, fetchOptions(cfg));
 		runtime.log?.debug("lyrics: prefetch next", next.videoId, next.title);
 	} catch (err) {
 		runtime.log?.debug("lyrics: prefetch next failed", err);
@@ -109,10 +115,7 @@ async function refreshTrack(expectVideoId?: string | null) {
 	}
 	runtime.lastVideoId = info.videoId;
 	const cfg = readLyricsSettings();
-	await runtime.store.fetchForTrack(info, {
-		showEvenIfInexact: cfg.showEvenIfInexact,
-		providers: cfg.providers,
-	});
+	await runtime.store.fetchForTrack(info, fetchOptions(cfg));
 	if (!runtime.active) return;
 	if (runtime.lastVideoId !== info.videoId) return;
 	void prefetchNextTrack(cfg);
@@ -201,7 +204,11 @@ async function startLyrics() {
 			if (key === "lyrics.showTimeCodes" || key === "lyrics.showProgressBar" || key === "lyrics.dynamicLyrics") {
 				runtime.renderer?.repaint();
 			}
-			if (key === "lyrics.showEvenIfInexact" || key === "lyrics.providers") {
+			if (
+				key === "lyrics.showEvenIfInexact" ||
+				key === "lyrics.providers" ||
+				key === "lyrics.betterLyricsApiKey"
+			) {
 				runtime.store.clearCache();
 				void refreshTrack();
 			}

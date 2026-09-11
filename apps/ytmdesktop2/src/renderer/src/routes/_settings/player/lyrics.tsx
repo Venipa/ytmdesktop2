@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LyricsProvidersOrder } from "@/components/lyrics-providers-order";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
+import { SettingsInput } from "@/components/settings-input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 import { useSettingsState } from "@/hooks/use-settings";
@@ -68,12 +69,31 @@ function LyricsSettingsPage() {
 				<CardHeader>
 					<CardTitle>Providers</CardTitle>
 					<CardDescription>
-						Tried in order until one returns lyrics (default: Better Lyrics → Unison → LRCLib). Better Lyrics and Unison
-						can return syllable sync; LRCLib is line/plain only. Toggle sources on or off and drag to reorder.
+						Tried in order until one returns lyrics (default: Better Lyrics → Unison → LRCLib → YouTube captions). Better Lyrics and Unison
+						can return syllable sync; LRCLib is line/plain (word sync when the entry has it); YouTube captions is line-only and
+						uses the current video's own caption track. Toggle sources on or off and drag to reorder.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<LyricsProvidersOrder disabled={!lyricsEnabled} />
+					<FieldGroup>
+						<LyricsProvidersOrder disabled={!lyricsEnabled} />
+						<SettingsInput
+							configKey="lyrics.betterLyricsApiKey"
+							type="password"
+							autoComplete="off"
+							spellCheck={false}
+							disabled={!lyricsEnabled}
+							placeholder="Optional"
+							label="Better Lyrics API key"
+							hint={
+								<>
+									Sent as <code>X-API-Key</code>. Cached songs never need a key; uncached songs do, and Better
+									Lyrics is not issuing new keys right now. Without one, play a song once in the Better Lyrics
+									browser extension to cache it.
+								</>
+							}
+						/>
+					</FieldGroup>
 				</CardContent>
 				<CardFooter>
 					<p className="text-xs text-muted-foreground">Site links open each provider&apos;s homepage or docs.</p>

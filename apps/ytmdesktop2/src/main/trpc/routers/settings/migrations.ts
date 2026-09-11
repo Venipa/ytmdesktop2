@@ -110,7 +110,9 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 					{ id: "better-lyrics", enabled: true },
 					{ id: "unison", enabled: true },
 					{ id: "lrclib", enabled: true },
+					{ id: "youtube-captions", enabled: true },
 				],
+				betterLyricsApiKey: "",
 			});
 		},
 	},
@@ -128,6 +130,7 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 					{ id: "better-lyrics", enabled: true },
 					{ id: "unison", enabled: true },
 					{ id: "lrclib", enabled: true },
+					{ id: "youtube-captions", enabled: true },
 				]);
 				return;
 			}
@@ -159,6 +162,18 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 				pinned = false;
 			}
 			store.set("trayView.pinned", pinned);
+		},
+	},
+	{
+		hook(store) {
+			const current = (store.store as SettingsStore)?.lyrics;
+			if (!current) return;
+			if (typeof current.betterLyricsApiKey !== "string") store.set("lyrics.betterLyricsApiKey", "");
+			// New last-resort provider: append (enabled) for users with an older saved order.
+			const providers = Array.isArray(current.providers) ? current.providers : [];
+			if (providers.length && !providers.some((p) => p?.id === "youtube-captions")) {
+				store.set("lyrics.providers", [...providers, { id: "youtube-captions", enabled: true }]);
+			}
 		},
 	},
 ];

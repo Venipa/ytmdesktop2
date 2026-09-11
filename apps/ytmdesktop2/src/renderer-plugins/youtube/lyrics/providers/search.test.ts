@@ -5,11 +5,13 @@ import { enabledLyricsProviderIds, LYRICS_PROVIDER_META, moveLyricsProvider, nor
 vi.mock("./better-lyrics", () => ({ searchBetterLyrics: vi.fn() }));
 vi.mock("./unison", () => ({ searchUnison: vi.fn() }));
 vi.mock("./lrclib", () => ({ searchLrcLib: vi.fn() }));
+vi.mock("./youtube-captions", () => ({ searchYouTubeCaptions: vi.fn() }));
 
 import { searchBetterLyrics } from "./better-lyrics";
 import { searchLrcLib } from "./lrclib";
+import { searchLyrics, searchLyricsDetailed } from "./search";
 import { searchUnison } from "./unison";
-import { searchLyrics } from "./search";
+import { searchYouTubeCaptions } from "./youtube-captions";
 
 const info: TrackSearchInfo = {
 	videoId: "dQw4w9WgXcQ",
@@ -36,26 +38,27 @@ describe("catalog", () => {
 			{ id: "lrclib", enabled: true },
 			{ id: "better-lyrics", enabled: true },
 			{ id: "unison", enabled: true },
+			{ id: "youtube-captions", enabled: true },
 		]);
 		expect(
 			enabledLyricsProviderIds([
 				{ id: "better-lyrics", enabled: false },
 				{ id: "unison", enabled: true },
 			]),
-		).toEqual(["unison", "lrclib"]);
+		).toEqual(["unison", "lrclib", "youtube-captions"]);
 	});
 
 	it("supports Providers card reorder + toggle", () => {
 		const base = normalizeLyricsProviders(undefined);
 		const moved = moveLyricsProvider(base, 0, 2);
-		expect(moved?.map((e) => e.id)).toEqual(["unison", "lrclib", "better-lyrics"]);
+		expect(moved?.map((e) => e.id)).toEqual(["unison", "lrclib", "better-lyrics", "youtube-captions"]);
 		expect(moveLyricsProvider(base, 0, 0)).toBeNull();
 
 		const toggled = setLyricsProviderEnabled(base, "lrclib", false);
 		expect(toggled.find((e) => e.id === "lrclib")?.enabled).toBe(false);
-		expect(enabledLyricsProviderIds(toggled)).toEqual(["better-lyrics", "unison"]);
+		expect(enabledLyricsProviderIds(toggled)).toEqual(["better-lyrics", "unison", "youtube-captions"]);
 
-		for (const id of ["better-lyrics", "unison", "lrclib"] as const) {
+		for (const id of ["better-lyrics", "unison", "lrclib", "youtube-captions"] as const) {
 			expect(LYRICS_PROVIDER_META[id].href).toMatch(/^https:\/\//);
 			expect(LYRICS_PROVIDER_META[id].label.length).toBeGreaterThan(0);
 		}
@@ -104,3 +107,61 @@ describe("searchLyrics", () => {
 		expect(searchLrcLib).toHaveBeenCalledOnce();
 	});
 });
+
+describe("searchLyricsDetailed", () => {
+	beforeEach(() => {
+		vi.mocked(searchBetterLyrics).mockReset();
+		vi.mocked(searchUnison).mockReset();
+		vi.mocked(searchLrcLib).mockReset();
+	});
+
+	it("forwards the API key and surfaces the Better Lyrics miss reason when nothing is found", async () => {
+		vi.mocked(searchBetterLyrics).mockImplementation(async (_info, options) => {
+			options?.onMiss?.("uncached");
+			return null;
+		});
+		vi.mocked(searchUnison).mockResolvedValue(null);
+		vi.mocked(searchLrcLib).mockResolvedValue(null);
+
+		const outcome = await searchLyricsDetailed(info, { showEvenIfInexact: true, betterLyricsApiKey: "k" });
+		expect(outcome).toEqual({ result: null, betterLyricsMiss: "uncached" });
+		expect(vi.mocked(searchBetterLyrics).mock.calls[0]?.[1]).toMatchObject({ apiKey: "k" });
+	});
+
+	it("keeps the miss reason even when a later provider wins", async () => {
+		vi.mocked(searchBetterLyrics).mockImplementation(async (_info, options) => {
+			options?.onMiss?.("uncached");
+			return null;
+		});
+		vi.mocked(searchUnison).mockResolvedValue(hit("unison"));
+
+		const outcome = await searchLyricsDetailed(info, { showEvenIfInexact: true });
+		expect(outcome.result?.provider).toBe("unison");
+		expect(outcome.betterLyricsMiss).toBe("uncached");
+	});
+});
+
+describe("searchLyricsDetailed prefetch", () => {
+	beforeEach(() => {
+		vi.mocked(searchBetterLyrics).mockReset();
+		vi.mocked(searchUnison).mockReset();
+		vi.mocked(searchLrcLib).mockReset();
+		vi.mocked(searchYouTubeCaptions).mockReset();
+	});
+
+	it("skips current-video-only providers and flags the outcome as partial", async () => {
+		vi.mocked(searchBetterLyrics).mockResolvedValue(null);
+		vi.mocked(searchUnison).mockResolvedValue(null);
+		vi.mocked(searchLrcLib).mockResolvedValue(null);
+		vi.mocked(searchYouTubeCaptions).mockResolvedValue(hit("youtube-captions"));
+
+		const outcome = await searchLyricsDetailed(info, { showEvenIfInexact: true, prefetch: true });
+		expect(outcome).toMatchObject({ result: null, partial: true });
+		expect(searchYouTubeCaptions).not.toHaveBeenCalled();
+
+		const full = await searchLyricsDetailed(info, { showEvenIfInexact: true });
+		expect(full.result?.provider).toBe("youtube-captions");
+		expect(full.partial).toBeUndefined();
+	});
+});
+

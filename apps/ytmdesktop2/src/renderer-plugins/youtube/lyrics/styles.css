@@ -39,6 +39,14 @@
 	color: #fff;
 }
 
+#ytmd-lyrics-root .ytmd-lyrics-status-hint {
+	margin: 8px auto 0;
+	max-width: 36em;
+	font-size: 12px;
+	line-height: 1.5;
+	opacity: 0.8;
+}
+
 #ytmd-lyrics-root .ytmd-lyrics-loading {
 	display: flex;
 	flex-direction: column;

@@ -69,6 +69,24 @@ export function statusMessage(snap: LyricsStoreSnapshot): string {
 	}
 }
 
+/**
+ * Actionable follow-up for an empty result. Better Lyrics is cache-first: a 401 means the song is
+ * simply not cached yet, which the user can fix themselves (see https://lyrics-api-docs.boidu.dev/docs/authentication).
+ */
+export function statusHint(snap: LyricsStoreSnapshot): string | null {
+	if (snap.status !== "empty") return null;
+	switch (snap.betterLyricsMiss) {
+		case "uncached":
+			return "Better Lyrics hasn't cached this song yet. Play it once with the Better Lyrics browser extension, or add the lyrics on Unison, then replay.";
+		case "invalid-key":
+			return "Better Lyrics rejected the API key set in Settings → Player → Lyrics.";
+		case "rate-limited":
+			return "Better Lyrics is rate-limiting requests right now. Try again in a moment.";
+		default:
+			return null;
+	}
+}
+
 function prefersReducedMotion(): boolean {
 	try {
 		return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
@@ -388,10 +406,12 @@ export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, 
 	}
 
 	if (snap.status !== "ready" || !result) {
+		const hint = statusHint(snap);
 		return (
 			<div className="ytmd-lyrics-body">
 				<div className="ytmd-lyrics-status" role="status">
 					{statusMessage(snap)}
+					{hint ? <div className="ytmd-lyrics-status-hint">{hint}</div> : null}
 				</div>
 			</div>
 		);

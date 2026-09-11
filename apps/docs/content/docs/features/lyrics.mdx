@@ -1,14 +1,13 @@
-| **Show line progress** | On | Text fill on the active line| **Dynamic lyrics** | On | Continuously fills the sung text and gently enlarges the current line. |
 ---
 title: Lyrics
-description: Timed lyrics in the YouTube Music Lyrics tab via Better Lyrics, Unison, and LRCLib
+description: Timed lyrics in the YouTube Music Lyrics tab via Better Lyrics, Unison, LRCLib, and YouTube captions
 og:
   image: /images/features-lyrics-player.png
   type: render-auto
   color: "#ff0000"
 ---
 
-When **Lyrics** is enabled, YTMDesktop2 replaces the YouTube Music **Lyrics** tab with timed lines. Providers are tried in your chosen order (default: [Better Lyrics](https://github.com/better-lyrics/better-lyrics) → Unison → [LRCLib](https://lrclib.net)). Syllable/word highlighting appears automatically when the winning provider returns it.
+When **Lyrics** is enabled, YTMDesktop2 replaces the YouTube Music **Lyrics** tab with timed lines. Providers are tried in your chosen order (default: [Better Lyrics](https://github.com/better-lyrics/better-lyrics) → Unison → [LRCLib](https://lrclib.net) → YouTube captions). Syllable/word highlighting appears automatically when the winning provider returns it.
 
 ![Synced lyrics in the player](/images/features-lyrics-player.png)
 
@@ -24,10 +23,12 @@ When **Lyrics** is enabled, YTMDesktop2 replaces the YouTube Music **Lyrics** ta
 | Setting | Default | What it does |
 | --- | --- | --- |
 | **Enable lyrics** | Off | Hijacks the Lyrics tab (hot-toggle, no app restart). |
+| **Dynamic lyrics** | On | Continuously fills the sung text and gently enlarges the current line. |
 | **Allow approximate matches** | On | For LRCLib, show lyrics when title/artist match is close but not exact. |
 | **Show time codes** | Off | Two-column layout with a right-aligned timestamp per line. |
-| **Show line progress** | On | Muted fill on the active line when there are no word/syllable cues. |
-| **Providers** | Better Lyrics → Unison → LRCLib | Separate card: drag to reorder; toggle each source on/off. |
+| **Show line progress** | On | Text fill on the active line when there are no word/syllable cues. |
+| **Providers** | Better Lyrics → Unison → LRCLib → YouTube captions | Separate card: drag to reorder; toggle each source on/off. |
+| **Better Lyrics API key** | Empty | Optional `X-API-Key` for the Better Lyrics API. Only needed for songs that aren't cached yet. |
 
 ## Providers
 
@@ -35,7 +36,19 @@ When **Lyrics** is enabled, YTMDesktop2 replaces the YouTube Music **Lyrics** ta
 | --- | --- |
 | **Better Lyrics** | Syllable & line (TTML) |
 | **[Unison](https://github.com/better-lyrics/unison)** | Syllable, line & plain |
-| **LRCLib** | Line & plain |
+| **LRCLib** | Word (enhanced LRC), line & plain |
+| **YouTube captions** | Line — the video's own human-made caption track; auto-generated captions are ignored |
+
+The Better Lyrics provider uses its documented [public API](https://lyrics-api-docs.boidu.dev), which is **cache-first**: songs already in its cache are free for anyone, while a song that has never been requested needs an API key to fetch from upstream. Better Lyrics is [not issuing new keys](https://lyrics-api-docs.boidu.dev/docs/authentication) at the moment, so for an uncached song YTMDesktop2 falls through to Unison, LRCLib and YouTube captions, and shows a hint in the Lyrics tab.
+
+To get an uncached song into Better Lyrics yourself:
+
+1. Play it once in YouTube Music with the [Better Lyrics browser extension](https://better-lyrics.boidu.dev) installed. The extension fetches through the same upstream, so after one playback the song is cached for every caller — including YTMDesktop2.
+2. Or, if you have the lyrics, upload them at [unison.boidu.dev](https://unison.boidu.dev).
+
+If you already have a Better Lyrics API key, paste it into **Better Lyrics API key** under the Providers card. Changing the key clears the session cache and refetches the current track.
+
+**YouTube captions** reads the caption track YouTube already serves for the current video — useful for music videos and live sessions with a human-made caption track. Auto-generated captions are skipped because speech recognition mishears sung lyrics. Because the player only exposes captions for the video that is playing, this source is not consulted when pre-fetching the next queued track.
 
 ## Notes
 
