@@ -105,6 +105,7 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 				showTimeCodes: false,
 				showEvenIfInexact: true,
 				showProgressBar: true,
+				dynamicLyrics: true,
 				providers: [
 					{ id: "better-lyrics", enabled: true },
 					{ id: "unison", enabled: true },

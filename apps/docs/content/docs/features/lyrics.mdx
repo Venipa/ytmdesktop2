@@ -1,3 +1,4 @@
+| **Show line progress** | On | Text fill on the active line| **Dynamic lyrics** | On | Continuously fills the sung text and gently enlarges the current line. |
 ---
 title: Lyrics
 description: Timed lyrics in the YouTube Music Lyrics tab via Better Lyrics, Unison, and LRCLib
@@ -42,6 +43,9 @@ When **Lyrics** is enabled, YTMDesktop2 replaces the YouTube Music **Lyrics** ta
 - Changing provider order clears the session cache and refetches for the current track.
 - Ads, live, podcasts, and very short clips are skipped.
 - Overlapping timed lines can all be active at once; scroll follows the latest-started.
+- With **Dynamic lyrics** enabled, word/syllable cues fill continuously in the text as they are sung. The current line gently enlarges without changing text wrapping; line-only lyrics use the same text-fill treatment.
+- Scrolling manually pauses automatic centering for 2.5 seconds. Resizing the panel recenters the current line once that pause ends.
+- The system's reduced-motion preference disables line scaling and smooth scrolling while keeping timing highlights visible.
 - Disable anytime to restore stock YouTube Music lyrics.
 
 ## Related

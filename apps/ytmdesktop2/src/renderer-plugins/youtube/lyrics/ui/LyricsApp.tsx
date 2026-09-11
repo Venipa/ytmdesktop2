@@ -1,15 +1,16 @@
 import {
+	type CSSProperties,
+	type KeyboardEvent,
 	memo,
+	type ReactNode,
 	useEffect,
 	useLayoutEffect,
 	useRef,
 	useState,
 	useSyncExternalStore,
-	type CSSProperties,
-	type KeyboardEvent,
-	type ReactNode,
 } from "react";
 import { activeLineIndices, activeWordIndex, primaryActiveLineIndex } from "../lrc";
+import { wordProgress } from "../progress";
 import { lyricsProviderLabel } from "../providers/catalog";
 import type { LyricsStoreSnapshot } from "../store";
 import type { LyricLine, LyricResult, LyricWord } from "../types";
@@ -22,6 +23,7 @@ export interface LyricsShellState {
 	snap: LyricsStoreSnapshot;
 	showTimeCodes: boolean;
 	showProgressBar: boolean;
+	dynamicLyrics: boolean;
 	settingsEpoch: number;
 }
 
@@ -35,6 +37,7 @@ export interface LyricsUiState extends LyricsShellState, LyricsClockState {}
 export interface LyricsUiOptions {
 	showTimeCodes: () => boolean;
 	showProgressBar: () => boolean;
+	dynamicLyrics: () => boolean;
 	onSeek: (timeMs: number) => void;
 }
 
@@ -89,10 +92,11 @@ function lineProgressRatio(line: LyricLine, nowMs: number): number {
 	return Math.min(1, Math.max(0, (nowMs - line.timeMs) / dur));
 }
 
-function lineClassName(isActive: boolean, showProgress: boolean): string {
+function lineClassName(isActive: boolean, showProgress: boolean, dynamicLyrics: boolean): string {
 	const parts = ["ytmd-lyrics-line"];
 	if (isActive) parts.push("is-active");
 	if (isActive && showProgress) parts.push("has-line-progress");
+	if (dynamicLyrics) parts.push("is-dynamic");
 	return parts.join(" ");
 }
 
@@ -115,17 +119,24 @@ function wordClassName(isActiveLine: boolean, wordIdx: number, activeWord: numbe
 interface WordSyncTextProps {
 	words: LyricWord[];
 	isActive: boolean;
-	activeWord: number;
+	timeMs: number;
+	dynamicLyrics: boolean;
 	onSeek: (timeMs: number) => void;
 }
 
-const WordSyncText = memo(function WordSyncText({ words, isActive, activeWord, onSeek }: WordSyncTextProps) {
+const WordSyncText = memo(function WordSyncText({ words, isActive, timeMs, dynamicLyrics, onSeek }: WordSyncTextProps) {
+	const activeWord = isActive ? activeWordIndex(words, timeMs) : -1;
 	return (
 		<span className="ytmd-lyrics-words">
 			{words.map((word, w) => (
 				<span
 					key={`${word.timeMs}-${w}`}
 					className={wordClassName(isActive, w, activeWord)}
+					style={
+						dynamicLyrics
+							? ({ "--ytmd-word-progress": `${(isActive ? wordProgress(word, timeMs) : 0) * 100}%` } as CSSProperties)
+							: undefined
+					}
 					onClick={(ev) => {
 						ev.stopPropagation();
 						onSeek(word.timeMs);
@@ -145,7 +156,8 @@ interface LyricLineRowProps {
 	progress: number | null;
 	showTimeCodes: boolean;
 	words: LyricWord[] | undefined;
-	activeWord: number;
+	timeMs: number;
+	dynamicLyrics: boolean;
 	onSeek: (timeMs: number) => void;
 }
 
@@ -156,7 +168,8 @@ const LyricLineRow = memo(function LyricLineRow({
 	progress,
 	showTimeCodes,
 	words,
-	activeWord,
+	timeMs,
+	dynamicLyrics,
 	onSeek,
 }: LyricLineRowProps) {
 	const parts = line.parts?.filter((p) => p.length > 0);
@@ -175,7 +188,7 @@ const LyricLineRow = memo(function LyricLineRow({
 
 	let textBody: ReactNode;
 	if (words?.length) {
-		textBody = <WordSyncText words={words} isActive={isActive} activeWord={activeWord} onSeek={onSeek} />;
+		textBody = <WordSyncText words={words} isActive={isActive} timeMs={timeMs} dynamicLyrics={dynamicLyrics} onSeek={onSeek} />;
 	} else if (parts && parts.length > 1) {
 		textBody = (
 			<span className="ytmd-lyrics-parts">
@@ -192,7 +205,7 @@ const LyricLineRow = memo(function LyricLineRow({
 
 	return (
 		<div
-			className={lineClassName(isActive, progress != null)}
+			className={lineClassName(isActive, progress != null, dynamicLyrics)}
 			data-index={index}
 			role="listitem"
 			tabIndex={0}
@@ -229,6 +242,7 @@ interface SyncedListProps {
 	result: LyricResult;
 	showTimeCodes: boolean;
 	showProgressBar: boolean;
+	dynamicLyrics: boolean;
 	settingsEpoch: number;
 	videoId: string | null;
 	subscribeClock: (onStoreChange: () => void) => () => void;
@@ -241,6 +255,7 @@ function SyncedList({
 	result,
 	showTimeCodes,
 	showProgressBar,
+	dynamicLyrics,
 	settingsEpoch,
 	videoId,
 	subscribeClock,
@@ -312,6 +327,8 @@ function SyncedList({
 			const pad = Math.max(24, Math.round(list.clientHeight / 2));
 			list.style.paddingTop = `${pad}px`;
 			list.style.paddingBottom = `${pad}px`;
+			lastScrolledActive.current = -1;
+			setCatchUpNonce((n) => n + 1);
 		};
 		applyPad();
 		const ro = new ResizeObserver(applyPad);
@@ -331,7 +348,6 @@ function SyncedList({
 					const words = line.words?.length ? line.words : undefined;
 					const useWords = !!words?.length;
 					const progress = isActive && showProgressBar && !useWords ? lineProgressRatio(line, timeMs) : null;
-					const activeWord = isActive && useWords ? activeWordIndex(words!, timeMs) : -1;
 					return (
 						<LyricLineRow
 							key={`${line.timeMs}-${i}`}
@@ -341,7 +357,8 @@ function SyncedList({
 							progress={progress}
 							showTimeCodes={showTimeCodes}
 							words={words}
-							activeWord={activeWord}
+							timeMs={isActive && useWords ? timeMs : 0}
+							dynamicLyrics={dynamicLyrics}
 							onSeek={onSeek}
 						/>
 					);
@@ -353,7 +370,7 @@ function SyncedList({
 
 export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, onSeek }: LyricsAppProps) {
 	const shell = useSyncExternalStore(subscribeShell, getShell, getShell);
-	const { snap, showTimeCodes, showProgressBar, settingsEpoch } = shell;
+	const { snap, showTimeCodes, showProgressBar, dynamicLyrics, settingsEpoch } = shell;
 
 	const result = snap.result;
 	const lines = snap.status === "ready" && result?.lines?.length ? result.lines : null;
@@ -387,6 +404,7 @@ export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, 
 				result={result}
 				showTimeCodes={showTimeCodes}
 				showProgressBar={showProgressBar}
+				dynamicLyrics={dynamicLyrics}
 				settingsEpoch={settingsEpoch}
 				videoId={snap.videoId}
 				subscribeClock={subscribeClock}

@@ -46,6 +46,7 @@ const defaultSettings = {
 		showTimeCodes: false,
 		showEvenIfInexact: true,
 		showProgressBar: true,
+		dynamicLyrics: true,
 		providers: [
 			{ id: "better-lyrics", enabled: true },
 			{ id: "unison", enabled: true },

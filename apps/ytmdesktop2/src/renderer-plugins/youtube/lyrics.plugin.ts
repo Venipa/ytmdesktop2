@@ -9,10 +9,10 @@ import {
 	stopLyricsClock,
 	trackInfoFromMainWorld,
 } from "./lyrics/track";
+import type { TrackSearchInfo } from "./lyrics/types";
 import { createLyricsRenderer, type LyricsRenderApi } from "./lyrics/ui/render";
 import { lyricsPage, subscribeLyricsTime } from "./lyrics.page";
 import lyricsRenderer from "./lyrics.renderer";
-import type { TrackSearchInfo } from "./lyrics/types";
 
 const SEEK_OFFSET_MS = 10;
 /** Nudge UI ahead of getCurrentTime - YTM clock often trails audible audio. */
@@ -61,6 +61,7 @@ function readLyricsSettings(settings?: Record<string, any>) {
 		showTimeCodes: !!s?.lyrics?.showTimeCodes,
 		showEvenIfInexact: s?.lyrics?.showEvenIfInexact !== false,
 		showProgressBar: s?.lyrics?.showProgressBar !== false,
+		dynamicLyrics: s?.lyrics?.dynamicLyrics !== false,
 		providers: s?.lyrics?.providers,
 	};
 }
@@ -186,6 +187,7 @@ async function startLyrics() {
 	runtime.renderer = createLyricsRenderer(() => runtime.mount?.getHost() ?? null, {
 		showTimeCodes: () => readLyricsSettings().showTimeCodes,
 		showProgressBar: () => readLyricsSettings().showProgressBar,
+		dynamicLyrics: () => readLyricsSettings().dynamicLyrics,
 		onSeek: (timeMs) => {
 			void seekPlayer((timeMs + SEEK_OFFSET_MS) / 1000).then((ok) => {
 				if (!ok) runtime.log?.debug("lyrics: seek failed");
@@ -196,7 +198,7 @@ async function startLyrics() {
 	runtime.unsubStore = runtime.store.subscribe((snap) => runtime.renderer?.setSnapshot(snap));
 	runtime.unsubSettings =
 		runtime.onSettingsChange?.((key) => {
-			if (key === "lyrics.showTimeCodes" || key === "lyrics.showProgressBar") {
+			if (key === "lyrics.showTimeCodes" || key === "lyrics.showProgressBar" || key === "lyrics.dynamicLyrics") {
 				runtime.renderer?.repaint();
 			}
 			if (key === "lyrics.showEvenIfInexact" || key === "lyrics.providers") {

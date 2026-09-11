@@ -105,7 +105,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
-	gap: 4px;
+	gap: 8px;
 	flex: 1 1 auto;
 	width: 100%;
 	min-width: 0;
@@ -128,7 +128,7 @@
 	min-width: 0;
 	max-width: 100%;
 	margin: 0;
-	padding: 10px 12px;
+	padding: 14px 12px;
 	border: 0;
 	border-radius: 8px;
 	background-color: transparent;
@@ -147,32 +147,34 @@
 	word-break: normal;
 	overflow-wrap: break-word;
 	font-family: "YouTube Sans", Roboto, Arial, sans-serif !important;
-	font-size: 18px !important;
-	font-weight: 400 !important;
+	font-size: clamp(22px, 1.55vw, 28px) !important;
+	font-weight: 600 !important;
 	font-style: normal !important;
 	font-stretch: normal !important;
-	line-height: 1.5 !important;
-	opacity: 0.5;
+	line-height: 1.35 !important;
+	opacity: 0.32;
 	cursor: pointer;
 	overflow: hidden;
 	user-select: none;
 	-webkit-user-select: none;
-	transition: opacity 120ms ease, background-color 120ms ease;
+	transition: opacity 200ms ease, background-color 200ms ease;
 }
 
 #ytmd-lyrics-root .ytmd-lyrics-line:hover {
-	opacity: 0.85;
-	background-color: rgba(255, 255, 255, 0.06);
+	opacity: 0.72;
 }
 
 #ytmd-lyrics-root .ytmd-lyrics-line.is-active {
 	opacity: 1;
 	font-weight: 600 !important;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active:not(.is-dynamic) {
 	background-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Muted translucent progress as row background (left → right). */
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active.has-line-progress {
+/* Keep the original row progress when dynamic text highlighting is disabled. */
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active.has-line-progress:not(.is-dynamic) {
 	background-color: transparent;
 	background-image: linear-gradient(
 		to right,
@@ -197,6 +199,13 @@
 	white-space: normal;
 	overflow-wrap: break-word;
 	word-break: normal;
+	transform-origin: left center;
+	transition: transform 250ms ease;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-line.is-dynamic:not(.is-active) .ytmd-lyrics-line-content {
+	/* Reserve the full-size layout; scaling inactive text never changes wrapping. */
+	transform: scale(0.92);
 }
 
 /* Time | text — wrapped lines stay in text column, not under timecode. */
@@ -223,22 +232,44 @@
 	display: inline;
 	color: inherit;
 	-webkit-text-fill-color: inherit;
-	transition: opacity 80ms ease, color 80ms ease;
 }
 
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active .ytmd-lyrics-word {
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active:not(.is-dynamic) .ytmd-lyrics-word {
 	opacity: 0.45;
 }
 
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active .ytmd-lyrics-word.is-sung {
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active:not(.is-dynamic) .ytmd-lyrics-word.is-sung {
 	opacity: 0.78;
 }
 
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active .ytmd-lyrics-word.is-current {
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active:not(.is-dynamic) .ytmd-lyrics-word.is-current {
 	opacity: 1;
 	font-weight: 700 !important;
-	color: #fff !important;
-	-webkit-text-fill-color: #fff !important;
+}
+
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active.is-dynamic .ytmd-lyrics-word {
+	background-image: linear-gradient(
+		to right,
+		#fff var(--ytmd-word-progress, 0%),
+		rgba(255, 255, 255, 0.35) var(--ytmd-word-progress, 0%)
+	);
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent !important;
+}
+
+/* Line-synced lyrics use the same typography fill instead of painting the row. */
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active.is-dynamic.has-line-progress .ytmd-lyrics-text {
+	background-image: linear-gradient(
+		to right,
+		#fff 0%,
+		#fff calc(var(--ytmd-line-progress, 0) * 100%),
+		rgba(255, 255, 255, 0.35) calc(var(--ytmd-line-progress, 0) * 100%),
+		rgba(255, 255, 255, 0.35) 100%
+	);
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent !important;
 }
 
 #ytmd-lyrics-root .ytmd-lyrics-parts {
@@ -311,6 +342,11 @@
 	}
 
 	#ytmd-lyrics-root .ytmd-lyrics-word {
+		transition: none;
+	}
+
+	#ytmd-lyrics-root .ytmd-lyrics-line-content {
+		transform: none !important;
 		transition: none;
 	}
 }

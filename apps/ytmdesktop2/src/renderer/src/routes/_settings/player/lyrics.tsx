@@ -31,6 +31,14 @@ function LyricsSettingsPage() {
 							Enable lyrics
 						</SettingsCheckbox>
 						<SettingsCheckbox
+							configKey="lyrics.dynamicLyrics"
+							defaultValue={true}
+							disabled={!lyricsEnabled}
+							description="Continuously fill the lyric text as it plays and gently enlarge the current line."
+						>
+							Dynamic lyrics
+						</SettingsCheckbox>
+						<SettingsCheckbox
 							configKey="lyrics.showEvenIfInexact"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
@@ -49,7 +57,7 @@ function LyricsSettingsPage() {
 							configKey="lyrics.showProgressBar"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
-							description="Fill the active lyric row as it plays when the provider has no word/syllable cues."
+							description="Show playback progress on the active line when the provider has no word/syllable cues."
 						>
 							Show line progress
 						</SettingsCheckbox>
