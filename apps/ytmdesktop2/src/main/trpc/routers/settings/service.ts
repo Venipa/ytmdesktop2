@@ -55,6 +55,10 @@ const defaultSettings = {
 		] as Array<{ id: "better-lyrics" | "unison" | "lrclib" | "youtube-captions"; enabled: boolean }>,
 		/** Optional Better Lyrics `X-API-Key`; empty = cached songs only. */
 		betterLyricsApiKey: "",
+		/** Switch the player page to the Lyrics tab when lyrics for a new track are showing. */
+		autoOpenTab: true,
+		/** Keep trying later providers for word/syllable cues before settling for line sync. */
+		preferWordSync: true,
 	},
 	player: {
 		skipDisliked: false,

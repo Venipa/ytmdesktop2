@@ -32,12 +32,28 @@ function LyricsSettingsPage() {
 							Enable lyrics
 						</SettingsCheckbox>
 						<SettingsCheckbox
+							configKey="lyrics.autoOpenTab"
+							defaultValue={true}
+							disabled={!lyricsEnabled}
+							description="Switch the player page to the Lyrics tab when lyrics for a new track are found. Once per track, so switching away by hand sticks."
+						>
+							Auto-open Lyrics tab
+						</SettingsCheckbox>
+						<SettingsCheckbox
 							configKey="lyrics.dynamicLyrics"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
 							description="Continuously fill the lyric text as it plays and gently enlarge the current line."
 						>
 							Dynamic lyrics
+						</SettingsCheckbox>
+						<SettingsCheckbox
+							configKey="lyrics.preferWordSync"
+							defaultValue={true}
+							disabled={!lyricsEnabled}
+							description="Keep trying later providers for word/syllable timing before settling for line-synced lyrics. A few extra requests on line-only songs."
+						>
+							Prefer word-synced sources
 						</SettingsCheckbox>
 						<SettingsCheckbox
 							configKey="lyrics.showEvenIfInexact"

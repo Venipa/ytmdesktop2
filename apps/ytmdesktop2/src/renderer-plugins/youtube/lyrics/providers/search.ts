@@ -12,6 +12,8 @@ export interface LyricsSearchOptions {
 	betterLyricsApiKey?: string;
 	/** Background "up next" lookup: providers that only see the current player video are skipped. */
 	prefetch?: boolean;
+	/** Keep trying later providers for word/syllable cues before settling for a line-synced hit. */
+	preferWordSync?: boolean;
 	signal?: AbortSignal;
 }
 
@@ -60,9 +62,15 @@ function isPlainOnly(result: LyricResult | null | undefined): boolean {
 	return !!result?.plain?.trim() && !result?.lines?.length;
 }
 
+function isWordSynced(result: LyricResult | null | undefined): boolean {
+	return isTimed(result) && (!!result?.hasWordSync || !!result?.lines?.some((l) => !!l.words?.length));
+}
+
 /**
  * Try enabled providers in user order.
  * Timed (line/syllable) wins immediately; plain is kept as fallback so later providers can still supply sync.
+ * With `preferWordSync`, only word/syllable-synced results win immediately — a line-synced hit is kept as a
+ * fallback while later providers get a chance to supply word cues.
  */
 export async function searchLyricsDetailed(
 	info: TrackSearchInfo,
@@ -70,6 +78,7 @@ export async function searchLyricsDetailed(
 ): Promise<LyricsSearchOutcome> {
 	const order = enabledLyricsProviderIds(options.providers);
 	const outcome: LyricsSearchOutcome = { result: null };
+	let timedFallback: LyricResult | null = null;
 	let plainFallback: LyricResult | null = null;
 	for (const id of order) {
 		if (options.prefetch && CURRENT_VIDEO_ONLY_PROVIDERS.has(id)) {
@@ -79,15 +88,19 @@ export async function searchLyricsDetailed(
 		try {
 			const result = await runProvider(id, info, options, outcome);
 			if (isTimed(result)) {
-				outcome.result = result;
-				return outcome;
+				if (!options.preferWordSync || isWordSynced(result)) {
+					outcome.result = result;
+					return outcome;
+				}
+				if (!timedFallback) timedFallback = result;
+				continue;
 			}
 			if (isPlainOnly(result) && !plainFallback) plainFallback = result;
 		} catch {
 			/* try next provider */
 		}
 	}
-	outcome.result = plainFallback;
+	outcome.result = timedFallback ?? plainFallback;
 	return outcome;
 }
 

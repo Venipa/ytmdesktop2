@@ -165,3 +165,40 @@ describe("searchLyricsDetailed prefetch", () => {
 	});
 });
 
+describe("searchLyricsDetailed preferWordSync", () => {
+	beforeEach(() => {
+		vi.mocked(searchBetterLyrics).mockReset();
+		vi.mocked(searchUnison).mockReset();
+		vi.mocked(searchLrcLib).mockReset();
+		vi.mocked(searchYouTubeCaptions).mockReset();
+	});
+
+	const wordHit = (): LyricResult => ({ ...hit("unison"), hasWordSync: true, syncLevel: "syllable" });
+	const order = [
+		{ id: "lrclib", enabled: true },
+		{ id: "unison", enabled: true },
+		{ id: "better-lyrics", enabled: false },
+		{ id: "youtube-captions", enabled: false },
+	];
+
+	it("keeps searching past a line-synced hit for word sync, then falls back to it", async () => {
+		vi.mocked(searchLrcLib).mockResolvedValue(hit("lrclib"));
+		vi.mocked(searchUnison).mockResolvedValue(wordHit());
+
+		const preferred = await searchLyricsDetailed(info, { showEvenIfInexact: true, providers: order, preferWordSync: true });
+		expect(preferred.result?.provider).toBe("unison");
+
+		vi.mocked(searchUnison).mockResolvedValue(null);
+		const fallback = await searchLyricsDetailed(info, { showEvenIfInexact: true, providers: order, preferWordSync: true });
+		expect(fallback.result?.provider).toBe("lrclib");
+	});
+
+	it("stops at the first timed hit when disabled", async () => {
+		vi.mocked(searchLrcLib).mockResolvedValue(hit("lrclib"));
+		vi.mocked(searchUnison).mockResolvedValue(wordHit());
+
+		const outcome = await searchLyricsDetailed(info, { showEvenIfInexact: true, providers: order, preferWordSync: false });
+		expect(outcome.result?.provider).toBe("lrclib");
+		expect(searchUnison).not.toHaveBeenCalled();
+	});
+});

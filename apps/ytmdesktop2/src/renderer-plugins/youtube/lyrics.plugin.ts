@@ -1,7 +1,7 @@
 import definePlugin from "@plugins/utils";
 import { getYtmd } from "@preload/preload-local";
 import { createLyricsStore } from "./lyrics/store";
-import { createTabMount, type TabMountHandle } from "./lyrics/tab-mount";
+import { createTabMount, selectLyricsTab, type TabMountHandle } from "./lyrics/tab-mount";
 import {
 	seekPlayer,
 	shouldSkipTrack,
@@ -35,6 +35,8 @@ interface LyricsRuntime {
 	tabSelected: boolean;
 	started: boolean;
 	lastVideoId: string | null;
+	/** videoId the Lyrics tab was auto-opened for (once per track). */
+	autoOpenedFor: string | null;
 }
 
 const runtime: LyricsRuntime = {
@@ -52,6 +54,7 @@ const runtime: LyricsRuntime = {
 	tabSelected: false,
 	started: false,
 	lastVideoId: null,
+	autoOpenedFor: null,
 };
 
 function readLyricsSettings(settings?: Record<string, any>) {
@@ -64,6 +67,8 @@ function readLyricsSettings(settings?: Record<string, any>) {
 		dynamicLyrics: s?.lyrics?.dynamicLyrics !== false,
 		providers: s?.lyrics?.providers,
 		betterLyricsApiKey: typeof s?.lyrics?.betterLyricsApiKey === "string" ? s.lyrics.betterLyricsApiKey : "",
+		autoOpenTab: s?.lyrics?.autoOpenTab !== false,
+		preferWordSync: s?.lyrics?.preferWordSync !== false,
 	};
 }
 
@@ -72,6 +77,7 @@ function fetchOptions(cfg: ReturnType<typeof readLyricsSettings>) {
 		showEvenIfInexact: cfg.showEvenIfInexact,
 		providers: cfg.providers,
 		betterLyricsApiKey: cfg.betterLyricsApiKey,
+		preferWordSync: cfg.preferWordSync,
 	};
 }
 
@@ -119,6 +125,19 @@ async function refreshTrack(expectVideoId?: string | null) {
 	if (!runtime.active) return;
 	if (runtime.lastVideoId !== info.videoId) return;
 	void prefetchNextTrack(cfg);
+}
+
+/**
+ * With `autoOpenTab`, switch the player page to the Lyrics tab once lyrics for a new track are showing
+ * (our overlay or stock YTM). Once per videoId, so a manual switch away is respected for that track.
+ */
+function maybeAutoOpenTab(snap: { status: string; videoId: string | null }) {
+	if (!runtime.active || !snap.videoId) return;
+	if (snap.status !== "ready" && snap.status !== "stock") return;
+	if (runtime.autoOpenedFor === snap.videoId) return;
+	runtime.autoOpenedFor = snap.videoId;
+	if (!readLyricsSettings().autoOpenTab) return;
+	if (!selectLyricsTab()) runtime.log?.debug("lyrics: auto-open tab skipped (header missing/disabled)");
 }
 
 function applyTickTime(timeSec: number) {
@@ -198,7 +217,10 @@ async function startLyrics() {
 		},
 	});
 
-	runtime.unsubStore = runtime.store.subscribe((snap) => runtime.renderer?.setSnapshot(snap));
+	runtime.unsubStore = runtime.store.subscribe((snap) => {
+		runtime.renderer?.setSnapshot(snap);
+		maybeAutoOpenTab(snap);
+	});
 	runtime.unsubSettings =
 		runtime.onSettingsChange?.((key) => {
 			if (key === "lyrics.showTimeCodes" || key === "lyrics.showProgressBar" || key === "lyrics.dynamicLyrics") {
@@ -207,7 +229,8 @@ async function startLyrics() {
 			if (
 				key === "lyrics.showEvenIfInexact" ||
 				key === "lyrics.providers" ||
-				key === "lyrics.betterLyricsApiKey"
+				key === "lyrics.betterLyricsApiKey" ||
+				key === "lyrics.preferWordSync"
 			) {
 				runtime.store.clearCache();
 				void refreshTrack();
@@ -226,6 +249,7 @@ function stopLyrics() {
 	runtime.active = false;
 	runtime.tabSelected = false;
 	runtime.lastVideoId = null;
+	runtime.autoOpenedFor = null;
 	stopTimePoll();
 	unbindTrackWatch();
 	runtime.unsubStore?.();

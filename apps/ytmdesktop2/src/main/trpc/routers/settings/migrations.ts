@@ -113,6 +113,8 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 					{ id: "youtube-captions", enabled: true },
 				],
 				betterLyricsApiKey: "",
+				autoOpenTab: true,
+				preferWordSync: true,
 			});
 		},
 	},
@@ -169,6 +171,8 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 			const current = (store.store as SettingsStore)?.lyrics;
 			if (!current) return;
 			if (typeof current.betterLyricsApiKey !== "string") store.set("lyrics.betterLyricsApiKey", "");
+			if (typeof current.autoOpenTab !== "boolean") store.set("lyrics.autoOpenTab", true);
+			if (typeof current.preferWordSync !== "boolean") store.set("lyrics.preferWordSync", true);
 			// New last-resort provider: append (enabled) for users with an older saved order.
 			const providers = Array.isArray(current.providers) ? current.providers : [];
 			if (providers.length && !providers.some((p) => p?.id === "youtube-captions")) {

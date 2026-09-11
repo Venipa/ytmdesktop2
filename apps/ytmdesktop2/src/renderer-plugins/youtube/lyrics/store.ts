@@ -15,6 +15,7 @@ export interface LyricsFetchOptions {
 	showEvenIfInexact: boolean;
 	providers?: unknown;
 	betterLyricsApiKey?: string;
+	preferWordSync?: boolean;
 }
 
 interface CacheEntry {
