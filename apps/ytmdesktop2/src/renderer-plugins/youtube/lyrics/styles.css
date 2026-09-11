@@ -266,20 +266,6 @@
 	-webkit-text-fill-color: transparent !important;
 }
 
-/* Line-synced lyrics use the same typography fill instead of painting the row. */
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active.is-dynamic.has-line-progress .ytmd-lyrics-text {
-	background-image: linear-gradient(
-		to right,
-		#fff 0%,
-		#fff calc(var(--ytmd-line-progress, 0) * 100%),
-		rgba(255, 255, 255, 0.35) calc(var(--ytmd-line-progress, 0) * 100%),
-		rgba(255, 255, 255, 0.35) 100%
-	);
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent !important;
-}
-
 #ytmd-lyrics-root .ytmd-lyrics-parts {
 	display: flex;
 	flex-direction: column;

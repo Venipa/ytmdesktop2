@@ -365,7 +365,10 @@ function SyncedList({
 					const isActive = activeSet.has(i);
 					const words = line.words?.length ? line.words : undefined;
 					const useWords = !!words?.length;
-					const progress = isActive && showProgressBar && !useWords ? lineProgressRatio(line, timeMs) : null;
+					// Line-only cues carry no per-word pacing, so a constant-rate fill drifts from the vocal;
+					// in dynamic mode the active line just lights up and scales instead.
+					const progress =
+						isActive && showProgressBar && !useWords && !dynamicLyrics ? lineProgressRatio(line, timeMs) : null;
 					return (
 						<LyricLineRow
 							key={`${line.timeMs}-${i}`}

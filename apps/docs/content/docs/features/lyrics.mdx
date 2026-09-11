@@ -24,11 +24,11 @@ When **Lyrics** is enabled, YTMDesktop2 replaces the YouTube Music **Lyrics** ta
 | --- | --- | --- |
 | **Enable lyrics** | Off | Hijacks the Lyrics tab (hot-toggle, no app restart). |
 | **Auto-open Lyrics tab** | On | Switches the player page to the Lyrics tab when lyrics for a new track are found (once per track). |
-| **Dynamic lyrics** | On | Continuously fills the sung text and gently enlarges the current line. |
+| **Dynamic lyrics** | On | Continuously fills word/syllable-synced text and gently enlarges the current line. Line-only lyrics just highlight and enlarge. |
 | **Prefer word-synced sources** | On | Keeps trying later providers for word/syllable timing before settling for a line-synced hit. Off = first timed result wins. |
 | **Allow approximate matches** | On | For LRCLib, show lyrics when title/artist match is close but not exact. |
 | **Show time codes** | Off | Two-column layout with a right-aligned timestamp per line. |
-| **Show line progress** | On | Text fill on the active line when there are no word/syllable cues. |
+| **Show line progress** | On | Row progress on the active line when there are no word/syllable cues (only with Dynamic lyrics off). |
 | **Providers** | Better Lyrics → Unison → LRCLib → YouTube captions | Separate card: drag to reorder; toggle each source on/off. |
 | **Better Lyrics API key** | Empty | Optional `X-API-Key` for the Better Lyrics API. Only needed for songs that aren't cached yet. |
 
@@ -58,7 +58,7 @@ If you already have a Better Lyrics API key, paste it into **Better Lyrics API k
 - Changing provider order clears the session cache and refetches for the current track.
 - Ads, live, podcasts, and very short clips are skipped.
 - Overlapping timed lines can all be active at once; scroll follows the latest-started.
-- With **Dynamic lyrics** enabled, word/syllable cues fill continuously in the text as they are sung. The current line gently enlarges without changing text wrapping; line-only lyrics use the same text-fill treatment.
+- With **Dynamic lyrics** enabled, word/syllable cues fill continuously in the text as they are sung. The current line gently enlarges without changing text wrapping. Line-only lyrics don't fill — a line cue only says when the line starts, not how its words are paced, so a constant-rate fill would drift from the vocal; the active line simply highlights and enlarges.
 - Scrolling manually pauses automatic centering for 2.5 seconds. Resizing the panel recenters the current line once that pause ends.
 - The system's reduced-motion preference disables line scaling and smooth scrolling while keeping timing highlights visible.
 - Disable anytime to restore stock YouTube Music lyrics.

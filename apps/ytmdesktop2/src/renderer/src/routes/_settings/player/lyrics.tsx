@@ -43,7 +43,7 @@ function LyricsSettingsPage() {
 							configKey="lyrics.dynamicLyrics"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
-							description="Continuously fill the lyric text as it plays and gently enlarge the current line."
+							description="Continuously fill word-synced lyric text as it plays and gently enlarge the current line. Line-synced lyrics just highlight and enlarge."
 						>
 							Dynamic lyrics
 						</SettingsCheckbox>
@@ -74,7 +74,7 @@ function LyricsSettingsPage() {
 							configKey="lyrics.showProgressBar"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
-							description="Show playback progress on the active line when the provider has no word/syllable cues."
+							description="Show playback progress on the active line when the provider has no word/syllable cues. Only applies when Dynamic lyrics is off."
 						>
 							Show line progress
 						</SettingsCheckbox>
