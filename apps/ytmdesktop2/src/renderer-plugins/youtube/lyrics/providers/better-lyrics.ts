@@ -39,16 +39,24 @@ export async function searchBetterLyrics(
 		s: info.title,
 		a: info.artist,
 	};
-	if (info.album) query.al = info.album;
 	if (info.durationSec > 0) query.d = Math.round(info.durationSec);
 	if (info.videoId) query.videoId = info.videoId;
 
 	const apiKey = options.apiKey?.trim();
-	const { data, error } = await blFetch<BetterLyricsResponse>("/getLyrics", {
-		query,
-		...(apiKey ? { headers: { "X-API-Key": apiKey } } : {}),
-		...(options.signal ? { signal: options.signal } : {}),
-	});
+	const request = (q: Record<string, string | number>) =>
+		blFetch<BetterLyricsResponse>("/getLyrics", {
+			query: q,
+			...(apiKey ? { headers: { "X-API-Key": apiKey } } : {}),
+			...(options.signal ? { signal: options.signal } : {}),
+		});
+
+	// The album is part of the cache key. YTM's album string (e.g. "÷ (Deluxe)") often differs
+	// from what the extension cached the song under, so a keyless 401 with the album set is
+	// retried without it before we call the song uncached.
+	let { data, error } = await (info.album ? request({ ...query, al: info.album }) : request(query));
+	if (error?.status === 401 && !apiKey && info.album) {
+		({ data, error } = await request(query));
+	}
 
 	if (error) {
 		// 401 = cache miss without key (or rejected key); 404 = no lyrics; 429 = rate limited.

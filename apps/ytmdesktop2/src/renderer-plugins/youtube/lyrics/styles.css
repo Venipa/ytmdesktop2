@@ -179,10 +179,13 @@
 #ytmd-lyrics-root .ytmd-lyrics-line.is-active {
 	opacity: 1;
 	font-weight: 600 !important;
+	background-color: rgba(255, 255, 255, 0.08);
 }
 
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active:not(.is-dynamic) {
-	background-color: rgba(255, 255, 255, 0.08);
+/* "Active line background" off: only the text brightens. The bar style keeps its row gradient
+ * since that is the indicator the user asked for. */
+#ytmd-lyrics-root .ytmd-lyrics-list.text-only .ytmd-lyrics-line.is-active:not(.line-bar) {
+	background-color: transparent;
 }
 
 /* Line style "bar": row background that advances with playback (line-only cues). */
@@ -211,13 +214,6 @@
 	white-space: normal;
 	overflow-wrap: break-word;
 	word-break: normal;
-	transform-origin: left center;
-	transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-#ytmd-lyrics-root .ytmd-lyrics-line.is-dynamic:not(.is-active) .ytmd-lyrics-line-content {
-	/* Reserve the full-size layout; scaling inactive text never changes wrapping. */
-	transform: scale(0.92);
 }
 
 /* Time | text — wrapped lines stay in text column, not under timecode. */
@@ -247,38 +243,29 @@
 	transition: opacity 180ms ease;
 }
 
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active:not(.is-dynamic) .ytmd-lyrics-word {
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active .ytmd-lyrics-word {
 	opacity: 0.45;
 }
 
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active:not(.is-dynamic) .ytmd-lyrics-word.is-sung {
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active .ytmd-lyrics-word.is-sung {
 	opacity: 0.78;
 }
 
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active:not(.is-dynamic) .ytmd-lyrics-word.is-current {
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active .ytmd-lyrics-word.is-current {
 	opacity: 1;
 	font-weight: 700 !important;
 }
 
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active.is-dynamic .ytmd-lyrics-word {
+/* Line style "fill" on word-synced lines: each word's colour sweeps left → right over its own
+ * duration (--ytmd-word-progress, 0–100%). Sung words sit at 100%, unsung at 0%, so the step
+ * opacities above are replaced by the gradient. */
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active.word-fill .ytmd-lyrics-word {
+	opacity: 1;
+	font-weight: inherit !important;
 	background-image: linear-gradient(
 		to right,
 		#fff var(--ytmd-word-progress, 0%),
 		rgba(255, 255, 255, 0.35) var(--ytmd-word-progress, 0%)
-	);
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent !important;
-}
-
-/* Line style "fill": text colour that advances with playback (line-only cues). */
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active.line-fill .ytmd-lyrics-text {
-	background-image: linear-gradient(
-		to right,
-		#fff 0%,
-		#fff calc(var(--ytmd-line-progress, 0) * 100%),
-		rgba(255, 255, 255, 0.35) calc(var(--ytmd-line-progress, 0) * 100%),
-		rgba(255, 255, 255, 0.35) 100%
 	);
 	background-clip: text;
 	-webkit-background-clip: text;
@@ -355,11 +342,6 @@
 	}
 
 	#ytmd-lyrics-root .ytmd-lyrics-word {
-		transition: none;
-	}
-
-	#ytmd-lyrics-root .ytmd-lyrics-line-content {
-		transform: none !important;
 		transition: none;
 	}
 }

@@ -31,8 +31,8 @@ export function createLyricsRenderer(
 	let shell: LyricsShellState = {
 		snap: { status: "idle", result: null, videoId: null },
 		showTimeCodes: options.showTimeCodes(),
+		lineBackground: options.lineBackground(),
 		lineStyle: options.lineStyle(),
-		dynamicLyrics: options.dynamicLyrics(),
 		settingsEpoch: 0,
 	};
 	let clock: LyricsClockState = { timeMs: 0 };
@@ -113,8 +113,8 @@ export function createLyricsRenderer(
 		repaint() {
 			patchShell({
 				showTimeCodes: options.showTimeCodes(),
+				lineBackground: options.lineBackground(),
 				lineStyle: options.lineStyle(),
-				dynamicLyrics: options.dynamicLyrics(),
 				settingsEpoch: shell.settingsEpoch + 1,
 			});
 			ensureRoot();

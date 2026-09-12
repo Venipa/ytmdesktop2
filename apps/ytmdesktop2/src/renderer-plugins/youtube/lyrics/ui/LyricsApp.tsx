@@ -23,8 +23,8 @@ export const USER_SCROLL_PAUSE_MS = 2500;
 export interface LyricsShellState {
 	snap: LyricsStoreSnapshot;
 	showTimeCodes: boolean;
+	lineBackground: boolean;
 	lineStyle: LyricsLineStyle;
-	dynamicLyrics: boolean;
 	settingsEpoch: number;
 }
 
@@ -37,8 +37,8 @@ export interface LyricsUiState extends LyricsShellState, LyricsClockState {}
 
 export interface LyricsUiOptions {
 	showTimeCodes: () => boolean;
+	lineBackground: () => boolean;
 	lineStyle: () => LyricsLineStyle;
-	dynamicLyrics: () => boolean;
 	onSeek: (timeMs: number) => void;
 }
 
@@ -111,12 +111,11 @@ function lineProgressRatio(line: LyricLine, nowMs: number): number {
 	return Math.min(1, Math.max(0, (nowMs - line.timeMs) / dur));
 }
 
-function lineClassName(isActive: boolean, progressStyle: LyricsLineStyle | null, dynamicLyrics: boolean): string {
+function lineClassName(isActive: boolean, progressStyle: LyricsLineStyle | null, wordFill: boolean): string {
 	const parts = ["ytmd-lyrics-line"];
 	if (isActive) parts.push("is-active");
 	if (isActive && progressStyle === "bar") parts.push("line-bar");
-	if (isActive && progressStyle === "fill") parts.push("line-fill");
-	if (dynamicLyrics) parts.push("is-dynamic");
+	if (isActive && wordFill) parts.push("word-fill");
 	return parts.join(" ");
 }
 
@@ -139,13 +138,13 @@ function wordClassName(isActiveLine: boolean, wordIdx: number, activeWord: numbe
 interface WordSyncTextProps {
 	words: LyricWord[];
 	isActive: boolean;
-	timeMs: number;
-	dynamicLyrics: boolean;
+	activeWord: number;
+	/** Playback time for the "fill" sweep; null = step per word only (no per-frame re-render). */
+	fillTimeMs: number | null;
 	onSeek: (timeMs: number) => void;
 }
 
-const WordSyncText = memo(function WordSyncText({ words, isActive, timeMs, dynamicLyrics, onSeek }: WordSyncTextProps) {
-	const activeWord = isActive ? activeWordIndex(words, timeMs) : -1;
+const WordSyncText = memo(function WordSyncText({ words, isActive, activeWord, fillTimeMs, onSeek }: WordSyncTextProps) {
 	return (
 		<span className="ytmd-lyrics-words">
 			{words.map((word, w) => (
@@ -153,8 +152,8 @@ const WordSyncText = memo(function WordSyncText({ words, isActive, timeMs, dynam
 					key={`${word.timeMs}-${w}`}
 					className={wordClassName(isActive, w, activeWord)}
 					style={
-						dynamicLyrics
-							? ({ "--ytmd-word-progress": `${(isActive ? wordProgress(word, timeMs) : 0) * 100}%` } as CSSProperties)
+						fillTimeMs != null
+							? ({ "--ytmd-word-progress": `${wordProgress(word, fillTimeMs) * 100}%` } as CSSProperties)
 							: undefined
 					}
 					onClick={(ev) => {
@@ -178,8 +177,9 @@ interface LyricLineRowProps {
 	lineStyle: LyricsLineStyle;
 	showTimeCodes: boolean;
 	words: LyricWord[] | undefined;
-	timeMs: number;
-	dynamicLyrics: boolean;
+	activeWord: number;
+	/** Playback time while the "fill" sweep is running on this line; null otherwise. */
+	fillTimeMs: number | null;
 	onSeek: (timeMs: number) => void;
 }
 
@@ -191,8 +191,8 @@ const LyricLineRow = memo(function LyricLineRow({
 	lineStyle,
 	showTimeCodes,
 	words,
-	timeMs,
-	dynamicLyrics,
+	activeWord,
+	fillTimeMs,
 	onSeek,
 }: LyricLineRowProps) {
 	const parts = line.parts?.filter((p) => p.length > 0);
@@ -211,7 +211,9 @@ const LyricLineRow = memo(function LyricLineRow({
 
 	let textBody: ReactNode;
 	if (words?.length) {
-		textBody = <WordSyncText words={words} isActive={isActive} timeMs={timeMs} dynamicLyrics={dynamicLyrics} onSeek={onSeek} />;
+		textBody = (
+			<WordSyncText words={words} isActive={isActive} activeWord={activeWord} fillTimeMs={fillTimeMs} onSeek={onSeek} />
+		);
 	} else if (parts && parts.length > 1) {
 		textBody = (
 			<span className="ytmd-lyrics-parts">
@@ -228,7 +230,7 @@ const LyricLineRow = memo(function LyricLineRow({
 
 	return (
 		<div
-			className={lineClassName(isActive, progress != null ? lineStyle : null, dynamicLyrics)}
+			className={lineClassName(isActive, progress != null ? lineStyle : null, fillTimeMs != null)}
 			data-index={index}
 			role="listitem"
 			tabIndex={0}
@@ -264,8 +266,8 @@ interface SyncedListProps {
 	lines: LyricLine[];
 	result: LyricResult;
 	showTimeCodes: boolean;
+	lineBackground: boolean;
 	lineStyle: LyricsLineStyle;
-	dynamicLyrics: boolean;
 	settingsEpoch: number;
 	videoId: string | null;
 	subscribeClock: (onStoreChange: () => void) => () => void;
@@ -277,8 +279,8 @@ function SyncedList({
 	lines,
 	result,
 	showTimeCodes,
+	lineBackground,
 	lineStyle,
-	dynamicLyrics,
 	settingsEpoch,
 	videoId,
 	subscribeClock,
@@ -365,15 +367,22 @@ function SyncedList({
 				<div className="ytmd-lyrics-meta">{providerMetaLabel(result)}</div>
 				{result.inexact ? <div className="ytmd-lyrics-meta">Approximate match</div> : null}
 			</div>
-			<div ref={listRef} className="ytmd-lyrics-list" role="list" onScroll={onListScroll}>
+			<div
+				ref={listRef}
+				className={lineBackground ? "ytmd-lyrics-list" : "ytmd-lyrics-list text-only"}
+				role="list"
+				onScroll={onListScroll}
+			>
 				{lines.map((line, i) => {
 					const isActive = activeSet.has(i);
 					const words = line.words?.length ? line.words : undefined;
 					const useWords = !!words?.length;
-					// Line-only cues carry no per-word pacing, so any progress indicator runs at a constant
-					// rate and can drift from the vocal — it's opt-in via lineStyle ("highlight" draws none).
-					const progress =
-						isActive && !useWords && lineStyle !== "highlight" ? lineProgressRatio(line, timeMs) : null;
+					// "bar" is the only line-only indicator: it runs at a constant rate (line cues carry no
+					// per-word pacing) so it's opt-in. "fill" needs word cues — without them the line just
+					// highlights rather than sweeping at a guessed rate.
+					const progress = isActive && !useWords && lineStyle === "bar" ? lineProgressRatio(line, timeMs) : null;
+					const activeWord = isActive && useWords ? activeWordIndex(words!, timeMs) : -1;
+					const fillTimeMs = isActive && useWords && lineStyle === "fill" ? timeMs : null;
 					return (
 						<LyricLineRow
 							key={`${line.timeMs}-${i}`}
@@ -384,8 +393,8 @@ function SyncedList({
 							lineStyle={lineStyle}
 							showTimeCodes={showTimeCodes}
 							words={words}
-							timeMs={isActive && useWords ? timeMs : 0}
-							dynamicLyrics={dynamicLyrics}
+							activeWord={activeWord}
+							fillTimeMs={fillTimeMs}
 							onSeek={onSeek}
 						/>
 					);
@@ -397,7 +406,7 @@ function SyncedList({
 
 export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, onSeek }: LyricsAppProps) {
 	const shell = useSyncExternalStore(subscribeShell, getShell, getShell);
-	const { snap, showTimeCodes, lineStyle, dynamicLyrics, settingsEpoch } = shell;
+	const { snap, showTimeCodes, lineBackground, lineStyle, settingsEpoch } = shell;
 
 	const result = snap.result;
 	const lines = snap.status === "ready" && result?.lines?.length ? result.lines : null;
@@ -432,8 +441,8 @@ export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, 
 				lines={lines}
 				result={result}
 				showTimeCodes={showTimeCodes}
+				lineBackground={lineBackground}
 				lineStyle={lineStyle}
-				dynamicLyrics={dynamicLyrics}
 				settingsEpoch={settingsEpoch}
 				videoId={snap.videoId}
 				subscribeClock={subscribeClock}

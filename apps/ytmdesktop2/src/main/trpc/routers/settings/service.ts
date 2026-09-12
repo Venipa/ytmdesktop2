@@ -45,9 +45,10 @@ const defaultSettings = {
 		enabled: false,
 		showTimeCodes: false,
 		showEvenIfInexact: true,
-		/** Progress indicator for line-only lyrics: highlight (none), bar (row background), fill (text colour). */
-		lineStyle: "highlight" as "highlight" | "bar" | "fill",
-		dynamicLyrics: true,
+		/** Tint the row behind the active line; off = text brightens only. */
+		lineBackground: true,
+		/** Active-line progress: highlight (none), bar (line-only row background), fill (word-synced sweep). */
+		lineStyle: "fill" as "highlight" | "bar" | "fill",
 		providers: [
 			{ id: "better-lyrics", enabled: true },
 			{ id: "unison", enabled: true },

@@ -64,8 +64,8 @@ function readLyricsSettings(settings?: Record<string, any>) {
 		enabled: !!s?.lyrics?.enabled,
 		showTimeCodes: !!s?.lyrics?.showTimeCodes,
 		showEvenIfInexact: s?.lyrics?.showEvenIfInexact !== false,
+		lineBackground: s?.lyrics?.lineBackground !== false,
 		lineStyle: readLineStyle(s?.lyrics?.lineStyle),
-		dynamicLyrics: s?.lyrics?.dynamicLyrics !== false,
 		providers: s?.lyrics?.providers,
 		betterLyricsApiKey: typeof s?.lyrics?.betterLyricsApiKey === "string" ? s.lyrics.betterLyricsApiKey : "",
 		autoOpenTab: s?.lyrics?.autoOpenTab !== false,
@@ -209,8 +209,8 @@ async function startLyrics() {
 
 	runtime.renderer = createLyricsRenderer(() => runtime.mount?.getHost() ?? null, {
 		showTimeCodes: () => readLyricsSettings().showTimeCodes,
+		lineBackground: () => readLyricsSettings().lineBackground,
 		lineStyle: () => readLyricsSettings().lineStyle,
-		dynamicLyrics: () => readLyricsSettings().dynamicLyrics,
 		onSeek: (timeMs) => {
 			void seekPlayer((timeMs + SEEK_OFFSET_MS) / 1000).then((ok) => {
 				if (!ok) runtime.log?.debug("lyrics: seek failed");
@@ -224,7 +224,7 @@ async function startLyrics() {
 	});
 	runtime.unsubSettings =
 		runtime.onSettingsChange?.((key) => {
-			if (key === "lyrics.showTimeCodes" || key === "lyrics.lineStyle" || key === "lyrics.dynamicLyrics") {
+			if (key === "lyrics.showTimeCodes" || key === "lyrics.lineBackground" || key === "lyrics.lineStyle") {
 				runtime.renderer?.repaint();
 			}
 			if (

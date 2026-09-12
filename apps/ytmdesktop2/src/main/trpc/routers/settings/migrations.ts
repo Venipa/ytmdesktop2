@@ -104,8 +104,8 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 				enabled: false,
 				showTimeCodes: false,
 				showEvenIfInexact: true,
-				lineStyle: "highlight",
-				dynamicLyrics: true,
+				lineBackground: true,
+				lineStyle: "fill",
 				providers: [
 					{ id: "better-lyrics", enabled: true },
 					{ id: "unison", enabled: true },
@@ -184,13 +184,14 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 		hook(store) {
 			const current = (store.store as SettingsStore)?.lyrics as (SettingsStore["lyrics"] & { showProgressBar?: unknown }) | undefined;
 			if (!current) return;
-			// `showProgressBar` (bool) became `lineStyle`. The old default drew a constant-rate text fill
-			// that drifted from the vocal, so everyone lands on the new "highlight" default rather than
-			// mapping true → fill.
+			// `showProgressBar` (bool) became `lineStyle`. The old bool drew a constant-rate line fill;
+			// the new "fill" only sweeps word-synced lines (line-only songs just highlight), so it is a
+			// safe default for everyone rather than mapping true/false individually.
 			if ("showProgressBar" in current) store.delete("lyrics.showProgressBar" as keyof SettingsStore);
 			if (current.lineStyle !== "highlight" && current.lineStyle !== "bar" && current.lineStyle !== "fill") {
-				store.set("lyrics.lineStyle", "highlight");
+				store.set("lyrics.lineStyle", "fill");
 			}
+			if (typeof current.lineBackground !== "boolean") store.set("lyrics.lineBackground", true);
 		},
 	},
 ];

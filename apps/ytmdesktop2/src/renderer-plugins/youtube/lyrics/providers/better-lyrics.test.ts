@@ -45,6 +45,33 @@ describe("searchBetterLyrics", () => {
 		expect(lastRequestHeaders().get("x-api-key")).toBe("secret");
 	});
 
+	it("retries a keyless 401 without the album, since album is part of the cache key", async () => {
+		const urls: string[] = [];
+		fetchMock.mockImplementation(async (input) => {
+			const url = input instanceof Request ? input.url : String(input);
+			urls.push(url);
+			return new URL(url).searchParams.has("al")
+				? jsonResponse(401, { error: "API key required" })
+				: jsonResponse(200, { ttml: TTML });
+		});
+
+		const reasons: LyricsMissReason[] = [];
+		const result = await searchBetterLyrics({ ...info, album: "÷ (Deluxe)" }, { onMiss: (r) => reasons.push(r) });
+		expect(result?.provider).toBe("better-lyrics");
+		expect(reasons).toEqual([]);
+		expect(urls.map((u) => new URL(u).searchParams.get("al"))).toEqual(["÷ (Deluxe)", null]);
+
+		// With a key, 401 means the key was rejected — no point retrying.
+		urls.length = 0;
+		fetchMock.mockImplementation(async (input) => {
+			urls.push(input instanceof Request ? input.url : String(input));
+			return jsonResponse(401, { error: "invalid key" });
+		});
+		expect(await searchBetterLyrics({ ...info, album: "÷ (Deluxe)" }, { apiKey: "k", onMiss: (r) => reasons.push(r) })).toBeNull();
+		expect(urls).toHaveLength(1);
+		expect(reasons).toEqual(["invalid-key"]);
+	});
+
 	it("reports 401 as uncached without a key, invalid-key with one", async () => {
 		fetchMock.mockImplementation(async () => jsonResponse(401, { error: "API key required" }));
 

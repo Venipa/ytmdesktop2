@@ -15,17 +15,18 @@ const LINE_STYLE_OPTIONS: SettingsSelectOption[] = [
 	{
 		value: "highlight",
 		label: "Highlight only",
-		description: "Light the current line up (and enlarge it with Dynamic lyrics). No progress indicator.",
-	},
-	{
-		value: "bar",
-		label: "Progress bar",
-		description: "A row background that advances across the line as it plays.",
+		description: "Light the current line up. Word-synced lyrics still step word by word; no extra indicator.",
 	},
 	{
 		value: "fill",
 		label: "Text fill",
-		description: "The text turns white from left to right as the line plays.",
+		description:
+			"Word-synced lyrics: each word sweeps to white as it's sung. Songs with line timing only fall back to Highlight only.",
+	},
+	{
+		value: "bar",
+		label: "Progress bar",
+		description: "Songs with line timing only: a row background advances across the line at a constant rate.",
 	},
 ];
 
@@ -59,14 +60,6 @@ function LyricsSettingsPage() {
 							Auto-open Lyrics tab
 						</SettingsCheckbox>
 						<SettingsCheckbox
-							configKey="lyrics.dynamicLyrics"
-							defaultValue={true}
-							disabled={!lyricsEnabled}
-							description="Continuously fill word-synced lyric text as it plays and gently enlarge the current line. Line-synced lyrics follow the Line-synced style below."
-						>
-							Dynamic lyrics
-						</SettingsCheckbox>
-						<SettingsCheckbox
 							configKey="lyrics.preferWordSync"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
@@ -89,12 +82,20 @@ function LyricsSettingsPage() {
 						>
 							Show time codes
 						</SettingsCheckbox>
+						<SettingsCheckbox
+							configKey="lyrics.lineBackground"
+							defaultValue={true}
+							disabled={!lyricsEnabled}
+							description="Tint the row behind the current line. Turn off to brighten the text only. The Progress bar style still draws its bar."
+						>
+							Active line background
+						</SettingsCheckbox>
 						<SettingsSelect
 							configKey="lyrics.lineStyle"
-							defaultValue="highlight"
+							defaultValue="fill"
 							disabled={!lyricsEnabled}
-							label="Line-synced style"
-							description="How the current line shows progress when the provider only has line timing (no word/syllable cues). Line timing says when a line starts, not how fast it's sung, so bar and fill advance at a constant rate."
+							label="Highlight style"
+							description="How the current line shows progress. Text fill needs word/syllable timing from the provider; line timing only says when a line starts, not how fast it's sung, so those songs get a plain highlight or the constant-rate bar."
 							options={LINE_STYLE_OPTIONS}
 						/>
 					</FieldGroup>
