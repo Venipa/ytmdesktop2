@@ -128,6 +128,17 @@ function readCurrentTimeSec(): number {
 	}
 }
 
+/** YT player state 1 = playing (2 paused, 3 buffering, 5 cued). */
+function readIsPlaying(): boolean {
+	const api = getPagePlayerApi();
+	if (!api || typeof api.getPlayerState !== "function") return false;
+	try {
+		return Number(api.getPlayerState()) === 1;
+	} catch {
+		return false;
+	}
+}
+
 function seekToSec(timeSec: number): boolean {
 	const api = getPagePlayerApi();
 	if (!api || typeof api.seekTo !== "function") return false;
@@ -223,6 +234,7 @@ type LyricsTickMessage = {
 	type: string;
 	kind: "tick";
 	timeSec: number;
+	playing: boolean;
 };
 
 let clockWanted = false;
@@ -234,6 +246,7 @@ function emitTimeTick(): void {
 		type: LYRICS_BRIDGE_TYPE,
 		kind: "tick",
 		timeSec: readCurrentTimeSec(),
+		playing: readIsPlaying(),
 	};
 	window.postMessage(msg, "*");
 }
@@ -297,10 +310,10 @@ function isLyricsTick(data: unknown): data is LyricsTickMessage {
 }
 
 /** Preload: subscribe to page-world playback ticks (smooth progress / no bridge request storm). */
-export function subscribeLyricsTime(handler: (timeSec: number) => void): () => void {
+export function subscribeLyricsTime(handler: (timeSec: number, playing: boolean) => void): () => void {
 	const onMessage = (ev: MessageEvent) => {
 		if (!isLyricsTick(ev.data)) return;
-		handler(ev.data.timeSec);
+		handler(ev.data.timeSec, ev.data.playing === true);
 	};
 	window.addEventListener("message", onMessage);
 	return () => window.removeEventListener("message", onMessage);
