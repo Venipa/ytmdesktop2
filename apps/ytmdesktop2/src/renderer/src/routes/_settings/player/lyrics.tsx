@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LyricsProvidersOrder } from "@/components/lyrics-providers-order";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
+import { SettingsInput } from "@/components/settings-input";
+import { SettingsSelect, type SettingsSelectOption } from "@/components/settings-select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 import { useSettingsState } from "@/hooks/use-settings";
@@ -8,6 +10,25 @@ import { useSettingsState } from "@/hooks/use-settings";
 export const Route = createFileRoute("/_settings/player/lyrics")({
 	component: LyricsSettingsPage,
 });
+
+const LINE_STYLE_OPTIONS: SettingsSelectOption[] = [
+	{
+		value: "highlight",
+		label: "Highlight only",
+		description: "Light the current line up. Word-synced lyrics still step word by word; no extra indicator.",
+	},
+	{
+		value: "fill",
+		label: "Text fill",
+		description:
+			"Word-synced lyrics: each word sweeps to white as it's sung. Songs with line timing only fall back to Highlight only.",
+	},
+	{
+		value: "bar",
+		label: "Progress bar",
+		description: "Songs with line timing only: a row background advances across the line at a constant rate.",
+	},
+];
 
 function LyricsSettingsPage() {
 	const [lyricsEnabled] = useSettingsState<boolean>("lyrics.enabled", false);
@@ -31,6 +52,22 @@ function LyricsSettingsPage() {
 							Enable lyrics
 						</SettingsCheckbox>
 						<SettingsCheckbox
+							configKey="lyrics.autoOpenTab"
+							defaultValue={true}
+							disabled={!lyricsEnabled}
+							description="Switch the player page to the Lyrics tab when lyrics for a new track are found. Once per track, so switching away by hand sticks."
+						>
+							Auto-open Lyrics tab
+						</SettingsCheckbox>
+						<SettingsCheckbox
+							configKey="lyrics.preferWordSync"
+							defaultValue={true}
+							disabled={!lyricsEnabled}
+							description="Keep trying later providers for word/syllable timing before settling for line-synced lyrics. A few extra requests on line-only songs."
+						>
+							Prefer word-synced sources
+						</SettingsCheckbox>
+						<SettingsCheckbox
 							configKey="lyrics.showEvenIfInexact"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
@@ -46,13 +83,21 @@ function LyricsSettingsPage() {
 							Show time codes
 						</SettingsCheckbox>
 						<SettingsCheckbox
-							configKey="lyrics.showProgressBar"
+							configKey="lyrics.lineBackground"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
-							description="Fill the active lyric row as it plays when the provider has no word/syllable cues."
+							description="Tint the row behind the current line. Turn off to brighten the text only. The Progress bar style still draws its bar."
 						>
-							Show line progress
+							Active line background
 						</SettingsCheckbox>
+						<SettingsSelect
+							configKey="lyrics.lineStyle"
+							defaultValue="fill"
+							disabled={!lyricsEnabled}
+							label="Highlight style"
+							description="How the current line shows progress. Text fill needs word/syllable timing from the provider; line timing only says when a line starts, not how fast it's sung, so those songs get a plain highlight or the constant-rate bar."
+							options={LINE_STYLE_OPTIONS}
+						/>
 					</FieldGroup>
 				</CardContent>
 			</Card>
@@ -60,12 +105,31 @@ function LyricsSettingsPage() {
 				<CardHeader>
 					<CardTitle>Providers</CardTitle>
 					<CardDescription>
-						Tried in order until one returns lyrics (default: Better Lyrics → Unison → LRCLib). Better Lyrics and Unison
-						can return syllable sync; LRCLib is line/plain only. Toggle sources on or off and drag to reorder.
+						Tried in order until one returns lyrics (default: Better Lyrics → Unison → LRCLib → YouTube captions). Better Lyrics and Unison
+						can return syllable sync; LRCLib is line/plain (word sync when the entry has it); YouTube captions is line-only and
+						uses the current video's own caption track. Toggle sources on or off and drag to reorder.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<LyricsProvidersOrder disabled={!lyricsEnabled} />
+					<FieldGroup>
+						<LyricsProvidersOrder disabled={!lyricsEnabled} />
+						<SettingsInput
+							configKey="lyrics.betterLyricsApiKey"
+							type="password"
+							autoComplete="off"
+							spellCheck={false}
+							disabled={!lyricsEnabled}
+							placeholder="Optional"
+							label="Better Lyrics API key"
+							hint={
+								<>
+									Sent as <code>X-API-Key</code>. Cached songs never need a key; uncached songs do, and Better
+									Lyrics is not issuing new keys right now. Without one, play a song once in the Better Lyrics
+									browser extension to cache it.
+								</>
+							}
+						/>
+					</FieldGroup>
 				</CardContent>
 				<CardFooter>
 					<p className="text-xs text-muted-foreground">Site links open each provider&apos;s homepage or docs.</p>

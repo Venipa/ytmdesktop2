@@ -1,15 +1,17 @@
 import {
+	type CSSProperties,
+	type KeyboardEvent,
 	memo,
+	type ReactNode,
 	useEffect,
 	useLayoutEffect,
 	useRef,
 	useState,
 	useSyncExternalStore,
-	type CSSProperties,
-	type KeyboardEvent,
-	type ReactNode,
 } from "react";
+import type { LyricsLineStyle } from "../line-style";
 import { activeLineIndices, activeWordIndex, primaryActiveLineIndex } from "../lrc";
+import { wordProgress } from "../progress";
 import { lyricsProviderLabel } from "../providers/catalog";
 import type { LyricsStoreSnapshot } from "../store";
 import type { LyricLine, LyricResult, LyricWord } from "../types";
@@ -21,7 +23,8 @@ export const USER_SCROLL_PAUSE_MS = 2500;
 export interface LyricsShellState {
 	snap: LyricsStoreSnapshot;
 	showTimeCodes: boolean;
-	showProgressBar: boolean;
+	lineBackground: boolean;
+	lineStyle: LyricsLineStyle;
 	settingsEpoch: number;
 }
 
@@ -34,7 +37,8 @@ export interface LyricsUiState extends LyricsShellState, LyricsClockState {}
 
 export interface LyricsUiOptions {
 	showTimeCodes: () => boolean;
-	showProgressBar: () => boolean;
+	lineBackground: () => boolean;
+	lineStyle: () => LyricsLineStyle;
 	onSeek: (timeMs: number) => void;
 }
 
@@ -66,6 +70,24 @@ export function statusMessage(snap: LyricsStoreSnapshot): string {
 	}
 }
 
+/**
+ * Actionable follow-up for an empty result. Better Lyrics is cache-first: a 401 means the song is
+ * simply not cached yet, which the user can fix themselves (see https://lyrics-api-docs.boidu.dev/docs/authentication).
+ */
+export function statusHint(snap: LyricsStoreSnapshot): string | null {
+	if (snap.status !== "empty") return null;
+	switch (snap.betterLyricsMiss) {
+		case "uncached":
+			return "Better Lyrics hasn't cached this song yet. Play it once with the Better Lyrics browser extension, or add the lyrics on Unison, then replay.";
+		case "invalid-key":
+			return "Better Lyrics rejected the API key set in Settings → Player → Lyrics.";
+		case "rate-limited":
+			return "Better Lyrics is rate-limiting requests right now. Try again in a moment.";
+		default:
+			return null;
+	}
+}
+
 function prefersReducedMotion(): boolean {
 	try {
 		return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
@@ -89,10 +111,11 @@ function lineProgressRatio(line: LyricLine, nowMs: number): number {
 	return Math.min(1, Math.max(0, (nowMs - line.timeMs) / dur));
 }
 
-function lineClassName(isActive: boolean, showProgress: boolean): string {
+function lineClassName(isActive: boolean, progressStyle: LyricsLineStyle | null, wordFill: boolean): string {
 	const parts = ["ytmd-lyrics-line"];
 	if (isActive) parts.push("is-active");
-	if (isActive && showProgress) parts.push("has-line-progress");
+	if (isActive && progressStyle === "bar") parts.push("line-bar");
+	if (isActive && wordFill) parts.push("word-fill");
 	return parts.join(" ");
 }
 
@@ -116,16 +139,23 @@ interface WordSyncTextProps {
 	words: LyricWord[];
 	isActive: boolean;
 	activeWord: number;
+	/** Playback time for the "fill" sweep; null = step per word only (no per-frame re-render). */
+	fillTimeMs: number | null;
 	onSeek: (timeMs: number) => void;
 }
 
-const WordSyncText = memo(function WordSyncText({ words, isActive, activeWord, onSeek }: WordSyncTextProps) {
+const WordSyncText = memo(function WordSyncText({ words, isActive, activeWord, fillTimeMs, onSeek }: WordSyncTextProps) {
 	return (
 		<span className="ytmd-lyrics-words">
 			{words.map((word, w) => (
 				<span
 					key={`${word.timeMs}-${w}`}
 					className={wordClassName(isActive, w, activeWord)}
+					style={
+						fillTimeMs != null
+							? ({ "--ytmd-word-progress": `${wordProgress(word, fillTimeMs) * 100}%` } as CSSProperties)
+							: undefined
+					}
 					onClick={(ev) => {
 						ev.stopPropagation();
 						onSeek(word.timeMs);
@@ -142,10 +172,14 @@ interface LyricLineRowProps {
 	line: LyricLine;
 	index: number;
 	isActive: boolean;
+	/** 0..1 playback ratio for line-only cues; null when no progress indicator should draw. */
 	progress: number | null;
+	lineStyle: LyricsLineStyle;
 	showTimeCodes: boolean;
 	words: LyricWord[] | undefined;
 	activeWord: number;
+	/** Playback time while the "fill" sweep is running on this line; null otherwise. */
+	fillTimeMs: number | null;
 	onSeek: (timeMs: number) => void;
 }
 
@@ -154,9 +188,11 @@ const LyricLineRow = memo(function LyricLineRow({
 	index,
 	isActive,
 	progress,
+	lineStyle,
 	showTimeCodes,
 	words,
 	activeWord,
+	fillTimeMs,
 	onSeek,
 }: LyricLineRowProps) {
 	const parts = line.parts?.filter((p) => p.length > 0);
@@ -175,7 +211,9 @@ const LyricLineRow = memo(function LyricLineRow({
 
 	let textBody: ReactNode;
 	if (words?.length) {
-		textBody = <WordSyncText words={words} isActive={isActive} activeWord={activeWord} onSeek={onSeek} />;
+		textBody = (
+			<WordSyncText words={words} isActive={isActive} activeWord={activeWord} fillTimeMs={fillTimeMs} onSeek={onSeek} />
+		);
 	} else if (parts && parts.length > 1) {
 		textBody = (
 			<span className="ytmd-lyrics-parts">
@@ -192,7 +230,7 @@ const LyricLineRow = memo(function LyricLineRow({
 
 	return (
 		<div
-			className={lineClassName(isActive, progress != null)}
+			className={lineClassName(isActive, progress != null ? lineStyle : null, fillTimeMs != null)}
 			data-index={index}
 			role="listitem"
 			tabIndex={0}
@@ -228,7 +266,8 @@ interface SyncedListProps {
 	lines: LyricLine[];
 	result: LyricResult;
 	showTimeCodes: boolean;
-	showProgressBar: boolean;
+	lineBackground: boolean;
+	lineStyle: LyricsLineStyle;
 	settingsEpoch: number;
 	videoId: string | null;
 	subscribeClock: (onStoreChange: () => void) => () => void;
@@ -240,7 +279,8 @@ function SyncedList({
 	lines,
 	result,
 	showTimeCodes,
-	showProgressBar,
+	lineBackground,
+	lineStyle,
 	settingsEpoch,
 	videoId,
 	subscribeClock,
@@ -312,6 +352,8 @@ function SyncedList({
 			const pad = Math.max(24, Math.round(list.clientHeight / 2));
 			list.style.paddingTop = `${pad}px`;
 			list.style.paddingBottom = `${pad}px`;
+			lastScrolledActive.current = -1;
+			setCatchUpNonce((n) => n + 1);
 		};
 		applyPad();
 		const ro = new ResizeObserver(applyPad);
@@ -325,13 +367,22 @@ function SyncedList({
 				<div className="ytmd-lyrics-meta">{providerMetaLabel(result)}</div>
 				{result.inexact ? <div className="ytmd-lyrics-meta">Approximate match</div> : null}
 			</div>
-			<div ref={listRef} className="ytmd-lyrics-list" role="list" onScroll={onListScroll}>
+			<div
+				ref={listRef}
+				className={lineBackground ? "ytmd-lyrics-list" : "ytmd-lyrics-list text-only"}
+				role="list"
+				onScroll={onListScroll}
+			>
 				{lines.map((line, i) => {
 					const isActive = activeSet.has(i);
 					const words = line.words?.length ? line.words : undefined;
 					const useWords = !!words?.length;
-					const progress = isActive && showProgressBar && !useWords ? lineProgressRatio(line, timeMs) : null;
+					// "bar" is the only line-only indicator: it runs at a constant rate (line cues carry no
+					// per-word pacing) so it's opt-in. "fill" needs word cues — without them the line just
+					// highlights rather than sweeping at a guessed rate.
+					const progress = isActive && !useWords && lineStyle === "bar" ? lineProgressRatio(line, timeMs) : null;
 					const activeWord = isActive && useWords ? activeWordIndex(words!, timeMs) : -1;
+					const fillTimeMs = isActive && useWords && lineStyle === "fill" ? timeMs : null;
 					return (
 						<LyricLineRow
 							key={`${line.timeMs}-${i}`}
@@ -339,9 +390,11 @@ function SyncedList({
 							index={i}
 							isActive={isActive}
 							progress={progress}
+							lineStyle={lineStyle}
 							showTimeCodes={showTimeCodes}
 							words={words}
 							activeWord={activeWord}
+							fillTimeMs={fillTimeMs}
 							onSeek={onSeek}
 						/>
 					);
@@ -353,7 +406,7 @@ function SyncedList({
 
 export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, onSeek }: LyricsAppProps) {
 	const shell = useSyncExternalStore(subscribeShell, getShell, getShell);
-	const { snap, showTimeCodes, showProgressBar, settingsEpoch } = shell;
+	const { snap, showTimeCodes, lineBackground, lineStyle, settingsEpoch } = shell;
 
 	const result = snap.result;
 	const lines = snap.status === "ready" && result?.lines?.length ? result.lines : null;
@@ -371,10 +424,12 @@ export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, 
 	}
 
 	if (snap.status !== "ready" || !result) {
+		const hint = statusHint(snap);
 		return (
 			<div className="ytmd-lyrics-body">
 				<div className="ytmd-lyrics-status" role="status">
 					{statusMessage(snap)}
+					{hint ? <div className="ytmd-lyrics-status-hint">{hint}</div> : null}
 				</div>
 			</div>
 		);
@@ -386,7 +441,8 @@ export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, 
 				lines={lines}
 				result={result}
 				showTimeCodes={showTimeCodes}
-				showProgressBar={showProgressBar}
+				lineBackground={lineBackground}
+				lineStyle={lineStyle}
 				settingsEpoch={settingsEpoch}
 				videoId={snap.videoId}
 				subscribeClock={subscribeClock}

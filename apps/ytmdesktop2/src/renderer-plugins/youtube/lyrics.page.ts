@@ -1,7 +1,7 @@
 import { definePageCmds } from "@plugins/define-bridge";
-import type { TrackSearchInfo } from "./lyrics/types";
-import { resolveYtmStore } from "./ytm-store";
+import type { TrackSearchInfo, YouTubeCaptionTrack, YouTubeCaptionTracks } from "./lyrics/types";
 import { getPagePlayerApi } from "./world0/context";
+import { resolveYtmStore } from "./ytm-store";
 
 function readAlbumTitle(): string | undefined {
 	try {
@@ -60,6 +60,62 @@ export function readTrackInfoFromPlayer(): TrackSearchInfo | null {
 		musicVideoType: String(details?.musicVideoType || micro?.musicVideoType || ""),
 		isLiveContent: !!details?.isLiveContent,
 	};
+}
+
+function captionName(name: unknown): string {
+	if (typeof name === "string") return name;
+	const obj = name as { simpleText?: unknown; runs?: { text?: unknown }[] } | null;
+	if (typeof obj?.simpleText === "string") return obj.simpleText;
+	if (Array.isArray(obj?.runs)) return obj.runs.map((r) => String(r?.text ?? "")).join("");
+	return "";
+}
+
+/**
+ * Caption tracks for the *current* player video.
+ * Prefers `getPlayerResponse().captions` (documented shape); falls back to `getAudioTrack().captionTracks`.
+ */
+export function readCaptionTracksFromPlayer(): YouTubeCaptionTracks | null {
+	const api = getPagePlayerApi();
+	if (!api) return null;
+
+	let videoId = "";
+	const tracks: YouTubeCaptionTrack[] = [];
+	const push = (raw: Record<string, unknown> | null | undefined) => {
+		const url = raw?.baseUrl ?? raw?.url;
+		const languageCode = raw?.languageCode;
+		if (typeof url !== "string" || !url || typeof languageCode !== "string") return;
+		tracks.push({
+			languageCode,
+			url,
+			isAuto: raw?.kind === "asr" || String(raw?.vssId ?? "").startsWith("a."),
+			name: captionName(raw?.name ?? raw?.displayName),
+		});
+	};
+
+	try {
+		const response = api.getPlayerResponse?.() as
+			| {
+					videoDetails?: { videoId?: unknown };
+					captions?: { playerCaptionsTracklistRenderer?: { captionTracks?: Record<string, unknown>[] } };
+			  }
+			| undefined;
+		videoId = String(response?.videoDetails?.videoId ?? "");
+		for (const raw of response?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? []) push(raw);
+	} catch {
+		/* mid-nav */
+	}
+
+	if (!tracks.length) {
+		try {
+			const audio = api.getAudioTrack?.() as { captionTracks?: Record<string, unknown>[] } | undefined;
+			for (const raw of audio?.captionTracks ?? []) push(raw);
+		} catch {
+			/* ignore */
+		}
+	}
+	if (!videoId) videoId = readTrackInfoFromPlayer()?.videoId ?? "";
+	if (!videoId) return null;
+	return { videoId, tracks };
 }
 
 function readCurrentTimeSec(): number {
@@ -220,6 +276,7 @@ export const lyricsPage = definePageCmds({
 	cmds: {
 		trackInfo: () => readTrackInfoFromPlayer(),
 		nextTrackInfo: () => readNextTrackInfoFromQueue(),
+		captionTracks: () => readCaptionTracksFromPlayer(),
 		currentTime: () => readCurrentTimeSec(),
 		seek: (timeSec) => seekToSec(Number(timeSec) || 0),
 		startClock: () => startLyricsClock(),

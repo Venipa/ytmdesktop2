@@ -104,12 +104,17 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 				enabled: false,
 				showTimeCodes: false,
 				showEvenIfInexact: true,
-				showProgressBar: true,
+				lineBackground: true,
+				lineStyle: "fill",
 				providers: [
 					{ id: "better-lyrics", enabled: true },
 					{ id: "unison", enabled: true },
 					{ id: "lrclib", enabled: true },
+					{ id: "youtube-captions", enabled: true },
 				],
+				betterLyricsApiKey: "",
+				autoOpenTab: true,
+				preferWordSync: true,
 			});
 		},
 	},
@@ -127,6 +132,7 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 					{ id: "better-lyrics", enabled: true },
 					{ id: "unison", enabled: true },
 					{ id: "lrclib", enabled: true },
+					{ id: "youtube-captions", enabled: true },
 				]);
 				return;
 			}
@@ -158,6 +164,34 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 				pinned = false;
 			}
 			store.set("trayView.pinned", pinned);
+		},
+	},
+	{
+		hook(store) {
+			const current = (store.store as SettingsStore)?.lyrics;
+			if (!current) return;
+			if (typeof current.betterLyricsApiKey !== "string") store.set("lyrics.betterLyricsApiKey", "");
+			if (typeof current.autoOpenTab !== "boolean") store.set("lyrics.autoOpenTab", true);
+			if (typeof current.preferWordSync !== "boolean") store.set("lyrics.preferWordSync", true);
+			// New last-resort provider: append (enabled) for users with an older saved order.
+			const providers = Array.isArray(current.providers) ? current.providers : [];
+			if (providers.length && !providers.some((p) => p?.id === "youtube-captions")) {
+				store.set("lyrics.providers", [...providers, { id: "youtube-captions", enabled: true }]);
+			}
+		},
+	},
+	{
+		hook(store) {
+			const current = (store.store as SettingsStore)?.lyrics as (SettingsStore["lyrics"] & { showProgressBar?: unknown }) | undefined;
+			if (!current) return;
+			// `showProgressBar` (bool) became `lineStyle`. The old bool drew a constant-rate line fill;
+			// the new "fill" only sweeps word-synced lines (line-only songs just highlight), so it is a
+			// safe default for everyone rather than mapping true/false individually.
+			if ("showProgressBar" in current) store.delete("lyrics.showProgressBar" as keyof SettingsStore);
+			if (current.lineStyle !== "highlight" && current.lineStyle !== "bar" && current.lineStyle !== "fill") {
+				store.set("lyrics.lineStyle", "fill");
+			}
+			if (typeof current.lineBackground !== "boolean") store.set("lyrics.lineBackground", true);
 		},
 	},
 ];

@@ -1,12 +1,12 @@
 import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import type { LyricsStoreSnapshot } from "../store";
 import {
 	LyricsApp,
 	type LyricsClockState,
 	type LyricsShellState,
 	type LyricsUiOptions,
 } from "./LyricsApp";
-import type { LyricsStoreSnapshot } from "../store";
 
 export interface LyricsRenderApi {
 	setSnapshot(snap: LyricsStoreSnapshot): void;
@@ -31,7 +31,8 @@ export function createLyricsRenderer(
 	let shell: LyricsShellState = {
 		snap: { status: "idle", result: null, videoId: null },
 		showTimeCodes: options.showTimeCodes(),
-		showProgressBar: options.showProgressBar(),
+		lineBackground: options.lineBackground(),
+		lineStyle: options.lineStyle(),
 		settingsEpoch: 0,
 	};
 	let clock: LyricsClockState = { timeMs: 0 };
@@ -112,7 +113,8 @@ export function createLyricsRenderer(
 		repaint() {
 			patchShell({
 				showTimeCodes: options.showTimeCodes(),
-				showProgressBar: options.showProgressBar(),
+				lineBackground: options.lineBackground(),
+				lineStyle: options.lineStyle(),
 				settingsEpoch: shell.settingsEpoch + 1,
 			});
 			ensureRoot();
