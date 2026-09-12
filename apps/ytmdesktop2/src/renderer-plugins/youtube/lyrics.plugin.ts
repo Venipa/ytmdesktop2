@@ -1,7 +1,10 @@
 import definePlugin from "@plugins/utils";
 import { getYtmd } from "@preload/preload-local";
+import { LYRICS_OVERLAY_IPC, readLyricsOverlaySettings } from "@shared/lyrics/overlay";
+import { readLineStyle } from "./lyrics/line-style";
+import { createOverlayPublisher, type OverlayPublisher, toOverlaySnapshot } from "./lyrics/overlay-publisher";
 import { createLyricsStore } from "./lyrics/store";
-import { createTabMount, type TabMountHandle } from "./lyrics/tab-mount";
+import { createTabMount, selectLyricsTab, type TabMountHandle } from "./lyrics/tab-mount";
 import {
 	seekPlayer,
 	shouldSkipTrack,
@@ -9,10 +12,10 @@ import {
 	stopLyricsClock,
 	trackInfoFromMainWorld,
 } from "./lyrics/track";
+import type { TrackSearchInfo } from "./lyrics/types";
 import { createLyricsRenderer, type LyricsRenderApi } from "./lyrics/ui/render";
 import { lyricsPage, subscribeLyricsTime } from "./lyrics.page";
 import lyricsRenderer from "./lyrics.renderer";
-import type { TrackSearchInfo } from "./lyrics/types";
 
 const SEEK_OFFSET_MS = 10;
 /** Nudge UI ahead of getCurrentTime - YTM clock often trails audible audio. */
@@ -22,6 +25,8 @@ type LyricsLogger = { debug: (...args: unknown[]) => void; error: (...args: unkn
 
 interface LyricsRuntime {
 	store: ReturnType<typeof createLyricsStore>;
+	/** Desktop overlay feed (main process relays to the `/lyrics-overlay` window). */
+	overlay: OverlayPublisher;
 	mount: TabMountHandle | null;
 	renderer: LyricsRenderApi | null;
 	unsubStore: (() => void) | null;
@@ -35,10 +40,24 @@ interface LyricsRuntime {
 	tabSelected: boolean;
 	started: boolean;
 	lastVideoId: string | null;
+	/** videoId the Lyrics tab was auto-opened for (once per track). */
+	autoOpenedFor: string | null;
+}
+
+function sendToMain(channel: string, payload: unknown) {
+	try {
+		getYtmd().sendInternal(channel, payload);
+	} catch (err) {
+		runtime.log?.debug("lyrics: overlay send failed", channel, err);
+	}
 }
 
 const runtime: LyricsRuntime = {
 	store: createLyricsStore(),
+	overlay: createOverlayPublisher({
+		sendSnapshot: (snap) => sendToMain(LYRICS_OVERLAY_IPC.snapshot, snap),
+		sendClock: (clock) => sendToMain(LYRICS_OVERLAY_IPC.clock, clock),
+	}),
 	mount: null,
 	renderer: null,
 	unsubStore: null,
@@ -52,6 +71,7 @@ const runtime: LyricsRuntime = {
 	tabSelected: false,
 	started: false,
 	lastVideoId: null,
+	autoOpenedFor: null,
 };
 
 function readLyricsSettings(settings?: Record<string, any>) {
@@ -60,8 +80,22 @@ function readLyricsSettings(settings?: Record<string, any>) {
 		enabled: !!s?.lyrics?.enabled,
 		showTimeCodes: !!s?.lyrics?.showTimeCodes,
 		showEvenIfInexact: s?.lyrics?.showEvenIfInexact !== false,
-		showProgressBar: s?.lyrics?.showProgressBar !== false,
+		lineBackground: s?.lyrics?.lineBackground !== false,
+		lineStyle: readLineStyle(s?.lyrics?.lineStyle),
 		providers: s?.lyrics?.providers,
+		betterLyricsApiKey: typeof s?.lyrics?.betterLyricsApiKey === "string" ? s.lyrics.betterLyricsApiKey : "",
+		autoOpenTab: s?.lyrics?.autoOpenTab !== false,
+		preferWordSync: s?.lyrics?.preferWordSync !== false,
+		overlayEnabled: readLyricsOverlaySettings(s?.lyrics?.overlay).enabled,
+	};
+}
+
+function fetchOptions(cfg: ReturnType<typeof readLyricsSettings>) {
+	return {
+		showEvenIfInexact: cfg.showEvenIfInexact,
+		providers: cfg.providers,
+		betterLyricsApiKey: cfg.betterLyricsApiKey,
+		preferWordSync: cfg.preferWordSync,
 	};
 }
 
@@ -79,10 +113,7 @@ async function prefetchNextTrack(cfg: ReturnType<typeof readLyricsSettings>) {
 	try {
 		const next = await lyricsPage.request("nextTrackInfo");
 		if (!canPrefetchTrack(next)) return;
-		runtime.store.prefetchForTrack(next, {
-			showEvenIfInexact: cfg.showEvenIfInexact,
-			providers: cfg.providers,
-		});
+		runtime.store.prefetchForTrack(next, fetchOptions(cfg));
 		runtime.log?.debug("lyrics: prefetch next", next.videoId, next.title);
 	} catch (err) {
 		runtime.log?.debug("lyrics: prefetch next failed", err);
@@ -108,18 +139,30 @@ async function refreshTrack(expectVideoId?: string | null) {
 	}
 	runtime.lastVideoId = info.videoId;
 	const cfg = readLyricsSettings();
-	await runtime.store.fetchForTrack(info, {
-		showEvenIfInexact: cfg.showEvenIfInexact,
-		providers: cfg.providers,
-	});
+	await runtime.store.fetchForTrack(info, fetchOptions(cfg));
 	if (!runtime.active) return;
 	if (runtime.lastVideoId !== info.videoId) return;
 	void prefetchNextTrack(cfg);
 }
 
-function applyTickTime(timeSec: number) {
-	if (!runtime.renderer || !runtime.active || !runtime.tabSelected) return;
-	runtime.renderer.setTime(timeSec * 1000 + DISPLAY_LEAD_MS);
+/**
+ * With `autoOpenTab`, switch the player page to the Lyrics tab once lyrics for a new track are showing
+ * (our overlay or stock YTM). Once per videoId, so a manual switch away is respected for that track.
+ */
+function maybeAutoOpenTab(snap: { status: string; videoId: string | null }) {
+	if (!runtime.active || !snap.videoId) return;
+	if (snap.status !== "ready" && snap.status !== "stock") return;
+	if (runtime.autoOpenedFor === snap.videoId) return;
+	runtime.autoOpenedFor = snap.videoId;
+	if (!readLyricsSettings().autoOpenTab) return;
+	if (!selectLyricsTab()) runtime.log?.debug("lyrics: auto-open tab skipped (header missing/disabled)");
+}
+
+function applyTickTime(timeSec: number, playing: boolean) {
+	if (!runtime.active) return;
+	const timeMs = timeSec * 1000 + DISPLAY_LEAD_MS;
+	if (runtime.renderer && runtime.tabSelected) runtime.renderer.setTime(timeMs);
+	runtime.overlay.tick(timeMs, playing);
 }
 
 async function startTimePoll() {
@@ -137,6 +180,14 @@ function stopTimePoll() {
 	stopLyricsClock();
 	runtime.unsubTime?.();
 	runtime.unsubTime = null;
+	runtime.overlay.resetClock();
+}
+
+/** The page clock runs while anything consumes it: the Lyrics tab or the desktop overlay. */
+function syncTimePoll() {
+	if (!runtime.active) return;
+	if (runtime.tabSelected || runtime.overlay.isEnabled()) void startTimePoll();
+	else stopTimePoll();
 }
 
 function unbindTrackWatch() {
@@ -174,18 +225,16 @@ async function startLyrics() {
 		},
 		onTabSelectedChange: (selected) => {
 			runtime.tabSelected = selected;
-			if (selected) {
-				void startTimePoll();
-			} else {
-				stopTimePoll();
-			}
+			syncTimePoll();
 		},
 	});
 	runtime.tabSelected = runtime.mount.isLyricsTabSelected();
+	runtime.overlay.setEnabled(readLyricsSettings().overlayEnabled);
 
 	runtime.renderer = createLyricsRenderer(() => runtime.mount?.getHost() ?? null, {
 		showTimeCodes: () => readLyricsSettings().showTimeCodes,
-		showProgressBar: () => readLyricsSettings().showProgressBar,
+		lineBackground: () => readLyricsSettings().lineBackground,
+		lineStyle: () => readLyricsSettings().lineStyle,
 		onSeek: (timeMs) => {
 			void seekPlayer((timeMs + SEEK_OFFSET_MS) / 1000).then((ok) => {
 				if (!ok) runtime.log?.debug("lyrics: seek failed");
@@ -193,20 +242,33 @@ async function startLyrics() {
 		},
 	});
 
-	runtime.unsubStore = runtime.store.subscribe((snap) => runtime.renderer?.setSnapshot(snap));
+	runtime.unsubStore = runtime.store.subscribe((snap) => {
+		runtime.renderer?.setSnapshot(snap);
+		runtime.overlay.setSnapshot(toOverlaySnapshot(snap, true));
+		maybeAutoOpenTab(snap);
+	});
 	runtime.unsubSettings =
 		runtime.onSettingsChange?.((key) => {
-			if (key === "lyrics.showTimeCodes" || key === "lyrics.showProgressBar") {
+			if (key === "lyrics.showTimeCodes" || key === "lyrics.lineBackground" || key === "lyrics.lineStyle") {
 				runtime.renderer?.repaint();
 			}
-			if (key === "lyrics.showEvenIfInexact" || key === "lyrics.providers") {
+			if (key === "lyrics.overlay.enabled") {
+				runtime.overlay.setEnabled(readLyricsSettings().overlayEnabled);
+				syncTimePoll();
+			}
+			if (
+				key === "lyrics.showEvenIfInexact" ||
+				key === "lyrics.providers" ||
+				key === "lyrics.betterLyricsApiKey" ||
+				key === "lyrics.preferWordSync"
+			) {
 				runtime.store.clearCache();
 				void refreshTrack();
 			}
 		}) ?? null;
 
 	bindTrackWatch();
-	if (runtime.tabSelected) await startTimePoll();
+	if (runtime.tabSelected || runtime.overlay.isEnabled()) await startTimePoll();
 	await refreshTrack();
 	runtime.renderer.repaint();
 }
@@ -214,9 +276,12 @@ async function startLyrics() {
 function stopLyrics() {
 	if (!runtime.active && !runtime.mount) return;
 	runtime.log?.debug("lyrics: stop");
+	// Tell the overlay (if open) that lyrics are off rather than leaving the last song frozen on screen.
+	runtime.overlay.setSnapshot(toOverlaySnapshot(runtime.store.getSnapshot(), false));
 	runtime.active = false;
 	runtime.tabSelected = false;
 	runtime.lastVideoId = null;
+	runtime.autoOpenedFor = null;
 	stopTimePoll();
 	unbindTrackWatch();
 	runtime.unsubStore?.();

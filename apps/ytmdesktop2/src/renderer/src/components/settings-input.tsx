@@ -79,13 +79,13 @@ export function SettingsInput({
 		<Field data-disabled={isPending || undefined} className={cn(className)}>
 			{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
 			<Input
+				{...attrs}
 				id={id}
 				type={type}
-				placeholder={attrs.placeholder}
 				value={String(value ?? "")}
 				min={min}
 				max={max}
-				disabled={isPending}
+				disabled={isPending || attrs.disabled}
 				onChange={(ev) => {
 					if (type === "number" && (min !== undefined || max !== undefined)) {
 						const n = Number(ev.target.value);

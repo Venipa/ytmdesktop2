@@ -1,7 +1,7 @@
 import { definePageCmds } from "@plugins/define-bridge";
-import type { TrackSearchInfo } from "./lyrics/types";
-import { resolveYtmStore } from "./ytm-store";
+import type { TrackSearchInfo, YouTubeCaptionTrack, YouTubeCaptionTracks } from "./lyrics/types";
 import { getPagePlayerApi } from "./world0/context";
+import { resolveYtmStore } from "./ytm-store";
 
 function readAlbumTitle(): string | undefined {
 	try {
@@ -62,6 +62,62 @@ export function readTrackInfoFromPlayer(): TrackSearchInfo | null {
 	};
 }
 
+function captionName(name: unknown): string {
+	if (typeof name === "string") return name;
+	const obj = name as { simpleText?: unknown; runs?: { text?: unknown }[] } | null;
+	if (typeof obj?.simpleText === "string") return obj.simpleText;
+	if (Array.isArray(obj?.runs)) return obj.runs.map((r) => String(r?.text ?? "")).join("");
+	return "";
+}
+
+/**
+ * Caption tracks for the *current* player video.
+ * Prefers `getPlayerResponse().captions` (documented shape); falls back to `getAudioTrack().captionTracks`.
+ */
+export function readCaptionTracksFromPlayer(): YouTubeCaptionTracks | null {
+	const api = getPagePlayerApi();
+	if (!api) return null;
+
+	let videoId = "";
+	const tracks: YouTubeCaptionTrack[] = [];
+	const push = (raw: Record<string, unknown> | null | undefined) => {
+		const url = raw?.baseUrl ?? raw?.url;
+		const languageCode = raw?.languageCode;
+		if (typeof url !== "string" || !url || typeof languageCode !== "string") return;
+		tracks.push({
+			languageCode,
+			url,
+			isAuto: raw?.kind === "asr" || String(raw?.vssId ?? "").startsWith("a."),
+			name: captionName(raw?.name ?? raw?.displayName),
+		});
+	};
+
+	try {
+		const response = api.getPlayerResponse?.() as
+			| {
+					videoDetails?: { videoId?: unknown };
+					captions?: { playerCaptionsTracklistRenderer?: { captionTracks?: Record<string, unknown>[] } };
+			  }
+			| undefined;
+		videoId = String(response?.videoDetails?.videoId ?? "");
+		for (const raw of response?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? []) push(raw);
+	} catch {
+		/* mid-nav */
+	}
+
+	if (!tracks.length) {
+		try {
+			const audio = api.getAudioTrack?.() as { captionTracks?: Record<string, unknown>[] } | undefined;
+			for (const raw of audio?.captionTracks ?? []) push(raw);
+		} catch {
+			/* ignore */
+		}
+	}
+	if (!videoId) videoId = readTrackInfoFromPlayer()?.videoId ?? "";
+	if (!videoId) return null;
+	return { videoId, tracks };
+}
+
 function readCurrentTimeSec(): number {
 	const api = getPagePlayerApi();
 	if (!api || typeof api.getCurrentTime !== "function") return 0;
@@ -69,6 +125,17 @@ function readCurrentTimeSec(): number {
 		return Number(api.getCurrentTime()) || 0;
 	} catch {
 		return 0;
+	}
+}
+
+/** YT player state 1 = playing (2 paused, 3 buffering, 5 cued). */
+function readIsPlaying(): boolean {
+	const api = getPagePlayerApi();
+	if (!api || typeof api.getPlayerState !== "function") return false;
+	try {
+		return Number(api.getPlayerState()) === 1;
+	} catch {
+		return false;
 	}
 }
 
@@ -167,6 +234,7 @@ type LyricsTickMessage = {
 	type: string;
 	kind: "tick";
 	timeSec: number;
+	playing: boolean;
 };
 
 let clockWanted = false;
@@ -178,6 +246,7 @@ function emitTimeTick(): void {
 		type: LYRICS_BRIDGE_TYPE,
 		kind: "tick",
 		timeSec: readCurrentTimeSec(),
+		playing: readIsPlaying(),
 	};
 	window.postMessage(msg, "*");
 }
@@ -220,6 +289,7 @@ export const lyricsPage = definePageCmds({
 	cmds: {
 		trackInfo: () => readTrackInfoFromPlayer(),
 		nextTrackInfo: () => readNextTrackInfoFromQueue(),
+		captionTracks: () => readCaptionTracksFromPlayer(),
 		currentTime: () => readCurrentTimeSec(),
 		seek: (timeSec) => seekToSec(Number(timeSec) || 0),
 		startClock: () => startLyricsClock(),
@@ -240,10 +310,10 @@ function isLyricsTick(data: unknown): data is LyricsTickMessage {
 }
 
 /** Preload: subscribe to page-world playback ticks (smooth progress / no bridge request storm). */
-export function subscribeLyricsTime(handler: (timeSec: number) => void): () => void {
+export function subscribeLyricsTime(handler: (timeSec: number, playing: boolean) => void): () => void {
 	const onMessage = (ev: MessageEvent) => {
 		if (!isLyricsTick(ev.data)) return;
-		handler(ev.data.timeSec);
+		handler(ev.data.timeSec, ev.data.playing === true);
 	};
 	window.addEventListener("message", onMessage);
 	return () => window.removeEventListener("message", onMessage);

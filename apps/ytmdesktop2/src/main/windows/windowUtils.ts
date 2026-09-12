@@ -28,6 +28,12 @@ export type WindowOptions = {
 	type?: Electron.BrowserWindowConstructorOptions["type"];
 	/** Open detached DevTools (defaults to true in development). */
 	devtools?: boolean;
+	/** Transparent frameless window (no background colour / shadow) — desktop overlays. */
+	transparent?: boolean;
+	/** Native resize borders (default true). */
+	resizable?: boolean;
+	/** Extra BrowserWindow options merged last (alwaysOnTop, focusable, …). */
+	extraOptions?: Electron.BrowserWindowConstructorOptions;
 };
 const log = createLogger("main");
 export function parseScriptPath(p: string) {
@@ -258,8 +264,26 @@ export function shortcutOnWindow(
 
 export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	// eslint-disable-next-line prefer-const
-	let { parent, path, minHeight, minWidth, maxHeight, maxWidth, height, width, top, showTaskBar, minimizeable, maximizeable, show, type, devtools } =
-		appOptions ?? {};
+	let {
+		parent,
+		path,
+		minHeight,
+		minWidth,
+		maxHeight,
+		maxWidth,
+		height,
+		width,
+		top,
+		showTaskBar,
+		minimizeable,
+		maximizeable,
+		show,
+		type,
+		devtools,
+		transparent,
+		resizable,
+		extraOptions,
+	} = appOptions ?? {};
 	if (!path) path = "/";
 	const shouldShow = show ?? true;
 	const shouldOpenDevtools = devtools ?? (isDevelopment || isProdDebug);
@@ -274,7 +298,9 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 		show: false,
 		minimizable: minimizeable === true,
 		maximizable: maximizeable === true,
-		backgroundColor: "#000000",
+		// Transparent windows must not paint an opaque backdrop.
+		...(transparent ? { transparent: true, hasShadow: false } : { backgroundColor: "#000000" }),
+		resizable: resizable !== false,
 		fullscreenable: !maxWidth && !maxHeight,
 		icon: appIconPath,
 		frame: false,
@@ -283,6 +309,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 		skipTaskbar: showTaskBar === false,
 		darkTheme: true,
 		...(type ? { type } : {}),
+		...extraOptions,
 		webPreferences: {
 			// Use pluginOptions.nodeIntegration, leave this alone
 			// See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
@@ -290,6 +317,7 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 			contextIsolation: true,
 			sandbox: false,
 			preload: join(__dirname, "../preload/api.js"),
+			...extraOptions?.webPreferences,
 		},
 	});
 
