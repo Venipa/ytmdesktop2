@@ -165,11 +165,15 @@
 	overflow: hidden;
 	user-select: none;
 	-webkit-user-select: none;
-	transition: opacity 200ms ease, background-color 200ms ease;
+	/* Ease-out so the hand-off between lines settles instead of snapping. */
+	transition:
+		opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
+		background-color 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #ytmd-lyrics-root .ytmd-lyrics-line:hover {
 	opacity: 0.72;
+	transition-duration: 160ms;
 }
 
 #ytmd-lyrics-root .ytmd-lyrics-line.is-active {
@@ -181,8 +185,8 @@
 	background-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Keep the original row progress when dynamic text highlighting is disabled. */
-#ytmd-lyrics-root .ytmd-lyrics-line.is-active.has-line-progress:not(.is-dynamic) {
+/* Line style "bar": row background that advances with playback (line-only cues). */
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active.line-bar {
 	background-color: transparent;
 	background-image: linear-gradient(
 		to right,
@@ -208,7 +212,7 @@
 	overflow-wrap: break-word;
 	word-break: normal;
 	transform-origin: left center;
-	transition: transform 250ms ease;
+	transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #ytmd-lyrics-root .ytmd-lyrics-line.is-dynamic:not(.is-active) .ytmd-lyrics-line-content {
@@ -240,6 +244,7 @@
 	display: inline;
 	color: inherit;
 	-webkit-text-fill-color: inherit;
+	transition: opacity 180ms ease;
 }
 
 #ytmd-lyrics-root .ytmd-lyrics-line.is-active:not(.is-dynamic) .ytmd-lyrics-word {
@@ -260,6 +265,20 @@
 		to right,
 		#fff var(--ytmd-word-progress, 0%),
 		rgba(255, 255, 255, 0.35) var(--ytmd-word-progress, 0%)
+	);
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent !important;
+}
+
+/* Line style "fill": text colour that advances with playback (line-only cues). */
+#ytmd-lyrics-root .ytmd-lyrics-line.is-active.line-fill .ytmd-lyrics-text {
+	background-image: linear-gradient(
+		to right,
+		#fff 0%,
+		#fff calc(var(--ytmd-line-progress, 0) * 100%),
+		rgba(255, 255, 255, 0.35) calc(var(--ytmd-line-progress, 0) * 100%),
+		rgba(255, 255, 255, 0.35) 100%
 	);
 	background-clip: text;
 	-webkit-background-clip: text;

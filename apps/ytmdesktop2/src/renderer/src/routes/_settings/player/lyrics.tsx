@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LyricsProvidersOrder } from "@/components/lyrics-providers-order";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
 import { SettingsInput } from "@/components/settings-input";
+import { SettingsSelect, type SettingsSelectOption } from "@/components/settings-select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 import { useSettingsState } from "@/hooks/use-settings";
@@ -9,6 +10,24 @@ import { useSettingsState } from "@/hooks/use-settings";
 export const Route = createFileRoute("/_settings/player/lyrics")({
 	component: LyricsSettingsPage,
 });
+
+const LINE_STYLE_OPTIONS: SettingsSelectOption[] = [
+	{
+		value: "highlight",
+		label: "Highlight only",
+		description: "Light the current line up (and enlarge it with Dynamic lyrics). No progress indicator.",
+	},
+	{
+		value: "bar",
+		label: "Progress bar",
+		description: "A row background that advances across the line as it plays.",
+	},
+	{
+		value: "fill",
+		label: "Text fill",
+		description: "The text turns white from left to right as the line plays.",
+	},
+];
 
 function LyricsSettingsPage() {
 	const [lyricsEnabled] = useSettingsState<boolean>("lyrics.enabled", false);
@@ -43,7 +62,7 @@ function LyricsSettingsPage() {
 							configKey="lyrics.dynamicLyrics"
 							defaultValue={true}
 							disabled={!lyricsEnabled}
-							description="Continuously fill word-synced lyric text as it plays and gently enlarge the current line. Line-synced lyrics just highlight and enlarge."
+							description="Continuously fill word-synced lyric text as it plays and gently enlarge the current line. Line-synced lyrics follow the Line-synced style below."
 						>
 							Dynamic lyrics
 						</SettingsCheckbox>
@@ -70,14 +89,14 @@ function LyricsSettingsPage() {
 						>
 							Show time codes
 						</SettingsCheckbox>
-						<SettingsCheckbox
-							configKey="lyrics.showProgressBar"
-							defaultValue={true}
+						<SettingsSelect
+							configKey="lyrics.lineStyle"
+							defaultValue="highlight"
 							disabled={!lyricsEnabled}
-							description="Show playback progress on the active line when the provider has no word/syllable cues. Only applies when Dynamic lyrics is off."
-						>
-							Show line progress
-						</SettingsCheckbox>
+							label="Line-synced style"
+							description="How the current line shows progress when the provider only has line timing (no word/syllable cues). Line timing says when a line starts, not how fast it's sung, so bar and fill advance at a constant rate."
+							options={LINE_STYLE_OPTIONS}
+						/>
 					</FieldGroup>
 				</CardContent>
 			</Card>

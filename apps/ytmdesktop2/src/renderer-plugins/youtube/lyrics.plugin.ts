@@ -1,5 +1,6 @@
 import definePlugin from "@plugins/utils";
 import { getYtmd } from "@preload/preload-local";
+import { readLineStyle } from "./lyrics/line-style";
 import { createLyricsStore } from "./lyrics/store";
 import { createTabMount, selectLyricsTab, type TabMountHandle } from "./lyrics/tab-mount";
 import {
@@ -63,7 +64,7 @@ function readLyricsSettings(settings?: Record<string, any>) {
 		enabled: !!s?.lyrics?.enabled,
 		showTimeCodes: !!s?.lyrics?.showTimeCodes,
 		showEvenIfInexact: s?.lyrics?.showEvenIfInexact !== false,
-		showProgressBar: s?.lyrics?.showProgressBar !== false,
+		lineStyle: readLineStyle(s?.lyrics?.lineStyle),
 		dynamicLyrics: s?.lyrics?.dynamicLyrics !== false,
 		providers: s?.lyrics?.providers,
 		betterLyricsApiKey: typeof s?.lyrics?.betterLyricsApiKey === "string" ? s.lyrics.betterLyricsApiKey : "",
@@ -208,7 +209,7 @@ async function startLyrics() {
 
 	runtime.renderer = createLyricsRenderer(() => runtime.mount?.getHost() ?? null, {
 		showTimeCodes: () => readLyricsSettings().showTimeCodes,
-		showProgressBar: () => readLyricsSettings().showProgressBar,
+		lineStyle: () => readLyricsSettings().lineStyle,
 		dynamicLyrics: () => readLyricsSettings().dynamicLyrics,
 		onSeek: (timeMs) => {
 			void seekPlayer((timeMs + SEEK_OFFSET_MS) / 1000).then((ok) => {
@@ -223,7 +224,7 @@ async function startLyrics() {
 	});
 	runtime.unsubSettings =
 		runtime.onSettingsChange?.((key) => {
-			if (key === "lyrics.showTimeCodes" || key === "lyrics.showProgressBar" || key === "lyrics.dynamicLyrics") {
+			if (key === "lyrics.showTimeCodes" || key === "lyrics.lineStyle" || key === "lyrics.dynamicLyrics") {
 				runtime.renderer?.repaint();
 			}
 			if (

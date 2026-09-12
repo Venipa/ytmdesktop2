@@ -9,6 +9,7 @@ import {
 	useState,
 	useSyncExternalStore,
 } from "react";
+import type { LyricsLineStyle } from "../line-style";
 import { activeLineIndices, activeWordIndex, primaryActiveLineIndex } from "../lrc";
 import { wordProgress } from "../progress";
 import { lyricsProviderLabel } from "../providers/catalog";
@@ -22,7 +23,7 @@ export const USER_SCROLL_PAUSE_MS = 2500;
 export interface LyricsShellState {
 	snap: LyricsStoreSnapshot;
 	showTimeCodes: boolean;
-	showProgressBar: boolean;
+	lineStyle: LyricsLineStyle;
 	dynamicLyrics: boolean;
 	settingsEpoch: number;
 }
@@ -36,7 +37,7 @@ export interface LyricsUiState extends LyricsShellState, LyricsClockState {}
 
 export interface LyricsUiOptions {
 	showTimeCodes: () => boolean;
-	showProgressBar: () => boolean;
+	lineStyle: () => LyricsLineStyle;
 	dynamicLyrics: () => boolean;
 	onSeek: (timeMs: number) => void;
 }
@@ -110,10 +111,11 @@ function lineProgressRatio(line: LyricLine, nowMs: number): number {
 	return Math.min(1, Math.max(0, (nowMs - line.timeMs) / dur));
 }
 
-function lineClassName(isActive: boolean, showProgress: boolean, dynamicLyrics: boolean): string {
+function lineClassName(isActive: boolean, progressStyle: LyricsLineStyle | null, dynamicLyrics: boolean): string {
 	const parts = ["ytmd-lyrics-line"];
 	if (isActive) parts.push("is-active");
-	if (isActive && showProgress) parts.push("has-line-progress");
+	if (isActive && progressStyle === "bar") parts.push("line-bar");
+	if (isActive && progressStyle === "fill") parts.push("line-fill");
 	if (dynamicLyrics) parts.push("is-dynamic");
 	return parts.join(" ");
 }
@@ -171,7 +173,9 @@ interface LyricLineRowProps {
 	line: LyricLine;
 	index: number;
 	isActive: boolean;
+	/** 0..1 playback ratio for line-only cues; null when no progress indicator should draw. */
 	progress: number | null;
+	lineStyle: LyricsLineStyle;
 	showTimeCodes: boolean;
 	words: LyricWord[] | undefined;
 	timeMs: number;
@@ -184,6 +188,7 @@ const LyricLineRow = memo(function LyricLineRow({
 	index,
 	isActive,
 	progress,
+	lineStyle,
 	showTimeCodes,
 	words,
 	timeMs,
@@ -223,7 +228,7 @@ const LyricLineRow = memo(function LyricLineRow({
 
 	return (
 		<div
-			className={lineClassName(isActive, progress != null, dynamicLyrics)}
+			className={lineClassName(isActive, progress != null ? lineStyle : null, dynamicLyrics)}
 			data-index={index}
 			role="listitem"
 			tabIndex={0}
@@ -259,7 +264,7 @@ interface SyncedListProps {
 	lines: LyricLine[];
 	result: LyricResult;
 	showTimeCodes: boolean;
-	showProgressBar: boolean;
+	lineStyle: LyricsLineStyle;
 	dynamicLyrics: boolean;
 	settingsEpoch: number;
 	videoId: string | null;
@@ -272,7 +277,7 @@ function SyncedList({
 	lines,
 	result,
 	showTimeCodes,
-	showProgressBar,
+	lineStyle,
 	dynamicLyrics,
 	settingsEpoch,
 	videoId,
@@ -365,10 +370,10 @@ function SyncedList({
 					const isActive = activeSet.has(i);
 					const words = line.words?.length ? line.words : undefined;
 					const useWords = !!words?.length;
-					// Line-only cues carry no per-word pacing, so a constant-rate fill drifts from the vocal;
-					// in dynamic mode the active line just lights up and scales instead.
+					// Line-only cues carry no per-word pacing, so any progress indicator runs at a constant
+					// rate and can drift from the vocal — it's opt-in via lineStyle ("highlight" draws none).
 					const progress =
-						isActive && showProgressBar && !useWords && !dynamicLyrics ? lineProgressRatio(line, timeMs) : null;
+						isActive && !useWords && lineStyle !== "highlight" ? lineProgressRatio(line, timeMs) : null;
 					return (
 						<LyricLineRow
 							key={`${line.timeMs}-${i}`}
@@ -376,6 +381,7 @@ function SyncedList({
 							index={i}
 							isActive={isActive}
 							progress={progress}
+							lineStyle={lineStyle}
 							showTimeCodes={showTimeCodes}
 							words={words}
 							timeMs={isActive && useWords ? timeMs : 0}
@@ -391,7 +397,7 @@ function SyncedList({
 
 export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, onSeek }: LyricsAppProps) {
 	const shell = useSyncExternalStore(subscribeShell, getShell, getShell);
-	const { snap, showTimeCodes, showProgressBar, dynamicLyrics, settingsEpoch } = shell;
+	const { snap, showTimeCodes, lineStyle, dynamicLyrics, settingsEpoch } = shell;
 
 	const result = snap.result;
 	const lines = snap.status === "ready" && result?.lines?.length ? result.lines : null;
@@ -426,7 +432,7 @@ export function LyricsApp({ subscribeShell, getShell, subscribeClock, getClock, 
 				lines={lines}
 				result={result}
 				showTimeCodes={showTimeCodes}
-				showProgressBar={showProgressBar}
+				lineStyle={lineStyle}
 				dynamicLyrics={dynamicLyrics}
 				settingsEpoch={settingsEpoch}
 				videoId={snap.videoId}

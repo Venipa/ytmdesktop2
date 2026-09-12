@@ -45,7 +45,8 @@ const defaultSettings = {
 		enabled: false,
 		showTimeCodes: false,
 		showEvenIfInexact: true,
-		showProgressBar: true,
+		/** Progress indicator for line-only lyrics: highlight (none), bar (row background), fill (text colour). */
+		lineStyle: "highlight" as "highlight" | "bar" | "fill",
 		dynamicLyrics: true,
 		providers: [
 			{ id: "better-lyrics", enabled: true },
