@@ -45,12 +45,22 @@ const defaultSettings = {
 		enabled: false,
 		showTimeCodes: false,
 		showEvenIfInexact: true,
-		showProgressBar: true,
+		/** Tint the row behind the active line; off = text brightens only. */
+		lineBackground: true,
+		/** Active-line progress: highlight (none), bar (line-only row background), fill (word-synced sweep). */
+		lineStyle: "fill" as "highlight" | "bar" | "fill",
 		providers: [
 			{ id: "better-lyrics", enabled: true },
 			{ id: "unison", enabled: true },
 			{ id: "lrclib", enabled: true },
-		] as Array<{ id: "better-lyrics" | "unison" | "lrclib"; enabled: boolean }>,
+			{ id: "youtube-captions", enabled: true },
+		] as Array<{ id: "better-lyrics" | "unison" | "lrclib" | "youtube-captions"; enabled: boolean }>,
+		/** Optional Better Lyrics `X-API-Key`; empty = cached songs only. */
+		betterLyricsApiKey: "",
+		/** Switch the player page to the Lyrics tab when lyrics for a new track are showing. */
+		autoOpenTab: true,
+		/** Keep trying later providers for word/syllable cues before settling for line sync. */
+		preferWordSync: true,
 	},
 	player: {
 		skipDisliked: false,

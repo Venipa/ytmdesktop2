@@ -46,7 +46,14 @@ async function searchApi(params: URLSearchParams, signal?: AbortSignal): Promise
 	return data;
 }
 
-/** Rank by duration match, then artist score. Line-synced only (no word sync). */
+function hasSynced(hit: LrcLibHit): boolean {
+	return !!hit.syncedLyrics?.trim();
+}
+
+/**
+ * Rank: duration within tolerance first, then synced before plain-only, then closest duration, then artist score.
+ * Timed lines are the whole point of the provider, so a synced hit a few seconds off beats a plain-only exact match.
+ */
 export function rankLrcLibHits(hits: LrcLibHit[], info: TrackSearchInfo): RankedLrcLibHit[] {
 	return hits
 		.map((hit) => {
@@ -59,9 +66,34 @@ export function rankLrcLibHits(hits: LrcLibHit[], info: TrackSearchInfo): Ranked
 			const aExact = a.durationDelta <= DURATION_TOLERANCE_SEC ? 0 : 1;
 			const bExact = b.durationDelta <= DURATION_TOLERANCE_SEC ? 0 : 1;
 			if (aExact !== bExact) return aExact - bExact;
+			const aSynced = hasSynced(a.hit) ? 0 : 1;
+			const bSynced = hasSynced(b.hit) ? 0 : 1;
+			if (aSynced !== bSynced) return aSynced - bSynced;
 			if (a.durationDelta !== b.durationDelta) return a.durationDelta - b.durationDelta;
 			return b.artistRatio - a.artistRatio;
 		});
+}
+
+/**
+ * Alternate spellings of a YTM title worth querying when the full title finds no synced hit.
+ * YTM (esp. JP/KR releases) often titles tracks `原題 - romaji (english)`; LRCLib entries use any one of the parts.
+ */
+export function lrcLibTitleVariants(title: string): string[] {
+	const out: string[] = [];
+	const push = (s: string) => {
+		const t = s.replace(/\s+/g, " ").trim();
+		if (t && !out.includes(t)) out.push(t);
+	};
+	const stripSuffix = (s: string) => s.replace(/\s*[([][^)\]]*[)\]]\s*$/g, "").replace(/\s*(?:feat|ft)\.?\s.*$/i, "");
+
+	push(title);
+	const parts = title.split(/\s+[-–—/|]\s+/);
+	for (const part of parts) {
+		push(part);
+		push(stripSuffix(part));
+	}
+	push(stripSuffix(title));
+	return out.slice(0, 5);
 }
 
 export function pickBest(
@@ -88,33 +120,50 @@ function toResult(hit: LrcLibHit, inexact: boolean): LyricResult | null {
 	const synced = hit.syncedLyrics?.trim();
 	const plain = hit.plainLyrics?.trim();
 	if (!synced && !plain) return null;
+	const lines = synced ? parseLrc(synced) : undefined;
+	// LRCLib is usually plain `[mm:ss.xx]` LRC, but enhanced `<mm:ss.xx>` word tags do show up — honor them.
+	const hasWordSync = !!lines?.some((l) => !!l.words?.length);
 	return {
 		title: hit.trackName,
 		artists: artistsFromHit(hit.artistName),
-		...(synced ? { lines: parseLrc(synced) } : {}),
+		...(lines ? { lines } : {}),
 		...(plain ? { plain } : {}),
 		inexact,
 		provider: "lrclib",
-		hasWordSync: false,
-		syncLevel: synced ? "line" : "plain",
+		hasWordSync,
+		syncLevel: hasWordSync ? "word" : synced ? "line" : "plain",
 	};
 }
 
-/** Fetch line-synced / plain lyrics from LRCLib. */
+/** True when `hits` already contain a synced, artist-matched entry within duration tolerance — no need to keep querying. */
+function hasGoodSyncedHit(hits: LrcLibHit[], info: TrackSearchInfo): boolean {
+	const best = rankLrcLibHits(hits, info)[0];
+	return !!best && best.durationDelta <= DURATION_TOLERANCE_SEC && hasSynced(best.hit);
+}
+
+/**
+ * Fetch line-synced / plain lyrics from LRCLib.
+ * Queries the full title first, then title variants until a synced in-tolerance hit shows up; hits are pooled
+ * (deduped by id) so a plain-only exact match never hides a synced entry filed under another spelling.
+ */
 export async function searchLrcLib(info: TrackSearchInfo, options: LrcLibSearchOptions): Promise<LyricResult | null> {
-	const params = new URLSearchParams({
-		artist_name: info.artist,
-		track_name: info.title,
-	});
-	if (info.album) params.set("album_name", info.album);
+	const pooled = new Map<number, LrcLibHit>();
+	const collect = (hits: LrcLibHit[]) => {
+		for (const hit of hits) if (!pooled.has(hit.id)) pooled.set(hit.id, hit);
+	};
 
-	let hits = await searchApi(params, options.signal);
-
-	if (!hits.length && options.showEvenIfInexact) {
-		hits = await searchApi(new URLSearchParams({ q: info.title }), options.signal);
+	for (const title of lrcLibTitleVariants(info.title)) {
+		const params = new URLSearchParams({ artist_name: info.artist, track_name: title });
+		if (info.album && title === info.title) params.set("album_name", info.album);
+		collect(await searchApi(params, options.signal));
+		if (hasGoodSyncedHit([...pooled.values()], info)) break;
 	}
 
-	const picked = pickBest(hits, info, options.showEvenIfInexact);
+	if (!pooled.size && options.showEvenIfInexact) {
+		collect(await searchApi(new URLSearchParams({ q: info.title }), options.signal));
+	}
+
+	const picked = pickBest([...pooled.values()], info, options.showEvenIfInexact);
 	if (!picked) return null;
 	return toResult(picked.hit, picked.inexact);
 }

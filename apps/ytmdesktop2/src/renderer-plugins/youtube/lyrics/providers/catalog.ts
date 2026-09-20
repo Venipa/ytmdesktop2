@@ -1,4 +1,4 @@
-export const LYRICS_PROVIDER_IDS = ["better-lyrics", "unison", "lrclib"] as const;
+export const LYRICS_PROVIDER_IDS = ["better-lyrics", "unison", "lrclib", "youtube-captions"] as const;
 
 export type LyricsProviderId = (typeof LYRICS_PROVIDER_IDS)[number];
 
@@ -31,8 +31,14 @@ export const LYRICS_PROVIDER_META: Record<LyricsProviderId, LyricsProviderMeta> 
 	lrclib: {
 		id: "lrclib",
 		label: "LRCLib",
-		syncLevels: "Line & plain",
+		syncLevels: "Word, line & plain",
 		href: "https://lrclib.net",
+	},
+	"youtube-captions": {
+		id: "youtube-captions",
+		label: "YouTube captions",
+		syncLevels: "Line (music videos with captions)",
+		href: "https://support.google.com/youtube/answer/2734796",
 	},
 };
 
@@ -40,7 +46,11 @@ export const DEFAULT_LYRICS_PROVIDERS: LyricsProviderEntry[] = [
 	{ id: "better-lyrics", enabled: true },
 	{ id: "unison", enabled: true },
 	{ id: "lrclib", enabled: true },
+	{ id: "youtube-captions", enabled: true },
 ];
+
+/** Providers that can only describe the *current* player video — skipped when prefetching "up next". */
+export const CURRENT_VIDEO_ONLY_PROVIDERS: ReadonlySet<LyricsProviderId> = new Set<LyricsProviderId>(["youtube-captions"]);
 
 function isProviderId(value: unknown): value is LyricsProviderId {
 	return typeof value === "string" && (LYRICS_PROVIDER_IDS as readonly string[]).includes(value);

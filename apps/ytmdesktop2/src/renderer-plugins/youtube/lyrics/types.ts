@@ -24,7 +24,7 @@ export interface LyricResult {
 	lines?: LyricLine[];
 	plain?: string;
 	inexact?: boolean;
-	provider: "lrclib" | "better-lyrics" | "unison";
+	provider: "lrclib" | "better-lyrics" | "unison" | "youtube-captions";
 	/** True when result includes real word/syllable cues. */
 	hasWordSync?: boolean;
 	syncLevel?: LyricsSyncLevel;
@@ -40,7 +40,28 @@ export interface TrackSearchInfo {
 	isLiveContent?: boolean;
 }
 
+/** One caption track on the current player video, normalized from the page world. */
+export interface YouTubeCaptionTrack {
+	languageCode: string;
+	/** `timedtext` URL (signed by YTM; short-lived). */
+	url: string;
+	/** Auto-generated (ASR) track. */
+	isAuto: boolean;
+	name: string;
+}
+
+export interface YouTubeCaptionTracks {
+	videoId: string;
+	tracks: YouTubeCaptionTrack[];
+}
+
 export type LyricsStatus = "idle" | "loading" | "ready" | "empty" | "error" | "skipped" | "stock";
+
+/**
+ * Why a provider returned nothing. `uncached` / `invalid-key` come from Better Lyrics'
+ * cache-first auth model (401 on a cache miss) and are surfaced as a hint in the empty state.
+ */
+export type LyricsMissReason = "not-found" | "uncached" | "invalid-key" | "rate-limited";
 
 export interface LyricsViewState {
 	status: LyricsStatus;

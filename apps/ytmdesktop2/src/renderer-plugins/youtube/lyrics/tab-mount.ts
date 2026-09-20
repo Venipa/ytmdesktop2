@@ -32,6 +32,16 @@ export function isLyricsTabSelected(): boolean {
 	return header.getAttribute("aria-selected") === "true";
 }
 
+/** Click the YTM Lyrics tab header (no-op when already selected / header missing / disabled). */
+export function selectLyricsTab(): boolean {
+	const header = findLyricsHeader();
+	if (!header) return false;
+	if (header.getAttribute("aria-selected") === "true") return true;
+	if (header.hasAttribute("disabled") || header.getAttribute("aria-disabled") === "true") return false;
+	header.click();
+	return true;
+}
+
 function ensureHost(body: HTMLElement): HTMLElement {
 	let host = body.querySelector(`#${LYRICS_ROOT_ID}`) as HTMLElement | null;
 	if (!host) {

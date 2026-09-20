@@ -17,6 +17,7 @@ export interface SettingsSelectProps {
 	description?: ReactNode;
 	options: SettingsSelectOption[];
 	className?: string;
+	disabled?: boolean;
 	onChange?: (value: string) => void;
 }
 
@@ -31,7 +32,16 @@ function OptionContent({ label, description, compact }: { label: ReactNode; desc
 	);
 }
 
-export function SettingsSelect({ configKey, defaultValue = "", label, description, options, className, onChange }: SettingsSelectProps) {
+export function SettingsSelect({
+	configKey,
+	defaultValue = "",
+	label,
+	description,
+	options,
+	className,
+	disabled,
+	onChange,
+}: SettingsSelectProps) {
 	const id = useId();
 	const [value, setValue, { isPending }] = useSettingsState<string>(configKey, defaultValue, { debounce: 200 });
 	const rich = options.some((opt) => opt.description != null);
@@ -43,13 +53,13 @@ export function SettingsSelect({ configKey, defaultValue = "", label, descriptio
 	);
 
 	return (
-		<Field data-disabled={isPending || undefined} className={cn(className)}>
+		<Field data-disabled={isPending || disabled || undefined} className={cn(className)}>
 			{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
 			{description ? <FieldDescription>{description}</FieldDescription> : null}
 			<Select
 				value={value}
 				items={items}
-				disabled={isPending}
+				disabled={isPending || disabled}
 				onValueChange={(next) => {
 					if (next == null || next === value) return;
 					setValue(next);
@@ -58,7 +68,7 @@ export function SettingsSelect({ configKey, defaultValue = "", label, descriptio
 			>
 				<SelectTrigger
 					id={id}
-					disabled={isPending}
+					disabled={isPending || disabled}
 					className={cn(
 						"w-full",
 						rich &&
