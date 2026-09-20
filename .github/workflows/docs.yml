@@ -16,7 +16,6 @@ on:
 
 permissions:
   contents: read
-  packages: read # @venipa/* on GitHub Packages
   pages: write
   id-token: write
 
@@ -37,19 +36,8 @@ jobs:
           cache: true
           install: false
 
-      - name: Prepare pnpm / auth
-        shell: pwsh
-        run: |
-          Remove-Item -Path .npmrc -ErrorAction Ignore
-          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
-          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
-          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
-
       - name: Install docs dependencies
         run: pnpm install --frozen-lockfile --filter ytmdesktop2-docs...
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Pages
         id: pages

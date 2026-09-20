@@ -34,13 +34,3 @@ allowBuilds:
 overrides:
   node-gyp: ^13.0.1
   node-abi: ^4.33.0
-
-minimumReleaseAgeExclude:
-  - '@venipa/xosms-darwin-arm64@0.8.5'
-  - '@venipa/xosms-darwin-universal@0.8.5'
-  - '@venipa/xosms-darwin-x64@0.8.5'
-  - '@venipa/xosms-linux-arm64-gnu@0.8.5'
-  - '@venipa/xosms-linux-x64-gnu@0.8.5'
-  - '@venipa/xosms-win32-arm64-msvc@0.8.5'
-  - '@venipa/xosms-win32-x64-msvc@0.8.5'
-  - '@venipa/xosms@0.8.5'

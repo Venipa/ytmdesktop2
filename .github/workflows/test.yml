@@ -13,7 +13,6 @@ concurrency:
 
 permissions:
   contents: read
-  packages: read # @venipa/xosms (+ platform optional deps) on GitHub Packages
   checks: write
   pull-requests: write
 
@@ -31,21 +30,8 @@ jobs:
           cache: true
           install: false
 
-      - name: Prepare pnpm / auth
-        shell: bash
-        run: |
-          rm -f .npmrc
-          {
-            echo "registry=https://registry.npmjs.org/"
-            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-            echo "@venipa:registry=https://npm.pkg.github.com"
-            echo "@venipa/*:registry=https://npm.pkg.github.com"
-          } >> .npmrc
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run vitest
         run: pnpm test
