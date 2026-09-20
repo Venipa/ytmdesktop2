@@ -34,3 +34,19 @@ allowBuilds:
 overrides:
   node-gyp: ^13.0.1
   node-abi: ^4.33.0
+
+# xosms ships NAPI binaries as optional platform packages. Install all of them
+# so electron-builder pack jobs (and Vite require-scan) are not host-OS-only.
+supportedArchitectures:
+  os:
+    - current
+    - win32
+    - darwin
+    - linux
+  cpu:
+    - current
+    - x64
+    - arm64
+  libc:
+    - current
+    - glibc

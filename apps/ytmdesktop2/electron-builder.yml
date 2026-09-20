@@ -18,13 +18,15 @@ files:
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig*.json}"
 asarUnpack:
   - resources/**
-  # electron-vite may hash asset names — match stem; ICNS needs real path (not asar).
+  # electron-vite may hash asset names - match stem; ICNS needs real path (not asar).
   - "**/*favicon*"
   - "**/*32x32*"
   - "**/*16x16*"
   - "**/*icon*.icns"
   - "**/*.icns"
   - "**/assets/**"
+  - "**/*.node"
+  - "**/@xosms/**"
 protocols:
   - name: YouTube Music for Desktop
     schemes:
