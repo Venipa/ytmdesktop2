@@ -7,8 +7,10 @@ description: Develop and package ytmdesktop2
 
 - Node.js (see CI: Node 24.x)
 - [pnpm](https://pnpm.io/) 11+
+- GitHub CLI (`gh`) for `@venipa` packages (`xosms`)
 
 ```bash
+gh auth refresh -s read:packages
 pnpm install
 pnpm dev
 ```

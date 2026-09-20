@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  packages: read # @venipa/* on GitHub Packages (if resolved via lockfile)
 
 concurrency:
   group: userscript-${{ github.ref }}
@@ -31,7 +32,18 @@ jobs:
           cache: true
           install: false
 
+      - name: Configure GitHub Packages auth
+        run: |
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } > .npmrc
+
       - name: Install userscript dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile --filter ytmdesktop-userscript...
 
       - name: Build userscript

@@ -83,6 +83,8 @@ More detail in [`apps/docs/content/docs/features`](./apps/docs/content/docs/feat
 Monorepo (pnpm). App: [`apps/ytmdesktop2`](./apps/ytmdesktop2). Stream Deck: [`packages/streamdeck`](./packages/streamdeck).
 
 ```bash
+# gh required for github packages (Venipa/xosms)
+gh auth refresh -s read:packages
 pnpm install
 pnpm dev
 ```

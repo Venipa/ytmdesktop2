@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: write
+  packages: read # for @venipa/oxsms github hosted package
 
 env:
   NODE_VERSION: "24.14.0"
@@ -66,8 +67,21 @@ jobs:
           fs.writeFileSync(p, next);
           EOF
 
+      - name: Prepare pnpm / auth
+        shell: bash
+        run: |
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compile Electron app
         run: pnpm release:compile
@@ -144,6 +158,15 @@ jobs:
           fs.writeFileSync(p, next);
           EOF
 
+      - name: Prepare pnpm / auth
+        shell: pwsh
+        run: |
+          Remove-Item -Path .npmrc -ErrorAction Ignore
+          Add-Content -Path .npmrc -Value "registry=https://registry.npmjs.org/"
+          Add-Content -Path .npmrc -Value "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+          Add-Content -Path .npmrc -Value "@venipa:registry=https://npm.pkg.github.com"
+          Add-Content -Path .npmrc -Value "@venipa/*:registry=https://npm.pkg.github.com"
+
       - name: install windows deps
         uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.5
         with:
@@ -157,6 +180,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_msvs_version: "2026"
 
       # Artifact root is out/ + resources/ (common apps/ytmdesktop2 prefix stripped).
@@ -215,8 +239,21 @@ jobs:
           fs.writeFileSync(p, next);
           EOF
 
+      - name: Prepare pnpm / auth
+        shell: bash
+        run: |
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download compile artifact
         uses: actions/download-artifact@v8
@@ -304,8 +341,21 @@ jobs:
           sudo apt update
           sudo apt install -y libdbus-1-dev elfutils libarchive-tools rpm
 
+      - name: Prepare pnpm / auth
+        shell: bash
+        run: |
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download compile artifact
         uses: actions/download-artifact@v8
@@ -375,8 +425,21 @@ jobs:
           sudo apt update
           sudo apt install -y libdbus-1-dev elfutils
 
+      - name: Prepare pnpm / auth
+        shell: bash
+        run: |
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download compile artifact
         uses: actions/download-artifact@v8
@@ -444,8 +507,21 @@ jobs:
             org.freedesktop.Sdk/x86_64/24.08 \
             org.electronjs.Electron2.BaseApp/x86_64/24.08
 
+      - name: Prepare pnpm / auth
+        shell: bash
+        run: |
+          rm -f .npmrc
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+            echo "@venipa:registry=https://npm.pkg.github.com"
+            echo "@venipa/*:registry=https://npm.pkg.github.com"
+          } >> .npmrc
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download compile artifact
         uses: actions/download-artifact@v8

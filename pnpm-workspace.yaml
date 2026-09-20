@@ -35,18 +35,12 @@ overrides:
   node-gyp: ^13.0.1
   node-abi: ^4.33.0
 
-# xosms ships NAPI binaries as optional platform packages. Install all of them
-# so electron-builder pack jobs (and Vite require-scan) are not host-OS-only.
-supportedArchitectures:
-  os:
-    - current
-    - win32
-    - darwin
-    - linux
-  cpu:
-    - current
-    - x64
-    - arm64
-  libc:
-    - current
-    - glibc
+minimumReleaseAgeExclude:
+  - '@venipa/xosms-darwin-arm64@0.8.5'
+  - '@venipa/xosms-darwin-universal@0.8.5'
+  - '@venipa/xosms-darwin-x64@0.8.5'
+  - '@venipa/xosms-linux-arm64-gnu@0.8.5'
+  - '@venipa/xosms-linux-x64-gnu@0.8.5'
+  - '@venipa/xosms-win32-arm64-msvc@0.8.5'
+  - '@venipa/xosms-win32-x64-msvc@0.8.5'
+  - '@venipa/xosms@0.8.5'
