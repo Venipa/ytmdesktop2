@@ -50,3 +50,6 @@ routeTree.gen.ts
 **/.tanstack/tmp/
 # Vitest / CI
 test-results/
+
+# Internal testing scripts
+apps/ytmdesktop2/scripts/find-player-api-console.js
