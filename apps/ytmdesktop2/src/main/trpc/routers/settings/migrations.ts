@@ -1,5 +1,6 @@
 import { platform } from "@electron-toolkit/utils";
 import type { LegacyCustomCssConfig } from "@main/trpc/routers/themes/types";
+import { readLyricsOverlaySettings } from "@shared/lyrics/overlay";
 import { app } from "electron";
 import { Migration } from "electron-conf";
 import { readFileSync, rmSync, statSync } from "fs";
@@ -192,6 +193,22 @@ const migrations: Omit<Migration<SettingsStore>, "version">[] = [
 				store.set("lyrics.lineStyle", "fill");
 			}
 			if (typeof current.lineBackground !== "boolean") store.set("lyrics.lineBackground", true);
+		},
+	},
+	{
+		hook(store) {
+			const current = (store.store as SettingsStore)?.lyrics;
+			if (!current) return;
+			// Desktop overlay lands closed and unlocked; `readLyricsOverlaySettings` fills any missing field.
+			store.set("lyrics.overlay", readLyricsOverlaySettings(current.overlay));
+		},
+	},
+	{
+		hook(store) {
+			const current = (store.store as SettingsStore)?.lyrics;
+			if (!current) return;
+			// Overlay gained outline / shadow / next-line / bar colours — backfill defaults, keep user values.
+			store.set("lyrics.overlay", readLyricsOverlaySettings(current.overlay));
 		},
 	},
 ];

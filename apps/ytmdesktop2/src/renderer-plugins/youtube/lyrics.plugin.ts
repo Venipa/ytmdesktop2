@@ -1,6 +1,8 @@
 import definePlugin from "@plugins/utils";
 import { getYtmd } from "@preload/preload-local";
+import { LYRICS_OVERLAY_IPC, readLyricsOverlaySettings } from "@shared/lyrics/overlay";
 import { readLineStyle } from "./lyrics/line-style";
+import { createOverlayPublisher, type OverlayPublisher, toOverlaySnapshot } from "./lyrics/overlay-publisher";
 import { createLyricsStore } from "./lyrics/store";
 import { createTabMount, selectLyricsTab, type TabMountHandle } from "./lyrics/tab-mount";
 import {
@@ -23,6 +25,8 @@ type LyricsLogger = { debug: (...args: unknown[]) => void; error: (...args: unkn
 
 interface LyricsRuntime {
 	store: ReturnType<typeof createLyricsStore>;
+	/** Desktop overlay feed (main process relays to the `/lyrics-overlay` window). */
+	overlay: OverlayPublisher;
 	mount: TabMountHandle | null;
 	renderer: LyricsRenderApi | null;
 	unsubStore: (() => void) | null;
@@ -40,8 +44,20 @@ interface LyricsRuntime {
 	autoOpenedFor: string | null;
 }
 
+function sendToMain(channel: string, payload: unknown) {
+	try {
+		getYtmd().sendInternal(channel, payload);
+	} catch (err) {
+		runtime.log?.debug("lyrics: overlay send failed", channel, err);
+	}
+}
+
 const runtime: LyricsRuntime = {
 	store: createLyricsStore(),
+	overlay: createOverlayPublisher({
+		sendSnapshot: (snap) => sendToMain(LYRICS_OVERLAY_IPC.snapshot, snap),
+		sendClock: (clock) => sendToMain(LYRICS_OVERLAY_IPC.clock, clock),
+	}),
 	mount: null,
 	renderer: null,
 	unsubStore: null,
@@ -70,6 +86,7 @@ function readLyricsSettings(settings?: Record<string, any>) {
 		betterLyricsApiKey: typeof s?.lyrics?.betterLyricsApiKey === "string" ? s.lyrics.betterLyricsApiKey : "",
 		autoOpenTab: s?.lyrics?.autoOpenTab !== false,
 		preferWordSync: s?.lyrics?.preferWordSync !== false,
+		overlayEnabled: readLyricsOverlaySettings(s?.lyrics?.overlay).enabled,
 	};
 }
 
@@ -141,9 +158,11 @@ function maybeAutoOpenTab(snap: { status: string; videoId: string | null }) {
 	if (!selectLyricsTab()) runtime.log?.debug("lyrics: auto-open tab skipped (header missing/disabled)");
 }
 
-function applyTickTime(timeSec: number) {
-	if (!runtime.renderer || !runtime.active || !runtime.tabSelected) return;
-	runtime.renderer.setTime(timeSec * 1000 + DISPLAY_LEAD_MS);
+function applyTickTime(timeSec: number, playing: boolean) {
+	if (!runtime.active) return;
+	const timeMs = timeSec * 1000 + DISPLAY_LEAD_MS;
+	if (runtime.renderer && runtime.tabSelected) runtime.renderer.setTime(timeMs);
+	runtime.overlay.tick(timeMs, playing);
 }
 
 async function startTimePoll() {
@@ -161,6 +180,14 @@ function stopTimePoll() {
 	stopLyricsClock();
 	runtime.unsubTime?.();
 	runtime.unsubTime = null;
+	runtime.overlay.resetClock();
+}
+
+/** The page clock runs while anything consumes it: the Lyrics tab or the desktop overlay. */
+function syncTimePoll() {
+	if (!runtime.active) return;
+	if (runtime.tabSelected || runtime.overlay.isEnabled()) void startTimePoll();
+	else stopTimePoll();
 }
 
 function unbindTrackWatch() {
@@ -198,14 +225,11 @@ async function startLyrics() {
 		},
 		onTabSelectedChange: (selected) => {
 			runtime.tabSelected = selected;
-			if (selected) {
-				void startTimePoll();
-			} else {
-				stopTimePoll();
-			}
+			syncTimePoll();
 		},
 	});
 	runtime.tabSelected = runtime.mount.isLyricsTabSelected();
+	runtime.overlay.setEnabled(readLyricsSettings().overlayEnabled);
 
 	runtime.renderer = createLyricsRenderer(() => runtime.mount?.getHost() ?? null, {
 		showTimeCodes: () => readLyricsSettings().showTimeCodes,
@@ -220,12 +244,17 @@ async function startLyrics() {
 
 	runtime.unsubStore = runtime.store.subscribe((snap) => {
 		runtime.renderer?.setSnapshot(snap);
+		runtime.overlay.setSnapshot(toOverlaySnapshot(snap, true));
 		maybeAutoOpenTab(snap);
 	});
 	runtime.unsubSettings =
 		runtime.onSettingsChange?.((key) => {
 			if (key === "lyrics.showTimeCodes" || key === "lyrics.lineBackground" || key === "lyrics.lineStyle") {
 				runtime.renderer?.repaint();
+			}
+			if (key === "lyrics.overlay.enabled") {
+				runtime.overlay.setEnabled(readLyricsSettings().overlayEnabled);
+				syncTimePoll();
 			}
 			if (
 				key === "lyrics.showEvenIfInexact" ||
@@ -239,7 +268,7 @@ async function startLyrics() {
 		}) ?? null;
 
 	bindTrackWatch();
-	if (runtime.tabSelected) await startTimePoll();
+	if (runtime.tabSelected || runtime.overlay.isEnabled()) await startTimePoll();
 	await refreshTrack();
 	runtime.renderer.repaint();
 }
@@ -247,6 +276,8 @@ async function startLyrics() {
 function stopLyrics() {
 	if (!runtime.active && !runtime.mount) return;
 	runtime.log?.debug("lyrics: stop");
+	// Tell the overlay (if open) that lyrics are off rather than leaving the last song frozen on screen.
+	runtime.overlay.setSnapshot(toOverlaySnapshot(runtime.store.getSnapshot(), false));
 	runtime.active = false;
 	runtime.tabSelected = false;
 	runtime.lastVideoId = null;

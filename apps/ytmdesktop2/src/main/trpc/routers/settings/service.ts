@@ -7,6 +7,7 @@ import { createYmlStore } from "@main/lib/store/createYmlStore";
 import type { ThemesConfig } from "@main/trpc/routers/themes/types";
 import { trackService } from "@main/trpc/routers/track";
 import eventNames from "@shared/constants/eventNames";
+import { DEFAULT_LYRICS_OVERLAY_SETTINGS, type LyricsOverlaySettings } from "@shared/lyrics/overlay";
 import { VideoResSetting } from "@shared/utils/ISettings";
 import { App, IpcMainEvent, IpcMainInvokeEvent } from "electron";
 import { Migration } from "electron-conf";
@@ -61,6 +62,8 @@ const defaultSettings = {
 		autoOpenTab: true,
 		/** Keep trying later providers for word/syllable cues before settling for line sync. */
 		preferWordSync: true,
+		/** Always-on-top transparent desktop lyrics window (see `@shared/lyrics/overlay`). */
+		overlay: { ...DEFAULT_LYRICS_OVERLAY_SETTINGS } as LyricsOverlaySettings,
 	},
 	player: {
 		skipDisliked: false,
