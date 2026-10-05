@@ -263,12 +263,12 @@ export const trackControls = {
 async function queueAddVideo(videoId: string, index: number, store: YtmStoreLike | null): Promise<void> {
 	const liveStore = store ?? resolveYtmStore();
 	const queueContextParams = liveStore?.getState?.()?.queue?.queueContextParams;
-	const fetch = resolveYtmApp()?.networkManager?.fetch;
-	if (!liveStore || !queueContextParams || typeof fetch !== "function") {
+	const manager = resolveYtmApp()?.networkManager;
+	if (!liveStore || !queueContextParams || typeof manager?.fetch !== "function") {
 		throw new Error("queueAdd failed - play a track first (queue context missing)");
 	}
 
-	const result = await fetch("/music/get_queue", {
+	const result = await manager.fetch("/music/get_queue", {
 		queueContextParams,
 		queueInsertPosition: "INSERT_AT_END",
 		videoIds: [videoId],

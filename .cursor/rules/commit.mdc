@@ -18,9 +18,14 @@ alwaysApply: true
   - style: Code style changes (optional; only use if it's a significant style change)
   - perf: Performance improvements (optional; only use if it's a significant performance improvement)
 - Keep it short and to the point, max 50 characters
+- Reference GitHub issues/PRs in the subject as `type(#n):`, not in a footer
+  - Compact human summary after the colon (what broke / what changed)
+  - Do not write "closes #n", "fixes #n", or a long body that restates the ticket
+  - Example: "fix(#259): keep ytm fetch bound to networkmanager"
+  - Example: "feat(#254): word-driven lyrics fill and auto-open tab"
+  - Example: "fix: fixed issue with login"
   - Example: "feat: added new timer feature to the reports page"
   - Example: "feat: updated layout in timer page"
-  - Example: "fix: fixed issue with login"
   - Example: "chore: updated dependencies"
   - Example: "refactor: refactored code in timer page - improved performance and readability, reduced code complexity, extended with new features"
   - Example: "test: added new test for timer page"
@@ -36,6 +41,7 @@ alwaysApply: true
 
 ## Commit Footer
 
+- Issue/PR numbers belong in the subject (`type(#n):`), not here
 - if the commit is signed off, add the Signed-off-by: <username>
   - otherwise leave empty
 
