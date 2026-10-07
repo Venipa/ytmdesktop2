@@ -65,7 +65,7 @@
 		"electron-trpc": "^0.7.1",
 		"electron-updater": "^6.8.9",
 		"encryption.js": "^2.0.4",
-		"hono": "^4.13.0",
+		"hono": "^4.13.5",
 		"lodash-es": "^4.17.21",
 		"lucide-react": "^1.28.0",
 		"motion": "^13.0.0",
