@@ -87,7 +87,7 @@ importers:
         version: 1.3.1
       '@electron-toolkit/utils':
         specifier: ^3.0.0
-        version: 3.0.0(electron@43.3.0(supports-color@8.1.1))
+        version: 3.0.0(electron@43.7.7(supports-color@8.1.1))
       '@fontsource-variable/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -147,10 +147,10 @@ importers:
         version: 3.4.13
       electron-conf:
         specifier: ^1.3.0
-        version: 1.3.0(electron@43.3.0(supports-color@8.1.1))
+        version: 1.3.0(electron@43.7.7(supports-color@8.1.1))
       electron-trpc:
         specifier: ^0.7.1
-        version: 0.7.1(@trpc/client@10.45.4(@trpc/server@10.45.4))(@trpc/server@10.45.4)(electron@43.3.0(supports-color@8.1.1))(supports-color@8.1.1)
+        version: 0.7.1(@trpc/client@10.45.4(@trpc/server@10.45.4))(@trpc/server@10.45.4)(electron@43.7.7(supports-color@8.1.1))(supports-color@8.1.1)
       electron-updater:
         specifier: ^6.8.9
         version: 6.8.9(supports-color@8.1.1)
@@ -297,8 +297,8 @@ importers:
         specifier: ^7.0.3
         version: 7.0.3
       electron:
-        specifier: 43.3.0
-        version: 43.3.0(supports-color@8.1.1)
+        specifier: 43.7.7
+        version: 43.7.7(supports-color@8.1.1)
       electron-builder:
         specifier: ^26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)(supports-color@8.1.1)
@@ -4612,8 +4612,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@43.3.0:
-    resolution: {integrity: sha512-nLlvu0WFjftWsSaTkV2B/c4NDuJBspTyXu8vKSQ6vLvFt8uG3NgN49LLKcXddwX0GqVvAQDhciWp+4xOdTdhew==}
+  electron@43.7.7:
+    resolution: {integrity: sha512-y0pg+KhWLAkW2Ts2njkFFNFl3KtB1FmbUp9Te9i+R2Og2v1fcI/I6MADJ7jvnzB5UKdt+U+0EUoCnVL79xMPMA==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -8357,9 +8357,9 @@ snapshots:
     dependencies:
       '@types/node': 24.12.0
 
-  '@electron-toolkit/utils@3.0.0(electron@43.3.0(supports-color@8.1.1))':
+  '@electron-toolkit/utils@3.0.0(electron@43.7.7(supports-color@8.1.1))':
     dependencies:
-      electron: 43.3.0(supports-color@8.1.1)
+      electron: 43.7.7(supports-color@8.1.1)
 
   '@electron/asar@3.4.1':
     dependencies:
@@ -12010,10 +12010,10 @@ snapshots:
       - electron-builder-squirrel-windows
       - supports-color
 
-  electron-conf@1.3.0(electron@43.3.0(supports-color@8.1.1)):
+  electron-conf@1.3.0(electron@43.7.7(supports-color@8.1.1)):
     dependencies:
       ajv: 8.20.0
-      electron: 43.3.0(supports-color@8.1.1)
+      electron: 43.7.7(supports-color@8.1.1)
 
   electron-publish@26.15.3(supports-color@8.1.1):
     dependencies:
@@ -12031,12 +12031,12 @@ snapshots:
 
   electron-to-chromium@1.5.313: {}
 
-  electron-trpc@0.7.1(@trpc/client@10.45.4(@trpc/server@10.45.4))(@trpc/server@10.45.4)(electron@43.3.0(supports-color@8.1.1))(supports-color@8.1.1):
+  electron-trpc@0.7.1(@trpc/client@10.45.4(@trpc/server@10.45.4))(@trpc/server@10.45.4)(electron@43.7.7(supports-color@8.1.1))(supports-color@8.1.1):
     dependencies:
       '@trpc/client': 10.45.4(@trpc/server@10.45.4)
       '@trpc/server': 10.45.4
       debug: 4.4.3(supports-color@8.1.1)
-      electron: 43.3.0(supports-color@8.1.1)
+      electron: 43.7.7(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -12079,7 +12079,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@43.3.0(supports-color@8.1.1):
+  electron@43.7.7(supports-color@8.1.1):
     dependencies:
       '@electron-internal/extract-zip': 1.0.5
       '@electron/get': 5.1.0(supports-color@8.1.1)
