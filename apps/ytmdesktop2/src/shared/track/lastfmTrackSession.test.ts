@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import type { TrackData } from "./trackData";
 import {
 	decideLastFmSession,
+	isProgressWrap,
 	lastFmListenKey,
 	lastFmScrobbleRemainingMs,
 	preferLastFmTrack,
@@ -10,6 +10,7 @@ import {
 	shouldRefreshLastFmNowPlaying,
 	trackNeedsLastFmPush,
 } from "./lastfmTrackSession";
+import type { TrackData } from "./trackData";
 
 function makeTrack(opts: {
 	videoId: string;
@@ -205,5 +206,15 @@ describe("lastfmTrackSession smoke — Song↔Video", () => {
 		expect(lastFmScrobbleRemainingMs(200, 100)).toBe(0);
 		expect(lastFmScrobbleRemainingMs(29, 0)).toBeNull();
 		expect(lastFmScrobbleRemainingMs(600, 0)).toBe(240_000);
+	});
+
+	test("progress wrap near end to start is a loop", () => {
+		expect(isProgressWrap(199, 0.4, 200)).toBe(true);
+		expect(isProgressWrap(193, 0, 200)).toBe(true);
+	});
+
+	test("seek from 10s to 0 is not a wrap", () => {
+		expect(isProgressWrap(10, 0, 200)).toBe(false);
+		expect(isProgressWrap(50, 0, 200)).toBe(false);
 	});
 });

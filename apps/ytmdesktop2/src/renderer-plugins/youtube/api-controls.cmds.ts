@@ -141,10 +141,11 @@ export const trackControls = {
 		if (!state) return false;
 		return !!state.isPlaying;
 	},
-	repeat: (playerApi: PlayerApi) => {
-		const next = !playerApi.getLoopVideo?.();
+	repeat: (playerApi: PlayerApi, loop?: boolean) => {
+		const next = typeof loop === "boolean" ? loop : !playerApi.getLoopVideo?.();
 		playerApi.setLoopVideo?.(next);
-		return { loop: next, ...playbackSnapshot(playerApi) };
+		playerApi.setLoop?.(false);
+		return { loop: !!playerApi.getLoopVideo?.() || next, ...playbackSnapshot(playerApi) };
 	},
 	shuffle: (_playerApi: PlayerApi) => {
 		const btn = document.querySelector<HTMLElement>("ytmusic-player-bar #button-shape-shuffle button, ytmusic-player-bar [aria-label*='Shuffle' i]");

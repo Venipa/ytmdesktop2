@@ -1,8 +1,8 @@
-import { trpc } from "@/lib/trpc";
 import type { AppRouter } from "@main/trpc/router";
 import type { inferRouterOutputs } from "@trpc/server";
 import { isEqual, pick } from "lodash-es";
 import { useMemo } from "react";
+import { trpc } from "@/lib/trpc";
 
 export type TrackState = NonNullable<inferRouterOutputs<AppRouter>["track"]["state"]>;
 export type CurrentTrack = inferRouterOutputs<AppRouter>["track"]["current"];
@@ -30,6 +30,7 @@ function sameState(a: TrackState | null, b: TrackState | null): boolean {
 		Math.floor(a.progress * 4) === Math.floor(b.progress * 4) &&
 		a.liked === b.liked &&
 		a.disliked === b.disliked &&
+		a.loop === b.loop &&
 		a.accent === b.accent &&
 		a.eventType === b.eventType &&
 		Math.floor(a.duration) === Math.floor(b.duration)
