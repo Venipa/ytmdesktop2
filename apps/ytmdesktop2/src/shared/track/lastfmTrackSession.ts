@@ -90,6 +90,9 @@ export function trackNeedsLastFmPush(args: {
 export const LASTFM_NP_REFRESH_AFTER_PAUSE_MS = 90_000;
 export const LASTFM_SCROBBLE_MIN_DURATION_SEC = 30;
 export const LASTFM_SCROBBLE_MAX_WAIT_SEC = 240;
+/** Same-file loop without `dataloaded`: last sample near end, next near start. */
+export const LASTFM_PROGRESS_WRAP_NEAR_END_SEC = 8;
+export const LASTFM_PROGRESS_WRAP_NEAR_START_SEC = 8;
 
 /** True when pause was long enough that Last.fm likely cleared Now Playing. */
 export function shouldRefreshLastFmNowPlaying(
@@ -120,4 +123,18 @@ export function lastFmScrobbleRemainingMs(
 export function lastFmListenKey(videoId: string, startedAt: number, epoch?: number): string {
 	const base = `${videoId}:${Math.floor(startedAt)}`;
 	return epoch != null ? `${base}:${epoch}` : base;
+}
+
+/** True when playback jumped from near the end to near 0 (HTML5 loop / setLoopVideo). */
+export function isProgressWrap(
+	prevSec: number,
+	nextSec: number,
+	durationSec: number,
+	nearEndSec: number = LASTFM_PROGRESS_WRAP_NEAR_END_SEC,
+	nearStartSec: number = LASTFM_PROGRESS_WRAP_NEAR_START_SEC,
+): boolean {
+	if (!Number.isFinite(prevSec) || !Number.isFinite(nextSec) || !Number.isFinite(durationSec) || durationSec <= 0) {
+		return false;
+	}
+	return prevSec > durationSec - nearEndSec && nextSec < nearStartSec;
 }

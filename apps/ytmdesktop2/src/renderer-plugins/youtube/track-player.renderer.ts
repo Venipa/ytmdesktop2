@@ -1,6 +1,6 @@
 import type { PlayerApi } from "ytm-client-api";
-import type { RendererPluginRegistration } from "./world0/types";
 import { getPagePlayerApi } from "./world0/context";
+import type { RendererPluginRegistration } from "./world0/types";
 
 type PlayerEventTarget = {
 	addEventListener?: (event: string, handler: (...args: never[]) => void) => void;
@@ -258,6 +258,7 @@ const trackPlayerRenderer: RendererPluginRegistration = {
 		let hookedInfoPlayer: PlayerApi | null = null;
 		let lastPlaying: boolean | null = null;
 		let lastProgressBucket = -1;
+		let lastLoop: boolean | null = null;
 		let hookedPlayPlayer: PlayerApi | null = null;
 
 		const clearAlbumPoll = () => {
@@ -346,12 +347,21 @@ const trackPlayerRenderer: RendererPluginRegistration = {
 			return true;
 		};
 
-		const emitPlayState = (channel: string, playing: boolean, progress: number) => {
+		const readLoop = (player: PlayerApi) => {
+			try {
+				return !!player.getLoopVideo?.();
+			} catch {
+				return false;
+			}
+		};
+
+		const emitPlayState = (channel: string, playing: boolean, progress: number, loop: boolean) => {
 			const progressBucket = Math.floor((Number(progress) || 0) * 4);
-			if (playing === lastPlaying && progressBucket === lastProgressBucket) return;
+			if (playing === lastPlaying && progressBucket === lastProgressBucket && loop === lastLoop) return;
 			lastPlaying = playing;
 			lastProgressBucket = progressBucket;
-			ctx.ytmd?.emit(channel, playing, progress);
+			lastLoop = loop;
+			ctx.ytmd?.emit(channel, playing, progress, loop);
 		};
 
 		const isPlaying = (player: PlayerApi) => {
@@ -365,7 +375,7 @@ const trackPlayerRenderer: RendererPluginRegistration = {
 		const onProgress = (progress: number) => {
 			const player = getPagePlayerApi() ?? playerApi;
 			if (!player) return;
-			emitPlayState("track:play-state-progress", isPlaying(player), progress);
+			emitPlayState("track:play-state-progress", isPlaying(player), progress, readLoop(player));
 		};
 
 		const onStateChange = () => {
@@ -377,7 +387,7 @@ const trackPlayerRenderer: RendererPluginRegistration = {
 			} catch {
 				/* ignore */
 			}
-			emitPlayState("track:play-state", isPlaying(player), time);
+			emitPlayState("track:play-state", isPlaying(player), time, readLoop(player));
 		};
 
 		const hookPlayPlayer = () => {

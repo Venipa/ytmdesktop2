@@ -20,9 +20,8 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 	constructor(private app: App) {
 		super("startup");
 		if (platform.isWindows) {
-			app.commandLine.appendSwitch("enable-gpu-rasterization"); // performance feature flags
-			app.commandLine.appendSwitch("enable-zero-copy");
-			app.commandLine.appendSwitch("force_high_performance_gpu"); // fixes choppy/lowfps video and transitions, defaults to primary gpu if no more powerful gpu is found
+			app.commandLine.appendSwitch("enable-gpu-rasterization"); // may fix large playlist / ui only hang issue
+      app.commandLine.appendSwitch("ignore-gpu-blocklist"); // allow GPU rasterization on all devices + hardware acceleration
 		}
 		// Keep renderers (esp. YouTube WebContentsView) off Chromium background/EcoQoS throttling
 		app.commandLine.appendSwitch("disable-renderer-backgrounding");
@@ -34,8 +33,6 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 		app.commandLine.appendSwitch("high-dpi-support", "1");
 		if (platform.isLinux && GTK_VERSION) this.app.commandLine.appendSwitch("gtk-version", GTK_VERSION);
 		if (platform.isLinux) this.app.commandLine.appendSwitch("ozone-platform-hint", "auto");
-		// better gpu performance - for faster blur effect
-		this.app.commandLine.appendSwitch("disable-gpu-sandbox");
 		this.app.commandLine.appendSwitch(
 			"enable-features",
 			[
@@ -44,7 +41,6 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 				"CanvasOopRasterization",
 				"SharedArrayBuffer",
 				platform.isLinux && ["UseOzonePlatform", "WaylandWindowDecorations"],
-				platform.isWindows && ["CanvasOopRasterization", "EnableDrDc"],
 			]
 				.flat()
 				.filter(Boolean)

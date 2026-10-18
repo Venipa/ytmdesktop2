@@ -1,0 +1,40 @@
+---
+title: Global shortcuts
+description: Custom OS-wide media keybinds in Settings
+---
+
+YTMDesktop2 can register **global** shortcuts so media controls work even when another app is focused.
+
+Defaults:
+
+- Previous track: `Shift+Alt+Left`
+- Next track: `Shift+Alt+Right`
+- Play / pause: `Shift+Alt+Space`
+
+Extra actions (play, pause, seek 10s, volume, like, dislike, shuffle, repeat) are listed in settings and stay unbound until you set them.
+
+## Setup
+
+1. Open **Settings > Player > Shortcuts**.
+2. Leave **Enable global shortcuts** on (off unregisters every bind).
+3. Click a bind, then press a combo. Escape cancels. Backspace or Delete clears.
+4. Use **Reset** on a row to restore that action's default, or **Reset all** (with confirm) to restore the three defaults and unbind the rest.
+
+## Safety
+
+Binds are checked in the main process before they are saved:
+
+- Must include Ctrl, Alt, or Cmd (Shift alone is rejected so typing is not stolen).
+- OS-reserved combos (for example `Alt+F4`, `Alt+Tab`, `Win+L`, `Cmd+Q`) are blocked.
+- Media/volume keys stay with the system media session.
+- Duplicates across actions are rejected.
+- Electron also probes `globalShortcut.register`. If the OS or another app already owns the combo, the change is refused.
+
+While you are capturing a bind, registered shortcuts are temporarily unregistered so the old combo does not fire.
+
+## Related
+
+<Cards>
+  <Card title="All features" href="/docs/features" />
+  <Card title="Tray view" href="/docs/features/tray-view" />
+</Cards>

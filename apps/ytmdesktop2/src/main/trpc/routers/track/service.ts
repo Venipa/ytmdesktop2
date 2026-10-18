@@ -1,22 +1,23 @@
 import { EventEmitter } from "node:events";
-import { YtmClient } from "@main/ytm/ytm-client";
 import { serverMain } from "@main/ipc/serverEvents";
 import { getAppWindows, getLifecycleContext, getYoutubeView, onAfterInit, requireAppWindows } from "@main/lifecycle";
 import { thumbnailCache } from "@main/services/thumbnailCache";
+import { YtmClient } from "@main/ytm/ytm-client";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
-import type { TrackData } from "@shared/track/trackData";
 import {
 	decideLastFmSession,
+	isProgressWrap,
+	LASTFM_NP_REFRESH_AFTER_PAUSE_MS,
+	LASTFM_SCROBBLE_MAX_WAIT_SEC,
+	LASTFM_SCROBBLE_MIN_DURATION_SEC,
 	lastFmScrobbleRemainingMs,
 	preferLastFmTrack,
 	relatedIdsIntersect,
 	relatedVideoIds,
 	shouldRefreshLastFmNowPlaying,
 	trackNeedsLastFmPush,
-	LASTFM_NP_REFRESH_AFTER_PAUSE_MS,
-	LASTFM_SCROBBLE_MIN_DURATION_SEC,
-	LASTFM_SCROBBLE_MAX_WAIT_SEC,
 } from "@shared/track/lastfmTrackSession";
+import type { TrackData } from "@shared/track/trackData";
 import { createLogger } from "@shared/utils/console";
 import { observable } from "@trpc/server/observable";
 import { ipcMain } from "electron";
@@ -32,13 +33,14 @@ export type TrackState = {
 	duration: number;
 	liked: boolean;
 	disliked: boolean;
+	loop: boolean;
 	startedAt: number;
 	percentage: number;
 	eventType: "state" | "progress";
 	accent: string | null;
 };
 
-type TrackControlResponse = { isPlaying: boolean; time: number };
+type TrackControlResponse = { isPlaying: boolean; time: number; loop?: boolean };
 
 type TrackEntry = { id: string } & TrackData;
 
@@ -101,6 +103,7 @@ const stateEmitKey = (state: TrackState): string =>
 		Math.floor(state.progress * 4),
 		state.liked ? 1 : 0,
 		state.disliked ? 1 : 0,
+		state.loop ? 1 : 0,
 		state.accent ?? "",
 		state.eventType,
 		Math.floor(state.duration),
@@ -133,6 +136,8 @@ export class TrackService {
 	} | null = null;
 	/** Prevent double startFreshLastFmListen from parallel IPC. */
 	private lastFmListenInFlight = false;
+	private lastFmNotedTrackId: string | null = null;
+	private lastFmNotedProgress = 0;
 	/** Wall-clock when playback last went paused — resume after long idle re-pushes Last.fm NP. */
 	private lastFmPausedAt: number | null = null;
 	/** Delayed post-scrobble NP — clear on new listen. */
@@ -252,7 +257,9 @@ export class TrackService {
 	}
 
 	async repeatTrack(): Promise<TrackControlResponse> {
-		return await this.executeCommand<TrackControlResponse>("repeat");
+		const result = await this.executeCommand<TrackControlResponse>("repeat");
+		if (typeof result?.loop === "boolean") this.patchTrackState({ loop: result.loop });
+		return result;
 	}
 
 	async shuffleTrack(): Promise<TrackControlResponse> {
@@ -323,6 +330,7 @@ export class TrackService {
 				duration: 0,
 				liked: false,
 				disliked: false,
+				loop: false,
 				startedAt: Date.now() / 1000,
 				percentage: 0,
 				eventType: "state",
@@ -378,6 +386,7 @@ export class TrackService {
 			if (patch.duration !== undefined) state.duration = patch.duration;
 			if (patch.eventType !== undefined) state.eventType = patch.eventType;
 			if (patch.playing !== undefined) state.playing = patch.playing;
+			if (patch.loop !== undefined) state.loop = patch.loop;
 		} else {
 			if (patch.playing !== undefined) state.playing = patch.playing;
 			if (patch.progress !== undefined) state.progress = patch.progress;
@@ -385,6 +394,7 @@ export class TrackService {
 			if (patch.duration !== undefined) state.duration = patch.duration;
 			if (patch.liked !== undefined) state.liked = patch.liked;
 			if (patch.disliked !== undefined) state.disliked = patch.disliked;
+			if (patch.loop !== undefined) state.loop = patch.loop;
 			if (patch.startedAt !== undefined) state.startedAt = patch.startedAt;
 			if (patch.percentage !== undefined) state.percentage = patch.percentage;
 			if (patch.eventType !== undefined) state.eventType = patch.eventType;
@@ -805,12 +815,22 @@ export class TrackService {
 	}
 
 	/**
-	 * Progress → scrobble watermark only.
-	 * Loop / re-listen comes from player `dataloaded` (`restartListen`), not progress wrap.
+	 * Progress → scrobble watermark, or wrap → same path as `dataloaded` (`onSongRestart`).
 	 */
-	private noteProgressForLastFm(progressSec: number, _durationSec: number, isPlaying: boolean) {
+	private noteProgressForLastFm(progressSec: number, durationSec: number, isPlaying: boolean) {
 		if (!isPlaying) return;
-		this.maybeScrobbleFromProgress(progressSec, _durationSec);
+		const id = this.lookupTrackId;
+		const sameTrack = !!id && id === this.lastFmNotedTrackId;
+		const pendingMax =
+			id && this.pendingScrobble?.relatedIds.has(id) ? this.pendingScrobble.maxProgress : 0;
+		const prev = sameTrack ? Math.max(this.lastFmNotedProgress, pendingMax) : 0;
+		this.lastFmNotedTrackId = id;
+		this.lastFmNotedProgress = progressSec;
+		if (id && this.trackData && isProgressWrap(prev, progressSec, durationSec)) {
+			void this.onSongRestart(this.trackData);
+			return;
+		}
+		this.maybeScrobbleFromProgress(progressSec, durationSec);
 	}
 
 	/** New song (different related set) — start NP + scrobble session. */
@@ -993,7 +1013,7 @@ export class TrackService {
 		}
 	}
 
-	async onPlayStateChange(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
+	async onPlayStateChange(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0, loop?: boolean) {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
 		const progress = Number(progressSeconds) || 0;
@@ -1006,6 +1026,7 @@ export class TrackService {
 			state.percentage = duration ? (progress / duration) * 100 : 0;
 			state.duration = duration;
 			state.eventType = "state";
+			if (typeof loop === "boolean") state.loop = loop;
 		});
 
 		if (!isPlaying) {
@@ -1038,7 +1059,7 @@ export class TrackService {
 		await discordProvider?.updateTrackProgress?.(isPlaying, progressSeconds, immediate);
 	}
 
-	async onPlayStateProgress(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0) {
+	async onPlayStateProgress(_ev: unknown, isPlaying: boolean, progressSeconds: number = 0, loop?: boolean) {
 		if (!this.trackData?.meta) return;
 		const duration = Number(this.trackData.meta.duration);
 		const progress = Number(progressSeconds) || 0;
@@ -1050,6 +1071,7 @@ export class TrackService {
 			state.playing = isPlaying;
 			state.duration = duration;
 			state.eventType = "progress";
+			if (typeof loop === "boolean") state.loop = loop;
 		});
 		// Sole progress→Last.fm path (1s onProgressHandler must not also call this)
 		this.noteProgressForLastFm(progress, duration, isPlaying);

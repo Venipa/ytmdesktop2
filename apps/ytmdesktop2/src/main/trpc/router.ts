@@ -4,11 +4,12 @@
 import { apiRouter } from "@main/trpc/routers/api";
 import { appServiceRouter } from "@main/trpc/routers/app";
 import { authRouter } from "@main/trpc/routers/auth";
-import { discordRouter } from "@main/trpc/routers/discord";
 import { chromecastRouter } from "@main/trpc/routers/chromecast";
+import { discordRouter } from "@main/trpc/routers/discord";
 import { lastfmRouter } from "@main/trpc/routers/lastfm";
 import { navigationRouter } from "@main/trpc/routers/navigation";
 import { settingsRouter } from "@main/trpc/routers/settings";
+import { shortcutRouter } from "@main/trpc/routers/shortcut";
 import { themesRouter } from "@main/trpc/routers/themes";
 import { trackRouter } from "@main/trpc/routers/track";
 import { trayRouter } from "@main/trpc/routers/tray";
@@ -37,6 +38,7 @@ export const appRouter = router({
 	chromecast: chromecastRouter,
 	window: windowRouter,
 	discord: discordRouter,
+	shortcut: shortcutRouter,
 });
 
 export type AppRouter = typeof appRouter;

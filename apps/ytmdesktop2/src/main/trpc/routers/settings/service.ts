@@ -93,6 +93,10 @@ const defaultSettings = {
 	lastfm: {
 		enabled: false,
 	} as LastFMSettings,
+	shortcuts: {
+		enabled: true,
+		binds: {} as Record<string, string | null>,
+	},
 };
 
 export type SettingsStore = typeof defaultSettings & {
