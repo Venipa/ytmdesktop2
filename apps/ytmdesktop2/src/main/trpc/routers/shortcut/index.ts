@@ -1,0 +1,1 @@
+export { shortcutRouter } from "./router";

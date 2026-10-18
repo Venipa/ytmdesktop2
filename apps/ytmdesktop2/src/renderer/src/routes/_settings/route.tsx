@@ -3,6 +3,7 @@ import {
 	RiArrowRightSLine,
 	RiChatQuoteLine,
 	RiCodeSSlashLine,
+	RiCommandLine,
 	RiComputerLine,
 	RiDashboardLine,
 	RiDiscordLine,
@@ -59,6 +60,7 @@ const tabs = {
 const playerSubs = [
 	{ to: "/player/general", label: "General", icon: RiMusic2Line },
 	{ to: "/player/lyrics", label: "Lyrics", icon: RiChatQuoteLine },
+	{ to: "/player/shortcuts", label: "Shortcuts", icon: RiCommandLine },
 ] as const;
 
 const apiCoreSubs = [
