@@ -16,7 +16,8 @@ import { App, globalShortcut } from "electron";
 
 export type ShortcutSetResult = { ok: true } | { ok: false; reason: string };
 
-const SEEK_SECONDS = 10;
+/** Player seek cmds take milliseconds (same as API / `trackControls.seek`). */
+const SEEK_MS = 10_000;
 
 const ACTIONS: Record<ShortcutActionId, () => Promise<unknown>> = {
 	prev: () => trackService.prevTrack(),
@@ -24,12 +25,12 @@ const ACTIONS: Record<ShortcutActionId, () => Promise<unknown>> = {
 	togglePlay: () => trackService.toggleTrackPlayback(),
 	play: () => trackService.playTrack(),
 	pause: () => trackService.pauseTrack(),
-	seekForward: () => trackService.forwardTrack(undefined, { time: SEEK_SECONDS }),
-	seekBackward: () => trackService.backwardTrack(undefined, { time: SEEK_SECONDS }),
+	seekForward: () => trackService.forwardTrack(undefined, { time: SEEK_MS }),
+	seekBackward: () => trackService.backwardTrack(undefined, { time: SEEK_MS }),
 	volumeUp: () => trackService.volumeUpTrack(),
 	volumeDown: () => trackService.volumeDownTrack(),
-	like: () => trackService.postTrackLike(true),
-	dislike: () => trackService.postTrackDisLike(true),
+	like: () => trackService.postTrackLike(!trackService.trackState?.liked),
+	dislike: () => trackService.postTrackDisLike(!trackService.trackState?.disliked),
 	shuffle: () => trackService.shuffleTrack(),
 	repeat: () => trackService.repeatTrack(),
 };

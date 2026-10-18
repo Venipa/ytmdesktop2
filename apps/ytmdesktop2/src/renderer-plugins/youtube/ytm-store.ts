@@ -7,6 +7,7 @@ export type YtmStoreLike = {
 			items?: unknown[];
 			nextQueueItemId?: number;
 			shuffleEnabled?: boolean;
+			repeatMode?: string;
 			queueContextParams?: string;
 		};
 		likeStatus?: {

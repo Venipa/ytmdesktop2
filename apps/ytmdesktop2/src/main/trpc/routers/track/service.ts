@@ -257,10 +257,8 @@ export class TrackService {
 	}
 
 	async repeatTrack(): Promise<TrackControlResponse> {
-		const next = !this.ensureTrackState().loop;
-		this.patchTrackState({ loop: next });
-		const result = await this.executeCommand<TrackControlResponse>("repeat", next);
-		this.patchTrackState({ loop: result.loop ?? next });
+		const result = await this.executeCommand<TrackControlResponse>("repeat");
+		if (typeof result?.loop === "boolean") this.patchTrackState({ loop: result.loop });
 		return result;
 	}
 

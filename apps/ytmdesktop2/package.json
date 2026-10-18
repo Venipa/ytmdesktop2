@@ -58,6 +58,7 @@
 		"@venipa/xosms": "0.8.5",
 		"bonjour-service": "1.4.4",
 		"castv2": "0.1.10",
+		"cn": "^0.5.0",
 		"cnfast": "^0.1.0",
 		"date-fns": "^2.29.1",
 		"dompurify": "^3.4.13",

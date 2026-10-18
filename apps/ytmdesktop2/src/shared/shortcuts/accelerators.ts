@@ -98,6 +98,19 @@ export function parseAccelerator(raw: string): ParsedAccelerator | null {
 	return parsed;
 }
 
+export function acceleratorDisplayParts(raw: string, platform: ShortcutPlatform): string[] {
+	const parsed = parseAccelerator(raw);
+	if (!parsed) return raw.split("+").filter(Boolean);
+	const parts: string[] = [];
+	if (parsed.cmdOrCtrl) parts.push(platform === "darwin" ? "Cmd" : "Ctrl");
+	else if (parsed.ctrl) parts.push("Ctrl");
+	if (parsed.alt) parts.push(platform === "darwin" ? "Option" : "Alt");
+	if (parsed.shift) parts.push("Shift");
+	if (parsed.meta && !parsed.cmdOrCtrl) parts.push(platform === "darwin" ? "Cmd" : "Win");
+	parts.push(parsed.key);
+	return parts;
+}
+
 export function formatAccelerator(parsed: ParsedAccelerator, platform: ShortcutPlatform = "linux"): string {
 	const mods: string[] = [];
 	if (parsed.cmdOrCtrl) mods.push("CommandOrControl");

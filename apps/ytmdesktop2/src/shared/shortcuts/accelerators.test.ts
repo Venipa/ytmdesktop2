@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	acceleratorDisplayParts,
 	acceleratorFromKeyboardEvent,
 	duplicateAcceleratorId,
 	parseAccelerator,
@@ -41,6 +42,13 @@ describe("duplicateAcceleratorId", () => {
 		expect(parsed).not.toBeNull();
 		expect(duplicateAcceleratorId(parsed!, resolved, "win32", "next")).toBe("prev");
 		expect(duplicateAcceleratorId(parsed!, resolved, "win32", "prev")).toBeNull();
+	});
+});
+
+describe("acceleratorDisplayParts", () => {
+	it("splits modifiers and key", () => {
+		expect(acceleratorDisplayParts("Shift+Alt+Left", "win32")).toEqual(["Alt", "Shift", "Left"]);
+		expect(acceleratorDisplayParts("CommandOrControl+Alt+K", "darwin")).toEqual(["Cmd", "Option", "K"]);
 	});
 });
 

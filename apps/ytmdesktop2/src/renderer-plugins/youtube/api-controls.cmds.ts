@@ -98,6 +98,36 @@ function isPlayingState(playerApi: PlayerApi): boolean {
 	return playerApi.getPlayerState() === 1;
 }
 
+type YtmPlayerBar = HTMLElement & {
+	queue?: { shuffle?: () => void };
+	onRepeatButtonClick?: () => void;
+	repeatMode?: string;
+};
+
+function queryPlayerBar(): YtmPlayerBar | null {
+	return document.querySelector("ytmusic-player-bar");
+}
+
+function isShuffleOn(bar: YtmPlayerBar | null, store: YtmStoreLike | null): boolean {
+	if (bar?.hasAttribute("shuffle-on")) return true;
+	return !!store?.getState()?.queue?.shuffleEnabled;
+}
+
+function isRepeatOn(bar: YtmPlayerBar | null, playerApi: PlayerApi): boolean {
+	const mode = String(bar?.getAttribute("repeat-mode") ?? bar?.repeatMode ?? "").toUpperCase();
+	if (mode && mode !== "NONE") return true;
+	return !!playerApi.getLoopVideo?.();
+}
+
+function applyRepeatEnabled(bar: YtmPlayerBar | null, playerApi: PlayerApi, on: boolean) {
+	if (typeof bar?.onRepeatButtonClick === "function") {
+		for (let i = 0; i < 3 && isRepeatOn(bar, playerApi) !== on; i++) bar.onRepeatButtonClick();
+		return;
+	}
+	playerApi.setLoop?.(on);
+	playerApi.setLoopVideo?.(on);
+}
+
 function playbackSnapshot(playerApi: PlayerApi, playing?: boolean) {
 	return {
 		isPlaying: playing ?? isPlayingState(playerApi),
@@ -142,15 +172,30 @@ export const trackControls = {
 		return !!state.isPlaying;
 	},
 	repeat: (playerApi: PlayerApi, loop?: boolean) => {
-		const next = typeof loop === "boolean" ? loop : !playerApi.getLoopVideo?.();
-		playerApi.setLoopVideo?.(next);
-		playerApi.setLoop?.(false);
-		return { loop: !!playerApi.getLoopVideo?.() || next, ...playbackSnapshot(playerApi) };
+		const bar = queryPlayerBar();
+		if (typeof loop === "boolean") {
+			applyRepeatEnabled(bar, playerApi, loop);
+		} else if (typeof bar?.onRepeatButtonClick === "function") {
+			bar.onRepeatButtonClick();
+		} else {
+			applyRepeatEnabled(bar, playerApi, !isRepeatOn(bar, playerApi));
+		}
+		const on = isRepeatOn(bar, playerApi);
+		return { loop: on, ...playbackSnapshot(playerApi) };
 	},
-	shuffle: (_playerApi: PlayerApi) => {
-		const btn = document.querySelector<HTMLElement>("ytmusic-player-bar #button-shape-shuffle button, ytmusic-player-bar [aria-label*='Shuffle' i]");
-		btn?.click();
-		return { ok: !!btn };
+	shuffle: (playerApi: PlayerApi) => {
+		const bar = queryPlayerBar();
+		const store = resolveYtmStore();
+		const wasOn = isShuffleOn(bar, store);
+		if (typeof bar?.queue?.shuffle === "function") {
+			bar.queue.shuffle();
+		} else if (store) {
+			store.dispatch({ type: "SET_SHUFFLE", payload: !wasOn });
+		} else {
+			playerApi.setShuffle?.(!wasOn);
+		}
+		const on = isShuffleOn(bar, resolveYtmStore());
+		return { shuffle: on, ...playbackSnapshot(playerApi) };
 	},
 	/** `time` is milliseconds. `type: "seek"` = absolute; otherwise relative (`seekBy`). */
 	seek: (playerApi: PlayerApi, data?: SeekPayload) => {
