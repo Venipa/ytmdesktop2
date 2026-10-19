@@ -5,7 +5,7 @@
 	"private": false,
 	"author": "Venipa <admin@venipa.net>",
 	"homepage": "https://youtube-music.app",
-	"desktopName": "ytmdesktop2",
+	"desktopName": "net.venipa.ytmdesktop",
 	"main": "./out/main/index.js",
 	"scripts": {
 		"format": "prettier --write .",

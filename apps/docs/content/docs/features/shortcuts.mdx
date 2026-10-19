@@ -32,6 +32,12 @@ Binds are checked in the main process before they are saved:
 
 While you are capturing a bind, registered shortcuts are temporarily unregistered so the old combo does not fire.
 
+## Linux (Wayland)
+
+On GNOME Wayland, Electron uses the [XDG GlobalShortcuts portal](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.GlobalShortcuts.html). GNOME only accepts a reverse-DNS app id. YTMDesktop2 ships as `net.venipa.ytmdesktop` (same as the builder `appId`) and enables `GlobalShortcutsPortal` so you should get the GNOME approval dialog instead of a silent discard of `ytmdesktop2`.
+
+If a bind still fails (portal denied, or an older install), turn **Enable global shortcuts** off and use MPRIS with [playerctl](https://github.com/altdesktop/playerctl) from GNOME Keyboard custom shortcuts, for example `playerctl -p ytmdesktop2 play-pause`. See [issue #266](https://github.com/Venipa/ytmdesktop2/issues/266).
+
 ## Related
 
 <Cards>

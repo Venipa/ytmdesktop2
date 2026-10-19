@@ -40,7 +40,7 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 				"FluentOverlayScrollbar",
 				"CanvasOopRasterization",
 				"SharedArrayBuffer",
-				platform.isLinux && ["UseOzonePlatform", "WaylandWindowDecorations"],
+				platform.isLinux && ["UseOzonePlatform", "WaylandWindowDecorations", "GlobalShortcutsPortal"],
 			]
 				.flat()
 				.filter(Boolean)

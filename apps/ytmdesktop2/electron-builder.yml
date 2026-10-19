@@ -73,7 +73,8 @@ linux:
   executableName: ytmdesktop2
   synopsis: Unofficial YouTube Music desktop client
   description: Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.
-  # Match Electron WM_CLASS / app_id to installed .desktop (see package.json desktopName).
+  # .desktop basename must be reverse-DNS so GNOME GlobalShortcuts portal accepts app_id
+  # (package.json desktopName; Chromium rejects "ytmdesktop2"). Must match appId.
   syncDesktopName: true
   # arm64 AppImage built on ubuntu-24.04-arm in CI (release:pack:linux:arm).
   # flatpak is a separate CI job (release:pack:linux:flatpak).
