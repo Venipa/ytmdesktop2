@@ -180,6 +180,11 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 				this._blurHiddenAt = Date.now();
 				dismiss();
 			});
+			win.on("focus", () => {
+				if (win.isDestroyed() || !this._pinned) return;
+				win.setAlwaysOnTop(true, "floating");
+				win.moveTop();
+			});
 			win.webContents.on("before-input-event", (_ev, input) => {
 				if (input.type === "keyDown" && input.key === "Escape") dismiss();
 			});
@@ -325,6 +330,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		if (!win) return;
 		win.removeAllListeners("close");
 		win.removeAllListeners("blur");
+		win.removeAllListeners("focus");
 		win.removeAllListeners("move");
 		win.removeAllListeners("moved");
 		win.destroy();
