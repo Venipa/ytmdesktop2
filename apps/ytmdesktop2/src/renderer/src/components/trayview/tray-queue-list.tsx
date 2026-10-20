@@ -61,7 +61,7 @@ type TrayQueueListProps = {
 
 export function TrayQueueList({ currentVideoId, counterpartVideoId, accent, playing }: TrayQueueListProps) {
 	const utils = trpc.useUtils();
-	const { data, refetch, isFetching, isError, isLoading } = trpc.navigation.queueList.useQuery(undefined, {
+	const { data, refetch, isFetching, isError } = trpc.navigation.queueList.useQuery(undefined, {
 		refetchOnWindowFocus: false,
 		retry: 6,
 		retryDelay: 400,
@@ -75,7 +75,7 @@ export function TrayQueueList({ currentVideoId, counterpartVideoId, accent, play
 	const sentinelRef = useRef<HTMLDivElement>(null);
 	const activeRowRef = useRef<HTMLButtonElement>(null);
 	const items = data?.items ?? [];
-	const initialLoad = items.length === 0 && (isLoading || isFetching);
+	const initialLoad = data == null && !isError;
 
 	trpc.navigation.onQueue.useSubscription(undefined, {
 		onData: () => {

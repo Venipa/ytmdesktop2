@@ -119,6 +119,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			this.dockToTray(win);
 		}
 		win.setResizable(false);
+		this.assertAlwaysOnTop(win);
 	}
 
 	private async ensureWindow(): Promise<BrowserWindow> {
@@ -175,15 +176,17 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			});
 			win.on("blur", () => {
 				if (win.isDestroyed() || !win.isVisible()) return;
-				if (this._pinned) return;
+				if (this._pinned) {
+					this.assertAlwaysOnTop(win);
+					return;
+				}
 				if (Date.now() < this._suppressBlurUntil) return;
 				this._blurHiddenAt = Date.now();
 				dismiss();
 			});
 			win.on("focus", () => {
-				if (win.isDestroyed() || !this._pinned) return;
-				win.setAlwaysOnTop(true, "floating");
-				win.moveTop();
+				if (win.isDestroyed()) return;
+				this.assertAlwaysOnTop(win);
 			});
 			win.webContents.on("before-input-event", (_ev, input) => {
 				if (input.type === "keyDown" && input.key === "Escape") dismiss();
@@ -207,12 +210,22 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		this.windowContext.sendToAllViews("trayview.state", { active, pinned: this._pinned });
 	}
 
+	private alwaysOnTopLevel(): "floating" | "pop-up-menu" {
+		return this._pinned ? "floating" : "pop-up-menu";
+	}
+
+	/** Windows drops TOPMOST on click/resize/alt-tab; re-apply without moveTop (that can send it behind). */
+	private assertAlwaysOnTop(win: BrowserWindow) {
+		if (win.isDestroyed()) return;
+		win.setAlwaysOnTop(true, this.alwaysOnTopLevel());
+	}
+
 	private applyPinFlags(win: BrowserWindow) {
 		if (win.isDestroyed()) return;
 		this.suppressBlur(400);
 		win.setMovable(this._pinned);
+		this.assertAlwaysOnTop(win);
 		if (this._pinned) {
-			win.setAlwaysOnTop(true, "floating");
 			win.setSkipTaskbar(false);
 			win.setVisibleOnAllWorkspaces(true, {
 				visibleOnFullScreen: true,
@@ -221,7 +234,6 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		} else {
 			win.setSkipTaskbar(true);
 			win.setVisibleOnAllWorkspaces(false);
-			win.setAlwaysOnTop(true, "pop-up-menu");
 		}
 	}
 
