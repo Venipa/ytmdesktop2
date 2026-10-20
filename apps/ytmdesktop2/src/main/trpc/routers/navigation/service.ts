@@ -2,7 +2,7 @@ import { AfterInit, BaseProvider } from "@main/core/baseProvider";
 import { defaultUrl } from "@main/infra/devUtils";
 import { emitAppToast, friendlyQueueAddError } from "@main/lib/appToast";
 import { YtmClient } from "@main/ytm/ytm-client";
-import { type YtmdParsed, YtmdLink } from "@shared/protocol/ytmdProtocol";
+import { YtmdLink, type YtmdParsed } from "@shared/protocol/ytmdProtocol";
 import { App } from "electron";
 
 export default class NavigationProvider extends BaseProvider implements AfterInit {
@@ -118,8 +118,10 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 			await this.openWatch(link.videoId, link.playlistId);
 		} else if (link.type === "playlist") {
 			await this.openPlaylist(link.playlistId, link.play);
-		} else {
+		} else if (link.type === "channel") {
 			await this.openChannel({ channelId: link.channelId, handle: link.handle });
+		} else {
+			throw new Error("unsupported or invalid url");
 		}
 		return { ok: true as const, link };
 	}

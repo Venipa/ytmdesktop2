@@ -82,4 +82,24 @@ describe("YtmdLink.resolve", () => {
 		expect(YtmdLink.resolve("https://example.com/watch?v=dQw4w9WgXcQ")).toBeNull();
 		expect(YtmdLink.resolve("not-a-url")).toBeNull();
 	});
+
+	test("lastfm integration callback", () => {
+		expect(YtmdLink.integrationCallback("lastfm")).toBe("ytmd://integrations/lastfm/callback");
+		expect(YtmdLink.parse("ytmd://integrations/lastfm/callback")).toEqual({
+			type: "integration",
+			provider: "lastfm",
+			action: "callback",
+		});
+		expect(YtmdLink.parse("ytmd://integrations/lastfm/callback?token=abc")).toEqual({
+			type: "integration",
+			provider: "lastfm",
+			action: "callback",
+			token: "abc",
+		});
+		expect(YtmdLink.parse("ytmd://integrations/other/callback")).toBeNull();
+		expect(YtmdLink.parse("ytmd://integrations/lastfm/start")).toBeNull();
+		expect(YtmdLink.format({ type: "integration", provider: "lastfm", action: "callback" })).toBe(
+			"ytmd://integrations/lastfm/callback",
+		);
+	});
 });

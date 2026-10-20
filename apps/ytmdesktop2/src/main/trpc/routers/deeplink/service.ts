@@ -1,10 +1,10 @@
+import path from "node:path";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { emitAppToast } from "@main/lib/appToast";
 import { createAppDialogWindow } from "@main/windows/windowUtils";
-import { type YtmdParsed, YtmdLink } from "@shared/protocol/ytmdProtocol";
+import { YtmdLink, type YtmdParsed } from "@shared/protocol/ytmdProtocol";
 import { stripUndefined } from "@shared/utils/object";
 import { App, BrowserWindow } from "electron";
-import path from "node:path";
 
 type DeeplinkAction = "close" | "play" | "queue" | "open";
 
@@ -74,6 +74,15 @@ export default class DeeplinkProvider extends BaseProvider implements BeforeStar
 	}
 
 	private async handleLink(pending: YtmdParsed) {
+		if (pending.type === "integration") {
+			if (pending.provider === "lastfm" && pending.action === "callback") {
+				await this.getProvider("lastfm").handleAuthCallback(pending.token);
+				return;
+			}
+			this.logger.debug("ignored integration deeplink", pending.provider, pending.action);
+			return;
+		}
+
 		// Explicit `/play` on playlist → start immediately (link intent).
 		if (pending.type === "playlist" && pending.play) {
 			await this.applyChoice("play", pending);

@@ -1,16 +1,18 @@
 import { AfterInit, BaseProvider, OnInit } from "@main/core/baseProvider";
+import { emitAppToast } from "@main/lib/appToast";
 import { stringifyJson } from "@main/lib/json";
 import { LASTFM_KEYTAR_SESSION, LASTFM_KEYTAR_TOKEN } from "@main/lib/keytar";
 import { LastFMClient } from "@main/lib/lastfm";
 import secureStore from "@main/lib/secureStore";
-import { appIconPath } from "@main/windows/windowUtils";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
+import { YtmdLink } from "@shared/protocol/ytmdProtocol";
 import { lastFmListenKey } from "@shared/track/lastfmTrackSession";
 import { TrackData } from "@shared/track/trackData";
-import { App, BrowserWindow, shell } from "electron";
+import { App, shell } from "electron";
 import { LastFMSettings } from "ytmd";
 
 const AUTH_POLL_MS = 1500;
+const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
 
 const lastFmClient =
 	(import.meta.env.VITE_LASTFM_SECRET &&
@@ -27,8 +29,9 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 	/** Serialize NP/scrobble so a late scrobble cannot clear a newer Now Playing. */
 	private writeChain: Promise<void> = Promise.resolve();
 	private authProgress = false;
-	private authWindow: BrowserWindow | null = null;
 	private authPollTimer: ReturnType<typeof setInterval> | null = null;
+	private authDeadline: ReturnType<typeof setTimeout> | null = null;
+	private authGen = 0;
 	/** `reauth` cancel keeps enabled=true; first-time connect cancel flips off. */
 	private authMode: "connect" | "reauth" | null = null;
 	/** Reauth enables setting without letting toggle handler start a second auth. */
@@ -106,21 +109,28 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		this.pauseIntegration();
 	}
 
+	private bumpAuthGen() {
+		this.authGen += 1;
+		return this.authGen;
+	}
+
 	private stopAuthPoll() {
 		if (this.authPollTimer) {
 			clearInterval(this.authPollTimer);
 			this.authPollTimer = null;
 		}
+		if (this.authDeadline) {
+			clearTimeout(this.authDeadline);
+			this.authDeadline = null;
+		}
 	}
 
 	/** Disable scrobbling; keep session/credentials for quick re-enable. */
 	private pauseIntegration() {
+		this.bumpAuthGen();
 		this.stopAuthPoll();
-		if (this.authWindow && !this.authWindow.isDestroyed()) {
-			this.authWindow.close();
-		}
-		this.authWindow = null;
 		this.authProgress = false;
+		this.authMode = null;
 		this.lastNowPlayingKey = null;
 		this.lastScrobbledKey = null;
 		this.sendState();
@@ -166,72 +176,82 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		this.sendState();
 	}
 
+	private async finishAuth(sessionToken: string, gen: number) {
+		if (gen !== this.authGen || !this.authProgress || !this.client) return;
+		this.stopAuthPoll();
+		this.authProgress = false;
+		this.authMode = null;
+		await secureStore.set(LASTFM_KEYTAR_SESSION, sessionToken);
+		await secureStore.delete(LASTFM_KEYTAR_TOKEN);
+		this.logger.debug(`[Auth]> Authenticated: ${sessionToken.slice(0, 6)}…`);
+		const settings = this.getProvider("settings");
+		settings.set("lastfm.enabled", true);
+		settings.set("lastfm.name", this.client.getName() || null);
+		settings.saveToDrive();
+		this.sendState();
+		emitAppToast(this.windowContext, { type: "success", message: "Last.fm connected" });
+	}
+
+	private cancelAuth(reason: "timeout" | "abort") {
+		this.bumpAuthGen();
+		this.stopAuthPoll();
+		const modeAtClose = this.authMode;
+		this.authProgress = false;
+		this.authMode = null;
+		const settings = this.getProvider("settings");
+		if (!this.client?.isConnected() && modeAtClose !== "reauth") {
+			settings.set("lastfm.enabled", false);
+		}
+		this.sendState();
+		if (reason === "timeout") {
+			emitAppToast(this.windowContext, { type: "error", message: "Last.fm authorization timed out" });
+		}
+	}
+
+	async handleAuthCallback(token?: string) {
+		if (!this.client || !this.authProgress) {
+			this.logger.debug("lastfm callback ignored — not awaiting auth");
+			return;
+		}
+		const pending = this.client.getPendingToken();
+		if (token && pending && token !== pending) {
+			this.logger.warn("lastfm callback token mismatch");
+			return;
+		}
+		try {
+			const sessionToken = await this.client.getSession();
+			if (sessionToken) await this.finishAuth(sessionToken, this.authGen);
+		} catch (err) {
+			this.logger.error(err);
+		}
+	}
+
 	private async authorizeSession(mode: "connect" | "reauth" = "connect") {
 		if (!this.client) return;
 		if (this.authProgress) return;
+		const gen = this.bumpAuthGen();
 		this.authMode = mode;
 		await this.client.authorize();
-		const win = new BrowserWindow({
-			width: 480,
-			height: 600,
-			minWidth: 480,
-			minHeight: 600,
-			alwaysOnTop: true,
-			parent: this.windowContext.main,
-			title: "LastFM Authorize",
-			icon: appIconPath,
-			paintWhenInitiallyHidden: true,
-			show: false,
-			autoHideMenuBar: true,
-			center: true,
-			resizable: false,
-			minimizable: false,
-			maximizable: false,
-			fullscreenable: false,
-			modal: true,
-		});
-		this.authWindow = win;
-		await win.loadURL(this.client.getUserAuthorizeUrl());
-		const settings = this.getProvider("settings");
-		let authSettled = false;
+		const authUrl = this.client.getUserAuthorizeUrl(YtmdLink.integrationCallback("lastfm"));
+		if (!authUrl.startsWith("https://www.last.fm/")) {
+			throw new Error("Last.fm auth URL rejected");
+		}
+		await shell.openExternal(authUrl);
 
-		const finishAuth = async (sessionToken: string) => {
-			if (authSettled) return;
-			authSettled = true;
-			this.stopAuthPoll();
-			await secureStore.set(LASTFM_KEYTAR_SESSION, sessionToken);
-			await secureStore.delete(LASTFM_KEYTAR_TOKEN);
-			this.logger.debug(`[Auth]> Authenticated: ${sessionToken.slice(0, 6)}…`);
-			settings.set("lastfm.enabled", true);
-			settings.set("lastfm.name", this.client!.getName() || null);
-			settings.saveToDrive();
-			if (!win.isDestroyed()) win.close();
-			this.sendState();
-		};
+		this.authProgress = true;
+		this.sendState();
 
-		// Poll auth.getSession — no DOM scrape of Last.fm success page
 		this.authPollTimer = setInterval(() => {
-			if (!this.client || win.isDestroyed()) return;
+			if (gen !== this.authGen || !this.client || !this.authProgress) return;
 			void this.client.tryGetSession().then((sessionToken) => {
-				if (sessionToken) void finishAuth(sessionToken);
+				if (sessionToken) void this.finishAuth(sessionToken, gen);
 			});
 		}, AUTH_POLL_MS);
 
-		win.show();
-		this.authProgress = true;
-		this.sendState();
-		win.once("closed", () => {
-			this.stopAuthPoll();
-			this.authWindow = null;
-			this.authProgress = false;
-			const modeAtClose = this.authMode;
-			this.authMode = null;
-			// First-time connect cancelled — flip enabled off. Reauth cancel keeps enabled.
-			if (!this.client?.isConnected() && modeAtClose !== "reauth") {
-				settings.set("lastfm.enabled", false);
-			}
-			this.sendState();
-		});
+		this.authDeadline = setTimeout(() => {
+			if (gen !== this.authGen || !this.authProgress) return;
+			this.cancelAuth("timeout");
+		}, AUTH_TIMEOUT_MS);
 	}
 	getState() {
 		if (!this.client) return { connected: false, name: null, processing: false, error: true };

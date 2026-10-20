@@ -28,7 +28,7 @@ export function useLastFm() {
 		...status,
 		// Gate connected by enabled so disable flips UI immediately even if IPC lags
 		connected: enabled && !!status.connected,
-		// Keep raw processing — auth window can run while enabled setting catches up
+		// Keep raw processing — browser auth can run while enabled setting catches up
 		processing: !!status.processing,
 	};
 

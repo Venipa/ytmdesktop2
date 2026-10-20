@@ -29,7 +29,9 @@ function LastFmSettingsPage() {
 		<Card>
 			<CardHeader>
 				<CardTitle>Last.fm</CardTitle>
-				<CardDescription>Scrobble tracks to your Last.fm profile.</CardDescription>
+				<CardDescription>
+					Scrobble tracks to your Last.fm profile. Authorization opens your browser; Last.fm returns via ytmd:// or we finish once you approve.
+				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
 				<Field orientation="horizontal" data-disabled={isBusy || undefined}>

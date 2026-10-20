@@ -2,7 +2,10 @@
 export type YtmdParsed =
 	| { type: "watch"; videoId: string; playlistId?: string }
 	| { type: "playlist"; playlistId: string; play: boolean }
-	| { type: "channel"; channelId?: string; handle?: string };
+	| { type: "channel"; channelId?: string; handle?: string }
+	| { type: "integration"; provider: "lastfm"; action: "callback"; token?: string };
+
+const INTEGRATION_PROVIDERS = new Set(["lastfm"]);
 
 /** `ytmd://` share / deep-link helpers (shared main + renderer). */
 export class YtmdLink {
@@ -42,10 +45,16 @@ export class YtmdLink {
 		return YtmdLink.watch(videoId, YtmdLink.playlistFromMusicUrl(musicUrl));
 	}
 
+	/** Last.fm (and later) OAuth return: `ytmd://integrations/<provider>/callback`. */
+	static integrationCallback(provider: "lastfm"): string {
+		return `${YtmdLink.scheme}://integrations/${provider}/callback`;
+	}
+
 	/** Format any parsed link back to a compact or music-host `ytmd://` URL. */
 	static format(link: YtmdParsed): string {
 		if (link.type === "watch") return YtmdLink.watch(link.videoId, link.playlistId);
 		if (link.type === "playlist") return YtmdLink.playlist(link.playlistId, link.play);
+		if (link.type === "integration") return YtmdLink.integrationCallback(link.provider);
 		if (link.channelId) return `${YtmdLink.scheme}://channel/${link.channelId}`;
 		if (link.handle) return `${YtmdLink.scheme}://music.youtube.com/@${link.handle}`;
 		return `${YtmdLink.scheme}://`;
@@ -147,6 +156,17 @@ export class YtmdLink {
 			}
 			if (YtmdLink.channelIdRe.test(token)) return { type: "channel", channelId: token };
 			return null;
+		}
+
+		if (kind === "integrations") {
+			const provider = parts[1]?.toLowerCase();
+			const action = parts[2]?.toLowerCase();
+			if (provider !== "lastfm" || !INTEGRATION_PROVIDERS.has(provider)) return null;
+			if (action !== "callback") return null;
+			const token = parsed.searchParams.get("token")?.trim() || undefined;
+			return token
+				? { type: "integration", provider: "lastfm", action: "callback", token }
+				: { type: "integration", provider: "lastfm", action: "callback" };
 		}
 
 		return null;

@@ -181,9 +181,17 @@ export class LastFMClient {
 		});
 	}
 
-	getUserAuthorizeUrl() {
+	getPendingToken() {
+		return this.token;
+	}
+
+	getUserAuthorizeUrl(cb?: string) {
 		if (!this.token) throw new Error("Invalid token");
-		return `https://www.last.fm/api/auth?api_key=${this.key.api}&token=${this.token}`;
+		const url = new URL("https://www.last.fm/api/auth");
+		url.searchParams.set("api_key", this.key.api);
+		url.searchParams.set("token", this.token);
+		if (cb) url.searchParams.set("cb", cb);
+		return url.toString();
 	}
 
 	getName() {
