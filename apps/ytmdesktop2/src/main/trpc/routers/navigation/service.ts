@@ -183,14 +183,27 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 	}
 
 	/** Current YTM queue snapshot (ids/titles when store hooked). */
-	async queueList(): Promise<{ items: { index: number; videoId?: string; title?: string }[]; count: number; storeHooked?: boolean }> {
+	async queueList(): Promise<{
+		items: { index: number; videoId?: string; title?: string; artist?: string; thumbnail?: string; durationSec?: number }[];
+		count: number;
+		storeHooked?: boolean;
+	}> {
 		this.requireYoutubeView("queueList");
 		await this.requireYtmReady("queueList");
-		return await YtmClient.cmdTimed<{ items: { index: number; videoId?: string; title?: string }[]; count: number; storeHooked?: boolean }>(
+		return await YtmClient.cmdTimed(
 			"api",
 			"queue_list",
 			10_000,
 		);
+	}
+
+	async queuePlay(index: number, videoId?: string): Promise<{ ok: true; index: number }> {
+		this.requireYoutubeView("queuePlay");
+		await this.requireYtmReady("queuePlay");
+		return await YtmClient.cmdTimed("api", "queue_play", 10_000, {
+			index,
+			...(videoId ? { videoId } : {}),
+		});
 	}
 
 	/** Clear upcoming queue (store CLEAR, else playerApi.clearQueue). */

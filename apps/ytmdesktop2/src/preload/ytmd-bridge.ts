@@ -9,6 +9,7 @@ const EMIT_ALLOWLIST = new Set<string>([
 	"track:play-state-progress",
 	"track:title-change",
 	"app.loadEnd",
+	"nav:queue-change",
 ]);
 
 /** Channels page-world `ytmd.on` may subscribe to. */

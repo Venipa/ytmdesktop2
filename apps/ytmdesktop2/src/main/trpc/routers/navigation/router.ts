@@ -92,6 +92,10 @@ export const navigationRouter = router({
 		return { ok: true as const };
 	}),
 	queueList: publicProcedure.query(async ({ ctx }) => provider(ctx, "navigation").queueList()),
+	onQueue: publicProcedure.subscription(() => fromIpcEvent<{ count: number; sig: string }>("nav:queue-change")),
+	queuePlay: publicProcedure
+		.input(z.object({ index: z.number().int().min(0), videoId: z.string().min(1).optional() }))
+		.mutation(async ({ ctx, input }) => provider(ctx, "navigation").queuePlay(input.index, input.videoId)),
 	queueClear: publicProcedure.mutation(async ({ ctx }) => provider(ctx, "navigation").queueClear()),
 	onSameOrigin: publicProcedure.subscription(() => fromIpcEvent<boolean>("nav.same-origin")),
 });

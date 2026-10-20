@@ -9,6 +9,7 @@ export type YtmEmitEvent =
 	| "track:play-state-progress"
 	| "track:title-change"
 	| "app.loadEnd"
+	| "nav:queue-change"
 	| (string & {});
 
 /** Main -> plugin push channels. */

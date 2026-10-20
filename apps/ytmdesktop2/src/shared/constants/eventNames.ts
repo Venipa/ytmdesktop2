@@ -53,6 +53,7 @@ const IPC_EVENT_NAMES = {
 	LAST_FM_TOGGLE: "lastfm.toggle",
 	LAST_FM_SUBMIT_STATE: "lastfm.stateObserver",
 	APP_TOAST: "app.toast",
+	NAV_QUEUE_CHANGE: "nav:queue-change",
 	...API_ROUTES,
 } as const;
 export default IPC_EVENT_NAMES;

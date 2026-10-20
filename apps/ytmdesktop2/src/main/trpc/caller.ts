@@ -32,7 +32,12 @@ type NavigationCaller = {
 	playlist: (input: { playlistId: string; play?: boolean }) => Promise<{ ok: true }>;
 	channel: (input: { channelId?: string; handle?: string }) => Promise<{ ok: true }>;
 	queue: (input: { videoId?: string; playlistId?: string }) => Promise<{ ok: true }>;
-	queueList: () => Promise<{ items: { index: number; videoId?: string; title?: string }[]; count: number; storeHooked?: boolean }>;
+	queueList: () => Promise<{
+		items: { index: number; videoId?: string; title?: string; artist?: string; thumbnail?: string; durationSec?: number }[];
+		count: number;
+		storeHooked?: boolean;
+	}>;
+	queuePlay: (input: { index: number; videoId?: string }) => Promise<{ ok: true; index: number }>;
 	queueClear: () => Promise<{ ok: true }>;
 };
 

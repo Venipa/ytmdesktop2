@@ -1,8 +1,8 @@
 import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
-import { isAppQuitting, shouldCancelWindowClose } from "@main/handlers/quitPolicy";
 import { showOnActiveDesktop } from "@main/domain/showOnActiveDesktop";
 import { positionNearTray } from "@main/domain/trayPosition";
+import { isAppQuitting, shouldCancelWindowClose } from "@main/handlers/quitPolicy";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import TrayProvider from "@main/trpc/routers/tray/service";
 import { createAppWindow, wrapWindowHandler } from "@main/windows/windowUtils";
@@ -11,12 +11,13 @@ import { debounce } from "lodash-es";
 
 const TRAY_VIEW_WIDTH = 420;
 const TRAY_VIEW_HEIGHT = 168;
+const TRAY_VIEW_QUEUE_HEIGHT = 400;
 
-function clampToVisibleWorkArea(x: number, y: number): { x: number; y: number } {
+function clampToVisibleWorkArea(x: number, y: number, width: number, height: number): { x: number; y: number } {
 	const b = screen.getDisplayNearestPoint({ x, y }).workArea;
 	return {
-		x: Math.round(Math.min(Math.max(x, b.x), b.x + b.width - TRAY_VIEW_WIDTH)),
-		y: Math.round(Math.min(Math.max(y, b.y), b.y + b.height - TRAY_VIEW_HEIGHT)),
+		x: Math.round(Math.min(Math.max(x, b.x), b.x + b.width - width)),
+		y: Math.round(Math.min(Math.max(y, b.y), b.y + b.height - height)),
 	};
 }
 
@@ -29,6 +30,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	private _restoredBounds: { x: number; y: number } | null = null;
 	private persistMoved = debounce(() => this._saveWindowState?.(), 250);
 	private _settingsWired = false;
+	private _queueOpen = false;
 
 	constructor(_app: App) {
 		super("trayView");
@@ -91,12 +93,32 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		this._suppressBlurUntil = Date.now() + ms;
 	}
 
+	private traySize(): { width: number; height: number } {
+		return {
+			width: TRAY_VIEW_WIDTH,
+			height: this._queueOpen ? TRAY_VIEW_QUEUE_HEIGHT : TRAY_VIEW_HEIGHT,
+		};
+	}
+
 	private dockToTray(win: BrowserWindow) {
 		const tray = this.trayProvider?.Tray;
-		positionNearTray(win, tray && !tray.isDestroyed() ? tray : null, {
-			width: TRAY_VIEW_WIDTH,
-			height: TRAY_VIEW_HEIGHT,
-		});
+		positionNearTray(win, tray && !tray.isDestroyed() ? tray : null, this.traySize());
+	}
+
+	private applyWindowSize(win: BrowserWindow) {
+		if (win.isDestroyed()) return;
+		const { width, height } = this.traySize();
+		win.setResizable(true);
+		win.setMinimumSize(width, height);
+		win.setMaximumSize(width, height);
+		if (this._pinned) {
+			const [x, y] = win.getPosition();
+			const pos = clampToVisibleWorkArea(x, y, width, height);
+			win.setBounds({ x: pos.x, y: pos.y, width, height });
+		} else {
+			this.dockToTray(win);
+		}
+		win.setResizable(false);
 	}
 
 	private async ensureWindow(): Promise<BrowserWindow> {
@@ -225,7 +247,8 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			this.dockToTray(win);
 			return;
 		}
-		const pos = clampToVisibleWorkArea(this._restoredBounds.x, this._restoredBounds.y);
+		const { width, height } = this.traySize();
+		const pos = clampToVisibleWorkArea(this._restoredBounds.x, this._restoredBounds.y, width, height);
 		this._restoredBounds = pos;
 		win.setPosition(pos.x, pos.y);
 	}
@@ -248,6 +271,13 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		this.present(win);
 		this.emitState(true);
 		return win.id;
+	}
+
+	setQueueOpen(open: boolean): boolean {
+		this._queueOpen = open;
+		const win = this.getWindow();
+		if (win) this.applyWindowSize(win);
+		return this._queueOpen;
 	}
 
 	async hide(): Promise<void> {

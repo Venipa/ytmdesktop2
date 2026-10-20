@@ -37,6 +37,8 @@ export const apiControlsPage = definePageCmds({
 		navigate: (data) => trackControls.navigate(data as Parameters<typeof trackControls.navigate>[0]),
 		queueAdd: (data) => trackControls.queueAdd(data as Parameters<typeof trackControls.queueAdd>[0]),
 		queueList: () => trackControls.queueList(),
+		queuePlay: (data) =>
+			trackControls.queuePlay(getPagePlayerApi(), data as Parameters<typeof trackControls.queuePlay>[1]),
 		queueClear: () => trackControls.queueClear(requirePlayer()),
 		videoId: () => {
 			const data = requirePlayer().getVideoData?.() as { video_id?: string } | undefined;

@@ -3,23 +3,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import { cva } from "class-variance-authority";
 import { intervalToDuration } from "date-fns";
 import { clamp } from "lodash-es";
-import { ArrowLeftIcon, GripVerticalIcon, PinIcon } from "lucide-react";
+import { ArrowLeftIcon, GripVerticalIcon, ListMusicIcon, PinIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import ApiIcon from "@/assets/icons/chip.svg?react";
-import DiscordIcon from "@/assets/icons/discord-rpc.svg?react";
-import LastFMIcon from "@/assets/icons/lastfm.svg?react";
 import LikeIcon from "@/assets/icons/like.svg?react";
 import NextIcon from "@/assets/icons/next.svg?react";
 import PauseIcon from "@/assets/icons/pause.svg?react";
 import PlayIcon from "@/assets/icons/play.svg?react";
 import PrevIcon from "@/assets/icons/prev.svg?react";
 import SettingsIcon from "@/assets/icons/settings.svg?react";
-import { Spinner } from "@/components/ui/spinner";
+import { TrayQueueList } from "@/components/trayview/tray-queue-list";
+import { TrayVolumeControl } from "@/components/trayview/tray-volume-control";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useDiscord } from "@/hooks/use-discord";
-import { useLastFm } from "@/hooks/use-lastfm";
-import { useSettingsState } from "@/hooks/use-settings";
+import { useLocalState } from "@/hooks/use-local-state";
 import { useTrack, useTrackState } from "@/hooks/use-track";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -174,8 +170,7 @@ function TrayAccentPill({ accent, drag, expanded }: { accent: string | null; dra
 	return (
 		<div
 			className={cn(
-				"relative z-10 flex shrink-0 items-stretch justify-center py-2.5 ml-1 no-drag transition-[width] duration-200 ease-out",
-				expanded ? "w-6" : "w-3",
+				"relative z-10 flex shrink-0 items-stretch justify-center py-2.5 ml-1 no-drag transition-[width] duration-200 ease-out w-3",
 			)}
 			aria-hidden={!drag}
 			title={drag ? "Drag" : undefined}
@@ -183,7 +178,7 @@ function TrayAccentPill({ accent, drag, expanded }: { accent: string | null; dra
 			<motion.div
 				className={cn(
 					"pointer-events-none flex items-center justify-center overflow-hidden rounded-full bg-accent transition-[width] duration-200 ease-out",
-					expanded ? "w-4" : "w-1.5",
+					expanded ? "w-3" : "w-1.5",
 				)}
 				initial={false}
 				animate={{ backgroundColor: accent ?? "var(--accent)" }}
@@ -240,6 +235,10 @@ const chromeButtonVariants = cva(
 	{ variants: { variant: { default: "" } }, defaultVariants: { variant: "default" } },
 );
 
+function ChromeButton({ className, type = "button", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
+	return <button type={type} className={cn(chromeButtonVariants(), className)} {...props} />;
+}
+
 const playerButtonVariants = cva(
 	[
 		"inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-[transform,background-color,color] duration-100",
@@ -259,21 +258,6 @@ const playerButtonVariants = cva(
 	},
 );
 
-const controlToggleVariants = cva(
-	[
-		"relative inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-[transform,background-color,color,opacity] duration-100",
-		"enabled:hover:bg-accent/15 enabled:hover:text-foreground enabled:active:scale-95",
-		"disabled:pointer-events-none disabled:opacity-40",
-		"[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-		"data-[on=true]:bg-accent/20 data-[on=true]:text-foreground",
-	].join(" "),
-	{ variants: { variant: { default: "" } }, defaultVariants: { variant: "default" } },
-);
-
-function ChromeButton({ className, type = "button", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
-	return <button type={type} className={cn(chromeButtonVariants(), className)} {...props} />;
-}
-
 function PlayerButton({
 	className,
 	variant,
@@ -283,28 +267,6 @@ function PlayerButton({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "default" | "hero"; active?: boolean }) {
 	return (
 		<button type={type} data-active={active ? "true" : undefined} className={cn(playerButtonVariants({ variant }), className)} {...props} />
-	);
-}
-
-function ControlToggle({
-	className,
-	active,
-	busy,
-	type = "button",
-	children,
-	...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean; busy?: boolean }) {
-	return (
-		<button type={type} data-on={active ? "true" : undefined} className={cn(controlToggleVariants(), className)} {...props}>
-			{children}
-			{busy ? (
-				<span className="absolute -top-0.5 -right-0.5 flex size-3 items-center justify-center rounded-full bg-muted">
-					<Spinner className="size-2" />
-				</span>
-			) : active ? (
-				<span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-green-500 ring-2 ring-background" />
-			) : null}
-		</button>
 	);
 }
 
@@ -320,15 +282,12 @@ function TrayViewPage() {
 	const playStateRef = useRef(playState);
 	playStateRef.current = playState;
 
-	const { enabled: lastFmEnabled, toggleLastFM, lastFM, lastFMLoading, isBusy: lastFmBusy } = useLastFm();
-	const { enabled: discordEnabled, toggle: toggleDiscord, loading: discordLoading, connected: discordConnected, error: discordError } = useDiscord();
-	const [apiEnabled, setApiEnabled] = useSettingsState<boolean>("api.enabled", false);
 	const { data: pinned = false } = trpc.trayView.pinned.useQuery();
+	const [queueOpen, setQueueOpen] = useLocalState("ytmd.tray.queueOpen", false);
 	const [contentHovered, setContentHovered] = useState(false);
 	const [leftThirdHovered, setLeftThirdHovered] = useState(false);
 	const [chromeTooltipOpen, setChromeTooltipOpen] = useState(false);
-	/** Portaled tooltips leave the tray DOM — keep chrome up while a chrome tooltip is open. */
-	const chromeVisible = contentHovered || chromeTooltipOpen || pinned;
+	const chromeVisible = contentHovered || chromeTooltipOpen;
 
 	const { mutateAsync: next } = trpc.track.next.useMutation();
 	const { mutateAsync: prev } = trpc.track.prev.useMutation();
@@ -340,10 +299,29 @@ function TrayViewPage() {
 	const { mutateAsync: hideTrayView } = trpc.trayView.hide.useMutation();
 	const { mutateAsync: openMain } = trpc.trayView.openMain.useMutation();
 	const { mutateAsync: toggleTrayPin } = trpc.trayView.togglePinned.useMutation();
+	const { mutateAsync: setTrayQueueOpen } = trpc.trayView.setQueueOpen.useMutation();
 	const { mutateAsync: openSettings } = trpc.app.openSettings.useMutation();
 
 	useEffect(() => {
 		document.title = "YouTube Music - Tray";
+	}, []);
+
+	useLayoutEffect(() => {
+		const html = document.documentElement;
+		const body = document.body;
+		const app = document.getElementById("app");
+		html.style.overflow = "hidden";
+		body.style.overflow = "hidden";
+		if (app) app.style.overflow = "hidden";
+		html.scrollTop = 0;
+		body.scrollTop = 0;
+		window.scrollTo(0, 0);
+		if (queueOpen) void setTrayQueueOpen({ open: true });
+		return () => {
+			html.style.overflow = "";
+			body.style.overflow = "";
+			if (app) app.style.overflow = "";
+		};
 	}, []);
 
 	useEffect(() => {
@@ -366,6 +344,24 @@ function TrayViewPage() {
 			if (typeof state?.pinned === "boolean") utils.trayView.pinned.setData(undefined, state.pinned);
 		},
 	});
+
+	async function setQueueVisible(open: boolean) {
+		try {
+			if (!open) {
+				await setTrayQueueOpen({ open: false });
+				setQueueOpen(false);
+				window.scrollTo(0, 0);
+				document.documentElement.scrollTop = 0;
+				document.body.scrollTop = 0;
+				return;
+			}
+			setQueueOpen(true);
+			await setTrayQueueOpen({ open: true });
+			window.scrollTo(0, 0);
+		} catch {
+			setQueueOpen(!open);
+		}
+	}
 
 	const thumbnail = toAppThumbUrl(track?.meta?.thumbnail);
 	const playing = !!playState?.playing;
@@ -538,17 +534,17 @@ function TrayViewPage() {
 
 	return (
 		<div
-			className="absolute inset-0 flex overflow-hidden border border-border bg-background text-foreground shadow-sm"
+			className="absolute inset-0 flex min-h-0 flex-col overflow-hidden border border-border bg-background text-foreground shadow-sm"
 			onMouseEnter={(ev) => {
 				setContentHovered(true);
 				const { left, width } = ev.currentTarget.getBoundingClientRect();
 				if (width <= 0) return;
-				setLeftThirdHovered((ev.clientX - left) / width < 1 / 3);
+				setLeftThirdHovered((ev.clientX - left) / width < 1 / 10);
 			}}
 			onMouseMove={(ev) => {
 				const { left, width } = ev.currentTarget.getBoundingClientRect();
 				if (width <= 0) return;
-				const inLeftThird = (ev.clientX - left) / width < 1 / 3;
+				const inLeftThird = (ev.clientX - left) / width < 1 / 10;
 				setLeftThirdHovered((prev) => (prev === inLeftThird ? prev : inLeftThird));
 			}}
 			onMouseLeave={(ev) => {
@@ -558,76 +554,71 @@ function TrayViewPage() {
 			}}
 		>
 			<TrayBleedArt src={artSrc} accent={displayAccent} />
-			<TrayAccentPill accent={displayAccent} drag={pinned} expanded={pinned && leftThirdHovered} />
 
-			<div className="no-drag relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
-				<div className="relative z-10 flex min-h-0 flex-1">
-					{/* Player column */}
-					<div className="relative flex min-w-0 flex-1 flex-col px-3 pt-3 pb-2">
-						{/* Chrome: fade in while pointer over content (or chrome tooltip open) */}
-						<div
-							className={cn(
-								"no-drag absolute top-2 right-2 z-20 flex items-center gap-0.5 rounded-md bg-background/60 p-0.5 shadow-sm backdrop-blur-sm",
-								"transition-[opacity,transform] duration-200 ease-out",
-								chromeVisible
-									? "pointer-events-auto translate-y-0 opacity-100"
-									: "pointer-events-none -translate-y-0.5 opacity-0",
-							)}
-						>
-							<Tooltip onOpenChange={setChromeTooltipOpen}>
-								<TooltipTrigger
-									render={
-										<ChromeButton
-											aria-label={pinned ? "Unpin" : "Pin"}
-											aria-pressed={pinned}
-											data-active={pinned ? "true" : undefined}
-											onPointerDown={(ev) => {
-												if (ev.button !== 0) return;
-												ev.preventDefault();
-												ev.stopPropagation();
-												void handlePinToggle();
-											}}
-											className={cn("no-drag", pinned && "text-foreground bg-accent/20")}
-										>
-											<PinIcon className={cn(pinned && "fill-current")} />
-										</ChromeButton>
-									}
-								/>
-								<TooltipContent side="bottom">{pinned ? "Unpin" : "Pin"}</TooltipContent>
-							</Tooltip>
-							<Tooltip onOpenChange={setChromeTooltipOpen}>
-								<TooltipTrigger
-									render={
-										<ChromeButton aria-label="Back to app" onClick={() => void openMain()}>
-											<ArrowLeftIcon />
-										</ChromeButton>
-									}
-								/>
-								<TooltipContent side="bottom">Back to app</TooltipContent>
-							</Tooltip>
-							<Tooltip onOpenChange={setChromeTooltipOpen}>
-								<TooltipTrigger
-									render={
-										<ChromeButton aria-label="Settings" onClick={() => void handleSettings()}>
-											<SettingsIcon />
-										</ChromeButton>
-									}
-								/>
-								<TooltipContent side="bottom">Settings</TooltipContent>
-							</Tooltip>
-						</div>
+			<div className="relative z-10 flex h-[10.5rem] min-h-0 w-full shrink-0 overflow-hidden">
+				<TrayAccentPill accent={displayAccent} drag={pinned} expanded={pinned && leftThirdHovered} />
+				<div className="no-drag relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+					<div
+						className={cn(
+							"no-drag absolute top-2 right-2 z-20 flex items-center gap-0.5 rounded-md bg-background/60 p-0.5 shadow-sm backdrop-blur-sm",
+							"transition-[opacity,transform] duration-200 ease-out",
+							chromeVisible
+								? "pointer-events-auto translate-y-0 opacity-100"
+								: "pointer-events-none -translate-y-0.5 opacity-0",
+						)}
+					>
+						<Tooltip onOpenChange={setChromeTooltipOpen}>
+							<TooltipTrigger
+								render={
+									<ChromeButton
+										aria-label={pinned ? "Unpin" : "Pin"}
+										aria-pressed={pinned}
+										onPointerDown={(ev) => {
+											if (ev.button !== 0) return;
+											ev.preventDefault();
+											ev.stopPropagation();
+											void handlePinToggle();
+										}}
+										className={cn("no-drag", pinned && "text-foreground bg-accent/20")}
+									>
+										<PinIcon className={cn(pinned && "fill-current")} />
+									</ChromeButton>
+								}
+							/>
+							<TooltipContent side="bottom">{pinned ? "Unpin" : "Pin"}</TooltipContent>
+						</Tooltip>
+						<Tooltip onOpenChange={setChromeTooltipOpen}>
+							<TooltipTrigger
+								render={
+									<ChromeButton aria-label="Back to app" onClick={() => void openMain()}>
+										<ArrowLeftIcon />
+									</ChromeButton>
+								}
+							/>
+							<TooltipContent side="bottom">Back to app</TooltipContent>
+						</Tooltip>
+						<Tooltip onOpenChange={setChromeTooltipOpen}>
+							<TooltipTrigger
+								render={
+									<ChromeButton aria-label="Settings" onClick={() => void handleSettings()}>
+										<SettingsIcon />
+									</ChromeButton>
+								}
+							/>
+							<TooltipContent side="bottom">Settings</TooltipContent>
+						</Tooltip>
+					</div>
 
+					<div className="relative flex min-h-0 min-w-0 flex-1 flex-col justify-between gap-1 overflow-hidden px-3 pt-3 pb-2">
 						<div className="flex items-start gap-2.5">
 							<TrayCoverArt src={artSrc} />
-
 							<div className="min-w-0 flex-1 pt-0.5">
 								<p className="truncate text-base leading-tight font-semibold">{title}</p>
 								{artist ? <p className="mt-0.5 truncate text-sm text-muted-foreground">{artist}</p> : null}
 							</div>
 						</div>
 
-						{/* Progress + duration */}
-						<div className="mt-3 flex items-center gap-2">
+						<div className="flex items-center gap-2">
 							<span
 								ref={seekTimeRef}
 								className="w-9 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground/40"
@@ -684,8 +675,7 @@ function TrayViewPage() {
 							<span className="w-9 shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">{time?.end ?? "0:00"}</span>
 						</div>
 
-						{/* Transport — segmented dock */}
-						<div className="mt-auto flex justify-center pt-2">
+						<div className="flex shrink-0 justify-center pt-1">
 							<div className="flex items-center gap-0.5 rounded-full border border-border/50 bg-background/50 p-1 shadow-sm backdrop-blur-md">
 								{hasLike ? (
 									<PlayerButton
@@ -739,76 +729,28 @@ function TrayViewPage() {
 										<LikeIcon className="rotate-180" />
 									</PlayerButton>
 								) : null}
+								<span className="mx-0.5 h-4 w-px shrink-0 bg-foreground/20" aria-hidden />
+								<TrayVolumeControl accent={displayAccent} disabled={trackBusy} />
+								<PlayerButton
+									active={queueOpen}
+                  style={
+                    queueOpen && displayAccent
+                      ? { color: displayAccent }
+                      : undefined
+                  }
+									aria-label={queueOpen ? "Close queue" : "Queue"}
+									onClick={() => void setQueueVisible(!queueOpen)}
+								>
+									<ListMusicIcon />
+								</PlayerButton>
 							</div>
 						</div>
 					</div>
-
-					{/* Control center column */}
-					<div className="relative z-10 flex w-12 shrink-0 flex-col items-center justify-center gap-1.5 border-l border-border/60 bg-background/40 px-1.5 py-2 backdrop-blur-sm">
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<ControlToggle
-										active={lastFmEnabled}
-										busy={lastFmBusy || lastFMLoading}
-										aria-label={lastFmEnabled ? "Disable Last.fm" : "Enable Last.fm"}
-										onClick={() => void toggleLastFM(!lastFmEnabled)}
-									>
-										<LastFMIcon
-											className={cn(
-												lastFmEnabled && lastFM.error && "text-red-500",
-												lastFmEnabled && lastFM.connected && !lastFM.error && "text-green-500",
-											)}
-										/>
-									</ControlToggle>
-								}
-							/>
-							<TooltipContent side="left">
-								{lastFmEnabled ? (lastFM.name ? `Last.fm · ${lastFM.name}` : "Last.fm on") : "Last.fm off"}
-							</TooltipContent>
-						</Tooltip>
-
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<ControlToggle
-										active={discordEnabled}
-										busy={discordLoading}
-										aria-label={discordEnabled ? "Disable Discord" : "Enable Discord"}
-										onClick={toggleDiscord}
-									>
-										<DiscordIcon className={cn(discordEnabled && discordError && "text-red-500")} />
-									</ControlToggle>
-								}
-							/>
-							<TooltipContent side="left">
-								{discordError && discordEnabled
-									? `Discord · ${discordError}`
-									: discordEnabled
-										? discordConnected
-											? "Discord on"
-											: "Discord connecting…"
-										: "Discord off"}
-							</TooltipContent>
-						</Tooltip>
-
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<ControlToggle
-										active={apiEnabled}
-										aria-label={apiEnabled ? "Disable Local API" : "Enable Local API"}
-										onClick={() => setApiEnabled((prev) => !prev)}
-									>
-										<ApiIcon />
-									</ControlToggle>
-								}
-							/>
-							<TooltipContent side="left">{apiEnabled ? "Local API on" : "Local API off"}</TooltipContent>
-						</Tooltip>
-					</div>
 				</div>
 			</div>
+			{queueOpen ? (
+				<TrayQueueList currentVideoId={track?.video?.videoId} accent={displayAccent} playing={playing} />
+			) : null}
 		</div>
 	);
 }

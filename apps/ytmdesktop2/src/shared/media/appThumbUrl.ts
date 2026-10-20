@@ -4,10 +4,18 @@ export const APP_THUMB_HOST = "i";
 
 const CACHABLE_HOST = /(^|\.)(googleusercontent\.com|ggpht\.com|ytimg\.com)$/i;
 
+/** Protocol-relative / http CDN thumbs -> https. */
+export function normalizeThumbUrl(url: string): string {
+	const trimmed = url.trim();
+	if (trimmed.startsWith("//")) return `https:${trimmed}`;
+	if (trimmed.startsWith("http://")) return `https://${trimmed.slice("http://".length)}`;
+	return trimmed;
+}
+
 /** Remote CDN thumbs safe to pull through main-process cache. */
 export function isCachableThumbUrl(url: string): boolean {
 	try {
-		const parsed = new URL(url);
+		const parsed = new URL(normalizeThumbUrl(url));
 		return parsed.protocol === "https:" && CACHABLE_HOST.test(parsed.hostname);
 	} catch {
 		return false;
@@ -51,8 +59,9 @@ function fromBase64Url(value: string): string {
 export function toAppThumbUrl(url: string | null | undefined): string | null {
 	if (!url) return null;
 	if (isAppThumbUrl(url)) return url;
-	if (!isCachableThumbUrl(url)) return url;
-	return `${APP_THUMB_SCHEME}://${APP_THUMB_HOST}/${toBase64Url(url)}`;
+	const remote = normalizeThumbUrl(url);
+	if (!isCachableThumbUrl(remote)) return null;
+	return `${APP_THUMB_SCHEME}://${APP_THUMB_HOST}/${toBase64Url(remote)}`;
 }
 
 /** Extract remote URL from a `ytmd-thumb` request URL. */
