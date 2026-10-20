@@ -69,6 +69,22 @@
   html {
     @apply font-sans;
 	}
+  
+	html,
+	body {
+		@apply select-none;
+	}
+	input,
+	textarea,
+	[contenteditable="true"] {
+		@apply select-text;
+	}
+	img,
+	video,
+	a {
+		@apply select-none;
+		-webkit-user-drag: none;
+	}
 }
 
 .drag {
