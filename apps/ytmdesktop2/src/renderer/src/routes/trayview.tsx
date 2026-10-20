@@ -285,7 +285,7 @@ function TrayViewPage() {
 	const { data: pinned = false } = trpc.trayView.pinned.useQuery();
 	const [queueOpen, setQueueOpen] = useLocalState("ytmd.tray.queueOpen", false);
 	const [contentHovered, setContentHovered] = useState(false);
-	const [leftThirdHovered, setLeftThirdHovered] = useState(false);
+	const [leftThirdHovered, setHoverThreshold] = useState(false);
 	const [chromeTooltipOpen, setChromeTooltipOpen] = useState(false);
 	const chromeVisible = contentHovered || chromeTooltipOpen;
 
@@ -327,9 +327,9 @@ function TrayViewPage() {
 	useEffect(() => {
 		const collapse = (ev: { clientX: number; clientY: number }) => {
 			if (pointerInsideWindow(ev)) return;
-			setLeftThirdHovered(false);
+			setHoverThreshold(false);
 		};
-		const onBlur = () => setLeftThirdHovered(false);
+		const onBlur = () => setHoverThreshold(false);
 		const root = document.documentElement;
 		root.addEventListener("mouseleave", collapse);
 		window.addEventListener("blur", onBlur);
@@ -539,18 +539,18 @@ function TrayViewPage() {
 				setContentHovered(true);
 				const { left, width } = ev.currentTarget.getBoundingClientRect();
 				if (width <= 0) return;
-				setLeftThirdHovered((ev.clientX - left) / width < 1 / 10);
+				setHoverThreshold((ev.clientX - left) / width < 1 / 10);
 			}}
 			onMouseMove={(ev) => {
 				const { left, width } = ev.currentTarget.getBoundingClientRect();
 				if (width <= 0) return;
-				const inLeftThird = (ev.clientX - left) / width < 1 / 10;
-				setLeftThirdHovered((prev) => (prev === inLeftThird ? prev : inLeftThird));
+				const isInThreshold = (ev.clientX - left) / width < 1 / 10;
+				setHoverThreshold((prev) => (prev === isInThreshold ? prev : isInThreshold));
 			}}
 			onMouseLeave={(ev) => {
 				setContentHovered(false);
 				if (pointerInsideWindow(ev)) return;
-				setLeftThirdHovered(false);
+				setHoverThreshold(false);
 			}}
 		>
 			<TrayBleedArt src={artSrc} accent={displayAccent} />

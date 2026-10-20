@@ -136,7 +136,7 @@ export function TrayQueueList({ currentVideoId, counterpartVideoId, accent, play
 	return (
 		<div className="relative z-10 flex min-h-0 w-full flex-1 flex-col">
 			<div className="flex min-h-0 flex-1 flex-col overflow-hidden border-border border-t bg-background/40 backdrop-blur-sm">
-				<ScrollArea className="min-h-0 flex-1" hideOnBlur="window">
+				<ScrollArea className="min-h-0 flex-1" hideOnBlur="scroll-area">
 					{initialLoad ? (
 						<ul className="flex flex-col gap-0.5 p-2" aria-busy="true" aria-label="Loading queue">
 							<QueueItemSkeletons count={6} />
