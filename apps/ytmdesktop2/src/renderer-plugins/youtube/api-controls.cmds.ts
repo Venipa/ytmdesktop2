@@ -299,7 +299,7 @@ export const trackControls = {
 			typeof data?.index === "number" && Number.isFinite(data.index) ? Math.floor(data.index) : -1;
 		const wantId = data?.videoId?.trim();
 		if (wantId) {
-			const found = rawItems.findIndex((item, i) => summarizeQueueItem(item, i).videoId === wantId);
+			const found = rawItems.findIndex((item, i) => queueItemHitsId(summarizeQueueItem(item, i), wantId));
 			if (found >= 0) index = found;
 		}
 		if (index < 0) throw new Error("queuePlay failed - index required");
@@ -412,30 +412,59 @@ function formatYtmAjaxError(err: unknown): string {
 export type QueueListItem = {
 	index: number;
 	videoId?: string;
+	/** Official audio (ATV) id when it differs from `videoId`. */
+	songId?: string;
 	title?: string;
 	artist?: string;
 	thumbnail?: string;
 	durationSec?: number;
 };
 
-function queueItemRenderer(item: unknown): Record<string, any> | null {
+function rendererVideoId(renderer: Record<string, any> | null | undefined): string | undefined {
+	const id = renderer?.videoId || renderer?.navigationEndpoint?.watchEndpoint?.videoId;
+	return typeof id === "string" && id ? id : undefined;
+}
+
+function rendererIsAtv(renderer: Record<string, any> | null | undefined): boolean {
+	const type =
+		renderer?.navigationEndpoint?.watchEndpoint?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig
+			?.musicVideoType;
+	return type === "MUSIC_VIDEO_TYPE_ATV";
+}
+
+function queueRenderers(item: unknown): {
+	primary: Record<string, any> | null;
+	counterpart: Record<string, any> | null;
+} {
 	const root = item as Record<string, any> | null;
-	if (!root) return null;
-	return (
+	if (!root) return { primary: null, counterpart: null };
+	const wrapper = root.playlistPanelVideoWrapperRenderer;
+	if (wrapper) {
+		return {
+			primary: wrapper.primaryRenderer?.playlistPanelVideoRenderer ?? null,
+			counterpart: wrapper.counterpart?.[0]?.counterpartRenderer?.playlistPanelVideoRenderer ?? null,
+		};
+	}
+	const single =
 		root.playlistPanelVideoRenderer ??
-		root.playlistPanelVideoWrapperRenderer?.primaryRenderer?.playlistPanelVideoRenderer ??
-		root.playlistPanelVideoWrapperRenderer?.counterpart?.[0]?.counterpartRenderer?.playlistPanelVideoRenderer ??
-		(root.videoId || root.title || root.navigationEndpoint ? root : null)
-	);
+		(root.videoId || root.title || root.navigationEndpoint ? root : null);
+	return { primary: single, counterpart: null };
+}
+
+function queueItemRenderer(item: unknown): Record<string, any> | null {
+	const { primary, counterpart } = queueRenderers(item);
+	return primary ?? counterpart;
+}
+
+function queueItemHitsId(row: QueueListItem, id: string): boolean {
+	return row.videoId === id || row.songId === id;
 }
 
 function queueItemEndpoint(item: unknown): Record<string, unknown> | null {
 	const renderer = queueItemRenderer(item);
 	const endpoint = renderer?.navigationEndpoint;
 	if (endpoint && typeof endpoint === "object") return endpoint as Record<string, unknown>;
-	const videoId =
-		(typeof renderer?.videoId === "string" && renderer.videoId) ||
-		renderer?.navigationEndpoint?.watchEndpoint?.videoId;
+	const videoId = rendererVideoId(renderer);
 	if (!videoId) return null;
 	return {
 		watchEndpoint: {
@@ -490,11 +519,11 @@ function lastThumbUrl(node: unknown): string | undefined {
 }
 
 export function summarizeQueueItem(item: unknown, index: number): QueueListItem {
-	const renderer = queueItemRenderer(item);
-	const videoId =
-		(typeof renderer?.videoId === "string" && renderer.videoId) ||
-		renderer?.navigationEndpoint?.watchEndpoint?.videoId ||
-		undefined;
+	const { primary, counterpart } = queueRenderers(item);
+	const renderer = primary ?? counterpart;
+	const videoId = rendererVideoId(primary) ?? rendererVideoId(counterpart);
+	const counterpartId = rendererVideoId(counterpart);
+	const songId = rendererIsAtv(counterpart) && counterpartId !== videoId ? counterpartId : undefined;
 	const title =
 		renderer?.title?.runs?.[0]?.text ||
 		renderer?.title?.simpleText ||
@@ -510,6 +539,7 @@ export function summarizeQueueItem(item: unknown, index: number): QueueListItem 
 	return {
 		index,
 		...(videoId ? { videoId: String(videoId) } : {}),
+		...(songId ? { songId } : {}),
 		...(title ? { title: String(title) } : {}),
 		...(artist ? { artist: String(artist) } : {}),
 		...(thumbnail ? { thumbnail: String(thumbnail) } : {}),

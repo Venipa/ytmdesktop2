@@ -749,7 +749,12 @@ function TrayViewPage() {
 				</div>
 			</div>
 			{queueOpen ? (
-				<TrayQueueList currentVideoId={track?.video?.videoId} accent={displayAccent} playing={playing} />
+				<TrayQueueList
+					currentVideoId={track?.video?.videoId}
+					counterpartVideoId={track?.meta?.counterpartVideoId}
+					accent={displayAccent}
+					playing={playing}
+				/>
 			) : null}
 		</div>
 	);

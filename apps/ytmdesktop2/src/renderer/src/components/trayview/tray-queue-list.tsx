@@ -54,11 +54,12 @@ function QueueItemSkeletons({ count }: { count: number }) {
 
 type TrayQueueListProps = {
 	currentVideoId?: string;
+	counterpartVideoId?: string | null;
 	accent: string | null;
 	playing: boolean;
 };
 
-export function TrayQueueList({ currentVideoId, accent, playing }: TrayQueueListProps) {
+export function TrayQueueList({ currentVideoId, counterpartVideoId, accent, playing }: TrayQueueListProps) {
 	const utils = trpc.useUtils();
 	const { data, refetch, isFetching, isError, isLoading } = trpc.navigation.queueList.useQuery(undefined, {
 		refetchOnWindowFocus: false,
@@ -97,7 +98,7 @@ export function TrayQueueList({ currentVideoId, accent, playing }: TrayQueueList
 		const viewRect = viewport.getBoundingClientRect();
 		if (rowRect.top < viewRect.top) viewport.scrollTop -= viewRect.top - rowRect.top;
 		else if (rowRect.bottom > viewRect.bottom) viewport.scrollTop += rowRect.bottom - viewRect.bottom;
-	}, [currentVideoId, playingIndex, items.length]);
+	}, [currentVideoId, counterpartVideoId, playingIndex, items.length]);
 
 	useEffect(() => {
 		const el = sentinelRef.current;
@@ -147,9 +148,10 @@ export function TrayQueueList({ currentVideoId, accent, playing }: TrayQueueList
 					) : (
 						<ul className="flex flex-col gap-0.5 p-2">
 							{items.map((item) => {
+								const hits = (id?: string | null) => !!id && (id === item.videoId || id === item.songId);
 								const current =
 									playingIndex === item.index ||
-									(playingIndex === null && !!item.videoId && item.videoId === currentVideoId);
+									(playingIndex === null && (hits(currentVideoId) || hits(counterpartVideoId)));
 								const thumb = toAppThumbUrl(item.thumbnail);
 								return (
 									<li key={`${item.index}-${item.videoId ?? "row"}`}>

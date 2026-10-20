@@ -36,6 +36,47 @@ describe("summarizeQueueItem", () => {
 		expect(summarizeQueueItem(item, 0).thumbnail).toBe("//yt3.ggpht.com/a.jpg");
 	});
 
+	it("sets songId from ATV counterpart when primary is a music video", () => {
+		const item = {
+			playlistPanelVideoWrapperRenderer: {
+				primaryRenderer: {
+					playlistPanelVideoRenderer: {
+						videoId: "videovideov",
+						navigationEndpoint: {
+							watchEndpoint: {
+								videoId: "videovideov",
+								watchEndpointMusicSupportedConfigs: {
+									watchEndpointMusicConfig: { musicVideoType: "MUSIC_VIDEO_TYPE_OMV" },
+								},
+							},
+						},
+					},
+				},
+				counterpart: [
+					{
+						counterpartRenderer: {
+							playlistPanelVideoRenderer: {
+								videoId: "songsongsong",
+								navigationEndpoint: {
+									watchEndpoint: {
+										videoId: "songsongsong",
+										watchEndpointMusicSupportedConfigs: {
+											watchEndpointMusicConfig: { musicVideoType: "MUSIC_VIDEO_TYPE_ATV" },
+										},
+									},
+								},
+							},
+						},
+					},
+				],
+			},
+		};
+		expect(summarizeQueueItem(item, 0)).toMatchObject({
+			videoId: "videovideov",
+			songId: "songsongsong",
+		});
+	});
+
 	it("queueListSignature changes when first/last/context change", () => {
 		const a = { playlistPanelVideoRenderer: { videoId: "aaaaaaaaaaa" } };
 		const b = { playlistPanelVideoRenderer: { videoId: "bbbbbbbbbbb" } };

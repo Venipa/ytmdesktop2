@@ -184,7 +184,7 @@ export default class NavigationProvider extends BaseProvider implements AfterIni
 
 	/** Current YTM queue snapshot (ids/titles when store hooked). */
 	async queueList(): Promise<{
-		items: { index: number; videoId?: string; title?: string; artist?: string; thumbnail?: string; durationSec?: number }[];
+		items: { index: number; videoId?: string; songId?: string; title?: string; artist?: string; thumbnail?: string; durationSec?: number }[];
 		count: number;
 		storeHooked?: boolean;
 	}> {
