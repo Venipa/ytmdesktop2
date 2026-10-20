@@ -1,16 +1,70 @@
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area"
-import * as React from "react"
+import { useSyncExternalStore } from "react"
 
 import { cn } from "@/lib/utils"
+
+export type ScrollAreaHideOnBlur = "window" | "scroll-area"
+
+type ScrollAreaProps = ScrollAreaPrimitive.Root.Props & {
+	/** Hide the custom scrollbar while this target is blurred. */
+	hideOnBlur?: ScrollAreaHideOnBlur
+}
+
+let windowFocused = true
+const windowFocusListeners = new Set<() => void>()
+
+function emitWindowFocus() {
+	const next = document.hasFocus()
+	if (next === windowFocused) return
+	windowFocused = next
+	windowFocusListeners.forEach((listener) => listener())
+}
+
+function subscribeWindowFocus(onStoreChange: () => void) {
+	if (windowFocusListeners.size === 0) {
+		windowFocused = document.hasFocus()
+		window.addEventListener("focus", emitWindowFocus)
+		window.addEventListener("blur", emitWindowFocus)
+	}
+	windowFocusListeners.add(onStoreChange)
+	return () => {
+		windowFocusListeners.delete(onStoreChange)
+		if (windowFocusListeners.size === 0) {
+			window.removeEventListener("focus", emitWindowFocus)
+			window.removeEventListener("blur", emitWindowFocus)
+		}
+	}
+}
+
+function subscribeNoop() {
+	return () => {}
+}
+
+function getWindowFocused() {
+	return windowFocused
+}
+
+function getTrue() {
+	return true
+}
+
+function useWindowFocused(enabled: boolean) {
+	return useSyncExternalStore(enabled ? subscribeWindowFocus : subscribeNoop, enabled ? getWindowFocused : getTrue, getTrue)
+}
 
 function ScrollArea({
   className,
   children,
+  hideOnBlur = "scroll-area",
   ...props
-}: ScrollAreaPrimitive.Root.Props) {
+}: ScrollAreaProps) {
+  const windowFocused = useWindowFocused(hideOnBlur === "window")
+
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
+      data-hide-on-blur={hideOnBlur}
+      data-window-blurred={hideOnBlur === "window" && !windowFocused ? "" : undefined}
       className={cn("relative", className)}
       {...props}
     >

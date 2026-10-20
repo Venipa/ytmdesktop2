@@ -160,13 +160,20 @@ span,
 	}
 }
 
+[data-slot="scroll-area"][data-hide-on-blur="scroll-area"]:not(:hover):not(:focus-within) [data-slot="scroll-area-scrollbar"],
+[data-slot="scroll-area"][data-hide-on-blur="window"][data-window-blurred] [data-slot="scroll-area-scrollbar"] {
+	opacity: 0;
+	pointer-events: none;
+}
+
 [data-slot="scroll-area-scrollbar"] {
 	box-sizing: border-box;
 	background: transparent;
 	transition:
 		width 0.15s ease,
 		height 0.15s ease,
-		padding 0.15s ease;
+		padding 0.15s ease,
+		opacity 0.15s ease;
 }
 
 [data-slot="scroll-area-scrollbar"][data-orientation="vertical"] {
