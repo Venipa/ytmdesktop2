@@ -81,6 +81,7 @@
 	}
 	img,
 	video,
+  button,
 	a {
 		@apply select-none;
 		-webkit-user-drag: none;
