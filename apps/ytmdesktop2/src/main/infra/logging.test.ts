@@ -1,11 +1,12 @@
-import { resetSync } from "@logtape/logtape";
-import { logger } from "@shared/utils/console";
-import { app } from "electron";
+import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { resetSync } from "@logtape/logtape";
+import { logger } from "@shared/utils/console";
+import { app } from "electron";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { attachAppLogging, getAppLogFile } from "./logging";
+import { attachAppLogging, attachStdioErrorHandlers, getAppLogFile } from "./logging";
 
 vi.mock("electron", () => ({
 	app: { getPath: vi.fn() },
@@ -40,5 +41,33 @@ describe("attachAppLogging file sink", () => {
 		const body = fs.readFileSync(logFile, "utf8");
 		expect(body).toContain(marker);
 		expect(body).not.toContain("should-not-hit-file");
+	});
+});
+
+
+describe("attachStdioErrorHandlers", () => {
+	it("ignores EPIPE from a closed stdio pipe instead of crashing", () => {
+		const stream = new EventEmitter();
+		attachStdioErrorHandlers([stream as never]);
+		const error = Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+
+		expect(() => stream.emit("error", error)).not.toThrow();
+	});
+
+	it("ignores streams destroyed during teardown", () => {
+		const stream = new EventEmitter();
+		attachStdioErrorHandlers([stream as never]);
+		const error = Object.assign(new Error("destroyed"), { code: "ERR_STREAM_DESTROYED" });
+
+		expect(() => stream.emit("error", error)).not.toThrow();
+	});
+
+	it("still surfaces unexpected stream errors", () => {
+		const stream = new EventEmitter();
+		attachStdioErrorHandlers([stream as never]);
+
+		expect(() => stream.emit("error", new Error("unexpected stream failure"))).toThrow(
+			"unexpected stream failure",
+		);
 	});
 });
