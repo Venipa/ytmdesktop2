@@ -34,6 +34,13 @@ function PlayerGeneralSettingsPage() {
 							Skip disliked songs
 						</SettingsCheckbox>
 						<SettingsCheckbox
+							configKey="player.queueContinue"
+							defaultValue={true}
+							description="Load the next batch of a long playlist or Liked Songs before Up Next runs out."
+						>
+							Continue long queues
+						</SettingsCheckbox>
+						<SettingsCheckbox
 							configKey="volumeRatio.enabled"
 							description="Use an exponential volume curve for finer control than the default linear slider."
 						>

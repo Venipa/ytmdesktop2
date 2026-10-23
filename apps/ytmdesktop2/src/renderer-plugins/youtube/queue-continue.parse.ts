@@ -42,7 +42,8 @@ function continuationFromPanel(panel: Record<string, unknown>): string {
 
 /** Contents + next continuation from a `/next` watch-next payload. */
 export function parseNextPanel(res: unknown): ParsedQueuePanel | null {
-	const panel = findKey(res, new Set(["playlistPanelContinuation", "playlistPanelRenderer"]), FIND_DEPTH);
+	const root = isRecord(res) && res.data !== undefined ? res.data : res;
+	const panel = findKey(root, new Set(["playlistPanelContinuation", "playlistPanelRenderer"]), FIND_DEPTH);
 	if (!isRecord(panel) || !Array.isArray(panel.contents) || !panel.contents.length) return null;
 	return { items: panel.contents, continuation: continuationFromPanel(panel) };
 }
@@ -52,12 +53,33 @@ export function remainingAfterIndex(itemCount: number, currentIndex: number): nu
 	return itemCount - currentIndex - 1;
 }
 
-export function queueItemVideoId(item: unknown): string | null {
-	if (!isRecord(item)) return null;
-	const renderer = isRecord(item.playlistPanelVideoRenderer)
-		? item.playlistPanelVideoRenderer
-		: item;
+function rendererVideoId(renderer: unknown): string | null {
+	if (!isRecord(renderer)) return null;
 	if (typeof renderer.videoId === "string" && renderer.videoId) return renderer.videoId;
 	const watch = isRecord(renderer.navigationEndpoint) ? renderer.navigationEndpoint.watchEndpoint : undefined;
 	return isRecord(watch) && typeof watch.videoId === "string" ? watch.videoId : null;
+}
+
+export function queueItemVideoId(item: unknown): string | null {
+	if (!isRecord(item)) return null;
+	const wrapper = isRecord(item.playlistPanelVideoWrapperRenderer) ? item.playlistPanelVideoWrapperRenderer : null;
+	const primary = wrapper ? rendererVideoId(isRecord(wrapper.primaryRenderer) ? wrapper.primaryRenderer.playlistPanelVideoRenderer : undefined) : null;
+	if (primary) return primary;
+	return rendererVideoId(item.playlistPanelVideoRenderer) ?? rendererVideoId(item);
+}
+
+export function queueItemHitsVideoId(item: unknown, videoId: string): boolean {
+	if (!videoId || !isRecord(item)) return false;
+	const wrapper = isRecord(item.playlistPanelVideoWrapperRenderer) ? item.playlistPanelVideoWrapperRenderer : null;
+	if (wrapper) {
+		const primary = rendererVideoId(isRecord(wrapper.primaryRenderer) ? wrapper.primaryRenderer.playlistPanelVideoRenderer : undefined);
+		const counterparts = Array.isArray(wrapper.counterpart) ? wrapper.counterpart : [];
+		const counterpart = rendererVideoId(
+			isRecord(counterparts[0]) && isRecord(counterparts[0].counterpartRenderer)
+				? counterparts[0].counterpartRenderer.playlistPanelVideoRenderer
+				: undefined,
+		);
+		if (primary === videoId || counterpart === videoId) return true;
+	}
+	return queueItemVideoId(item) === videoId;
 }

@@ -64,6 +64,8 @@ const defaultSettings = {
 	},
 	player: {
 		skipDisliked: false,
+		/** Prefetch the next YTM queue batch before the loaded list ends. */
+		queueContinue: true,
 		/** `ask` = confirm dialog; `play` = open watch immediately */
 		deepLinkOpen: "ask" as "ask" | "play",
 		/** Rewrite YTM “Copy link” clipboard URLs to `ytmd://` */

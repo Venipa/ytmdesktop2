@@ -57,15 +57,44 @@ export function resolveQueueHost(): YtmQueueHost | null {
 	return document.querySelector("#queue") as YtmQueueHost | null;
 }
 
-export function readQueueContinuation(): string {
-	const token = resolveQueueHost()?.queue?.continuation;
+function continuationOf(value: unknown): string {
+	if (!value || typeof value !== "object") return "";
+	const token = (value as { continuation?: unknown }).continuation;
 	return typeof token === "string" ? token : "";
 }
 
+export function readQueueContinuation(): string {
+	const host = resolveQueueHost() as YtmQueueHost & { continuation?: string } | null;
+	return continuationOf(host?.queue) || continuationOf(host);
+}
+
 export function writeQueueContinuation(token: string): void {
-	const queue = resolveQueueHost()?.queue;
-	if (!queue) return;
-	queue.continuation = token;
+	const host = resolveQueueHost() as (YtmQueueHost & { continuation?: string; dispatch?: (action: unknown) => void }) | null;
+	if (!host) return;
+	if (host.queue) host.queue.continuation = token;
+	host.continuation = token;
+}
+
+/** Prefer the Polymer `#queue` dispatcher (same path as a manual last-item click). */
+export function appendQueueItems(items: unknown[]): void {
+	const store = resolveYtmStore();
+	const index = store?.getState()?.queue?.items?.length ?? 0;
+	const host = resolveQueueHost() as { dispatch?: (action: unknown) => void } | null;
+	if (typeof host?.dispatch === "function") {
+		const queue = store?.getState()?.queue;
+		host.dispatch({
+			type: "ADD_ITEMS",
+			payload: {
+				nextQueueItemId: queue?.nextQueueItemId,
+				index,
+				items,
+				shuffleEnabled: queue?.shuffleEnabled ?? false,
+				shouldAssignIds: true,
+			},
+		});
+		return;
+	}
+	if (store) dispatchQueueAddItems(store, items, index);
 }
 
 function readQueueHostStore(): YtmStoreLike | null {

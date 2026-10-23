@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseNextPanel, queueItemVideoId, remainingAfterIndex } from "./queue-continue.parse";
+import { parseNextPanel, queueItemHitsVideoId, queueItemVideoId, remainingAfterIndex } from "./queue-continue.parse";
 
 describe("parseNextPanel", () => {
 	it("reads contents and nextContinuationData from nested playlistPanelContinuation", () => {
@@ -31,7 +31,19 @@ describe("parseNextPanel", () => {
 			},
 		};
 		expect(parseNextPanel(res)).toEqual({ items: [item], continuation: "TOKEN2" });
+		expect(parseNextPanel({ data: res })).toEqual({ items: [item], continuation: "TOKEN2" });
 		expect(queueItemVideoId(item)).toBe("abcdefghijk");
+		expect(
+			queueItemHitsVideoId(
+				{
+					playlistPanelVideoWrapperRenderer: {
+						primaryRenderer: { playlistPanelVideoRenderer: { videoId: "mvxxxxxxxxxxx" } },
+						counterpart: [{ counterpartRenderer: { playlistPanelVideoRenderer: { videoId: "abcdefghijk" } } }],
+					},
+				},
+				"abcdefghijk",
+			),
+		).toBe(true);
 	});
 });
 
