@@ -24,7 +24,17 @@ export type YtmStoreLike = {
 
 export type YtmAppNetwork = {
 	networkManager?: {
-		fetch: (path: string, body: Record<string, unknown>) => Promise<{ queueDatas?: { content?: unknown }[] }>;
+		fetch: (
+			path: string,
+			body: Record<string, unknown>,
+		) => Promise<{ queueDatas?: { content?: unknown }[]; [key: string]: unknown }>;
+	};
+};
+
+export type YtmQueueHost = {
+	queue?: {
+		continuation?: string;
+		store?: { store?: unknown };
 	};
 };
 
@@ -43,9 +53,23 @@ export function cacheYtmStore(store: YtmStoreLike): void {
 	win.__YTMD_HOOK__ = { ...win.__YTMD_HOOK__, ytmStore: store };
 }
 
+export function resolveQueueHost(): YtmQueueHost | null {
+	return document.querySelector("#queue") as YtmQueueHost | null;
+}
+
+export function readQueueContinuation(): string {
+	const token = resolveQueueHost()?.queue?.continuation;
+	return typeof token === "string" ? token : "";
+}
+
+export function writeQueueContinuation(token: string): void {
+	const queue = resolveQueueHost()?.queue;
+	if (!queue) return;
+	queue.continuation = token;
+}
+
 function readQueueHostStore(): YtmStoreLike | null {
-	const queueHost = document.querySelector("#queue") as { queue?: { store?: { store?: unknown } } } | null;
-	const store = queueHost?.queue?.store?.store;
+	const store = resolveQueueHost()?.queue?.store?.store;
 	return isYtmStore(store) ? store : null;
 }
 
