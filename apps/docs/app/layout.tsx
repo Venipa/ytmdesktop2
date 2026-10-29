@@ -1,7 +1,7 @@
 import { Provider } from "@/components/provider";
 import { assetPath } from "@/lib/paths";
 import { appDescription, appName, appTagline, siteUrl } from "@/lib/shared";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./global.css";
@@ -47,9 +47,19 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  themeColor: "#0b0a0c",
+};
+
 export default function Layout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={inter.className} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`dark ${inter.className}`}
+      style={{ colorScheme: "dark" }}
+      suppressHydrationWarning
+    >
       <head>
         <Script
           src="https://rybbit.venipa.net/api/script.js"

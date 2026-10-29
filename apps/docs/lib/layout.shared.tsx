@@ -9,6 +9,7 @@ export function baseOptions(): BaseLayoutProps {
   const repositoryUrl = getRepositoryUrl();
 
   return {
+    themeSwitch: { enabled: false },
     nav: {
       title: <Logo />,
       transparentMode: 'top',

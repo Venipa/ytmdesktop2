@@ -2,7 +2,6 @@
 
 import { buttonVariants } from "fumadocs-ui/components/ui/button";
 import { FullSearchTrigger, SearchTrigger } from "fumadocs-ui/layouts/shared/slots/search-trigger";
-import { ThemeSwitch } from "fumadocs-ui/layouts/shared/slots/theme-switch";
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
 import { DiscordIcon, GitHubIcon } from "@/components/icons";
@@ -101,7 +100,6 @@ export function HomeNav({
             )}
             hideIfDisabled
           />
-          <ThemeSwitch className="hidden sm:flex" />
           {discordUrl ? (
             <a
               href={discordUrl}
