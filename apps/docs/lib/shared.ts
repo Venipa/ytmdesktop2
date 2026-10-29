@@ -5,8 +5,8 @@ function readEnv(name: string): string | undefined {
 
 function parseRepoUrl(url: string): { owner: string; name: string } | null {
   try {
-    const pathname = new URL(url).pathname.replace(/^\/+|\/+$/g, '');
-    const [owner, name] = pathname.split('/');
+    const pathname = new URL(url).pathname.replace(/^\/+|\/+$/g, "");
+    const [owner, name] = pathname.split("/");
     if (!owner || !name) return null;
     return { owner, name };
   } catch {
@@ -15,51 +15,48 @@ function parseRepoUrl(url: string): { owner: string; name: string } | null {
 }
 
 const parsedFromUrl = (() => {
-  const url = readEnv('REPO_URL') ?? readEnv('NEXT_PUBLIC_REPO_URL');
+  const url = readEnv("REPO_URL") ?? readEnv("NEXT_PUBLIC_REPO_URL");
   return url ? parseRepoUrl(url) : null;
 })();
 
-const githubRepository = readEnv('GITHUB_REPOSITORY');
-const githubParts = githubRepository?.includes('/')
+const githubRepository = readEnv("GITHUB_REPOSITORY");
+const githubParts = githubRepository?.includes("/")
   ? {
-      owner: githubRepository.split('/')[0]!,
-      name: githubRepository.split('/')[1]!,
+      owner: githubRepository.split("/")[0]!,
+      name: githubRepository.split("/")[1]!,
     }
   : null;
 
 export const repoOwner =
-  readEnv('REPO_OWNER') ??
-  readEnv('NEXT_PUBLIC_REPO_OWNER') ??
+  readEnv("REPO_OWNER") ??
+  readEnv("NEXT_PUBLIC_REPO_OWNER") ??
   parsedFromUrl?.owner ??
   githubParts?.owner ??
-  'local';
+  "local";
 
 export const repoName =
-  readEnv('REPO_NAME') ??
-  readEnv('NEXT_PUBLIC_REPO_NAME') ??
+  readEnv("REPO_NAME") ??
+  readEnv("NEXT_PUBLIC_REPO_NAME") ??
   parsedFromUrl?.name ??
   githubParts?.name ??
-  'app';
+  "app";
 
-export const repoTitle =
-  readEnv('REPO_TITLE') ??
-  readEnv('NEXT_PUBLIC_REPO_TITLE') ??
-  repoName;
+export const repoTitle = readEnv("REPO_TITLE") ?? readEnv("NEXT_PUBLIC_REPO_TITLE") ?? repoName;
 
 export const repoUrl =
-  readEnv('REPO_URL') ??
-  readEnv('NEXT_PUBLIC_REPO_URL') ??
+  readEnv("REPO_URL") ??
+  readEnv("NEXT_PUBLIC_REPO_URL") ??
   `https://github.com/${repoOwner}/${repoName}`;
 
 export const repoBranch =
-  readEnv('REPO_BRANCH') ??
-  readEnv('NEXT_PUBLIC_REPO_BRANCH') ??
-  readEnv('GITHUB_REF_NAME') ??
-  'master';
+  readEnv("REPO_BRANCH") ??
+  readEnv("NEXT_PUBLIC_REPO_BRANCH") ??
+  readEnv("GITHUB_REF_NAME") ??
+  "master";
 
 /** GitHub stargazer count baked in at build time (CI sets `REPO_STARS`). */
 export const repoStars = (() => {
-  const raw = readEnv('REPO_STARS') ?? readEnv('NEXT_PUBLIC_REPO_STARS');
+  const raw = readEnv("REPO_STARS") ?? readEnv("NEXT_PUBLIC_REPO_STARS");
   if (!raw) return null;
   const count = Number.parseInt(raw, 10);
   return Number.isFinite(count) && count >= 0 ? count : null;
@@ -76,30 +73,28 @@ export function formatStarCount(count: number): string {
 /** Display name in nav / metadata (same as REPO_TITLE). */
 export const appName = repoTitle;
 
-export const docsRoute = '/docs';
-export const docsImageRoute = '/og/docs';
-export const docsContentRoute = '/llms.mdx/docs';
-export const changelogRoute = '/changelog';
+export const docsRoute = "/docs";
+export const docsImageRoute = "/og/docs";
+export const docsContentRoute = "/llms.mdx/docs";
+export const changelogRoute = "/changelog";
 
 export const siteUrl =
-  readEnv('NEXT_PUBLIC_URL') ??
-  (process.env.GITHUB_PAGES === 'true'
+  readEnv("NEXT_PUBLIC_URL") ??
+  (process.env.GITHUB_PAGES === "true"
     ? `https://${repoOwner.toLowerCase()}.github.io/${repoName}`
-    : 'http://localhost:3000');
+    : "http://localhost:3000");
 
-export const brandColor = '#8B1CC3';
-export const brandColorRgb = '139, 28, 195';
+export const brandColor = "#8B1CC3";
+export const brandColorRgb = "139, 28, 195";
 
-export const appTagline = 'YouTube Music, on your desktop';
+export const appTagline = "YouTube Music, on your desktop";
 export const appDescription =
-  'A beautiful YouTube Music desktop app with Last.fm, Discord RPC, tray view, themes, DPI-aware scaling, OBS overlays, and Stream Deck.';
+  "A beautiful YouTube Music desktop app with Last.fm, Discord RPC, tray view, themes, DPI-aware scaling, OBS overlays, and Stream Deck.";
 
 export const docsDescription = `Documentation for ${appName} — features, install, API, Stream Deck, and changelog.`;
 
 export const discordUrl =
-  readEnv('DISCORD_URL') ??
-  readEnv('NEXT_PUBLIC_DISCORD_URL') ??
-  'https://discord.gg/dq4bZMhMjT';
+  readEnv("DISCORD_URL") ?? readEnv("NEXT_PUBLIC_DISCORD_URL") ?? "https://discord.gg/dq4bZMhMjT";
 
 /** @deprecated use repoOwner / repoName / repoBranch */
 export const gitConfig = {
@@ -110,7 +105,7 @@ export const gitConfig = {
 
 export const socials = {
   discord: {
-    handle: 'Discord',
+    handle: "Discord",
     url: discordUrl,
   },
   github: {
@@ -118,3 +113,6 @@ export const socials = {
     url: `https://github.com/${repoOwner}`,
   },
 } as const;
+
+/** Anchor for the hero download button; the nav shows its own CTA once this scrolls away. */
+export const HERO_DOWNLOAD_ID = "hero-download";

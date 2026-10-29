@@ -1,4 +1,4 @@
-import { getPageImageUrl, getPageMarkdownUrl, source } from '@/lib/source';
+import { getPageImageUrl, getPageMarkdownUrl, source } from "@/lib/source";
 import {
   DocsBody,
   DocsDescription,
@@ -6,15 +6,16 @@ import {
   DocsTitle,
   MarkdownCopyButton,
   ViewOptionsPopover,
-} from 'fumadocs-ui/layouts/docs/page';
-import { notFound } from 'next/navigation';
-import { getMDXComponents } from '@/components/mdx';
-import type { Metadata } from 'next';
-import { createRelativeLink } from 'fumadocs-ui/mdx';
-import { getBlobUrl } from '@/lib/github';
-import { siteUrl } from '@/lib/shared';
+} from "fumadocs-ui/layouts/docs/page";
+import { notFound } from "next/navigation";
+import { getMDXComponents } from "@/components/mdx";
+import type { Metadata } from "next";
+import { createRelativeLink } from "fumadocs-ui/mdx";
+import { getBlobUrl } from "@/lib/github";
+import { JsonLd } from "@/components/json-ld";
+import { absoluteFileUrl, absolutePageUrl, docPageJsonLd } from "@/lib/seo";
 
-export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
+export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
   const params = await props.params;
   const page = source.getPage(params.slug);
   if (!page) notFound();
@@ -24,6 +25,7 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
 
   return (
     <DocsPage toc={page.data.toc} full={page.data.full}>
+      <JsonLd data={docPageJsonLd(page)} />
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
       <div className="flex flex-row gap-2 items-center border-b pb-6">
@@ -48,17 +50,23 @@ export async function generateStaticParams() {
   return source.generateParams();
 }
 
-export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): Promise<Metadata> {
+export async function generateMetadata(props: PageProps<"/docs/[[...slug]]">): Promise<Metadata> {
   const params = await props.params;
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
-  const ogImage = `${siteUrl}${getPageImageUrl(page).url}`;
+  const ogImage = absoluteFileUrl(getPageImageUrl(page).url);
+  const canonical = absolutePageUrl(page.url);
 
   return {
     title: page.data.title,
     description: page.data.description,
+    alternates: { canonical },
     openGraph: {
+      type: "article",
+      url: canonical,
+      title: page.data.title,
+      description: page.data.description,
       images: [
         {
           url: ogImage,
@@ -69,7 +77,9 @@ export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): P
       ],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
+      title: page.data.title,
+      description: page.data.description,
       images: [ogImage],
     },
   };

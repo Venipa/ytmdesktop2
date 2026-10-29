@@ -1,4 +1,4 @@
-import { repoUrl } from './shared';
+import { repoUrl } from "./shared";
 
 export interface ReleaseAsset {
   name: string;
@@ -18,16 +18,16 @@ export interface LatestRelease {
   draft?: boolean;
 }
 
-export type DownloadPlatform = 'windows' | 'macos' | 'linux';
-export type CpuArch = 'arm64' | 'x64' | 'universal' | 'unknown';
-export type ReleaseChannel = 'stable' | 'beta' | 'alpha';
+export type DownloadPlatform = "windows" | "macos" | "linux";
+export type CpuArch = "arm64" | "x64" | "universal" | "unknown";
+export type ReleaseChannel = "stable" | "beta" | "alpha";
 
-export const RELEASE_CHANNELS: readonly ReleaseChannel[] = ['stable', 'beta', 'alpha'] as const;
+export const RELEASE_CHANNELS: readonly ReleaseChannel[] = ["stable", "beta", "alpha"] as const;
 
 export const RELEASE_CHANNEL_LABELS: Record<ReleaseChannel, string> = {
-  stable: 'Stable',
-  beta: 'Beta',
-  alpha: 'Alpha',
+  stable: "Stable",
+  beta: "Beta",
+  alpha: "Alpha",
 };
 
 interface ParsedReleaseVersion {
@@ -35,24 +35,22 @@ interface ParsedReleaseVersion {
   minor: number;
   patch: number;
   /** null = stable release; otherwise prerelease id + number */
-  pre: { id: 'rc' | 'a'; num: number } | null;
+  pre: { id: "rc" | "a"; num: number } | null;
 }
 
 /**
  * Parse a tag/name like `v1.2.3`, `1.2.3-rc.1`, or `1.2.3-a.0`.
  */
 export function parseReleaseVersion(version: string): ParsedReleaseVersion | null {
-  const match = version.match(
-    /(\d+)\.(\d+)\.(\d+)(?:-(rc|a|alpha)(?:\.(\d+))?)?/i,
-  );
+  const match = version.match(/(\d+)\.(\d+)\.(\d+)(?:-(rc|a|alpha)(?:\.(\d+))?)?/i);
   if (!match) return null;
 
   const preRaw = match[4]?.toLowerCase();
-  let pre: ParsedReleaseVersion['pre'] = null;
-  if (preRaw === 'rc') {
-    pre = { id: 'rc', num: Number(match[5] ?? 0) };
-  } else if (preRaw === 'a' || preRaw === 'alpha') {
-    pre = { id: 'a', num: Number(match[5] ?? 0) };
+  let pre: ParsedReleaseVersion["pre"] = null;
+  if (preRaw === "rc") {
+    pre = { id: "rc", num: Number(match[5] ?? 0) };
+  } else if (preRaw === "a" || preRaw === "alpha") {
+    pre = { id: "a", num: Number(match[5] ?? 0) };
   }
 
   return {
@@ -77,9 +75,9 @@ export function compareReleaseVersions(left: string, right: string): number {
   if (a.minor !== b.minor) return a.minor - b.minor;
   if (a.patch !== b.patch) return a.patch - b.patch;
 
-  const preRank = (pre: ParsedReleaseVersion['pre']): number => {
+  const preRank = (pre: ParsedReleaseVersion["pre"]): number => {
     if (!pre) return 2;
-    if (pre.id === 'rc') return 1;
+    if (pre.id === "rc") return 1;
     return 0;
   };
 
@@ -105,7 +103,7 @@ export function listVisibleReleaseChannels(
     const release = releases[channel];
     if (!release) return false;
 
-    if (channel === 'beta') {
+    if (channel === "beta") {
       const stable = releases.stable;
       if (stable && isReleaseOlderThan(release.tag_name, stable.tag_name)) {
         return false;
@@ -127,9 +125,9 @@ export function getReleaseChannel(version: string): ReleaseChannel | null {
   if (!match) return null;
 
   const preId = match[2]?.toLowerCase();
-  if (!preId) return 'stable';
-  if (preId === 'rc') return 'beta';
-  if (preId === 'a' || preId === 'alpha') return 'alpha';
+  if (!preId) return "stable";
+  if (preId === "rc") return "beta";
+  if (preId === "a" || preId === "alpha") return "alpha";
   return null;
 }
 
@@ -143,27 +141,27 @@ export function resolveReleaseChannel(release: {
   prerelease?: boolean;
 }): ReleaseChannel | null {
   const fromTag = getReleaseChannel(release.tag_name);
-  if (fromTag === 'beta' || fromTag === 'alpha') return fromTag;
+  if (fromTag === "beta" || fromTag === "alpha") return fromTag;
 
   const fromName = release.name ? getReleaseChannel(release.name) : null;
-  if (fromName === 'beta' || fromName === 'alpha') return fromName;
+  if (fromName === "beta" || fromName === "alpha") return fromName;
 
   // Bare tags marked prerelease on GitHub are not stable.
   if (release.prerelease) return null;
-  if (fromTag === 'stable') return 'stable';
+  if (fromTag === "stable") return "stable";
   return null;
 }
 
 export type DownloadKind =
-  | 'windows-setup'
-  | 'macos-dmg'
-  | 'macos-zip'
-  | 'macos-pkg'
-  | 'linux-appimage'
-  | 'linux-deb'
-  | 'linux-rpm'
-  | 'linux-flatpak'
-  | 'other';
+  | "windows-setup"
+  | "macos-dmg"
+  | "macos-zip"
+  | "macos-pkg"
+  | "linux-appimage"
+  | "linux-deb"
+  | "linux-rpm"
+  | "linux-flatpak"
+  | "other";
 
 export interface DownloadLabel {
   kind: DownloadKind;
@@ -174,13 +172,13 @@ export interface DownloadLabel {
 }
 
 export const DOWNLOAD_PLATFORMS: Array<{ id: DownloadPlatform; label: string }> = [
-  { id: 'windows', label: 'Windows' },
-  { id: 'macos', label: 'macOS' },
-  { id: 'linux', label: 'Linux' },
+  { id: "windows", label: "Windows" },
+  { id: "macos", label: "macOS" },
+  { id: "linux", label: "Linux" },
 ];
 
 export function getRepositoryUrl(): string {
-  return repoUrl.replace(/\/+$/, '');
+  return repoUrl.replace(/\/+$/, "");
 }
 
 export function getReleasesUrl(): string {
@@ -193,37 +191,37 @@ export function getLatestReleaseUrl(): string {
 
 function detectArch(name: string): CpuArch {
   const lower = name.toLowerCase();
-  if (lower.includes('universal')) return 'universal';
-  if (lower.includes('arm64') || lower.includes('aarch64')) return 'arm64';
-  if (lower.includes('x64') || lower.includes('x86_64') || lower.includes('amd64')) return 'x64';
-  return 'unknown';
+  if (lower.includes("universal")) return "universal";
+  if (lower.includes("arm64") || lower.includes("aarch64")) return "arm64";
+  if (lower.includes("x64") || lower.includes("x86_64") || lower.includes("amd64")) return "x64";
+  return "unknown";
 }
 
 function archLabel(arch: CpuArch): string {
   switch (arch) {
-    case 'arm64':
-      return 'Apple Silicon';
-    case 'x64':
-      return 'Intel';
-    case 'universal':
-      return 'Universal';
+    case "arm64":
+      return "Apple Silicon";
+    case "x64":
+      return "Intel";
+    case "universal":
+      return "Universal";
     default:
       // electron-builder often omits arch for default x64 mac artifacts
-      return 'Intel';
+      return "Intel";
   }
 }
 
 /** Mac builds without an arch token are almost always the Intel (x64) artifact. */
 function resolveMacArch(arch: CpuArch): CpuArch {
-  return arch === 'unknown' ? 'x64' : arch;
+  return arch === "unknown" ? "x64" : arch;
 }
 
 /** electron-builder mac zips often look like `…-arm64.zip` / `…-x64.zip` (no "mac" token). */
 function isLikelyMacZip(name: string): boolean {
   const lower = name.toLowerCase();
-  if (!lower.endsWith('.zip')) return false;
-  if (lower.includes('source') || lower.includes('sources')) return false;
-  if (lower.includes('mac') || lower.includes('darwin') || lower.includes('osx')) return true;
+  if (!lower.endsWith(".zip")) return false;
+  if (lower.includes("source") || lower.includes("sources")) return false;
+  if (lower.includes("mac") || lower.includes("darwin") || lower.includes("osx")) return true;
   // Linux ships AppImage/deb/rpm/flatpak — remaining arch zips are mac builds.
   if (/-arm64\.zip$/.test(lower) || /-x64\.zip$/.test(lower) || /-universal\.zip$/.test(lower)) {
     return true;
@@ -235,34 +233,34 @@ export function getDownloadLabel(asset: ReleaseAsset): DownloadLabel {
   const name = asset.name.toLowerCase();
   const arch = detectArch(name);
 
-  if (name.endsWith('-setup.exe') || name.endsWith('.exe')) {
+  if (name.endsWith("-setup.exe") || name.endsWith(".exe")) {
     return {
-      kind: 'windows-setup',
-      platform: 'windows',
+      kind: "windows-setup",
+      platform: "windows",
       arch,
-      title: 'Windows installer',
-      description: 'NSIS setup (.exe)',
+      title: "Windows installer",
+      description: "NSIS setup (.exe)",
     };
   }
 
-  if (name.endsWith('.dmg')) {
+  if (name.endsWith(".dmg")) {
     const macArch = resolveMacArch(arch);
     return {
-      kind: 'macos-dmg',
-      platform: 'macos',
+      kind: "macos-dmg",
+      platform: "macos",
       arch: macArch,
-      title: 'macOS DMG',
+      title: "macOS DMG",
       description: archLabel(macArch),
     };
   }
 
-  if (name.endsWith('.pkg')) {
+  if (name.endsWith(".pkg")) {
     const macArch = resolveMacArch(arch);
     return {
-      kind: 'macos-pkg',
-      platform: 'macos',
+      kind: "macos-pkg",
+      platform: "macos",
       arch: macArch,
-      title: 'macOS package',
+      title: "macOS package",
       description: archLabel(macArch),
     };
   }
@@ -270,84 +268,84 @@ export function getDownloadLabel(asset: ReleaseAsset): DownloadLabel {
   if (isLikelyMacZip(name)) {
     const macArch = resolveMacArch(arch);
     return {
-      kind: 'macos-zip',
-      platform: 'macos',
+      kind: "macos-zip",
+      platform: "macos",
       arch: macArch,
-      title: 'macOS zip',
+      title: "macOS zip",
       description: archLabel(macArch),
     };
   }
 
-  if (name.endsWith('.appimage')) {
+  if (name.endsWith(".appimage")) {
     return {
-      kind: 'linux-appimage',
-      platform: 'linux',
+      kind: "linux-appimage",
+      platform: "linux",
       arch,
-      title: 'Linux AppImage',
-      description: arch === 'arm64' ? 'arm64' : arch === 'x64' ? 'x64' : 'AppImage',
+      title: "Linux AppImage",
+      description: arch === "arm64" ? "arm64" : "x64", // unmarked AppImage builds are x64
     };
   }
 
-  if (name.endsWith('.deb')) {
+  if (name.endsWith(".deb")) {
     return {
-      kind: 'linux-deb',
-      platform: 'linux',
+      kind: "linux-deb",
+      platform: "linux",
       arch,
-      title: 'Debian package',
-      description: arch === 'arm64' ? 'arm64' : '.deb',
+      title: "Debian package",
+      description: arch === "arm64" ? "arm64" : ".deb",
     };
   }
 
-  if (name.endsWith('.rpm')) {
+  if (name.endsWith(".rpm")) {
     return {
-      kind: 'linux-rpm',
-      platform: 'linux',
+      kind: "linux-rpm",
+      platform: "linux",
       arch,
-      title: 'RPM package',
-      description: 'Fedora, RHEL, openSUSE',
+      title: "RPM package",
+      description: "Fedora, RHEL, openSUSE",
     };
   }
 
-  if (name.endsWith('.flatpak')) {
+  if (name.endsWith(".flatpak")) {
     return {
-      kind: 'linux-flatpak',
-      platform: 'linux',
+      kind: "linux-flatpak",
+      platform: "linux",
       arch,
-      title: 'Linux Flatpak',
+      title: "Linux Flatpak",
       description: asset.name,
     };
   }
 
   return {
-    kind: 'other',
+    kind: "other",
     platform: null,
     arch,
     title: asset.name,
-    description: 'Download',
+    description: "Download",
   };
 }
 
 export function listUserDownloads(assets: ReleaseAsset[]): ReleaseAsset[] {
   const order: DownloadKind[] = [
-    'windows-setup',
-    'macos-dmg',
-    'macos-pkg',
-    'macos-zip',
-    'linux-appimage',
-    'linux-deb',
-    'linux-rpm',
-    'linux-flatpak',
+    "windows-setup",
+    "macos-dmg",
+    "macos-pkg",
+    "macos-zip",
+    "linux-appimage",
+    "linux-deb",
+    "linux-rpm",
+    "linux-flatpak",
   ];
 
   return assets
-    .filter((asset) => getDownloadLabel(asset).kind !== 'other')
+    .filter((asset) => getDownloadLabel(asset).kind !== "other")
     .sort((left, right) => {
       const leftLabel = getDownloadLabel(left);
       const rightLabel = getDownloadLabel(right);
       const kindDelta = order.indexOf(leftLabel.kind) - order.indexOf(rightLabel.kind);
       if (kindDelta !== 0) return kindDelta;
       // Prefer arm64 then universal then x64 within same kind (Apple Silicon first).
-      const archOrder: CpuArch[] = ['arm64', 'universal', 'x64', 'unknown'];
+      const archOrder: CpuArch[] = ["arm64", "universal", "x64", "unknown"];
       return archOrder.indexOf(leftLabel.arch) - archOrder.indexOf(rightLabel.arch);
     });
 }
@@ -371,31 +369,35 @@ export function groupDownloadsByPlatform(
   return groups;
 }
 
-/** Prefer arch-matched build when visitor CPU is known (esp. macOS arm64 vs Intel). */
+/**
+ * Lead with the first kind in `listUserDownloads` order (e.g. AppImage on Linux, DMG on macOS),
+ * then match the visitor's arch within that kind. Unmarked file names count as x64.
+ */
 export function pickPreferredDownload(
   assets: ReleaseAsset[],
   preferredArch?: CpuArch | null,
 ): ReleaseAsset | undefined {
-  if (assets.length === 0) return undefined;
-  if (!preferredArch || preferredArch === 'unknown') return assets[0];
+  const lead = assets[0];
+  if (!lead) return undefined;
+  if (!preferredArch || preferredArch === "unknown") return lead;
 
-  const exact = assets.find((asset) => getDownloadLabel(asset).arch === preferredArch);
-  if (exact) return exact;
+  const leadKind = getDownloadLabel(lead).kind;
+  const candidates = assets.filter((asset) => getDownloadLabel(asset).kind === leadKind);
+  const archOf = (asset: ReleaseAsset) => {
+    const arch = getDownloadLabel(asset).arch;
+    return arch === "unknown" ? "x64" : arch;
+  };
 
-  const universal = assets.find((asset) => getDownloadLabel(asset).arch === 'universal');
-  if (universal) return universal;
-
-  return assets[0];
+  return (
+    candidates.find((asset) => archOf(asset) === preferredArch) ??
+    candidates.find((asset) => archOf(asset) === "universal") ??
+    lead
+  );
 }
 
 export function pickPrimaryDownload(assets: ReleaseAsset[]): ReleaseAsset | undefined {
   const groups = groupDownloadsByPlatform(assets);
-  return (
-    groups.windows[0] ??
-    groups.macos[0] ??
-    groups.linux[0] ??
-    listUserDownloads(assets)[0]
-  );
+  return groups.windows[0] ?? groups.macos[0] ?? groups.linux[0] ?? listUserDownloads(assets)[0];
 }
 
 export function formatBytes(bytes: number): string {
@@ -403,7 +405,7 @@ export function formatBytes(bytes: number): string {
     return `${bytes} B`;
   }
 
-  const units = ['KB', 'MB', 'GB'] as const;
+  const units = ["KB", "MB", "GB"] as const;
   let value = bytes / 1024;
   let unitIndex = 0;
 
@@ -416,10 +418,10 @@ export function formatBytes(bytes: number): string {
 }
 
 export function formatReleaseDate(isoDate: string): string {
-  return new Intl.DateTimeFormat('en', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  return new Intl.DateTimeFormat("en", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   }).format(new Date(isoDate));
 }
 
@@ -429,18 +431,27 @@ export function getReleaseNotes(body: string | null, maxItems: number | null = 6
   }
 
   const notes = body
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/\r\n/g, '\n')
-    .split('\n')
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
     .map((line) =>
       line
-        .replace(/^#+\s*/, '')
-        .replace(/^[-*+]\s+/, '')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-        .replace(/[*_`~]/g, '')
+        .replace(/^#+\s*/, "")
+        .replace(/^[-*+]\s+/, "")
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/[*_`~]/g, "")
         .trim(),
     )
     .filter((line) => line.length > 0 && !/^changes$/i.test(line));
 
   return maxItems == null ? notes : notes.slice(0, maxItems);
+}
+
+/** Release titles repeat the tag ("v1.8.6 - ..."); drop it where the tag is already shown. */
+export function releaseTitle(release: { name?: string | null; tag_name: string }): string {
+  return (
+    (release.name ?? "").replace(release.tag_name, "").replace(/^\s*[-\u2013:]\s*/, "") ||
+    release.tag_name
+  );
 }

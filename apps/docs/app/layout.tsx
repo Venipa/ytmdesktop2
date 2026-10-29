@@ -1,19 +1,17 @@
-import { Provider } from '@/components/provider';
-import { assetPath } from '@/lib/paths';
-import { appDescription, appName, appTagline, siteUrl } from '@/lib/shared';
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Provider } from "@/components/provider";
+import { assetPath } from "@/lib/paths";
+import { appDescription, appName, appTagline, siteUrl } from "@/lib/shared";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import Script from "next/script";
-import './global.css';
-
-
+import "./global.css";
 
 const inter = Inter({
-  subsets: ['latin'],
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(`${siteUrl}/`),
   title: {
     default: `${appName} — ${appTagline}`,
     template: `%s | ${appName}`,
@@ -21,24 +19,35 @@ export const metadata: Metadata = {
   description: appDescription,
   applicationName: appName,
   icons: {
-    icon: assetPath('/favicon.ico'),
+    icon: assetPath("/favicon.ico"),
   },
   openGraph: {
-    type: 'website',
+    type: "website",
     url: siteUrl,
     siteName: appName,
     title: `${appName} — ${appTagline}`,
     description: appDescription,
-    locale: 'en_US',
+    locale: "en_US",
   },
   twitter: {
-    card: 'summary_large_image',
+    card: "summary_large_image",
     title: `${appName} — ${appTagline}`,
     description: appDescription,
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
-export default function Layout({ children }: LayoutProps<'/'>) {
+export default function Layout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={inter.className} suppressHydrationWarning>
       <head>

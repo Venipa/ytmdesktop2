@@ -1,7 +1,8 @@
 name: Deploy docs to GitHub Pages
 
 on:
-  # Docs/workflow changes on default branch, or manual run.
+  # Docs/workflow changes on default branch, manual run, or nightly rebuild.
+  # Nightly rebuild refreshes GitHub data baked into the static Pages export (stars, releases).
   # branches: required so tag pushes (which ignore path filters) do not run this job.
   # Release publishes use docs-on-release.yml → workflow_dispatch on default branch
   # (github-pages env protection rejects tag refs like v1.0.2).
@@ -13,6 +14,8 @@ on:
       - "apps/docs/**"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
 
 permissions:
   contents: read
@@ -60,7 +63,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          count="$(gh api "repos/${{ github.repository }}" --jq '.stargazers_count')"
+          # Best-effort: on failure leave empty so the site hides the star count.
+          count="$(gh api "repos/${{ github.repository }}" --jq '.stargazers_count' || true)"
           echo "count=${count}" >> "$GITHUB_OUTPUT"
 
       # Build fetches GitHub releases (stable + prerelease beta/alpha) via GITHUB_TOKEN
@@ -77,6 +81,15 @@ jobs:
           REPO_TITLE: YTMDesktop2
           REPO_BRANCH: ${{ github.event.repository.default_branch }}
           REPO_STARS: ${{ steps.stars.outputs.count }}
+
+      # Release fetch fails soft (empty list); skip the deploy so the last good site stays live.
+      # Keep the text in sync with the empty state in apps/docs/app/(home)/changelog/page.tsx.
+      - name: Guard against empty release data
+        run: |
+          if grep -q 'No releases found' apps/docs/out/changelog/index.html; then
+            echo "::error::Release data is empty (GitHub API failure?); skipping deploy."
+            exit 1
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
