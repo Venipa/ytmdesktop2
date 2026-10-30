@@ -72,9 +72,20 @@ export class Logger {
 	private emit(func: (...args: unknown[]) => void, level: LogLevel, objects: unknown[]) {
 		if (level > Logger.level) return;
 		const prefix = this.source ? `${format(new Date(), "HH:mm:ss'.'SSS")} [${this.source}]` : null;
-		func(...(prefix ? [prefix, ...objects] : objects));
+		// A log transport must never take the app down. stdout/stderr can be a pipe whose
+		// reader is gone (EPIPE, e.g. a launcher/CI step exited); without this guard the
+		// throw becomes an uncaughtException — and the handler logs through the same stream.
+		try {
+			func(...(prefix ? [prefix, ...objects] : objects));
+		} catch {
+			// Intentionally swallowed: console output is best-effort.
+		}
 		for (const output of Logger.outputs) {
-			output(this.source, level, objects);
+			try {
+				output(this.source, level, objects);
+			} catch {
+				// A full disk or rotated-away file sink is not a fatal app error either.
+			}
 		}
 	}
 }
