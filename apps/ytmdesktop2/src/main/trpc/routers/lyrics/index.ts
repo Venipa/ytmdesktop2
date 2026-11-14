@@ -1,0 +1,1 @@
+export { lyricsRouter } from "./router";

@@ -1,7 +1,9 @@
 import { BaseProvider } from "@main/core/baseProvider";
 import { serverMain } from "@main/ipc/serverEvents";
 import AppProvider from "@main/trpc/routers/app/service";
+import LyricsProvider from "@main/trpc/routers/lyrics/service";
 import SettingsProvider from "@main/trpc/routers/settings/service";
+import { readLyricsOverlaySettings } from "@shared/lyrics/overlay";
 import translations from "@translations/index";
 import { Menu, shell } from "electron";
 
@@ -11,6 +13,8 @@ export const createTrayMenu = (provider: BaseProvider) => {
 	const appProvider = provider.getProvider("app") as AppProvider;
 	const { app } = appProvider;
 	const update = provider.getProvider("update");
+	const lyrics = provider.getProvider("lyrics") as LyricsProvider;
+	const lyricsOverlay = readLyricsOverlaySettings(sp.lyrics?.overlay);
 	const menu = Menu.buildFromTemplate([
 		{
 			label: translations.appName,
@@ -84,6 +88,38 @@ export const createTrayMenu = (provider: BaseProvider) => {
 					click: (item) => {
 						settings.set("discord.buttons", item.checked);
 					},
+				},
+			],
+		},
+		{
+			type: "separator",
+		},
+		{
+			type: "submenu",
+			label: "Desktop Lyrics",
+			submenu: [
+				{
+					label: "Show Desktop Lyrics",
+					type: "checkbox",
+					enabled: !!sp.lyrics?.enabled,
+					checked: !!sp.lyrics?.enabled && lyricsOverlay.enabled,
+					click: (item) => {
+						settings.set("lyrics.overlay.enabled", item.checked);
+					},
+				},
+				{
+					label: "Lock (click-through)",
+					type: "checkbox",
+					enabled: !!sp.lyrics?.enabled && lyricsOverlay.enabled,
+					checked: lyricsOverlay.locked,
+					click: (item) => {
+						settings.set("lyrics.overlay.locked", item.checked);
+					},
+				},
+				{
+					label: "Reset Position",
+					enabled: lyricsOverlay.enabled,
+					click: () => lyrics.resetOverlayPosition(),
 				},
 			],
 		},

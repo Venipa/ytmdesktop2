@@ -1,0 +1,237 @@
+/* Desktop lyrics overlay (`/lyrics-overlay`). The BrowserWindow is transparent, so nothing here may
+ * paint a full-window background: the page ground must stay see-through. */
+html.translucent #app {
+	background: transparent;
+	overflow: hidden;
+}
+
+.ytmd-overlay {
+	--ytmd-ov-text: #ffffff;
+	--ytmd-ov-accent: #5ab4ff;
+	--ytmd-ov-next: #ffffffb8;
+	--ytmd-ov-font-size: 30px;
+	--ytmd-ov-outline-color: #000000cc;
+	--ytmd-ov-outline-width: 2px;
+	--ytmd-ov-shadow-color: #00000099;
+	--ytmd-ov-bar-bg: #00000047;
+	--ytmd-ov-bar-fg: #5ab4ff73;
+	/* Toggles: the classes below zero these out. */
+	--ytmd-ov-stroke: var(--ytmd-ov-outline-width) var(--ytmd-ov-outline-color);
+	--ytmd-ov-shadow: 0 2px 6px var(--ytmd-ov-shadow-color);
+	/* Unsung part of the active line: text colour pulled toward the outline colour, so the sweep /
+	 * word step is visible even when text and accent are both white (opacity would also fade the
+	 * outline, which must stay crisp on light desktops). */
+	--ytmd-ov-dim: color-mix(in srgb, var(--ytmd-ov-text) 45%, var(--ytmd-ov-outline-color));
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	width: 100vw;
+	height: 100vh;
+	padding: 6px 14px;
+	overflow: hidden;
+	font-family: "YouTube Sans", "Noto Sans CJK TC", "Microsoft JhengHei", Roboto, Arial, sans-serif;
+	font-weight: 700;
+	line-height: 1.25;
+	user-select: none;
+	-webkit-user-select: none;
+	color: var(--ytmd-ov-text);
+}
+
+.ytmd-overlay.no-outline {
+	--ytmd-ov-stroke: 0 transparent;
+}
+
+.ytmd-overlay.no-shadow {
+	--ytmd-ov-shadow: none;
+}
+
+/* Unlocked: dashed outline shows the window bounds while it is movable / resizable. */
+.ytmd-overlay.is-unlocked {
+	border-radius: 10px;
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+	background: rgba(0, 0, 0, 0.18);
+}
+
+.ytmd-overlay-bar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: 0 0 auto;
+	height: 26px;
+	margin: -2px -8px 4px;
+	padding: 0 6px;
+	border-radius: 8px;
+	font-size: 11px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.85);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+	background: rgba(0, 0, 0, 0.45);
+	-webkit-app-region: drag;
+}
+
+.ytmd-overlay-bar .ytmd-overlay-grip {
+	opacity: 0.7;
+}
+
+.ytmd-overlay-bar .ytmd-overlay-hint {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.ytmd-overlay-bar button {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 20px;
+	padding: 0 7px;
+	border: 0;
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.12);
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	-webkit-app-region: no-drag;
+}
+
+.ytmd-overlay-bar button:hover {
+	background: rgba(255, 255, 255, 0.24);
+}
+
+.ytmd-overlay-bar button.is-primary {
+	background: var(--ytmd-ov-accent);
+	color: #000;
+}
+
+.ytmd-overlay-lines {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.18em;
+	flex: 1 1 auto;
+	min-height: 0;
+	font-size: var(--ytmd-ov-font-size);
+}
+
+.ytmd-overlay-lines.align-left {
+	align-items: flex-start;
+	text-align: left;
+}
+
+.ytmd-overlay-lines.align-center {
+	align-items: center;
+	text-align: center;
+}
+
+.ytmd-overlay-lines.align-right {
+	align-items: flex-end;
+	text-align: right;
+}
+
+.ytmd-overlay-line {
+	position: relative;
+	display: inline-block;
+	max-width: 100%;
+	padding: 0.08em 0.4em;
+	border-radius: 0.35em;
+	overflow-wrap: break-word;
+	white-space: pre-wrap;
+	transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ytmd-overlay-line.is-next {
+	font-size: 0.72em;
+	font-weight: 600;
+}
+
+.ytmd-overlay-line.is-status {
+	font-size: 0.6em;
+	font-weight: 500;
+}
+
+/* Next-line colour carries its own alpha, so no extra opacity (it would compound). */
+.ytmd-overlay-line.is-next .ytmd-overlay-base,
+.ytmd-overlay-line.is-status .ytmd-overlay-base {
+	color: var(--ytmd-ov-next);
+	-webkit-text-fill-color: var(--ytmd-ov-next);
+}
+
+/* Base layer: plain text carries the outline (stroke painted under the fill) and the shadow. */
+.ytmd-overlay-line .ytmd-overlay-base {
+	position: relative;
+	z-index: 1;
+	color: var(--ytmd-ov-text);
+	-webkit-text-fill-color: var(--ytmd-ov-text);
+	-webkit-text-stroke: var(--ytmd-ov-stroke);
+	paint-order: stroke fill;
+	text-shadow: var(--ytmd-ov-shadow);
+}
+
+/* Line-only cues in Highlight mode — and in Text fill mode, which has nothing to sweep without
+ * word cues — colour the whole active line with the accent. */
+.ytmd-overlay-line.is-active.style-highlight:not(.has-words) .ytmd-overlay-base,
+.ytmd-overlay-line.is-active.style-fill:not(.has-words) .ytmd-overlay-base {
+	color: var(--ytmd-ov-accent);
+	-webkit-text-fill-color: var(--ytmd-ov-accent);
+}
+
+/* Bar style (line-only cues): translucent pill whose accent portion advances with playback. */
+.ytmd-overlay-line.is-active.style-bar {
+	background-image: linear-gradient(
+		to right,
+		var(--ytmd-ov-bar-fg) 0%,
+		var(--ytmd-ov-bar-fg) calc(var(--ytmd-line-progress, 0) * 100%),
+		var(--ytmd-ov-bar-bg) calc(var(--ytmd-line-progress, 0) * 100%),
+		var(--ytmd-ov-bar-bg) 100%
+	);
+}
+
+/* Fill style (word cues): a second copy of the words sits exactly over the base layer and paints
+ * only the sung part in accent (unsung part is transparent so the base shows through). Keeping the
+ * shadow on the base layer avoids the "shadow on top of background-clip:text" artefact. */
+.ytmd-overlay-line .ytmd-overlay-fill {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	padding: inherit;
+	box-sizing: border-box;
+	pointer-events: none;
+	color: transparent;
+	-webkit-text-fill-color: transparent;
+	-webkit-text-stroke: 0 transparent;
+	text-shadow: none;
+}
+
+.ytmd-overlay-fill .ytmd-overlay-word {
+	background-image: linear-gradient(
+		to right,
+		var(--ytmd-ov-accent) var(--ytmd-word-progress, 0%),
+		transparent var(--ytmd-word-progress, 0%)
+	);
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+/* Word-synced active line: the base layer shows every word dimmed. Text fill paints the sung part
+ * in accent on the sweep layer above; Highlight / Progress bar step the base words themselves. */
+.ytmd-overlay-line.is-active.has-words .ytmd-overlay-base .ytmd-overlay-word {
+	color: var(--ytmd-ov-dim);
+	-webkit-text-fill-color: var(--ytmd-ov-dim);
+	transition: color 160ms ease;
+}
+
+.ytmd-overlay-line.is-active:not(.style-fill) .ytmd-overlay-base .ytmd-overlay-word.is-sung,
+.ytmd-overlay-line.is-active:not(.style-fill) .ytmd-overlay-base .ytmd-overlay-word.is-current {
+	color: var(--ytmd-ov-accent);
+	-webkit-text-fill-color: var(--ytmd-ov-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ytmd-overlay-line {
+		transition: none;
+	}
+}

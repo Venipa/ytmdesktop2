@@ -26,7 +26,19 @@ export default class TrayProvider extends BaseProvider implements AfterInit, OnD
 		if (!this._settingsBound) {
 			this._settingsBound = true;
 			this.settingsInstance.onSettingChange(
-				["app.autostart", "app.autoupdate", "app.minimizeTrayOverride", "discord.enabled", "discord.buttons", "themes.enabled", "themes.customFile", "themes.selected"],
+				[
+					"app.autostart",
+					"app.autoupdate",
+					"app.minimizeTrayOverride",
+					"discord.enabled",
+					"discord.buttons",
+					"themes.enabled",
+					"themes.customFile",
+					"themes.selected",
+					"lyrics.enabled",
+					"lyrics.overlay.enabled",
+					"lyrics.overlay.locked",
+				],
 				() => this.onSettingsChange(),
 				{ debounce: 50 },
 			);
