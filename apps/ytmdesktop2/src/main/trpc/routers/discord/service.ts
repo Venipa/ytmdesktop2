@@ -12,6 +12,10 @@ const CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
 const DISCORD_AVAILABLE = !!CLIENT_ID;
 const CONNECT_RETRY_MS = 5_000;
 const MAX_CONNECTION_RETRIES = 30;
+/** Paused this long -> presence cleared until playback resumes. */
+const IDLE_CLEAR_MS = 150_000;
+
+type ActivityOptions = Partial<{ showButtons: boolean; showThumbnails: boolean }>;
 
 export default class DiscordProvider extends BaseProvider implements AfterInit, OnDestroy {
 	/** User/settings want presence active. Cleared on disable — blocks reconnect. */
@@ -141,7 +145,7 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 
 	private applyActivityOptions(
 		activity: DiscordActivity,
-		options?: Partial<{ showButtons: boolean; showThumbnails: boolean }>,
+		options?: ActivityOptions,
 	): DiscordActivity {
 		const showButtons = options?.showButtons ?? this.settingsInstance.get("discord.buttons", true);
 		const showThumbnails = options?.showThumbnails ?? this.settingsInstance.get("discord.thumbnails", true);
@@ -163,8 +167,34 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 	}
 
 	private lastSentPlaying: boolean | null = null;
+	private idleTimer: NodeJS.Timeout | null = null;
+	/** Presence was cleared after a long pause; stays cleared until playback resumes. */
+	private idleCleared = false;
 
-	private _updateActivity(activity: DiscordActivity, options?: Partial<{ showButtons: boolean; showThumbnails: boolean }>) {
+	private clearIdleTimer() {
+		if (this.idleTimer) {
+			clearTimeout(this.idleTimer);
+			this.idleTimer = null;
+		}
+	}
+
+	/** Paused presence has no timestamps, so Discord counts elapsed time forever — drop it after a while. */
+	private trackIdle(playing: boolean) {
+		if (playing) {
+			this.clearIdleTimer();
+			this.idleCleared = false;
+			return;
+		}
+		if (this.idleTimer || this.idleCleared) return;
+		this.idleTimer = setTimeout(() => {
+			this.idleTimer = null;
+			this.idleCleared = true;
+			this.updateActivity.cancel();
+			this.client?.clearActivity();
+		}, IDLE_CLEAR_MS);
+	}
+
+	private _updateActivity(activity: DiscordActivity, options?: ActivityOptions) {
 		if (!this.wantConnected || !this.settingsEnabled || !this.isConnected || !this.client) return;
 		this.updateActivity.cancel();
 		this.client.setActivity(this.applyActivityOptions(activity, options));
@@ -172,21 +202,30 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 
 	private updateActivity = debounce(this._updateActivity.bind(this), 1000);
 
-	private pushCurrentTrack(immediate = false) {
+	/** Single entry for every presence update; immediate on play/pause flips. */
+	private publish(track: TrackData, playing: boolean, progress: number, immediate = false, options?: ActivityOptions) {
 		if (!this.wantConnected || !this.settingsEnabled || !this.isConnected) return;
-		const track = trackService.trackData;
-		if (!track) return;
-		const playing = trackService.playing;
-		const embed = discordEmbedFromTrack(track, playing, trackService.trackState?.progress ?? 0);
+		this.trackIdle(playing);
+		if (this.idleCleared) return;
+		const embed = discordEmbedFromTrack(track, playing, progress);
+		const playingChanged = this.lastSentPlaying !== playing;
 		this.lastSentPlaying = playing;
-		if (immediate) this._updateActivity(embed);
+		if (immediate || playingChanged) this._updateActivity(embed, options);
 		else this.updateActivity(embed);
+	}
+
+	private pushCurrentTrack(immediate = false, options?: ActivityOptions) {
+		const track = trackService.trackData;
+		if (!track?.video) return;
+		this.publish(track, trackService.playing, trackService.trackState?.progress ?? 0, immediate, options);
 	}
 
 	async disable() {
 		// Gate first so close/error from destroy cannot schedule reconnect
 		this.wantConnected = false;
 		this.clearRetryTimer();
+		this.clearIdleTimer();
+		this.idleCleared = false;
 		this.connectionRetries = 0;
 		this.updateActivity.cancel();
 		this.lastSentPlaying = null;
@@ -220,7 +259,10 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		trackService.onTrackChange((track) => void this.__onTrackInfo(track), { debounce: 1000 });
 		// No debounce on enabled — disable must stop loading/reconnect immediately
 		this.settingsInstance.onSettingChange("discord.enabled", (value) => void this.__onToggleEnabled(value as boolean));
-		this.settingsInstance.onSettingChange("discord.buttons", (value) => void this.__onToggleButtons(value as boolean), {
+		this.settingsInstance.onSettingChange("discord.buttons", (value) => this.pushCurrentTrack(true, { showButtons: value as boolean }), {
+			debounce: 1000,
+		});
+		this.settingsInstance.onSettingChange("discord.thumbnails", (value) => this.pushCurrentTrack(true, { showThumbnails: value as boolean }), {
 			debounce: 1000,
 		});
 		if (!this.settingsEnabled) return;
@@ -229,12 +271,8 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 	}
 
 	async updateTrackProgress(isPlaying: boolean, mediaProgress: number = 0, updateImmediate: boolean = false) {
-		if (!this.wantConnected || !this.settingsEnabled || !this.isConnected || !trackService.trackData) return;
-		const playingChanged = this.lastSentPlaying !== isPlaying;
-		const embed = discordEmbedFromTrack(trackService.trackData, isPlaying, mediaProgress);
-		this.lastSentPlaying = isPlaying;
-		if (updateImmediate || playingChanged) this._updateActivity(embed);
-		else this.updateActivity(embed);
+		if (!trackService.trackData) return;
+		this.publish(trackService.trackData, isPlaying, mediaProgress, updateImmediate);
 	}
 
 	private async __onToggleEnabled(enabled: boolean) {
@@ -242,22 +280,13 @@ export default class DiscordProvider extends BaseProvider implements AfterInit, 
 		else await this.disable();
 	}
 
-	private async __onToggleButtons(buttons: boolean) {
-		if (!this.wantConnected || !this.settingsEnabled || !trackService.trackData) return;
-		const embed = discordEmbedFromTrack(trackService.trackData, trackService.playing, trackService.trackState?.progress ?? 0);
-		if (!buttons) embed.buttons = [];
-		this._updateActivity(embed, { showButtons: buttons });
-	}
-
 	getConnectedState() {
 		return this.settingsEnabled && this.isConnected;
 	}
 
 	private async __onTrackInfo(track: TrackData) {
-		if (!track?.video || !this.wantConnected || !this.settingsEnabled || !this.isConnected) return;
-		const playing = trackService.playing;
-		this.lastSentPlaying = playing;
-		this._updateActivity(discordEmbedFromTrack(track, playing, trackService.trackState?.progress ?? 0));
+		if (!track?.video) return;
+		this.publish(track, trackService.playing, trackService.trackState?.progress ?? 0, true);
 	}
 
 	async OnDestroy() {
