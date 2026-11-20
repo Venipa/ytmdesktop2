@@ -304,7 +304,15 @@ export async function createAppWindow(appOptions?: Partial<WindowOptions>) {
 	});
 	syncWindowStateToWebContents(win)(win.webContents);
 	attachTrpcWindow(win);
-	if (parent) centerWindowOnParent(win, parent);
+	if (parent) {
+		centerWindowOnParent(win, parent);
+		// Chromium hides a closing window before destroying it; Windows then activates the next window in Z-order
+		// (often another app) instead of the owner. Hand focus back while the child is still the active window.
+		win.on("close", () => {
+			if (!win.isFocused() || parent.isDestroyed() || !parent.isVisible() || parent.isMinimized()) return;
+			parent.focus();
+		});
+	}
 	if (shouldShow) {
 		win.show();
 		win.moveTop();
