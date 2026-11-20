@@ -5,11 +5,17 @@ node_modules
 apps/ytmdesktop2/dist
 apps/ytmdesktop2/out
 apps/ytmdesktop2/src/preload/generated
+# docs+design draft
+docs/
+design/
+
+
 # local env files
 .env.local
 .env.*.local
 .secrets
 .secrets.*
+*.local.*
 
 # Log files
 npm-debug.log*
