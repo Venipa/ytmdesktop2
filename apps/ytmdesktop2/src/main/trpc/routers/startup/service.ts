@@ -2,7 +2,7 @@ import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { isDevelopment, isProduction } from "@main/infra/devUtils";
 import SettingsProvider from "@main/trpc/routers/settings/service";
-import { App, powerSaveBlocker } from "electron";
+import { App } from "electron";
 import { basename } from "path";
 
 const GTK_VERSION = /^[2-4]+$/.test(process.env.GTK_VERSION ?? "") ? process.env.GTK_VERSION : "3";
@@ -58,9 +58,6 @@ export default class StartupProvider extends BaseProvider implements AfterInit, 
 	}
 	async BeforeStart() {
 		if (this.settingsInstance.instance.app.disableHardwareAccel) this.app.disableHardwareAcceleration();
-		if (!platform.isMacOS) {
-			powerSaveBlocker.start("prevent-app-suspension"); // app suspension on mac prevents sleep
-		}
 	}
 	private get startArgs() {
 		return ["--processStart", `"${basename(process.execPath)}"`, "--startup"];
