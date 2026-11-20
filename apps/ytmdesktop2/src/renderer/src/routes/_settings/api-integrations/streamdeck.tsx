@@ -5,8 +5,8 @@ import {
 } from "@shared/utils/streamdeck-plugin";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { SettingsGroup, SettingsGroupBody } from "@/components/settings-group";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 
 export const Route = createFileRoute("/_settings/api-integrations/streamdeck")({
@@ -38,16 +38,17 @@ function StreamDeckSettingsPage() {
 
 	return (
 		<>
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
+			<SettingsGroup
+				title={
+					<>
 						Stream Deck
 						<Badge variant="outline">Integration</Badge>
-					</CardTitle>
-					<CardDescription>Control YouTube Music from an Elgato Stream Deck via the local API.</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col gap-3 text-sm text-muted-foreground">
-					<ol className="list-decimal space-y-2 pl-4">
+					</>
+				}
+				description="Control YouTube Music from an Elgato Stream Deck via the local API."
+			>
+				<SettingsGroupBody className="text-xs/5 text-muted-foreground">
+					<ol className="list-decimal space-y-1.5 pl-4">
 						<li>
 							Enable the API under <span className="font-medium text-foreground">API</span>
 							{apiEnabled ? null : " (currently off)"}.
@@ -67,8 +68,8 @@ function StreamDeckSettingsPage() {
 						</li>
 						<li>Approve the code under Authentication.</li>
 					</ol>
-				</CardContent>
-				<CardFooter className="flex flex-wrap gap-x-4 gap-y-2">
+				</SettingsGroupBody>
+				<SettingsGroupBody className="flex-row flex-wrap gap-x-4 gap-y-2">
 					<a href={docsUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline-offset-4 hover:underline">
 						Open website
 					</a>
@@ -98,8 +99,8 @@ function StreamDeckSettingsPage() {
 					>
 						Stream Deck docs
 					</a>
-				</CardFooter>
-			</Card>
+				</SettingsGroupBody>
+			</SettingsGroup>
 		</>
 	);
 }

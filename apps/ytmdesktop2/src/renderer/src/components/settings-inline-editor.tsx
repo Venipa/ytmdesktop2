@@ -1,7 +1,8 @@
 import { type InputHTMLAttributes, type ReactNode, useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+import { SettingsDescription, settingsLabelClass, settingsRowVariants } from "@/components/settings-group";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { useSettingsState } from "@/hooks/use-settings";
@@ -27,6 +28,8 @@ export interface SettingsInlineEditorProps extends Omit<InputHTMLAttributes<HTML
 	formatDisplay?: (value: unknown) => string;
 	/** Map input string → persisted value. */
 	parse?: (raw: string) => unknown;
+	/** Indent under the setting it depends on. */
+	nested?: boolean;
 }
 
 function validateValue(raw: string, type: "text" | "number", rules: SettingsInlineEditorRule[] | undefined): string | null {
@@ -68,6 +71,8 @@ export function SettingsInlineEditor({
 	formatDisplay,
 	parse,
 	placeholder,
+	nested,
+	disabled,
 	...attrs
 }: SettingsInlineEditorProps) {
 	const id = useId();
@@ -106,10 +111,10 @@ export function SettingsInlineEditor({
 	};
 
 	return (
-		<Field orientation="horizontal" data-disabled={isPending || undefined} className={cn("items-start", className)}>
+		<Field orientation="horizontal" data-disabled={isPending || disabled || undefined} className={cn(settingsRowVariants({ layout: "field", nested, disabled }), className)}>
 			<FieldContent>
-				{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
-				{hint ? <FieldDescription>{hint}</FieldDescription> : null}
+				{label ? <FieldLabel htmlFor={id} className={settingsLabelClass}>{label}</FieldLabel> : null}
+				{hint ? <SettingsDescription>{hint}</SettingsDescription> : null}
 			</FieldContent>
 			<Popover open={open} onOpenChange={handleOpenChange}>
 				<PopoverTrigger
@@ -117,7 +122,7 @@ export function SettingsInlineEditor({
 						<button
 							id={id}
 							type="button"
-							disabled={isPending}
+							disabled={isPending || disabled}
 							className={cn(
 								buttonVariants({ variant: "link", size: "sm" }),
 								"h-auto shrink-0 px-0 py-0 font-mono underline underline-offset-4",

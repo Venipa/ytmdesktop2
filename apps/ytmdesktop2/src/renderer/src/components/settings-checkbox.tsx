@@ -1,6 +1,7 @@
 import { type ReactNode, useId } from "react";
 import { toast } from "sonner";
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { SettingsDescription, settingsLabelClass, settingsRowVariants } from "@/components/settings-group";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { useSettingsState } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,8 @@ export interface SettingsCheckboxProps {
 	updateMessage?: string;
 	/** Grey out control (preference still readable). */
 	disabled?: boolean;
+	/** Indent under the setting it depends on. */
+	nested?: boolean;
 }
 
 export function SettingsCheckbox({
@@ -27,6 +30,7 @@ export function SettingsCheckbox({
 	onChange,
 	updateMessage,
 	disabled = false,
+	nested = false,
 }: SettingsCheckboxProps) {
 	const id = useId();
 	const [value, setValue, { isPending }] = useSettingsState<boolean>(configKey, defaultValue, {
@@ -47,8 +51,7 @@ export function SettingsCheckbox({
 			orientation="horizontal"
 			data-disabled={locked || undefined}
 			className={cn(
-				"-mx-2 items-start rounded-lg px-2 py-2 transition-colors duration-150 ease-out",
-				"cursor-pointer hover:bg-muted/50 active:bg-muted/70",
+				settingsRowVariants({ layout: "field", nested, interactive: true }),
 				"data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent data-disabled:active:bg-transparent",
 				className,
 			)}
@@ -61,11 +64,12 @@ export function SettingsCheckbox({
 		>
 			<FieldContent>
 				{/* No htmlFor — row onClick owns the toggle (avoids double-fire with Switch). */}
-				<FieldLabel className="pointer-events-none cursor-pointer">{children}</FieldLabel>
-				{description ? <FieldDescription>{description}</FieldDescription> : null}
+				<FieldLabel id={`${id}-label`} className={cn("pointer-events-none cursor-pointer", settingsLabelClass)}>{children}</FieldLabel>
+				{description ? <SettingsDescription>{description}</SettingsDescription> : null}
 			</FieldContent>
 			<Switch
 				id={id}
+				aria-labelledby={`${id}-label`}
 				checked={value}
 				disabled={locked}
 				onClick={(event) => event.stopPropagation()}

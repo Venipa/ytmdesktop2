@@ -1,8 +1,9 @@
 import { clamp } from "lodash-es";
 import { type InputHTMLAttributes, type ReactNode, useId, useRef } from "react";
 import { toast } from "sonner";
+import { SettingsDescription, settingsLabelClass, settingsRowVariants } from "@/components/settings-group";
 import { Button } from "@/components/ui/button";
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useSettingsState } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,8 @@ export interface SettingsInputProps extends Omit<InputHTMLAttributes<HTMLInputEl
 	debounce?: number;
 	/** Shown via sonner after the value is saved. */
 	updateMessage?: string;
+	/** Indent under the setting it depends on. */
+	nested?: boolean;
 }
 
 export function SettingsInput({
@@ -34,6 +37,7 @@ export function SettingsInput({
 	type = "text",
 	debounce = DEFAULT_INPUT_DEBOUNCE_MS,
 	updateMessage,
+	nested,
 	...attrs
 }: SettingsInputProps) {
 	const id = useId();
@@ -45,14 +49,14 @@ export function SettingsInput({
 
 	if (type === "file") {
 		return (
-			<Field data-disabled={isPending || undefined} className={cn(className)}>
-				{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
+			<Field data-disabled={isPending || undefined} className={cn("gap-2", settingsRowVariants({ nested, disabled: attrs.disabled }), className)}>
+				{label ? <FieldLabel htmlFor={id} className={settingsLabelClass}>{label}</FieldLabel> : null}
 				<FieldContent>
 					<div className="flex items-center gap-2">
 						<div className="flex h-8 min-w-0 flex-1 items-center truncate rounded-lg border border-input bg-transparent px-2.5 text-xs text-muted-foreground">
 							{String(value || "No file selected")}
 						</div>
-						<Button type="button" variant="outline" size="sm" disabled={isPending} onClick={() => fileInputRef.current?.click()}>
+						<Button type="button" variant="outline" size="sm" disabled={isPending || attrs.disabled} onClick={() => fileInputRef.current?.click()}>
 							Browse
 						</Button>
 					</div>
@@ -62,7 +66,7 @@ export function SettingsInput({
 						type="file"
 						className="hidden"
 						accept={attrs.accept}
-						disabled={isPending}
+						disabled={isPending || attrs.disabled}
 						onChange={(ev) => {
 							const file = ev.target.files?.[0];
 							if (!file) return;
@@ -76,8 +80,8 @@ export function SettingsInput({
 	}
 
 	return (
-		<Field data-disabled={isPending || undefined} className={cn(className)}>
-			{label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
+		<Field data-disabled={isPending || undefined} className={cn("gap-2", settingsRowVariants({ nested, disabled: attrs.disabled }), className)}>
+			{label ? <FieldLabel htmlFor={id} className={settingsLabelClass}>{label}</FieldLabel> : null}
 			<Input
 				{...attrs}
 				id={id}
@@ -99,7 +103,7 @@ export function SettingsInput({
 					setValue(ev.target.value);
 				}}
 			/>
-			{hint ? <FieldDescription>{hint}</FieldDescription> : null}
+			{hint ? <SettingsDescription>{hint}</SettingsDescription> : null}
 		</Field>
 	);
 }

@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
+import { SettingsGroup } from "@/components/settings-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { FieldGroup } from "@/components/ui/field";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSettingsState } from "@/hooks/use-settings";
 
 export const Route = createFileRoute("/_settings/")({
@@ -35,72 +35,44 @@ function GenericSettingsPage() {
 				</Card>
 			)}
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Application</CardTitle>
-					<CardDescription>Startup and system behavior.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
-						<SettingsCheckbox configKey="app.autostart" description={appAutostartEnabled ? "Launch YouTube Music when you sign in." : undefined}>
-							Enable Autostart
-						</SettingsCheckbox>
-						{appAutostartEnabled && !autostartPending && <SettingsCheckbox configKey="app.autostartMinimized">Start minimized</SettingsCheckbox>}
-						<SettingsCheckbox configKey="app.minimizeTrayOverride" description="Close window to tray instead of quitting.">
-							Minimize to tray on close
-						</SettingsCheckbox>
-						<SettingsCheckbox configKey="app.disableHardwareAccel" description="Requires an app restart to apply.">
-							Disable Hardware Acceleration
-						</SettingsCheckbox>
-					</FieldGroup>
-				</CardContent>
-			</Card>
+			<SettingsGroup title="Application">
+				<SettingsCheckbox configKey="app.autostart" description="Launch YouTube Music when you sign in.">
+					Enable autostart
+				</SettingsCheckbox>
+				<SettingsCheckbox configKey="app.autostartMinimized" nested disabled={!appAutostartEnabled || autostartPending}>
+					Start minimized
+				</SettingsCheckbox>
+				<SettingsCheckbox configKey="app.minimizeTrayOverride" description="Close window to tray instead of quitting.">
+					Minimize to tray on close
+				</SettingsCheckbox>
+				<SettingsCheckbox configKey="app.disableHardwareAccel" description="Requires an app restart to apply.">
+					Disable hardware acceleration
+				</SettingsCheckbox>
+			</SettingsGroup>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Updater</CardTitle>
-					<CardDescription>Automatic update checks and installs.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
-						<SettingsCheckbox configKey="app.autoupdate">Enable Autoupdate</SettingsCheckbox>
-					</FieldGroup>
-				</CardContent>
-			</Card>
+			<SettingsGroup title="Updates & privacy">
+				<SettingsCheckbox configKey="app.autoupdate">Enable autoupdate</SettingsCheckbox>
+				<SettingsCheckbox
+					configKey="app.enableStatisticsAndErrorTracing"
+					description="Allows faster bug fixing via anonymized error reports."
+				>
+					Allow anonymized error reporting
+				</SettingsCheckbox>
+			</SettingsGroup>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Sentry / Error reporting</CardTitle>
-					<CardDescription>Help improve the app by sharing anonymized crash data.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
-						<SettingsCheckbox
-							configKey="app.enableStatisticsAndErrorTracing"
-							description="Allows faster bug fixing via anonymized error reports."
-						>
-							Allow anonymized error reporting
-						</SettingsCheckbox>
-					</FieldGroup>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
+			<SettingsGroup
+				title={
+					<>
 						Developer
 						<Badge variant="destructive">Caution</Badge>
-					</CardTitle>
-					<CardDescription>Advanced tools for debugging. Do not paste unknown scripts into the console.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
-						<SettingsCheckbox configKey="app.enableDev" description="Enables developer tools for testing additional functionality.">
-							Enable Developer Mode
-						</SettingsCheckbox>
-					</FieldGroup>
-				</CardContent>
-			</Card>
+					</>
+				}
+				description="Advanced tools for debugging. Do not paste unknown scripts into the console."
+			>
+				<SettingsCheckbox configKey="app.enableDev" description="Enables developer tools for testing additional functionality.">
+					Enable developer mode
+				</SettingsCheckbox>
+			</SettingsGroup>
 		</>
 	);
 }

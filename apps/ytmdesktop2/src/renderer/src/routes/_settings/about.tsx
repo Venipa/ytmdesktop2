@@ -1,10 +1,9 @@
+import { RiFolderOpenLine } from "@remixicon/react";
 import { UPDATE_CHANNEL_LABELS, type UpdateChannel } from "@shared/utils/updater";
 import { createFileRoute } from "@tanstack/react-router";
-import { RiFolderOpenLine } from "@remixicon/react";
+import { SettingsGroup, SettingsRow } from "@/components/settings-group";
 import { SettingsSelect } from "@/components/settings-select";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { useUpdater } from "@/hooks/use-updater";
 import { trpc } from "@/lib/trpc";
@@ -32,17 +31,8 @@ function AboutSettingsPage() {
 
 	return (
 		<>
-			<Card>
-				<CardHeader>
-					<CardTitle>About</CardTitle>
-					<CardDescription>Information about your YouTube Music Desktop instance.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="flex items-center justify-between gap-4">
-						<div className="flex flex-col gap-1">
-							<span className="text-xs font-medium">Version</span>
-							<span className="text-xs text-muted-foreground">{appVersion}</span>
-						</div>
+			<SettingsGroup title="About">
+				<SettingsRow label="Version" description={appVersion}>
 						{status === "ready" && updateInfo ? (
 							<Button variant="outline" onClick={() => void install(true)} disabled={installing}>
 								Install {updateInfo.version}
@@ -61,7 +51,7 @@ function AboutSettingsPage() {
 							</Button>
 						) : (
 							<Button variant="outline" onClick={() => void check()} disabled={checking}>
-								{checking ? "Checking..." : updateInfo ? `Update v${updateInfo.version}` : "Check for Update"}
+								{checking ? "Checking..." : updateInfo ? `Update v${updateInfo.version}` : "Check for update"}
 								{checking ? (
 									<span data-icon="inline-end">
 										<Spinner />
@@ -69,36 +59,17 @@ function AboutSettingsPage() {
 								) : null}
 							</Button>
 						)}
-					</div>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle>Logs</CardTitle>
-					<CardDescription>Open the app logs folder on disk (errors and warnings in production).</CardDescription>
-				</CardHeader>
-				<CardContent>
+				</SettingsRow>
+				<SettingsSelect configKey="app.channel" defaultValue="stable" label="Update channel" options={CHANNEL_OPTIONS} />
+				<SettingsRow label="Logs" description="Open the app logs folder on disk (errors and warnings in production).">
 					<Button variant="outline" disabled={openingLogs} onClick={() => void openLogsFolder()}>
 						<span data-icon="inline-start">
 							<RiFolderOpenLine className="size-4" />
 						</span>
 						{openingLogs ? "Opening..." : "Open logs folder"}
 					</Button>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle>Channels</CardTitle>
-					<CardDescription>Choose which release channel to follow.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
-						<SettingsSelect configKey="app.channel" defaultValue="stable" label="Update channel" options={CHANNEL_OPTIONS} />
-					</FieldGroup>
-				</CardContent>
-			</Card>
+				</SettingsRow>
+			</SettingsGroup>
 		</>
 	);
 }

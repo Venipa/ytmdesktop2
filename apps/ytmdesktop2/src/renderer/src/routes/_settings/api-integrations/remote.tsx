@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { SettingsGroup, SettingsRow } from "@/components/settings-group";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const Route = createFileRoute("/_settings/api-integrations/remote")({
 	component: RemoteSettingsPage,
@@ -8,17 +8,16 @@ export const Route = createFileRoute("/_settings/api-integrations/remote")({
 
 function RemoteSettingsPage() {
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
+		<SettingsGroup
+			title={
+				<>
 					Remote
 					<Badge variant="secondary">Coming soon</Badge>
-				</CardTitle>
-				<CardDescription>Authorize a mobile companion by scanning a QR code.</CardDescription>
-			</CardHeader>
-			<CardContent className="text-sm text-muted-foreground">
-				<p>Remote pairing will use the same global authentication unit as Stream Deck and the local API.</p>
-			</CardContent>
-		</Card>
+				</>
+			}
+			description="Authorize a mobile companion by scanning a QR code."
+		>
+			<SettingsRow description="Remote pairing will use the same global authentication unit as Stream Deck and the local API." />
+		</SettingsGroup>
 	);
 }

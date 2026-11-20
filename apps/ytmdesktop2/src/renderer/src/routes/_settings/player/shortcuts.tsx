@@ -7,12 +7,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
+import { SettingsGroup, settingsLabelClass, settingsRowVariants } from "@/components/settings-group";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldContent, FieldDescription, FieldGroup, FieldTitle } from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { useSettingsState } from "@/hooks/use-settings";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_settings/player/shortcuts")({
 	component: PlayerShortcutsPage,
@@ -70,40 +71,29 @@ function PlayerShortcutsPage() {
 
 	return (
 		<>
-			<Card>
-				<CardHeader>
-					<CardTitle>Global shortcuts</CardTitle>
-					<CardDescription>OS-wide media keybinds. Rejected if the system or another action already uses them.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
-						<SettingsCheckbox configKey="shortcuts.enabled" defaultValue={true} description="When off, none of these fire.">
-							Enable global shortcuts
-						</SettingsCheckbox>
-					</FieldGroup>
-				</CardContent>
-			</Card>
+			<SettingsGroup title="Global shortcuts" description="OS-wide media keybinds. Rejected if the system or another action already uses them.">
+				<SettingsCheckbox configKey="shortcuts.enabled" defaultValue={true} description="When off, none of these fire.">
+					Enable global shortcuts
+				</SettingsCheckbox>
+			</SettingsGroup>
 
-			<Card>
-				<CardHeader className="flex flex-row items-start justify-between gap-4">
-					<div>
-						<CardTitle>Keybinds</CardTitle>
-						<CardDescription>Click a bind, then press a combo. Escape cancels. Backspace clears.</CardDescription>
-					</div>
+			<SettingsGroup
+				title="Keybinds"
+				description="Click a bind, then press a combo. Escape cancels. Backspace clears."
+				action={
 					<Button variant="ghost" size="sm" disabled={!enabled || reset.isLoading} onClick={() => setResetAllOpen(true)}>
 						Reset all
 					</Button>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
+				}
+			>
 						{rows.map((row) => {
 							const error = errorById[row.id];
 							const rowCapturing = capturingId === row.id;
 							const parts = row.accelerator ? acceleratorDisplayParts(row.accelerator, os) : [];
 							return (
-								<Field key={row.id} orientation="horizontal" data-invalid={error ? true : undefined}>
+								<Field key={row.id} orientation="horizontal" data-invalid={error ? true : undefined} className={cn(settingsRowVariants({ layout: "field" }), "gap-3")}>
 									<FieldContent>
-										<FieldTitle>{row.label}</FieldTitle>
+										<FieldTitle className={settingsLabelClass}>{row.label}</FieldTitle>
 										{error ? <FieldDescription>{error}</FieldDescription> : null}
 									</FieldContent>
 									<button
@@ -155,9 +145,7 @@ function PlayerShortcutsPage() {
 								</Field>
 							);
 						})}
-					</FieldGroup>
-				</CardContent>
-			</Card>
+			</SettingsGroup>
 
 			<ConfirmDialog
 				open={resetAllOpen}

@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { SettingsGroup, SettingsRow } from "@/components/settings-group";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { useLastFm } from "@/hooks/use-lastfm";
 import { cn } from "@/lib/utils";
@@ -26,44 +25,37 @@ function LastFmSettingsPage() {
 					: "Disconnected";
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Last.fm</CardTitle>
-				<CardDescription>
-					Scrobble tracks to your Last.fm profile. Authorization opens your browser; Last.fm returns via ytmd:// or we finish once you approve.
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
-				<Field orientation="horizontal" data-disabled={isBusy || undefined}>
-					<FieldContent>
-						<FieldLabel>Enable Last.fm</FieldLabel>
-						<FieldDescription>Connect to scrobble your listening history.</FieldDescription>
-					</FieldContent>
-					<Switch
-						checked={enabled}
-						disabled={isBusy && !enabled}
-						onCheckedChange={(next) => {
-							if (next === enabled) return;
-							void toggleLastFM(next);
-						}}
-					/>
-				</Field>
-				<div className="flex flex-wrap items-center justify-between gap-2">
-					<p
+		<SettingsGroup
+			title="Last.fm"
+			description="Scrobble tracks to your Last.fm profile. Authorization opens your browser; Last.fm returns via ytmd:// or we finish once you approve."
+		>
+			<SettingsRow label="Enable Last.fm" description="Connect to scrobble your listening history." disabled={isBusy && !enabled}>
+				<Switch
+					checked={enabled}
+					disabled={isBusy && !enabled}
+					onCheckedChange={(next) => {
+						if (next === enabled) return;
+						void toggleLastFM(next);
+					}}
+				/>
+			</SettingsRow>
+			<SettingsRow
+				label="Account"
+				description={
+					<span
 						className={cn(
-							"text-xs",
 							lastFM.connected && "text-green-500",
 							lastFM.error && !lastFM.connected && "text-destructive",
-							!lastFM.connected && !lastFM.error && "text-muted-foreground",
 						)}
 					>
-						Status: {statusLabel}
-					</p>
-					<Button type="button" size="sm" variant="outline" disabled={isBusy} onClick={() => void reauthLastFM()}>
-						{lastFM.processing ? "Authorizing…" : "Re-authenticate"}
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
+						{statusLabel}
+					</span>
+				}
+			>
+				<Button type="button" size="sm" variant="outline" disabled={isBusy} onClick={() => void reauthLastFM()}>
+					{lastFM.processing ? "Authorizing…" : "Re-authenticate"}
+				</Button>
+			</SettingsRow>
+		</SettingsGroup>
 	);
 }

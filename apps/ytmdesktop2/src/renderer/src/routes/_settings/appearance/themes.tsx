@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
+import { SettingsGroup, SettingsRow } from "@/components/settings-group";
 import { SettingsInput } from "@/components/settings-input";
 import { SettingsSelect } from "@/components/settings-select";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FieldGroup } from "@/components/ui/field";
 import { useSettingsState } from "@/hooks/use-settings";
 import { trpc } from "@/lib/trpc";
 
@@ -21,6 +20,7 @@ function ThemesSettingsPage() {
 	const { mutateAsync: openFile } = trpc.app.openFile.useMutation();
 
 	const isCustom = selected === "custom";
+	const themeLocked = !enabled || enabledPending;
 	const themeOptions =
 		themes?.map((t) => ({ value: t.id, label: t.name })) ??
 		[
@@ -29,63 +29,60 @@ function ThemesSettingsPage() {
 		];
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Themes</CardTitle>
-				<CardDescription>Pick a bundled theme or inject your own SCSS/CSS into YouTube Music.</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<FieldGroup>
-					<SettingsCheckbox configKey="themes.enabled">Enable Themes</SettingsCheckbox>
-					<SettingsCheckbox configKey="themes.thumbnailBackground">Enable Thumbnail Background</SettingsCheckbox>
-					<SettingsCheckbox configKey="themes.blur" description="Glass blur on player, bar, and dialogs. Turn off for better performance.">
-						Enable Blur
+		<SettingsGroup title="Themes" description="Pick a bundled theme or inject your own SCSS/CSS into YouTube Music.">
+			<SettingsCheckbox configKey="themes.enabled">Enable themes</SettingsCheckbox>
+			<SettingsSelect
+				configKey="themes.selected"
+				label="Theme"
+				defaultValue="default"
+				nested
+				disabled={themeLocked}
+				options={themeOptions}
+			/>
+			{isCustom && !selectedPending && (
+				<>
+					<SettingsCheckbox
+						configKey="themes.watching"
+						nested
+						disabled={themeLocked}
+						description="Recompile and inject when the file changes on disk."
+					>
+						Update on changes
 					</SettingsCheckbox>
-					{enabled && !enabledPending && (
-						<>
-							<SettingsSelect configKey="themes.selected" label="Theme" defaultValue="default" options={themeOptions} />
-							{isCustom && !selectedPending && (
-								<>
-									<SettingsCheckbox configKey="themes.watching" description="Recompile and inject when the file changes on disk.">
-										Update on Changes
-									</SettingsCheckbox>
-									<SettingsInput
-										configKey="themes.customFile"
-										type="file"
-										accept=".scss,.sass,.css"
-										label="Custom Theme File"
-										hint={
-											<div className="mt-2 flex justify-end gap-2">
-												<Button type="button" size="sm" variant="outline" disabled={pathPending} onClick={() => void reload()}>
-													Reload
-												</Button>
-												<Button
-													type="button"
-													size="sm"
-													variant="outline"
-													disabled={pathPending || !customFile}
-													onClick={() => {
-														if (customFile) void openFile(customFile);
-													}}
-												>
-													Open File
-												</Button>
-											</div>
-										}
-									/>
-								</>
-							)}
-							{!isCustom && (
-								<div className="flex justify-end">
-									<Button type="button" size="sm" variant="outline" onClick={() => void reload()}>
-										Reload
-									</Button>
-								</div>
-							)}
-						</>
-					)}
-				</FieldGroup>
-			</CardContent>
-		</Card>
+					<SettingsInput
+						configKey="themes.customFile"
+						type="file"
+						accept=".scss,.sass,.css"
+						label="Custom theme file"
+						nested
+						disabled={themeLocked}
+						hint={
+							<div className="flex justify-end gap-2">
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									disabled={themeLocked || pathPending || !customFile}
+									onClick={() => {
+										if (customFile) void openFile(customFile);
+									}}
+								>
+									Open file
+								</Button>
+							</div>
+						}
+					/>
+				</>
+			)}
+			<SettingsRow label="Reload theme" description="Recompile and inject the selected theme now." nested disabled={themeLocked}>
+				<Button type="button" size="sm" variant="outline" disabled={themeLocked || pathPending} onClick={() => void reload()}>
+					Reload
+				</Button>
+			</SettingsRow>
+			<SettingsCheckbox configKey="themes.thumbnailBackground">Enable thumbnail background</SettingsCheckbox>
+			<SettingsCheckbox configKey="themes.blur" description="Glass blur on player, bar, and dialogs. Turn off for better performance.">
+				Enable blur
+			</SettingsCheckbox>
+		</SettingsGroup>
 	);
 }

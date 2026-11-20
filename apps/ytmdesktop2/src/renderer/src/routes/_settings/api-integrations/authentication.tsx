@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { SettingsCheckbox } from "@/components/settings-checkbox";
+import { SettingsGroup, SettingsRow } from "@/components/settings-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -134,28 +135,23 @@ function AuthenticationSettingsPage() {
 
 	return (
 		<>
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
+			<SettingsGroup
+				title={
+					<>
 						Authentication
 						<Badge variant="outline">Global</Badge>
-					</CardTitle>
-					<CardDescription>
-						Pair external apps once. Approved clients unlock gated surfaces such as the local API and Stream Deck.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
-						<SettingsCheckbox
-							configKey="api.authRequired"
-							description="When enabled, API track/control endpoints require a paired client token."
-							updateMessage="Auth setting updated"
-						>
-							Require authorization for API
-						</SettingsCheckbox>
-					</FieldGroup>
-				</CardContent>
-			</Card>
+					</>
+				}
+				description="Pair external apps once. Approved clients unlock gated surfaces such as the local API and Stream Deck."
+			>
+				<SettingsCheckbox
+					configKey="api.authRequired"
+					description="When enabled, API track/control endpoints require a paired client token."
+					updateMessage="Auth setting updated"
+				>
+					Require authorization for API
+				</SettingsCheckbox>
+			</SettingsGroup>
 
 			{pending && (
 				<Card className="border-primary/40">
@@ -182,59 +178,56 @@ function AuthenticationSettingsPage() {
 				</Card>
 			)}
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Paired clients</CardTitle>
-					<CardDescription>
-						{authRequired || authPending
-							? "Authorized apps that can control playback and other unlocked surfaces."
-							: "Clients can still pair now; tokens are enforced when Require authorization is on."}
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{clients.length === 0 ? (
-						<p className="text-sm text-muted-foreground">No paired clients yet.</p>
-					) : (
-						<ul className="flex flex-col gap-3">
-							{clients.map((client) => (
-								<li key={client.appId}>
-									<Field orientation="horizontal">
-										<FieldContent>
-											<FieldLabel>{client.appName}</FieldLabel>
-											<FieldDescription>
-												<span className="font-mono">{client.appId}</span> · v{client.appVersion}
-											</FieldDescription>
-										</FieldContent>
-										<div className="flex shrink-0 gap-1">
-											<Button size="sm" variant="ghost" disabled={busy} onClick={() => void handleReveal(client.appId)}>
-												Copy token
-											</Button>
-											<Button
-												size="sm"
-												variant="ghost"
-												disabled={busy}
-												onClick={() => setRevokeTarget({ appId: client.appId, appName: client.appName })}
-											>
-												Revoke
-											</Button>
-										</div>
-									</Field>
-								</li>
-							))}
-						</ul>
-					)}
-				</CardContent>
-				<CardFooter className="flex flex-wrap gap-2">
-					<Button size="sm" onClick={() => setWizardOpen(true)}>
-						Create client
-					</Button>
-					{clients.length > 0 && (
-						<Button size="sm" variant="outline" disabled={busy} onClick={() => setRevokeTarget("all")}>
-							Revoke all
+			<SettingsGroup
+				title="Paired clients"
+				description={
+					authRequired || authPending
+						? "Authorized apps that can control playback and other unlocked surfaces."
+						: "Clients can still pair now; tokens are enforced when Require authorization is on."
+				}
+				action={
+					<div className="flex gap-2">
+						{clients.length > 0 && (
+							<Button size="sm" variant="ghost" disabled={busy} onClick={() => setRevokeTarget("all")}>
+								Revoke all
+							</Button>
+						)}
+						<Button size="sm" onClick={() => setWizardOpen(true)}>
+							Create client
 						</Button>
-					)}
-				</CardFooter>
-			</Card>
+					</div>
+				}
+			>
+				{clients.length === 0 ? (
+					<SettingsRow description="No paired clients yet." />
+				) : (
+					clients.map((client) => (
+						<SettingsRow
+							key={client.appId}
+							label={client.appName}
+							description={
+								<>
+									<span className="font-mono">{client.appId}</span> · v{client.appVersion}
+								</>
+							}
+						>
+							<div className="flex shrink-0 gap-1">
+								<Button size="sm" variant="ghost" disabled={busy} onClick={() => void handleReveal(client.appId)}>
+									Copy token
+								</Button>
+								<Button
+									size="sm"
+									variant="ghost"
+									disabled={busy}
+									onClick={() => setRevokeTarget({ appId: client.appId, appName: client.appName })}
+								>
+									Revoke
+								</Button>
+							</div>
+						</SettingsRow>
+					))
+				)}
+			</SettingsGroup>
 
 			<CreateClientWizard
 				open={wizardOpen}

@@ -323,7 +323,7 @@ function SettingsLayout() {
 						<Outlet />
 					) : (
 						<ScrollArea className="h-full">
-							<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 pb-32">
+							<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 pb-12">
 								<Suspense key={pathname} fallback={<SpinnerPage />}>
 									<Outlet />
 								</Suspense>

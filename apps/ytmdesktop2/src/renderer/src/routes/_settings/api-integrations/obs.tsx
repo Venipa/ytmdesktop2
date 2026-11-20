@@ -10,11 +10,11 @@ import { toAppThumbUrl } from "@shared/media/appThumbUrl";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { SettingsAdvanced, SettingsDescription, SettingsGroup, SettingsGroupBody, SettingsRow, settingsLabelClass } from "@/components/settings-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useTrack, useTrackState } from "@/hooks/use-track";
 import { trpc } from "@/lib/trpc";
@@ -34,6 +34,8 @@ const LAYOUT_OPTIONS: { value: EmbedLayout; label: string; hint: string }[] = [
 	{ value: "stack", label: "Stack", hint: "Vertical poster — art on top." },
 	{ value: "ticker", label: "Ticker", hint: "Thin scrolling strip for top/bottom." },
 ];
+
+const LAYOUT_ITEMS = Object.fromEntries(LAYOUT_OPTIONS.map((o) => [o.value, o.label]));
 
 const FLAG_ROWS: { key: BoolFlagKey; label: string; description: string }[] = [
 	{ key: "art", label: "Album art", description: "Show track thumbnail (ignored for text layout)." },
@@ -69,6 +71,7 @@ function ObsSettingsPage() {
 		};
 	}, [track, trackState]);
 
+	const clientItems = useMemo(() => Object.fromEntries(clients.map((c) => [c.appId, c.appName || c.appId])), [clients]);
 	const endpoint = useMemo(() => `http://127.0.0.1:${port}`, [port]);
 	const embedUrl = useMemo(
 		() =>
@@ -122,30 +125,28 @@ function ObsSettingsPage() {
 
 	return (
 		<>
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
+			<SettingsGroup
+				title={
+					<>
 						OBS overlay
 						<Badge variant="outline">Embed</Badge>
-					</CardTitle>
-					<CardDescription>
-						First-party now-playing browser source for OBS. Preview uses live player data; OBS hits the local API.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col gap-4">
-					<ol className="list-decimal space-y-2 pl-4 text-sm text-muted-foreground">
+					</>
+				}
+				description="First-party now-playing browser source for OBS. Preview uses live player data; OBS hits the local API."
+			>
+				<SettingsGroupBody>
+					<ol className="list-decimal space-y-1.5 pl-4 text-xs/5 text-muted-foreground">
 						<li>
 							Enable the API under <span className="font-medium text-foreground">API</span>
 							{apiEnabled ? null : " (currently off)"}.
 						</li>
-						<li>Tune flags below — preview updates immediately.</li>
+						<li>Tune the layout and elements below — preview updates immediately.</li>
 						<li>
 							{authRequired
 								? "Load a paired client token (or paste one), then copy the URL into an OBS Browser Source."
 								: "Copy the URL into an OBS Browser Source (width ~480, height ~140)."}
 						</li>
 					</ol>
-
 					<div
 						className="relative flex min-h-[140px] items-center justify-center overflow-hidden rounded-lg border border-border p-4"
 						style={{
@@ -168,129 +169,122 @@ function ObsSettingsPage() {
 						)}
 					</div>
 
-					<FieldGroup>
-						<Field orientation="horizontal" className="items-center justify-between gap-4">
-							<FieldContent>
-								<FieldLabel>Layout</FieldLabel>
-								<FieldDescription>
-									{LAYOUT_OPTIONS.find((o) => o.value === flags.layout)?.hint ?? "Widget layout variant."}
-								</FieldDescription>
-							</FieldContent>
-							<select
-								className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-								value={flags.layout}
-								onChange={(e) => {
-									const layout = e.target.value as EmbedLayout;
-									setFlags((prev) => ({ ...prev, layout }));
-								}}
-							>
+				</SettingsGroupBody>
+				<SettingsRow label="Layout" description={LAYOUT_OPTIONS.find((o) => o.value === flags.layout)?.hint ?? "Widget layout variant."}>
+					<Select
+						value={flags.layout}
+						items={LAYOUT_ITEMS}
+						onValueChange={(next) => {
+							if (next == null) return;
+							setFlags((prev) => ({ ...prev, layout: next as EmbedLayout }));
+						}}
+					>
+						<SelectTrigger className="w-44 shrink-0">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent alignItemWithTrigger sideOffset={0}>
+							<SelectGroup>
 								{LAYOUT_OPTIONS.map((opt) => (
-									<option key={opt.value} value={opt.value}>
+									<SelectItem key={opt.value} value={opt.value} label={opt.label}>
 										{opt.label}
-									</option>
+									</SelectItem>
 								))}
-							</select>
-						</Field>
-						{FLAG_ROWS.map((row) => (
-							<Field key={row.key} orientation="horizontal" className="items-center justify-between gap-4">
-								<FieldContent>
-									<FieldLabel>{row.label}</FieldLabel>
-									<FieldDescription>{row.description}</FieldDescription>
-								</FieldContent>
-								<Switch
-									checked={flags[row.key] === true}
-									onCheckedChange={(checked) => setFlag(row.key, checked === true)}
-								/>
-							</Field>
-						))}
-						<Field orientation="horizontal" className="items-center justify-between gap-4">
-							<FieldContent>
-								<FieldLabel>Scale</FieldLabel>
-								<FieldDescription>CSS scale factor (0.25–4).</FieldDescription>
-							</FieldContent>
-							<Input
-								type="number"
-								className="w-24"
-								min={0.25}
-								max={4}
-								step={0.05}
-								value={flags.scale}
-								onChange={(e) => {
-									const n = Number(e.target.value);
-									if (!Number.isFinite(n)) return;
-									setFlags((prev) => ({
-										...prev,
-										scale: Math.min(4, Math.max(0.25, n)),
-									}));
-								}}
-							/>
-						</Field>
-					</FieldGroup>
+							</SelectGroup>
+						</SelectContent>
+					</Select>
+				</SettingsRow>
+				<SettingsAdvanced label="Elements" summary={`${FLAG_ROWS.length + 1} settings`}>
+					{FLAG_ROWS.map((row) => (
+						<SettingsRow key={row.key} label={row.label} description={row.description}>
+							<Switch checked={flags[row.key] === true} onCheckedChange={(checked) => setFlag(row.key, checked === true)} />
+						</SettingsRow>
+					))}
+					<SettingsRow label="Scale" description="CSS scale factor (0.25–4).">
+						<Input
+							type="number"
+							className="w-24"
+							min={0.25}
+							max={4}
+							step={0.05}
+							value={flags.scale}
+							onChange={(e) => {
+								const n = Number(e.target.value);
+								if (!Number.isFinite(n)) return;
+								setFlags((prev) => ({
+									...prev,
+									scale: Math.min(4, Math.max(0.25, n)),
+								}));
+							}}
+						/>
+					</SettingsRow>
+				</SettingsAdvanced>
+			</SettingsGroup>
 
-					{authRequired ? (
-						<FieldGroup>
-							<Field>
-								<FieldLabel>API token</FieldLabel>
-								<FieldDescription>
-									Required when authorization is on. Appended as <span className="font-mono">?token=</span>.
-								</FieldDescription>
-								<div className="mt-2 flex flex-wrap gap-2">
-									<Input
-										className="min-w-[12rem] flex-1 font-mono text-xs"
-										placeholder="Paste token…"
-										value={token}
-										onChange={(e) => setToken(e.target.value)}
-										spellCheck={false}
-									/>
-									{clients.length > 0 ? (
-										<>
-											<select
-												className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-												value={selectedClientId}
-												onChange={(e) => setSelectedClientId(e.target.value)}
-											>
-												{clients.map((c) => (
-													<option key={c.appId} value={c.appId}>
-														{c.appName || c.appId}
-													</option>
-												))}
-											</select>
-											<Button type="button" size="sm" variant="secondary" disabled={revealing} onClick={() => void loadTokenFromClient()}>
-												Load token
-											</Button>
-										</>
-									) : (
-										<p className="text-xs text-muted-foreground">No paired clients — create one under Authentication.</p>
-									)}
-								</div>
-							</Field>
-						</FieldGroup>
-					) : null}
-
-					<div className="rounded-md border border-border bg-muted/30 p-3">
-						<p className="mb-1 text-xs text-muted-foreground">Browser source URL</p>
-						<code className="block break-all font-mono text-xs text-foreground">{embedUrl}</code>
-						{!apiEnabled || !running ? (
-							<p className="mt-2 text-xs text-amber-500">Local API is not running — preview still works; OBS needs the API.</p>
+			<SettingsGroup
+				title="Browser source"
+				action={
+					<div className="flex items-center gap-3">
+						{apiEnabled && running ? (
+							<a href={embedUrl} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+								Open in browser
+							</a>
 						) : null}
+						<Button type="button" size="sm" onClick={() => void copyUrl()}>
+							Copy OBS URL
+						</Button>
 					</div>
-				</CardContent>
-				<CardFooter className="flex flex-wrap gap-2">
-					<Button type="button" size="sm" onClick={() => void copyUrl()}>
-						Copy OBS URL
-					</Button>
-					{apiEnabled && running ? (
-						<a
-							href={embedUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="text-xs text-primary underline-offset-4 hover:underline"
-						>
-							Open in browser
-						</a>
+				}
+			>
+				{authRequired ? (
+					<SettingsGroupBody className="gap-2">
+						<div className="flex flex-col gap-0.5">
+							<span className={settingsLabelClass}>API token</span>
+							<SettingsDescription>
+								Required when authorization is on. Appended as <span className="font-mono">?token=</span>.
+							</SettingsDescription>
+						</div>
+						<div className="flex flex-wrap gap-2">
+							<Input
+								className="min-w-[12rem] flex-1 font-mono text-xs"
+								placeholder="Paste token…"
+								value={token}
+								onChange={(e) => setToken(e.target.value)}
+								spellCheck={false}
+							/>
+							{clients.length > 0 ? (
+								<>
+									<Select value={selectedClientId} items={clientItems} onValueChange={(next) => next != null && setSelectedClientId(next)}>
+										<SelectTrigger className="w-40">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent alignItemWithTrigger sideOffset={0}>
+											<SelectGroup>
+												{clients.map((c) => (
+													<SelectItem key={c.appId} value={c.appId} label={c.appName || c.appId}>
+														{c.appName || c.appId}
+													</SelectItem>
+												))}
+											</SelectGroup>
+										</SelectContent>
+									</Select>
+									<Button type="button" size="sm" variant="secondary" disabled={revealing} onClick={() => void loadTokenFromClient()}>
+										Load token
+									</Button>
+								</>
+							) : (
+								<p className="self-center text-xs text-muted-foreground">No paired clients — create one under Authentication.</p>
+							)}
+						</div>
+					</SettingsGroupBody>
+				) : null}
+				<SettingsGroupBody className="gap-1">
+					<span className="text-xs/4 text-muted-foreground">Browser source URL</span>
+					<code className="block break-all font-mono text-xs text-foreground select-text">{embedUrl}</code>
+					{!apiEnabled || !running ? (
+						<p className="mt-1 text-xs text-amber-500">Local API is not running — preview still works; OBS needs the API.</p>
 					) : null}
-				</CardFooter>
-			</Card>
+				</SettingsGroupBody>
+			</SettingsGroup>
 		</>
 	);
 }

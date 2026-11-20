@@ -21,7 +21,7 @@ function ApiIntegrationsLayout() {
 	return (
 		<div className="flex h-full min-h-0 flex-col">
 			<ScrollArea className="min-h-0 flex-1">
-				<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 pb-8">
+				<div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 pb-12">
 					<Suspense key={pathname} fallback={<SpinnerPage />}>
 						<Outlet />
 					</Suspense>
