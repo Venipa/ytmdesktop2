@@ -1,5 +1,11 @@
 import type { PlayerApi } from "ytm-client-api";
-import { parseNextPanel, QUEUE_CONTINUE_REMAINING, queueItemHitsVideoId, remainingAfterIndex } from "./queue-continue.parse";
+import {
+	continuationRetryAt,
+	parseNextPanel,
+	QUEUE_CONTINUE_REMAINING,
+	queueItemHitsVideoId,
+	remainingAfterIndex,
+} from "./queue-continue.parse";
 import { getPagePlayerApi } from "./world0/context";
 import type { RendererPluginRegistration } from "./world0/types";
 import {
@@ -79,14 +85,15 @@ const queueContinueRenderer: RendererPluginRegistration = {
 	},
 	onPlayerApiReady(playerApi, ctx) {
 		let inFlight = false;
-		let fetchedToken = "";
+		let triedToken = "";
+		let retryAt = 0;
 		let unsub: (() => void) | undefined;
 
 		const tick = () => {
 			if (!enabled || inFlight) return;
 			unsub ??= resolveYtmStore()?.subscribe?.(tick);
 			const token = readQueueContinuation();
-			if (!token || token === fetchedToken) return;
+			if (!token || (token === triedToken && Date.now() < retryAt)) return;
 			const store = resolveYtmStore();
 			const items = store?.getState()?.queue?.items ?? [];
 			const player = getPagePlayerApi() ?? playerApi;
@@ -102,6 +109,9 @@ const queueContinueRenderer: RendererPluginRegistration = {
 			if (index >= 0) body.index = index;
 
 			inFlight = true;
+			// tick runs on every store change — mark before fetching so empty/failed replies are not re-requested in a loop
+			triedToken = token;
+			retryAt = continuationRetryAt("pending", Date.now());
 			void fetchFn("/next", body)
 				.then((res) => {
 					const parsed = parseNextPanel(res);
@@ -111,9 +121,11 @@ const queueContinueRenderer: RendererPluginRegistration = {
 					}
 					appendQueueItems(parsed.items);
 					writeQueueContinuation(parsed.continuation);
-					fetchedToken = token;
 				})
-				.catch((err) => ctx.log.warn("queue continuation fetch failed", err))
+				.catch((err) => {
+					retryAt = continuationRetryAt("failed", Date.now());
+					ctx.log.warn("queue continuation fetch failed", err);
+				})
 				.finally(() => {
 					inFlight = false;
 				});

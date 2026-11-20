@@ -1,4 +1,10 @@
 export const QUEUE_CONTINUE_REMAINING = 3;
+export const QUEUE_CONTINUE_RETRY_MS = 30_000;
+
+/** When a tried token may be requested again: never once answered (even empty), after a pause on network failure. */
+export function continuationRetryAt(outcome: "pending" | "failed", now: number): number {
+	return outcome === "failed" ? now + QUEUE_CONTINUE_RETRY_MS : Number.POSITIVE_INFINITY;
+}
 const FIND_DEPTH = 16;
 
 export type ParsedQueuePanel = {
