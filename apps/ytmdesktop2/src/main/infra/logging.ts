@@ -1,10 +1,10 @@
+import fs from "node:fs";
+import path from "node:path";
 import { getRotatingFileSink } from "@logtape/file";
 import { configureSync, getLogger, getTextFormatter, type LogLevel as LogTapeLevel } from "@logtape/logtape";
 import { isAppQuitting } from "@main/handlers/quitPolicy";
 import { formatLogArgs, Logger, LogLevel, type LogOutput, logger } from "@shared/utils/console";
 import { app, dialog } from "electron";
-import fs from "node:fs";
-import path from "node:path";
 
 /** Per-file soft cap before rotate. */
 const MAX_LOG_FILE_BYTES = 5 * 1024 * 1024;
@@ -147,9 +147,35 @@ function showFatalErrorDialog(kind: string, reason: unknown): void {
 	}
 }
 
+type StdioStream = Pick<NodeJS.WriteStream, "on">;
+
+/** A broken stdio transport (closed pipe) is not an app failure. */
+function isBrokenStdioError(error: unknown): boolean {
+	const code = (error as NodeJS.ErrnoException | undefined)?.code;
+	return code === "EPIPE" || code === "ERR_STREAM_DESTROYED";
+}
+
+/**
+ * The app is often started with stdout/stderr connected to a pipe whose reader exits (a
+ * launcher, terminal or CI step). The next console write then raises `EPIPE`, which Electron
+ * reports as an uncaughtException — and the uncaughtException handler logs through the same
+ * broken stream. Broken stdio must never surface as a user-facing error dialog.
+ */
+export function attachStdioErrorHandlers(
+	streams: StdioStream[] = [process.stdout, process.stderr],
+): void {
+	for (const stream of streams) {
+		stream.on("error", (error: NodeJS.ErrnoException) => {
+			if (isBrokenStdioError(error)) return;
+			throw error;
+		});
+	}
+}
+
 function attachProcessErrorHandlers() {
 	if (processHandlersAttached) return;
 	processHandlersAttached = true;
+	attachStdioErrorHandlers();
 	process.on("uncaughtException", (err) => {
 		logger.error("uncaughtException", err);
 		if (isAppQuitting()) return;
