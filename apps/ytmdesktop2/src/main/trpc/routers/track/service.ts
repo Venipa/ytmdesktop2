@@ -11,6 +11,7 @@ import {
 	LASTFM_SCROBBLE_MAX_WAIT_SEC,
 	LASTFM_SCROBBLE_MIN_DURATION_SEC,
 	lastFmScrobbleRemainingMs,
+	mergeLateLastFmMeta,
 	preferLastFmTrack,
 	relatedIdsIntersect,
 	relatedVideoIds,
@@ -494,6 +495,7 @@ export class TrackService {
 				disliked: this._pendingLike?.videoId === videoId ? this._pendingLike.disliked : this._trackState?.id === videoId ? this._trackState.disliked : undefined,
 			},
 			music: musicObject,
+			artists: Array.isArray(ytTrack.artists) ? ytTrack.artists.map(String) : undefined,
 		} as TrackData;
 
 		trackCollection.addOrUpdate(videoId, track, this.lookupTrackId);
@@ -508,6 +510,8 @@ export class TrackService {
 
 		const key = trackContentKey(track);
 		const contentChanged = key !== this.lastTrackContentKey;
+		// trackContentKey has no artists: a late byline must reach the pending scrobble also when the key is the same
+		if (!restartListen) void this.refreshPendingLastFmMeta(track);
 		const stateOutOfSync = !this._trackState || this._trackState.id !== videoId;
 		const needsLastFm = this.trackNeedsLastFm(track);
 
@@ -772,6 +776,16 @@ export class TrackService {
 			findById: (id) => trackCollection.findById(id),
 			cloneTrack: clone,
 		});
+	}
+
+	/** Late byline data (artists, album) for the song that waits for its scrobble: update it and send Now Playing again. */
+	private async refreshPendingLastFmMeta(track: TrackData) {
+		const pending = this.pendingScrobble;
+		if (!pending || !mergeLateLastFmMeta(pending.track, track)) return;
+		this.logger.debug("lastfm late byline meta", pending.videoId);
+		const lastfm = this.getLastFm();
+		if (!lastfm?.getState().connected) return;
+		await lastfm.handleTrackStart(pending.track, { force: true, epoch: pending.epoch });
 	}
 
 	private getLastFm() {

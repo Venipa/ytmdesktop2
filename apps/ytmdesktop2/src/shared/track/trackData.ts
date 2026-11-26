@@ -93,6 +93,8 @@ export interface TrackData {
 	music?: {
 		album: string;
 	};
+	/** Artist names from the YTM player bar byline, one entry per artist. */
+	artists?: string[];
 }
 
 export const parseMusicUrlById = (id: string) => `https://music.youtube.com/watch?v=${id}&feature=share`;

@@ -94,6 +94,7 @@ const defaultSettings = {
 	},
 	lastfm: {
 		enabled: false,
+		firstArtistOnly: false,
 	} as LastFMSettings,
 	shortcuts: {
 		enabled: true,

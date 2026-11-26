@@ -29,6 +29,7 @@ Connect your Last.fm account so YTMDesktop2 can update **Now Playing** and scrob
 - Auth tokens are kept in an [encrypted store](/docs/internals/encrypted-stores) — clearing app data or the key file requires re-auth.
 - Toggle Last.fm off anytime without losing your login — turn it back on to resume (re-auth only if the session expired).
 - Use **Re-authenticate** on the settings page to switch accounts or refresh a broken session.
+- **Scrobble only the first artist** (off by default): for a song with several artists (for example `Artist A & Artist B`), Last.fm gets only `Artist A`. A band name that contains `&` or `,` stays whole, because the artists come from the YouTube Music player bar, not from splitting the text.
 
 ## Related
 
