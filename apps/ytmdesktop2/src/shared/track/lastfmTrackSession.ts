@@ -138,3 +138,32 @@ export function isProgressWrap(
 	}
 	return prevSec > durationSec - nearEndSec && nextSec < nearStartSec;
 }
+
+/**
+ * Artist name to send to Last.fm.
+ * With `firstArtistOnly`, a song with several byline artists sends only the first one.
+ */
+export function lastFmArtist(track: Pick<TrackData, "video" | "artists">, firstArtistOnly: boolean): string {
+	const artists = track.artists;
+	if (!firstArtistOnly || !artists || artists.length < 2) return track.video.author;
+	return artists[0];
+}
+
+/**
+ * Copy byline data that arrived late (the player bar updates after the video data) into the pending Last.fm track.
+ * @returns true when the pending track changed, so Now Playing must be sent again.
+ */
+export function mergeLateLastFmMeta(pending: TrackData, incoming: Pick<TrackData, "video" | "artists" | "music">): boolean {
+	if (pending.video.videoId !== incoming.video.videoId) return false;
+	let changed = false;
+	const artists = incoming.artists;
+	if (artists?.length && artists.join("|") !== (pending.artists ?? []).join("|")) {
+		pending.artists = [...artists];
+		changed = true;
+	}
+	if (incoming.music?.album && !pending.music?.album) {
+		pending.music = { ...pending.music, album: incoming.music.album };
+		changed = true;
+	}
+	return changed;
+}

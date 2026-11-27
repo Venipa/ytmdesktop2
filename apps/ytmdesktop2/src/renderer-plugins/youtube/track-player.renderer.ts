@@ -1,3 +1,4 @@
+import { artistsFromBylineRuns, bylineRunsForVideo, rendererVideoId, type YtmBylineRun } from "@shared/ytm/byline";
 import type { PlayerApi } from "ytm-client-api";
 import { getPagePlayerApi } from "./world0/context";
 import type { RendererPluginRegistration } from "./world0/types";
@@ -14,8 +15,9 @@ function asEventTarget(player: PlayerApi | null): PlayerEventTarget | null {
 const VIDEO_DATA_LOADED_TYPES: Record<string, 1> = { dataupdated: 1, dataloaded: 1, newdata: 1 };
 const FIRST_TRACK_POLL_MS = 50;
 const FIRST_TRACK_POLL_MAX_MS = 8000;
-const ALBUM_POLL_MS = 100;
-const ALBUM_POLL_MAX_MS = 3000;
+/** The player bar byline (album, artists) can arrive after the video data. */
+const BYLINE_POLL_MS = 100;
+const BYLINE_POLL_MAX_MS = 3000;
 
 type Thumb = { url: string; width: number; height: number };
 
@@ -29,16 +31,6 @@ function pickThumbs(raw: unknown): Thumb[] {
 		out.push({ url, width: Number(item.width || 0), height: Number(item.height || 0) });
 	}
 	return out;
-}
-
-function rendererVideoId(renderer: unknown): string | null {
-	if (!renderer || typeof renderer !== "object") return null;
-	const r = renderer as {
-		videoId?: string;
-		navigationEndpoint?: { watchEndpoint?: { videoId?: string } };
-	};
-	const id = r.videoId || r.navigationEndpoint?.watchEndpoint?.videoId;
-	return typeof id === "string" && id ? id : null;
 }
 
 function counterpartFromWrapper(wrapper: unknown, activeVideoId: string): string | null {
@@ -96,26 +88,29 @@ function readCounterpartVideoId(activeVideoId: string): string | null {
 	return null;
 }
 
-function readAlbum(): { id: string; title: string } | undefined {
-	try {
-		const bar = document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as {
-			currentItem?: {
-				longBylineText?: {
-					runs?: Array<{
-						text?: string;
-						navigationEndpoint?: {
-							browseEndpoint?: {
-								browseId?: string;
-								browseEndpointContextSupportedConfigs?: {
-									browseEndpointContextMusicConfig?: { pageType?: string };
-								};
-							};
-						};
-					}>;
-				};
+type BylineRun = YtmBylineRun & {
+	navigationEndpoint?: {
+		browseEndpoint?: {
+			browseId?: string;
+			browseEndpointContextSupportedConfigs?: {
+				browseEndpointContextMusicConfig?: { pageType?: string };
 			};
-		} | null;
-		const runs = bar?.currentItem?.longBylineText?.runs;
+		};
+	};
+};
+
+function readBylineRuns(videoId: string): BylineRun[] | undefined {
+	const bar = document.querySelector("ytmusic-app-layout>ytmusic-player-bar") as { currentItem?: Record<string, any> } | null;
+	return bylineRunsForVideo<BylineRun>(bar?.currentItem, videoId);
+}
+
+function readArtists(videoId: string): string[] {
+	return artistsFromBylineRuns(readBylineRuns(videoId));
+}
+
+function readAlbum(videoId: string): { id: string; title: string } | undefined {
+	try {
+		const runs = readBylineRuns(videoId);
 		if (!runs) return undefined;
 		for (const v of runs) {
 			const pageType =
@@ -141,7 +136,7 @@ function buildPayload(videoData: {
 		musicVideoType?: string;
 	};
 	microformat?: { microformatDataRenderer?: Record<string, unknown> };
-}, album: { id: string; title: string } | undefined) {
+}, album: { id: string; title: string } | undefined, artists: string[]) {
 	const details = videoData.videoDetails;
 	const micro = videoData.microformat?.microformatDataRenderer;
 	const videoId = String(details.videoId);
@@ -208,6 +203,7 @@ function buildPayload(videoData: {
 				}
 			: null,
 		music: details.musicVideoType === "MUSIC_VIDEO_TYPE_ATV" && album ? { album: album.title, albumId: album.id } : null,
+		artists,
 		counterpartVideoId: readCounterpartVideoId(videoId),
 		restartListen: false as boolean | undefined,
 	};
@@ -223,7 +219,9 @@ function contentKey(payload: ReturnType<typeof buildPayload>): string {
 		"|" +
 		payload.video.lengthSeconds +
 		"|" +
-		(payload.counterpartVideoId || "")
+		(payload.counterpartVideoId || "") +
+		"|" +
+		payload.artists.join("|")
 	);
 }
 
@@ -254,17 +252,17 @@ const trackPlayerRenderer: RendererPluginRegistration = {
 		let lastKey: string | null = null;
 		let disposed = false;
 		let firstPollTimer: ReturnType<typeof setTimeout> | null = null;
-		let albumPollTimer: ReturnType<typeof setTimeout> | null = null;
+		let bylinePollTimer: ReturnType<typeof setTimeout> | null = null;
 		let hookedInfoPlayer: PlayerApi | null = null;
 		let lastPlaying: boolean | null = null;
 		let lastProgressBucket = -1;
 		let lastLoop: boolean | null = null;
 		let hookedPlayPlayer: PlayerApi | null = null;
 
-		const clearAlbumPoll = () => {
-			if (albumPollTimer === null) return;
-			clearTimeout(albumPollTimer);
-			albumPollTimer = null;
+		const clearBylinePoll = () => {
+			if (bylinePollTimer === null) return;
+			clearTimeout(bylinePollTimer);
+			bylinePollTimer = null;
 		};
 
 		const emitInfo = (payload: ReturnType<typeof buildPayload>) => {
@@ -283,23 +281,25 @@ const trackPlayerRenderer: RendererPluginRegistration = {
 				return false;
 			}
 			if (!videoData?.videoDetails?.videoId) return false;
-			const payload = buildPayload(videoData, readAlbum());
+			const videoId = String(videoData.videoDetails.videoId);
+			const payload = buildPayload(videoData, readAlbum(videoId), readArtists(videoId));
 			const key = contentKey(payload);
 			const restartListen = !!opts?.restartListen;
 			if (!restartListen && key === lastKey) return true;
 			payload.restartListen = restartListen;
 			if (!emitInfo(payload)) return false;
 			lastKey = key;
-			if (payload.video.musicVideoType === "MUSIC_VIDEO_TYPE_ATV" && !payload.music) {
-				armAlbumPoll(payload.video.videoId);
+			const albumMissing = payload.video.musicVideoType === "MUSIC_VIDEO_TYPE_ATV" && !payload.music;
+			if (albumMissing || payload.artists.length === 0) {
+				armBylinePoll(videoId);
 			} else {
-				clearAlbumPoll();
+				clearBylinePoll();
 			}
 			return true;
 		};
 
-		const armAlbumPoll = (videoId: string) => {
-			clearAlbumPoll();
+		const armBylinePoll = (videoId: string) => {
+			clearBylinePoll();
 			const startedAt = Date.now();
 			const tick = () => {
 				if (disposed) return;
@@ -311,14 +311,14 @@ const trackPlayerRenderer: RendererPluginRegistration = {
 					currentId = "";
 				}
 				if (currentId !== videoId) return;
-				if (readAlbum()) {
-					pushTrackInfo();
-					return;
-				}
-				if (Date.now() - startedAt >= ALBUM_POLL_MAX_MS) return;
-				albumPollTimer = setTimeout(tick, ALBUM_POLL_MS);
+				// pushTrackInfo emits only when the byline changed, and polls again while album or artists are missing
+				const prevKey = lastKey;
+				pushTrackInfo();
+				if (lastKey !== prevKey) return;
+				if (Date.now() - startedAt >= BYLINE_POLL_MAX_MS) return;
+				bylinePollTimer = setTimeout(tick, BYLINE_POLL_MS);
 			};
-			albumPollTimer = setTimeout(tick, ALBUM_POLL_MS);
+			bylinePollTimer = setTimeout(tick, BYLINE_POLL_MS);
 		};
 
 		const handleVideoDataChange = (ev: { type?: string; playertype?: number }) => {
@@ -427,7 +427,7 @@ const trackPlayerRenderer: RendererPluginRegistration = {
 		const onUnload = () => {
 			disposed = true;
 			if (firstPollTimer !== null) clearTimeout(firstPollTimer);
-			clearAlbumPoll();
+			clearBylinePoll();
 			try {
 				asEventTarget(hookedInfoPlayer)?.removeEventListener?.(
 					"onVideoDataChange",

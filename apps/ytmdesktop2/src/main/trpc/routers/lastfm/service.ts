@@ -6,7 +6,7 @@ import { LastFMClient } from "@main/lib/lastfm";
 import secureStore from "@main/lib/secureStore";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
 import { YtmdLink } from "@shared/protocol/ytmdProtocol";
-import { lastFmListenKey } from "@shared/track/lastfmTrackSession";
+import { lastFmArtist, lastFmListenKey } from "@shared/track/lastfmTrackSession";
 import { TrackData } from "@shared/track/trackData";
 import { App, shell } from "electron";
 import { LastFMSettings } from "ytmd";
@@ -318,6 +318,11 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		return this.getState();
 	}
 
+	private artistOf(track: TrackData): string {
+		const firstArtistOnly = !!this.getProvider("settings").get<boolean>("lastfm.firstArtistOnly", false);
+		return lastFmArtist(track, firstArtistOnly);
+	}
+
 	private enqueueWrite(task: () => Promise<void>): Promise<void> {
 		const run = this.writeChain.then(task, task);
 		this.writeChain = run.then(
@@ -345,7 +350,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		await this.enqueueWrite(async () => {
 			try {
 				const d = await this.client!.updateNowPlaying({
-					artist: track.video.author,
+					artist: this.artistOf(track),
 					track: track.video.title,
 					duration: track.meta.duration,
 					...(track.music?.album && { album: track.music.album }),
@@ -379,7 +384,7 @@ export default class LastFMProvider extends BaseProvider implements AfterInit, O
 		await this.enqueueWrite(async () => {
 			try {
 				const d = await this.client!.scrobble({
-					artist: track.video.author,
+					artist: this.artistOf(track),
 					track: track.video.title,
 					timestamp: track.meta.startedAt,
 					duration: track.meta.duration,

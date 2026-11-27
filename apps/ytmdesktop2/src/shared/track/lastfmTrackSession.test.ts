@@ -2,8 +2,10 @@ import { describe, expect, test } from "vitest";
 import {
 	decideLastFmSession,
 	isProgressWrap,
+	lastFmArtist,
 	lastFmListenKey,
 	lastFmScrobbleRemainingMs,
+	mergeLateLastFmMeta,
 	preferLastFmTrack,
 	relatedIdsIntersect,
 	relatedVideoIds,
@@ -216,5 +218,39 @@ describe("lastfmTrackSession smoke — Song↔Video", () => {
 	test("seek from 10s to 0 is not a wrap", () => {
 		expect(isProgressWrap(10, 0, 200)).toBe(false);
 		expect(isProgressWrap(50, 0, 200)).toBe(false);
+	});
+});
+
+describe("lastFmArtist", () => {
+	const track = (author: string, artists?: string[]) => ({ video: { author } as TrackData["video"], artists });
+
+	test("sends the first artist only when the setting is on and the song has several", () => {
+		expect(lastFmArtist(track("A, B & C", ["A", "B", "C"]), true)).toBe("A");
+		expect(lastFmArtist(track("A & B", ["A", "B"]), false)).toBe("A & B");
+		expect(lastFmArtist(track("Earth, Wind & Fire", ["Earth, Wind & Fire"]), true)).toBe("Earth, Wind & Fire");
+	});
+
+	test("falls back to the author when the byline is missing", () => {
+		expect(lastFmArtist(track("A & B"), true)).toBe("A & B");
+		expect(lastFmArtist(track("A & B", []), true)).toBe("A & B");
+	});
+});
+
+describe("mergeLateLastFmMeta", () => {
+	const atv = (extra: Partial<TrackData> = {}) => ({ ...makeTrack({ videoId: "atv", isAudioExclusive: true }), ...extra });
+
+	test("copies late or changed artists and a late album into the pending track", () => {
+		const pending = atv({ artists: ["Old"] });
+		expect(mergeLateLastFmMeta(pending, atv({ artists: ["A", "B"], music: { album: "Album" } }))).toBe(true);
+		expect(pending.artists).toEqual(["A", "B"]);
+		expect(pending.music?.album).toBe("Album");
+	});
+
+	test("no change for the same data, another video, or empty artists", () => {
+		const pending = atv({ artists: ["A", "B"], music: { album: "Album" } });
+		expect(mergeLateLastFmMeta(pending, atv({ artists: ["A", "B"] }))).toBe(false);
+		expect(mergeLateLastFmMeta(pending, { ...makeTrack({ videoId: "other", isAudioExclusive: true }), artists: ["X"] })).toBe(false);
+		expect(mergeLateLastFmMeta(pending, atv({ artists: [] }))).toBe(false);
+		expect(pending.artists).toEqual(["A", "B"]);
 	});
 });

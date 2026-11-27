@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { SettingsCheckbox } from "@/components/settings-checkbox";
 import { SettingsGroup, SettingsRow } from "@/components/settings-group";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -39,6 +40,14 @@ function LastFmSettingsPage() {
 					}}
 				/>
 			</SettingsRow>
+			<SettingsCheckbox
+				configKey="lastfm.firstArtistOnly"
+				defaultValue={false}
+				nested
+				disabled={!enabled}
+				description="For songs with several artists, scrobble only the first one.">
+				Scrobble only the first artist
+			</SettingsCheckbox>
 			<SettingsRow
 				label="Account"
 				description={
