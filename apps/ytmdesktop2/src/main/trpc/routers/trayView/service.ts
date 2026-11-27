@@ -211,7 +211,8 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	}
 
 	private alwaysOnTopLevel(): "floating" | "pop-up-menu" {
-		return this._pinned ? "floating" : "pop-up-menu";
+		// On Windows Electron puts "floating" behind the taskbar; if the taskbar is not topmost the window loses TOPMOST and sinks.
+		return this._pinned && platform.isMacOS ? "floating" : "pop-up-menu";
 	}
 
 	/** Windows drops TOPMOST on click/resize/alt-tab; re-apply without moveTop (that can send it behind). */
